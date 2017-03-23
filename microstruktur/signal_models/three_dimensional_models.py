@@ -126,16 +126,24 @@ class CylindricalModelGradientEcho:
             cylinder_parallel_tensor, gradient_direction
         ) ** 2).sum(-1))
         gradient_perpendicular_norm = np.sqrt(1 - gradient_parallel_norm ** 2)
-        kwargs_aux['gradient_strength'] = kwargs['gradient_strength'] * gradient_parallel_norm.squeeze()
+        kwargs_aux['gradient_strength'] = (
+            kwargs['gradient_strength'] *
+            gradient_parallel_norm.squeeze()
+        )
         parallel_attenuation = (
             np.atleast_2d(free_diffusion_attenuation(**kwargs_aux))
         )
 
-        kwargs_aux['gradient_strength'] = kwargs['gradient_strength'] * gradient_perpendicular_norm.squeeze()
+        kwargs_aux['gradient_strength'] = (
+            kwargs['gradient_strength'] *
+            gradient_perpendicular_norm.squeeze()
+        )
         perpendicular_attenuation = (
             # gradient_perpendicular_norm.T *
             np.atleast_2d(
-                kwargs['perpendicular_signal_approximation_model'](**kwargs_aux)
+                kwargs['perpendicular_signal_approximation_model'](
+                    **kwargs_aux
+                )
             )
         )
 
@@ -199,7 +207,10 @@ class CylindricalModelGradientEcho:
         area = np.pi * radii ** 2
         radii_pdf = gamma_dist.pdf(radii)
         radii_pdf_area = radii_pdf * area
-        radii_pdf_normalized = radii_pdf_area / np.trapz(x=radii, y=radii_pdf_area)
+        radii_pdf_normalized = (
+            radii_pdf_area /
+            np.trapz(x=radii, y=radii_pdf_area)
+        )
 
         radius_old = kwargs['radius']
 
