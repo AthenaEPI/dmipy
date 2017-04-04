@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Approximations from
 Balinov B, Jonsson B, Linse P, Soderman O (1993)

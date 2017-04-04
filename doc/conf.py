@@ -18,7 +18,7 @@ import os
 
 # General information about the project.
 project = 'microstruktur'
-copyright = '2015, Ariel Rokem'
+copyright = '2017, Rutger Fick and Demian Wassermann'
 
 currentdir = os.path.abspath(os.path.dirname(__file__))
 ver_file = os.path.join(currentdir, '..', project, 'version.py')
