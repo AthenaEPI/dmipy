@@ -11,6 +11,34 @@ from . import utils
 SPHERICAL_INTEGRATOR = utils.SphericalIntegrator()
 
 
+def I1_stick(bvals, n, mu, lambda_par):
+    r""" The Stick model [1] - a cylinder with zero radius - for intra-axonal diffusion.
+
+    Parameters
+    ----------
+    bvals : float or array, shape(N),
+        b-values in s/mm^2
+    n : array, shape(N x 3),
+        b-vectors in cartesian coordinates
+    mu : array, shape(3),
+        unit vector representing orientation of the Stick
+    lambda_par : float,
+        parallel diffusivity in mm^2/s
+
+    Returns
+    -------
+    E_stick : float or array, shape(N),
+        signal attenuation
+        
+    References
+    ----------
+    .. [1] Behrens et al.
+           "Characterization and propagation of uncertainty in diffusion-weighted MR imaging"
+           Magnetic Resonance in Medicine (2003)
+    """
+    E_stick = np.exp(-bvals * lambda_par * np.dot(n, mu) ** 2)
+    return E_stick
+
 def SD3_watson(n, mu, kappa):
     r""" The Watson spherical distribution model [1].
 
