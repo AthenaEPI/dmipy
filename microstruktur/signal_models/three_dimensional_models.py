@@ -11,6 +11,35 @@ from . import utils
 SPHERICAL_INTEGRATOR = utils.SphericalIntegrator()
 
 
+def SD3_watson(n, mu, kappa):
+    r""" The Watson spherical distribution model [1].
+
+    Parameters
+    ----------
+    n : array of shape(3) or array of shape(N x 3),
+        sampled orientations of the Watson distribution
+    mu : array, shape(3),
+        unit vector representing orientation of Watson distribution
+    kappa : float,
+        concentration parameter of the Watson distribution
+
+    Returns
+    -------
+    Wn: float or array of shape(N),
+        Probability density at orientations n, given mu and kappa  
+
+    References
+    ----------
+    .. [1] Kaden et al.
+           "Parametric spherical deconvolution: inferring anatomical connectivity using diffusion MR imaging"
+           NeuroImage (2007)
+    """
+    nominator = np.exp(kappa * np.dot(n, mu) ** 2)
+    denominator = 4 * np.pi * special.hyp1f1(0.5, 1.5, kappa)
+    Wn = nominator / denominator
+    return Wn
+
+
 class CylindricalModelGradientEcho:
     '''
     Different Gradient Strength Echo protocols
