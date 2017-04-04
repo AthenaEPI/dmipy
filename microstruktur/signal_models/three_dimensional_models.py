@@ -11,8 +11,22 @@ from . import utils
 SPHERICAL_INTEGRATOR = utils.SphericalIntegrator()
 
 
+def perpendicular_vector(v):
+    if v[1] == 0 and v[2] == 0:
+        if v[0] == 0:
+            raise ValueError('zero vector')
+        else:
+            v_perp = np.cross(v, [0, 1, 0])
+            v_perp /= np.linalg.norm(v_perp)
+            return v_perp
+    v_perp = np.cross(v, [1, 0, 0])
+    v_perp /= np.linalg.norm(v_perp)
+    return v_perp
+
+
 def I1_stick(bvals, n, mu, lambda_par):
-    r""" The Stick model [1] - a cylinder with zero radius - for intra-axonal diffusion.
+    r""" The Stick model [1] - a cylinder with zero radius - for
+    intra-axonal diffusion.
 
     Parameters
     ----------
@@ -33,11 +47,58 @@ def I1_stick(bvals, n, mu, lambda_par):
     References
     ----------
     .. [1] Behrens et al.
-           "Characterization and propagation of uncertainty in diffusion-weighted MR imaging"
+           "Characterization and propagation of uncertainty in
+            diffusion-weighted MR imaging"
            Magnetic Resonance in Medicine (2003)
     """
     E_stick = np.exp(-bvals * lambda_par * np.dot(n, mu) ** 2)
     return E_stick
+
+
+def E4_zeppelin(bvals, n, mu, lambda_par, lambda_perp):
+    r""" The Zeppelin model [1] - an axially symmetric Tensor - for
+    extra-axonal diffusion.
+
+    Parameters
+    ----------
+    bvals : float or array, shape(N),
+        b-values in s/mm^2
+    n : array, shape(N x 3),
+        b-vectors in cartesian coordinates
+    mu : array, shape(3),
+        unit vector representing orientation of the Stick
+    lambda_par : float,
+        parallel diffusivity in mm^2/s
+    lambda_perp : float,
+        perpendicular diffusivity in mm^2/s
+
+    Returns
+    -------
+    E_zeppelin : float or array, shape(N),
+        signal attenuation
+        
+    References
+    ----------
+    .. [1] Panagiotaki et al.
+           "Compartment models of the diffusion MR signal in brain white
+            matter: a taxonomy and comparison"
+           NeuroImage (2012)
+    """
+    D_h = np.diag(np.r_[lambda_par, lambda_perp, lambda_perp])
+    R1 = mu
+    R2 = perpendicular_vector(R1)
+    R3 = np.cross(R1, R2)
+    R = np.c_[R1, R2, R3]
+    D = np.dot(np.dot(R, D_h), R.T)
+    
+    if isinstance(bvals, float):
+        E_zeppelin = np.exp(-bvals * np.dot(n, np.dot(n, D)))
+    else:
+        E_zeppelin = np.zeros_like(bvals)
+        for i in range(bvals.shape[0]):
+            E_zeppelin[i] = np.exp(-bvals[i] * np.dot(n[i], np.dot(n[i], D)))
+    return E_zeppelin
+
 
 def SD3_watson(n, mu, kappa):
     r""" The Watson spherical distribution model [1].
