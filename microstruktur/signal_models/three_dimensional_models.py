@@ -43,7 +43,7 @@ def I1_stick(bvals, n, mu, lambda_par):
     -------
     E_stick : float or array, shape(N),
         signal attenuation
-        
+
     References
     ----------
     .. [1] Behrens et al.
@@ -76,7 +76,7 @@ def E4_zeppelin(bvals, n, mu, lambda_par, lambda_perp):
     -------
     E_zeppelin : float or array, shape(N),
         signal attenuation
-        
+
     References
     ----------
     .. [1] Panagiotaki et al.
@@ -90,7 +90,7 @@ def E4_zeppelin(bvals, n, mu, lambda_par, lambda_perp):
     R3 = np.cross(R1, R2)
     R = np.c_[R1, R2, R3]
     D = np.dot(np.dot(R, D_h), R.T)
-    
+
     if isinstance(bvals, float):
         E_zeppelin = np.exp(-bvals * np.dot(n, np.dot(n, D)))
     else:
@@ -115,12 +115,13 @@ def SD3_watson(n, mu, kappa):
     Returns
     -------
     Wn: float or array of shape(N),
-        Probability density at orientations n, given mu and kappa  
+        Probability density at orientations n, given mu and kappa
 
     References
     ----------
     .. [1] Kaden et al.
-           "Parametric spherical deconvolution: inferring anatomical connectivity using diffusion MR imaging"
+           "Parametric spherical deconvolution: inferring anatomical
+            connectivity using diffusion MR imaging"
            NeuroImage (2007)
     """
     nominator = np.exp(kappa * np.dot(n, mu) ** 2)
