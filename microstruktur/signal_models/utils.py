@@ -1,5 +1,5 @@
 import numpy as np
-
+from dipy.core.geometry import sphere2cart
 from dipy.data import get_sphere
 SPHERE = get_sphere('symmetric362')
 
@@ -46,3 +46,44 @@ def spherical_triangle_centroid_value(f, abc, args=tuple()):
     mean_point = abc.mean(axis=0)
     mean_point /= np.linalg.norm(mean_point)
     return f(mean_point, *args)
+
+
+def perpendicular_vector(v):
+    if v[1] == 0 and v[2] == 0:
+        if v[0] == 0:
+            raise ValueError('zero vector')
+        else:
+            v_perp = np.cross(v, [0, 1, 0])
+            v_perp /= np.linalg.norm(v_perp)
+            return v_perp
+    v_perp = np.cross(v, [1, 0, 0])
+    v_perp /= np.linalg.norm(v_perp)
+    return v_perp
+
+
+def rotation_matrix_around_100(psi):
+    R = np.array([[1, 0, 0],
+                  [0, np.cos(psi), -np.sin(psi)],
+                  [0, np.sin(psi), np.cos(psi)]])
+    return R
+
+
+def rotation_matrix_100_to_theta_phi(theta, phi):
+    x, y, z = sphere2cart(1., theta, phi)
+    return rotation_matrix_100_to_xyz(x, y, z)
+
+
+def rotation_matrix_100_to_xyz(x, y, z):
+    y2 = y ** 2
+    z2 = z ** 2
+    yz = y * z
+    R = np.array([[x, -y, -z],
+                  [y, (x * y2 + z2) / (y2 + z2), ((x - 1) * yz) / (y2 + z2)],
+                  [z, ((x - 1) * yz) / (y2 + z2), (y2 + x * z2) / (y2 + z2)]])
+    return R
+
+
+def rotation_matrix_100_to_theta_phi_psi(theta, phi, psi):
+    R_100_to_theta_phi = rotation_matrix_100_to_theta_phi(theta, phi)
+    R_around_100 = rotation_matrix_around_100(psi)
+    return np.dot(R_100_to_theta_phi, R_around_100)

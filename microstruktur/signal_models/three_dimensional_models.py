@@ -4,24 +4,12 @@ import numpy as np
 from scipy import stats
 from scipy import integrate
 from scipy import special
+from dipy.core.geometry import cart2sphere
 
 from . import utils
 
 
 SPHERICAL_INTEGRATOR = utils.SphericalIntegrator()
-
-
-def perpendicular_vector(v):
-    if v[1] == 0 and v[2] == 0:
-        if v[0] == 0:
-            raise ValueError('zero vector')
-        else:
-            v_perp = np.cross(v, [0, 1, 0])
-            v_perp /= np.linalg.norm(v_perp)
-            return v_perp
-    v_perp = np.cross(v, [1, 0, 0])
-    v_perp /= np.linalg.norm(v_perp)
-    return v_perp
 
 
 def I1_stick(bvals, n, mu, lambda_par):
@@ -31,13 +19,13 @@ def I1_stick(bvals, n, mu, lambda_par):
     Parameters
     ----------
     bvals : float or array, shape(N),
-        b-values in s/mm^2
+        b-values in s/mm^2.
     n : array, shape(N x 3),
-        b-vectors in cartesian coordinates
+        b-vectors in cartesian coordinates.
     mu : array, shape(3),
-        unit vector representing orientation of the Stick
+        unit vector representing orientation of the Stick.
     lambda_par : float,
-        parallel diffusivity in mm^2/s
+        parallel diffusivity in mm^2/s.
 
     Returns
     -------
@@ -62,31 +50,30 @@ def E4_zeppelin(bvals, n, mu, lambda_par, lambda_perp):
     Parameters
     ----------
     bvals : float or array, shape(N),
-        b-values in s/mm^2
+        b-values in s/mm^2.
     n : array, shape(N x 3),
-        b-vectors in cartesian coordinates
+        b-vectors in cartesian coordinates.
     mu : array, shape(3),
-        unit vector representing orientation of the Stick
+        unit vector representing orientation of the Stick.
     lambda_par : float,
-        parallel diffusivity in mm^2/s
+        parallel diffusivity in mm^2/s.
     lambda_perp : float,
-        perpendicular diffusivity in mm^2/s
+        perpendicular diffusivity in mm^2/s.
 
     Returns
     -------
     E_zeppelin : float or array, shape(N),
-        signal attenuation
+        signal attenuation.
 
     References
     ----------
     .. [1] Panagiotaki et al.
            "Compartment models of the diffusion MR signal in brain white
-            matter: a taxonomy and comparison"
-           NeuroImage (2012)
+            matter: a taxonomy and comparison". NeuroImage (2012)
     """
     D_h = np.diag(np.r_[lambda_par, lambda_perp, lambda_perp])
     R1 = mu
-    R2 = perpendicular_vector(R1)
+    R2 = utils.perpendicular_vector(R1)
     R3 = np.cross(R1, R2)
     R = np.c_[R1, R2, R3]
     D = np.dot(np.dot(R, D_h), R.T)
@@ -100,29 +87,97 @@ def E4_zeppelin(bvals, n, mu, lambda_par, lambda_perp):
     return E_zeppelin
 
 
-def SD3_watson(n, mu, kappa):
-    r""" The Watson spherical distribution model [1].
+def SD2_bingham_cartesian(n, mu, psi, kappa, beta):
+    r""" Cartesian wrapper function for the Bingham spherical distribution
+    model. Takes principal distribution axis "mu" as a Cartesian unit vector,
+    while leaving the secondary dispersion angle "psi" in euler angles.
+    - Computes the euler angles of mu in terms of theta and phi.
+    - Then calls the spherical Bingham implementation.
+    """
+    _, theta, phi = cart2sphere(mu[0], mu[1], mu[2])
+    return SD2_bingham_spherical(n, theta, phi, psi, kappa, beta)
+
+
+def SD2_bingham_spherical(n, theta, phi, psi, kappa, beta):
+    r""" The Bingham spherical distribution model [1, 2, 3] using euler angles.
 
     Parameters
     ----------
     n : array of shape(3) or array of shape(N x 3),
-        sampled orientations of the Watson distribution
-    mu : array, shape(3),
-        unit vector representing orientation of Watson distribution
+        sampled orientations of the Bingham distribution.
+    theta : float,
+        inclination of polar angle of main angle mu [0, pi].
+    phi : float,
+        polar angle of main angle mu [-pi, pi].
+    psi : float,
+        angle in radians of the bingham distribution around mu [0, pi].
     kappa : float,
-        concentration parameter of the Watson distribution
+        first concentration parameter of the Bingham distribution.
+        defined as kappa = kappa1 - kappa3.
+    beta : float,
+        second concentration parameter of the Bingham distribution.
+        defined as beta = kappa2 - kappa3. Bingham becomes Watson when beta=0.
 
     Returns
     -------
-    Wn: float or array of shape(N),
-        Probability density at orientations n, given mu and kappa
+    Bn: float or array of shape(N),
+        Probability density at orientations n, given theta, phi, psi, kappa
+        and beta.
 
     References
     ----------
     .. [1] Kaden et al.
            "Parametric spherical deconvolution: inferring anatomical
-            connectivity using diffusion MR imaging"
-           NeuroImage (2007)
+            connectivity using diffusion MR imaging". NeuroImage (2007)
+    .. [2] Sotiropoulos et al.
+           "Ball and rackets: inferring fiber fanning from
+            diffusion-weighted MRI". NeuroImage (2012)
+    .. [3] Tariq et al.
+           "Bingham--NODDI: Mapping anisotropic orientation dispersion of
+            neurites using diffusion MRI". NeuroImage (2016)
+    """
+    R = utils.rotation_matrix_100_to_theta_phi_psi(theta, phi, psi)
+    Bdiag = np.diag(np.r_[kappa, beta, 0])
+    B = R.dot(Bdiag).dot(R.T)
+    if np.ndim(n) == 1:
+        numerator = np.exp(n.dot(B).dot(n))
+    else:
+        numerator = np.zeros(n.shape[0])
+        for i, n_ in enumerate(n):
+            numerator[i] = np.exp(n_.dot(B).dot(n_))
+
+    # the denomator to normalize still needs to become a matrix argument B,
+    # but function doesn't take it.
+    denominator = 4 * np.pi * special.hyp1f1(0.5, 1.5, kappa)
+    Bn = numerator / denominator
+    return Bn
+
+
+def SD3_watson(n, mu, kappa):
+    r""" The Watson spherical distribution model [1, 2].
+
+    Parameters
+    ----------
+    n : array of shape(3) or array of shape(N x 3),
+        sampled orientations of the Watson distribution.
+    mu : array, shape(3),
+        unit vector representing orientation of Watson distribution.
+    kappa : float,
+        concentration parameter of the Watson distribution.
+
+    Returns
+    -------
+    Wn: float or array of shape(N),
+        Probability density at orientations n, given mu and kappa.
+
+    References
+    ----------
+    .. [1] Kaden et al.
+           "Parametric spherical deconvolution: inferring anatomical
+            connectivity using diffusion MR imaging". NeuroImage (2007)
+    .. [2] Zhang et al.
+           "NODDI: practical in vivo neurite orientation dispersion and density
+            imaging of the human brain". NeuroImage (2012)
     """
     nominator = np.exp(kappa * np.dot(n, mu) ** 2)
     denominator = 4 * np.pi * special.hyp1f1(0.5, 1.5, kappa)

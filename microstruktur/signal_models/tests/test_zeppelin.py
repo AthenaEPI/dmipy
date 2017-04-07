@@ -3,8 +3,8 @@ from numpy.testing import (assert_almost_equal,
                            assert_equal,
                            run_module_suite)
 import numpy as np
-from microstruktur.signal_models.three_dimensional_models import (
-                                            E4_zeppelin, perpendicular_vector)
+from microstruktur.signal_models.three_dimensional_models import E4_zeppelin
+from microstruktur.signal_models.utils import perpendicular_vector
 
 
 def test_orienting_zeppelin():

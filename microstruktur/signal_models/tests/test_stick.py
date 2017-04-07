@@ -4,19 +4,7 @@ from numpy.testing import (assert_almost_equal,
                            run_module_suite)
 import numpy as np
 from microstruktur.signal_models.three_dimensional_models import I1_stick
-
-
-def perpendicular_vector(v):
-    if v[1] == 0 and v[2] == 0:
-        if v[0] == 0:
-            raise ValueError('zero vector')
-        else:
-            v_perp = np.cross(v, [0, 1, 0])
-            v_perp /= np.linalg.norm(v_perp)
-            return v_perp
-    v_perp = np.cross(v, [1, 0, 0])
-    v_perp /= np.linalg.norm(v_perp)
-    return v_perp
+from microstruktur.signal_models.utils import perpendicular_vector
 
 
 def test_orienting_stick():
