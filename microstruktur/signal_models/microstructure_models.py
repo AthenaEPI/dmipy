@@ -1,11 +1,52 @@
 from dipy.reconst.shm import real_sym_sh_mrtrix, cart2sphere
 from microstruktur.signal_models.three_dimensional_models import (
-                                    I1_stick_rh, E4_zeppelin_rh, SD3_watson_sh)
+                I1_stick, I1_stick_rh, E3_ball, E4_zeppelin_rh, SD3_watson_sh)
 from microstruktur.signal_models.spherical_convolution import sh_convolution
 from microstruktur.signal_models.utils import T1_tortuosity
 from microstruktur.signal_models.spherical_mean import (
                                 spherical_mean_stick, spherical_mean_zeppelin)
 import numpy as np
+
+
+def ball_and_stick(acquisition_params, f_intra, mu, lambda_par, lambda_iso):
+    r""" The Ball and Stick model [1], consisting of a Stick model oriented
+    along mu with parallel diffusivity lambda_par, and an isotropic Ball
+    compartment with isotropic diffusivity lambda_iso.
+
+    Parameters
+    ----------
+    acquisition_params : array, shape(N, 4),
+        b-values and b-vectors of the measured acquisition scheme.
+        first column is b-values in s/mm^2 and second through fourth column
+        are x, y, z components of cartesian unit b-vectors.
+    f_intra : float,
+        intra-axonal volume fraction [0 - 1].
+    mu : array, shape (3),
+        Cartesian unit vector representing the axis of the Watson distribution,
+        in turn describing the orientation of the estimated axon bundle.
+    lambda_par : float,
+        parallel diffusivity in mm^2/s. Preset to 1.7e-3 according to [1].
+    lambda_iso : float,
+        isotropic diffusivity in mm^2/s.
+
+    Returns
+    -------
+    E_ball_and_stick : array, shape (N),
+        signal attenuation of the ball and stick model for given parameters.
+
+    References
+    ----------
+    .. [1] Behrens et al.
+           "Characterization and propagation of uncertainty in
+            diffusion-weighted MR imaging"
+           Magnetic Resonance in Medicine (2003)
+    """
+    bvals = acquisition_params[:, 0]
+    bvecs = acquisition_params[:, 1:]
+    E_stick = I1_stick(bvals, bvecs, mu, lambda_par)
+    E_ball = E3_ball(bvals, lambda_iso)
+    E_ball_and_stick = f_intra * E_stick + (1 - f_intra) * E_ball
+    return E_ball_and_stick
 
 
 def noddi_watson_kaden(acquisition_params, f_intra, mu, kappa,

@@ -45,6 +45,32 @@ def I1_stick(bvals, n, mu, lambda_par):
     return E_stick
 
 
+def E3_ball(bvals, lambda_iso):
+    r""" The Ball model [1] - an isotropic Tensor with one diffusivity.
+
+    Parameters
+    ----------
+    bvals : float or array, shape(N),
+        b-values in s/mm^2.
+    lambda_iso : float,
+        isotropic diffusivity in mm^2/s.
+
+    Returns
+    -------
+    E_ball : float or array, shape(N),
+        signal attenuation
+
+    References
+    ----------
+    .. [1] Behrens et al.
+           "Characterization and propagation of uncertainty in
+            diffusion-weighted MR imaging"
+           Magnetic Resonance in Medicine (2003)
+    """
+    E_ball = np.exp(-bvals * lambda_iso)
+    return E_ball
+
+
 def E4_zeppelin(bvals, n, mu, lambda_par, lambda_perp):
     r""" The Zeppelin model [1] - an axially symmetric Tensor - for
     extra-axonal diffusion.
