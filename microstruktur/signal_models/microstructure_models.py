@@ -3,6 +3,8 @@ from microstruktur.signal_models.three_dimensional_models import (
                                     I1_stick_rh, E4_zeppelin_rh, SD3_watson_sh)
 from microstruktur.signal_models.spherical_convolution import sh_convolution
 from microstruktur.signal_models.utils import T1_tortuosity
+from microstruktur.signal_models.spherical_mean import (
+                                spherical_mean_stick, spherical_mean_zeppelin)
 import numpy as np
 
 
@@ -39,3 +41,15 @@ def noddi_watson_kaden(acquisition_params, f_intra, mu, kappa,
         # recover signal values from watson-convolved spherical harmonics
         E[bval_mask] = np.dot(sh_mat, E_dispersed_sh)
     return E
+
+
+def multi_compartment_smt(b, f_intra, lambda_par):
+    """ Multi-compartment spherical mean technique from kaden et al.
+    """
+    # use tortuosity to get perpendicular diffusivity
+    lambda_perp = T1_tortuosity(f_intra, lambda_par)
+    E_mean_intra = f_intra * spherical_mean_stick(b, lambda_par)
+    E_mean_extra = (1 - f_intra) * spherical_mean_zeppelin(b, lambda_par,
+                                                           lambda_perp)
+    E_mean = E_mean_intra + E_mean_extra
+    return E_mean

@@ -9,6 +9,7 @@ def spherical_mean_stick(b, lambda_par):
               (2 * np.sqrt(b * lambda_par)))
     return E_mean
 
+
 def spherical_mean_zeppelin(b, lambda_par, lambda_perp):
     """ Spherical mean of a Zeppelin, see (Eq. (8) in [1])
     """
