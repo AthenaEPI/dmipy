@@ -5,11 +5,13 @@ from scipy import stats
 from scipy import integrate
 from scipy import special
 from dipy.core.geometry import cart2sphere
+from dipy.reconst.shm import real_sym_sh_mrtrix
+from microstruktur.signal_models.spherical_convolution import kernel_sh_to_rh
 
 from . import utils
 
-
 SPHERICAL_INTEGRATOR = utils.SphericalIntegrator()
+gradient_path = '/user/rfick/home/microstruktur/microstruktur/gradient_tables/'
 
 
 def I1_stick(bvals, n, mu, lambda_par):
@@ -78,11 +80,18 @@ def E4_zeppelin(bvals, n, mu, lambda_par, lambda_perp):
     R = np.c_[R1, R2, R3]
     D = np.dot(np.dot(R, D_h), R.T)
 
-    if isinstance(bvals, float):
+    dim_b = np.ndim(bvals)
+    dim_n = np.ndim(n)
+
+    if dim_n == 1:  # if there is only one sampled orientation
         E_zeppelin = np.exp(-bvals * np.dot(n, np.dot(n, D)))
-    else:
-        E_zeppelin = np.zeros_like(bvals)
-        for i in range(bvals.shape[0]):
+    elif dim_b == 0 and dim_n == 2:  # one b-value on sphere
+        E_zeppelin = np.zeros(n.shape[0])
+        for i in range(n.shape[0]):
+            E_zeppelin[i] = np.exp(-bvals * np.dot(n[i], np.dot(n[i], D)))
+    elif dim_b == 1 and dim_n == 2:  # many b-values and orientations
+        E_zeppelin = np.zeros(n.shape[0])
+        for i in range(n.shape[0]):
             E_zeppelin[i] = np.exp(-bvals[i] * np.dot(n[i], np.dot(n[i], D)))
     return E_zeppelin
 
@@ -183,6 +192,50 @@ def SD3_watson(n, mu, kappa):
     denominator = 4 * np.pi * special.hyp1f1(0.5, 1.5, kappa)
     Wn = nominator / denominator
     return Wn
+
+
+def SD3_watson_sh(mu, kappa, sh_order=14):
+    _, theta_mu, phi_mu = cart2sphere(mu[0], mu[1], mu[2])
+    R = utils.rotation_matrix_001_to_xyz(mu[0], mu[1], mu[2])
+    vertices = np.loadtxt(gradient_path + 'sphere_with_cap.txt')
+    vertices_rotated = np.dot(vertices, R.T)
+    _, theta_rotated, phi_rotated = cart2sphere(vertices_rotated[:, 0],
+                                                vertices_rotated[:, 1],
+                                                vertices_rotated[:, 2])
+
+    watson_sf = SD3_watson(vertices_rotated, mu, kappa)
+
+    sh_mat = real_sym_sh_mrtrix(sh_order, theta_rotated, phi_rotated)[0]
+    sh_mat_inv = np.linalg.pinv(sh_mat)
+    watson_sh = np.dot(sh_mat_inv, watson_sf)
+    return watson_sh
+
+
+def I1_stick_rh(bval, lambda_par, sh_order=14):
+    vertices = np.loadtxt(gradient_path + 'sphere_with_cap.txt')
+    E_stick_sf = I1_stick(bval, vertices, np.r_[0., 0., 1.], lambda_par)
+    _, theta_, phi_ = cart2sphere(vertices[:, 0],
+                                  vertices[:, 1],
+                                  vertices[:, 2])
+    sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
+    sh_mat_inv = np.linalg.pinv(sh_mat)
+    sh = np.dot(sh_mat_inv, E_stick_sf)
+    rh = kernel_sh_to_rh(sh, sh_order)
+    return rh
+
+
+def E4_zeppelin_rh(bval, lambda_par, lambda_perp, sh_order=14):
+    vertices = np.loadtxt(gradient_path + 'sphere_with_cap.txt')
+    E_zeppelin_sf = E4_zeppelin(bval, vertices, np.r_[0., 0., 1.],
+                                lambda_par, lambda_perp)
+    _, theta_, phi_ = cart2sphere(vertices[:, 0],
+                                  vertices[:, 1],
+                                  vertices[:, 2])
+    sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
+    sh_mat_inv = np.linalg.pinv(sh_mat)
+    sh = np.dot(sh_mat_inv, E_zeppelin_sf)
+    rh = kernel_sh_to_rh(sh, sh_order)
+    return rh
 
 
 class CylindricalModelGradientEcho:

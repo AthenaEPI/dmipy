@@ -74,6 +74,8 @@ def rotation_matrix_100_to_theta_phi(theta, phi):
 
 
 def rotation_matrix_100_to_xyz(x, y, z):
+    if np.all(np.r_[x, y, z] == np.r_[1., 0., 0.]):
+        return np.eye(3)
     y2 = y ** 2
     z2 = z ** 2
     yz = y * z
@@ -83,7 +85,24 @@ def rotation_matrix_100_to_xyz(x, y, z):
     return R
 
 
+def rotation_matrix_001_to_xyz(x, y, z):
+    if np.all(np.r_[x, y, z] == np.r_[0., 0., 1.]):
+        return np.eye(3)
+    x2 = x ** 2
+    y2 = y ** 2
+    xy = x * y
+    R = np.array([[(y2 + x2 * z) / (x2 + y2), (xy * (z - 1)) / (x2 + y2), x],
+                  [(xy * (z - 1)) / (x2 + y2), (x2 + y2 * z) / (x2 + y2), y],
+                  [-x, -y, z]])
+    return R
+
+
 def rotation_matrix_100_to_theta_phi_psi(theta, phi, psi):
     R_100_to_theta_phi = rotation_matrix_100_to_theta_phi(theta, phi)
     R_around_100 = rotation_matrix_around_100(psi)
     return np.dot(R_100_to_theta_phi, R_around_100)
+
+
+def T1_tortuosity(f_intra, lambda_par):
+    lambda_perp = (1 - f_intra) * lambda_par 
+    return lambda_perp
