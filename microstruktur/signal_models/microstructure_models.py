@@ -10,6 +10,41 @@ import numpy as np
 
 def noddi_watson_kaden(acquisition_params, f_intra, mu, kappa,
                        lambda_par=1.7e-3, sh_order=14):
+    r""" The NODDI microstructure model [1] using using slow-exchange for the
+    extra-axonal compartment according to [2], without isotropic compartment. 
+
+    Parameters
+    ----------
+    acquisition_params : array, shape(N, 4),
+        b-values and b-vectors of the measured acquisition scheme.
+        first column is b-values in s/mm^2 and second through fourth column
+        are x, y, z components of cartesian unit b-vectors.
+    f_intra : float,
+        intra-axonal volume fraction [0 - 1].
+    mu : array, shape (3),
+        Cartesian unit vector representing the axis of the Watson distribution,
+        in turn describing the orientation of the estimated axon bundle.
+    kappa : float,
+        concentration parameter of the Watson distribution [0 - 16].
+    lambda_par : float,
+        parallel diffusivity in mm^2/s. Preset to 1.7e-3 according to [1].
+    sh_order : int,
+        maximum spherical harmonics order to be used in the approximation.
+        we found 14 to be sufficient to represent concentrations of kappa=17.
+
+    Returns
+    -------
+    watson_sh : array,
+        spherical harmonics of Watson probability density.
+
+    References
+    ----------
+    .. [1] Zhang et al.
+           "NODDI: practical in vivo neurite orientation dispersion and density
+            imaging of the human brain". NeuroImage (2012)
+    .. [2] Kaden et al. "Multi-compartment microscopic diffusion imaging."
+           NeuroImage 139 (2016): 346-359.
+    """
     bvals = acquisition_params[:, 0]
     bvecs = acquisition_params[:, 1:]
 
@@ -43,13 +78,44 @@ def noddi_watson_kaden(acquisition_params, f_intra, mu, kappa,
     return E
 
 
-def multi_compartment_smt(b, f_intra, lambda_par):
-    """ Multi-compartment spherical mean technique from kaden et al.
+def multi_compartment_smt(acquisition_params, f_intra, lambda_par):
+    r""" Multi-compartment spherical mean technique by Kaden et al [1].
+    Uses the spherical mean of the signal attenuation to estimate intra-axonal
+    volume fraction and diffusivity without having to estimate dispersion or
+    crossings. Requires multi-shell data.
+
+    Parameters
+    ----------
+    acquisition_params : array, shape(N, 4),
+        b-values and b-vectors of the measured acquisition scheme.
+        first column is b-values in s/mm^2 and second through fourth column
+        are x, y, z components of cartesian unit b-vectors.
+        in this model only the b-values are used.
+    f_intra : float,
+        intra-axonal volume fraction [0 - 1].
+    lambda_par : float,
+        parallel diffusivity in [0 - 4e-3] mm^2/s.
+
+    Returns
+    -------
+    E_mean : array, shape (number of b-shells)
+        spherical means of the signal attenuation for the given f_intra and
+        lambda_par at the b-values of acquisition scheme. For example, if there
+        are three shells in the acquisition then the array is of length 3.
+
+    References
+    ----------
+    .. [1] Kaden et al. "Multi-compartment microscopic diffusion imaging."
+           NeuroImage 139 (2016): 346-359.
     """
+    bvals = acquisition_params[:, 0]
+    # recover b-values of the different shells of the data
+    unique_bvals = np.unique(bvals)[np.unique(bvals) > 0]
+    E_mean = np.zeros_like(unique_bvals)
     # use tortuosity to get perpendicular diffusivity
     lambda_perp = T1_tortuosity(f_intra, lambda_par)
-    E_mean_intra = f_intra * spherical_mean_stick(b, lambda_par)
-    E_mean_extra = (1 - f_intra) * spherical_mean_zeppelin(b, lambda_par,
-                                                           lambda_perp)
-    E_mean = E_mean_intra + E_mean_extra
+    for i, b_ in enumerate(unique_bvals):
+        E_mean_intra = spherical_mean_stick(b_, lambda_par)
+        E_mean_extra = spherical_mean_zeppelin(b_, lambda_par, lambda_perp)
+        E_mean[i] = f_intra * E_mean_intra + (1 - f_intra) * E_mean_extra
     return E_mean

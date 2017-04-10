@@ -195,6 +195,32 @@ def SD3_watson(n, mu, kappa):
 
 
 def SD3_watson_sh(mu, kappa, sh_order=14):
+    r""" The Watson spherical distribution model in spherical harmonics [1, 2].
+
+    Parameters
+    ----------
+    mu : array, shape(3),
+        unit vector representing orientation of Watson distribution.
+    kappa : float,
+        concentration parameter of the Watson distribution.
+    sh_order : int,
+        maximum spherical harmonics order to be used in the approximation.
+        we found 14 to be sufficient to represent concentrations of kappa=17.
+
+    Returns
+    -------
+    watson_sh : array,
+        spherical harmonics of Watson probability density.
+
+    References
+    ----------
+    .. [1] Kaden et al.
+           "Parametric spherical deconvolution: inferring anatomical
+            connectivity using diffusion MR imaging". NeuroImage (2007)
+    .. [2] Zhang et al.
+           "NODDI: practical in vivo neurite orientation dispersion and density
+            imaging of the human brain". NeuroImage (2012)
+    """
     _, theta_mu, phi_mu = cart2sphere(mu[0], mu[1], mu[2])
     R = utils.rotation_matrix_001_to_xyz(mu[0], mu[1], mu[2])
     vertices = np.loadtxt(gradient_path + 'sphere_with_cap.txt')
@@ -212,6 +238,31 @@ def SD3_watson_sh(mu, kappa, sh_order=14):
 
 
 def I1_stick_rh(bval, lambda_par, sh_order=14):
+    r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
+    Axis aligned with z-axis to be used as kernel for spherical convolution.
+
+    Parameters
+    ----------
+    bval : float,
+        b-value in s/mm^2.
+    lambda_par : float,
+        parallel diffusivity in mm^2/s.
+    sh_order : int,
+        maximum spherical harmonics order to be used in the approximation.
+        set to 14 to conform with order used for watson distribution.
+
+    Returns
+    -------
+    rh : array,
+        rotational harmonics of stick model aligned with z-axis.
+
+    References
+    ----------
+    .. [1] Behrens et al.
+           "Characterization and propagation of uncertainty in
+            diffusion-weighted MR imaging"
+           Magnetic Resonance in Medicine (2003)
+    """
     vertices = np.loadtxt(gradient_path + 'sphere_with_cap.txt')
     E_stick_sf = I1_stick(bval, vertices, np.r_[0., 0., 1.], lambda_par)
     _, theta_, phi_ = cart2sphere(vertices[:, 0],
@@ -225,6 +276,32 @@ def I1_stick_rh(bval, lambda_par, sh_order=14):
 
 
 def E4_zeppelin_rh(bval, lambda_par, lambda_perp, sh_order=14):
+    r""" The Zeppelin model in rotational harmonics, such that Y_lm = Yl0.
+    Axis aligned with z-axis to be used as kernel for spherical convolution.
+
+    Parameters
+    ----------
+    bval : float,
+        b-value in s/mm^2.
+    lambda_par : float,
+        parallel diffusivity in mm^2/s.
+    lambda_perp : float,
+        perpendicular diffusivity in mm^2/s.
+    sh_order : int,
+        maximum spherical harmonics order to be used in the approximation.
+        set to 14 to conform with order used for watson distribution.
+
+    Returns
+    -------
+    rh : array,
+        rotational harmonics of zeppelin model aligned with z-axis.
+
+    References
+    ----------
+    .. [1] Panagiotaki et al.
+           "Compartment models of the diffusion MR signal in brain white
+            matter: a taxonomy and comparison". NeuroImage (2012)
+    """
     vertices = np.loadtxt(gradient_path + 'sphere_with_cap.txt')
     E_zeppelin_sf = E4_zeppelin(bval, vertices, np.r_[0., 0., 1.],
                                 lambda_par, lambda_perp)

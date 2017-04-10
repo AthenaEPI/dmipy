@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 from dipy.core.geometry import sphere2cart
 from dipy.data import get_sphere
@@ -49,6 +50,19 @@ def spherical_triangle_centroid_value(f, abc, args=tuple()):
 
 
 def perpendicular_vector(v):
+    """Returns a perpendicular vector to vector "v".
+
+    Parameters
+    ----------
+    v : array, shape (3)
+        normally Cartesian unit vector, but can also be any vector.
+
+    Returns
+    -------
+    v_perp : array, shape (3)
+        If v is unit vector, v_perp is a Cartesian unit vector perpendicular
+        to v.
+    """
     if v[1] == 0 and v[2] == 0:
         if v[0] == 0:
             raise ValueError('zero vector')
@@ -62,6 +76,18 @@ def perpendicular_vector(v):
 
 
 def rotation_matrix_around_100(psi):
+    """Generates a rotation matrix that rotates around the x-axis (1, 0, 0).
+
+    Parameters
+    ----------
+    psi : float,
+        euler angle [0, pi].
+
+    Returns
+    -------
+    R : array, shape (3 x 3)
+        Rotation matrix.
+    """
     R = np.array([[1, 0, 0],
                   [0, np.cos(psi), -np.sin(psi)],
                   [0, np.sin(psi), np.cos(psi)]])
@@ -69,11 +95,39 @@ def rotation_matrix_around_100(psi):
 
 
 def rotation_matrix_100_to_theta_phi(theta, phi):
+    """Generates a rotation matrix that rotates from the x-axis (1, 0, 0) to
+    an other position on the unit sphere.
+
+    Parameters
+    ----------
+    theta : float,
+        inclination of polar angle of main angle mu [0, pi].
+    phi : float,
+        polar angle of main angle mu [-pi, pi].
+
+    Returns
+    -------
+    R : array, shape (3 x 3)
+        Rotation matrix.
+    """
     x, y, z = sphere2cart(1., theta, phi)
     return rotation_matrix_100_to_xyz(x, y, z)
 
 
 def rotation_matrix_100_to_xyz(x, y, z):
+    """Generates a rotation matrix that rotates from the x-axis (1, 0, 0) to
+    an other position in Cartesian space.
+
+    Parameters
+    ----------
+    x, y, z : floats,
+        position in Cartesian space.
+
+    Returns
+    -------
+    R : array, shape (3 x 3)
+        Rotation matrix.
+    """
     if np.all(np.r_[x, y, z] == np.r_[1., 0., 0.]):
         return np.eye(3)
     y2 = y ** 2
@@ -86,6 +140,19 @@ def rotation_matrix_100_to_xyz(x, y, z):
 
 
 def rotation_matrix_001_to_xyz(x, y, z):
+    """Generates a rotation matrix that rotates from the z-axis (0, 0, 1) to
+    an other position in Cartesian space.
+
+    Parameters
+    ----------
+    x, y, z : floats,
+        position in Cartesian space.
+
+    Returns
+    -------
+    R : array, shape (3 x 3)
+        Rotation matrix.
+    """
     if np.all(np.r_[x, y, z] == np.r_[0., 0., 1.]):
         return np.eye(3)
     x2 = x ** 2
@@ -98,11 +165,54 @@ def rotation_matrix_001_to_xyz(x, y, z):
 
 
 def rotation_matrix_100_to_theta_phi_psi(theta, phi, psi):
+    """Generates a rotation matrix that rotates from the x-axis (1, 0, 0) to
+    an other position in Cartesian space, and rotates about its axis.
+
+    Parameters
+    ----------
+    theta : float,
+        inclination of polar angle of main angle mu [0, pi].
+    phi : float,
+        polar angle of main angle mu [-pi, pi].
+    psi : float,
+        angle in radians of the bingham distribution around mu [0, pi].
+
+    Returns
+    -------
+    R : array, shape (3 x 3)
+        Rotation matrix.
+    """
     R_100_to_theta_phi = rotation_matrix_100_to_theta_phi(theta, phi)
     R_around_100 = rotation_matrix_around_100(psi)
     return np.dot(R_100_to_theta_phi, R_around_100)
 
 
 def T1_tortuosity(f_intra, lambda_par):
+    """Tortuosity model for perpendicular extra-axonal diffusivity [1, 2, 3].
+
+    Parameters
+    ----------
+    f_intra : float,
+        intra-axonal volume fraction [0, 1].
+    lambda_par : float,
+        parallel diffusivity in mm^2/s.
+
+    Returns
+    -------
+    lambda_perp : float,
+        Rotation matrix.
+        
+    References
+    -------
+    .. [1] Bruggeman, Von DAG. "Berechnung verschiedener physikalischer
+        Konstanten von heterogenen Substanzen. I. Dielektrizitätskonstanten und
+        Leitfähigkeiten der Mischkörper aus isotropen Substanzen." Annalen der
+        physik 416.7 (1935): 636-664.
+    .. [2] Sen et al. "A self-similar model for sedimentary rocks with
+        application to the dielectric constant of fused glass beads."
+        Geophysics 46.5 (1981): 781-795.
+    .. [3] Szafer et al. "Theoretical model for water diffusion in tissues."
+        Magnetic resonance in medicine 33.5 (1995): 697-712.
+    """
     lambda_perp = (1 - f_intra) * lambda_par 
     return lambda_perp
