@@ -201,7 +201,7 @@ def T1_tortuosity(f_intra, lambda_par):
     -------
     lambda_perp : float,
         Rotation matrix.
-        
+
     References
     -------
     .. [1] Bruggeman, Von DAG. "Berechnung verschiedener physikalischer
@@ -214,5 +214,5 @@ def T1_tortuosity(f_intra, lambda_par):
     .. [3] Szafer et al. "Theoretical model for water diffusion in tissues."
         Magnetic resonance in medicine 33.5 (1995): 697-712.
     """
-    lambda_perp = (1 - f_intra) * lambda_par 
+    lambda_perp = (1 - f_intra) * lambda_par
     return lambda_perp

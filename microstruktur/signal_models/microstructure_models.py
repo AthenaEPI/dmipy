@@ -11,7 +11,7 @@ import numpy as np
 def noddi_watson_kaden(acquisition_params, f_intra, mu, kappa,
                        lambda_par=1.7e-3, sh_order=14):
     r""" The NODDI microstructure model [1] using using slow-exchange for the
-    extra-axonal compartment according to [2], without isotropic compartment. 
+    extra-axonal compartment according to [2], without isotropic compartment.
 
     Parameters
     ----------

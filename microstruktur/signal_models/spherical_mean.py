@@ -8,7 +8,7 @@ def spherical_mean_stick(bvalue, lambda_par):
     """ Spherical mean of the signal attenuation of the Stick model [1] for a
     given b-value and parallel diffusivity. Analytic expression from Eq. (7)
     in [2].
-    
+
     Parameters
     ----------
     bvalue : float,

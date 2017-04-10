@@ -6,7 +6,7 @@ def kernel_sh_to_rh(sh_coef, sh_order):
     """Conversion from spherical harmonics to rotational (zonal) harmonics.
     Takes spherical harmonics Ymn with degree (n) and order (m), and returns
     Ym0.
-    
+
     Parameters
     ----------
     sh_coef : array, shape (sh_coef)
@@ -46,7 +46,7 @@ def sh_convolution(f_distribution_sh, kernel_rh, sh_order):
     -------
     f_kernel_convolved : array, shape (sh_coef)
         spherical harmonic coefficients of the convolved kernel and
-        distribution. 
+        distribution.
     """
     m, n = sph_harm_ind_list(sh_order)
     lambda_ = np.sqrt((4 * np.pi) / (2 * n + 1))
