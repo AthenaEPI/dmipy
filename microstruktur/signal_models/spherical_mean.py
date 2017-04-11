@@ -68,6 +68,40 @@ def spherical_mean_zeppelin(bvalue, lambda_par, lambda_perp):
     return E_mean
 
 
+def estimate_spherical_mean_multi_shell(E_attenuation, bvecs, b_shell_indices,
+                                        sh_order=6):
+    r""" Estimates the spherical mean per shell of multi-shell acquisition.
+    Uses spherical harmonics to do the estimation.
+
+    Parameters
+    ----------
+    E_attenuation : array, shape (N),
+        signal attenuation.
+    bvecs : array, shape (N x 3),
+        x, y, z components of cartesian unit b-vectors.
+    b_shell_indices : array, shape (N)
+        array of integers indicating which measurement belongs to which shell.
+        0 should be used for b0 measurements, 1 for the lowest b-value shell,
+        2 for the second lowest etc.
+
+    Returns
+    -------
+    E_mean : array, shape (number of b-shells)
+        spherical means of the signal attenuation per shell of the. For
+        example, if there are three shells in the acquisition then the array
+        is of length 3.
+    """
+    E_mean = np.zeros(b_shell_indices.max())
+    for b_shell_index in np.arange(1, b_shell_indices.max() + 1):  # per shell
+        shell_mask = b_shell_indices == b_shell_index
+        bvecs_shell = bvecs[shell_mask]
+        E_shell = E_attenuation[shell_mask]
+        E_mean[b_shell_index - 1] = estimate_spherical_mean_shell(E_shell,
+                                                                  bvecs_shell,
+                                                                  sh_order)
+    return E_mean
+
+
 def estimate_spherical_mean_shell(E_shell, bvecs_shell, sh_order=6):
     """ Estimates spherical mean of a shell of measurements using
     spherical harmonics.
