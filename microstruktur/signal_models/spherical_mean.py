@@ -68,7 +68,7 @@ def spherical_mean_zeppelin(bvalue, lambda_par, lambda_perp):
     return E_mean
 
 
-def estimated_spherical_mean_shell(E_shell, bvecs_shell, sh_order=6):
+def estimate_spherical_mean_shell(E_shell, bvecs_shell, sh_order=6):
     """ Estimates spherical mean of a shell of measurements using
     spherical harmonics.
     The spherical mean is contained only in the Y00 spherical harmonic, as long

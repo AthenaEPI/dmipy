@@ -63,14 +63,15 @@ def perpendicular_vector(v):
         If v is unit vector, v_perp is a Cartesian unit vector perpendicular
         to v.
     """
-    if v[1] == 0 and v[2] == 0:
+    v_ = v * 1.
+    if v_[1] == 0 and v_[2] == 0:
         if v[0] == 0:
             raise ValueError('zero vector')
         else:
-            v_perp = np.cross(v, [0, 1, 0])
+            v_perp = np.cross(v_, [0, 1, 0])
             v_perp /= np.linalg.norm(v_perp)
             return v_perp
-    v_perp = np.cross(v, [1, 0, 0])
+    v_perp = np.cross(v_, [1, 0, 0])
     v_perp /= np.linalg.norm(v_perp)
     return v_perp
 
