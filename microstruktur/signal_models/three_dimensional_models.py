@@ -1,17 +1,190 @@
-from .free_diffusion import free_diffusion_attenuation
-from . import CONSTANTS
+'''
+Document Module
+'''
+import pkg_resources
+from os.path import join
+
 import numpy as np
 from scipy import stats
 from scipy import integrate
 from scipy import special
 from dipy.core.geometry import cart2sphere, sphere2cart
 from dipy.reconst.shm import real_sym_sh_mrtrix
-from microstruktur.signal_models.spherical_convolution import kernel_sh_to_rh
 
 from . import utils
+from .free_diffusion import free_diffusion_attenuation
+from . import CONSTANTS
+from ..signal_models.spherical_convolution import kernel_sh_to_rh
 
 SPHERICAL_INTEGRATOR = utils.SphericalIntegrator()
-gradient_path = '/user/rfick/home/microstruktur/microstruktur/gradient_tables/'
+GRADIENT_TABLES_PATH = pkg_resources.resource_filename(
+    'microstruktur', 'data/gradient_tables'
+)
+SPHERE_CARTESIAN = np.loadtxt(
+    join(GRADIENT_TABLES_PATH, 'sphere_with_cap.txt')
+)
+SPHERE_SPHERICAL = np.hstack(cart2sphere(*SPHERE_CARTESIAN.T))
+
+
+class MicrostrukturModel:
+    @property
+    def parameter_ranges(self):
+        return self._parameter_ranges.copy()
+
+    @property
+    def parameter_constraints(self):
+        return self._parameter_constraints()
+
+
+class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
+    def __init__(
+        self, models, partial_volumes=None,
+        parameter_links={}
+    ):
+        if partial_volumes is None:
+            partial_volumes = np.repeat(1 / len(models), len(models))
+
+        model_counts = {}
+        self.model_names = []
+        self.models = models
+        self.partial_volumes = partial_volumes
+
+        for model in models:
+            if model.__class__ not in model_counts:
+                model_counts[model.__class__] = 1
+            else:
+                model_counts[model.__class__] += 1
+
+            self.model_names.append(
+                '{}_{}_'.format(
+                    model.__class__.__name__,
+                    model_counts[model.__class__]
+                )
+            )
+
+        self._parameter_ranges = {
+            model_name + k: v
+            for model, model_name in zip(self.models, self.model_names)
+            for k, v in model.parameter_ranges.items()
+        }
+
+        self.parameter_defaults = {}
+        for model_name, model in zip(self.model_names, self.models):
+            for parameter in model.parameter_ranges:
+                self.parameter_defaults[model_name + parameter] = getattr(
+                    model, parameter
+                )
+
+    def __call__(self, bvals, n, **kwargs):
+        values = 0
+        for model_name, model, partial_volume in zip(
+            self.model_names, self.models, self.partial_volumes
+        ):
+            parameters = {}
+            for parameter in model.parameter_ranges:
+                parameter_name = '{}{}'.format(model_name, parameter)
+                parameters[parameter] = kwargs.get(
+                    parameter_name, self.parameter_defaults[parameter_name]
+                )
+            values = values + partial_volume * model(bvals, n, **parameters)
+        return values
+
+
+class I1Stick(MicrostrukturModel):
+    r""" The Stick model [1] - a cylinder with zero radius - for
+    intra-axonal diffusion.
+
+    Parameters
+    ----------
+    bvals : float or array, shape(N),
+        b-values in s/mm^2.
+    n : array, shape(N x 3),
+        b-vectors in cartesian coordinates.
+    mu : array, shape(3),
+        unit vector representing orientation of the Stick.
+    lambda_par : float,
+        parallel diffusivity in mm^2/s.
+
+
+    References
+    ----------
+    .. [1] Behrens et al.
+           "Characterization and propagation of uncertainty in
+            diffusion-weighted MR imaging"
+           Magnetic Resonance in Medicine (2003)
+    """
+
+    _parameter_ranges = {
+        'mu': ([0, -np.pi], [np.pi, np.pi]),
+        'lambda_par': (0, np.inf)
+    }
+
+    def __init__(self, mu=None, lambda_par=None):
+        self.mu = mu
+        self.lambda_par = lambda_par
+
+    def __call__(self, bvals, n, **kwargs):
+        r'''
+        Parameters
+        ----------
+        bvals : float or array, shape(N),
+            b-values in s/mm^2.
+        n : array, shape(N x 3),
+            b-vectors in cartesian coordinates.
+
+        Returns
+        -------
+        attenuation : float or array, shape(N),
+            signal attenuation
+        '''
+
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        mu = kwargs.get('mu', self.mu)
+        x, y, z = sphere2cart(1, mu[0], mu[1])
+        mu = np.r_[float(x), float(y), float(z)]
+        E_stick = np.exp(-bvals * lambda_par * np.dot(n, mu) ** 2)
+        return E_stick
+
+    def rotational_harmonics_representation(self, bval, rh_order=14, **kwargs):
+        r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
+        Axis aligned with z-axis to be used as kernelfor spherical
+        convolution.
+
+        Parameters
+        ----------
+        bval : float,
+            b-value in s/mm^2.
+        lambda_par : float,
+            parallel diffusivity in mm^2/s.
+        sh_order : int,
+            maximum spherical harmonics order to be used in the approximation.
+            set to 14 to conform with order used for watson distribution.
+
+        Returns
+        -------
+        rh : array,
+            rotational harmonics of stick model aligned with z-axis.
+
+        References
+        ----------
+        .. [1] Behrens et al.
+               "Characterization and propagation of uncertainty in
+                diffusion-weighted MR imaging"
+               Magnetic Resonance in Medicine (2003)
+        """
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+
+        E_stick_sf = self(
+            np.r_[bval], SPHERE_CARTESIAN,
+            mu=np.r_[0., 0.], lambda_par=lambda_par
+        )
+        sh_mat = real_sym_sh_mrtrix(
+            rh_order, SPHERE_SPHERICAL[:, 1], SPHERE_SPHERICAL[:, 0]
+        )[0]
+        sh_mat_inv = np.linalg.pinv(sh_mat)
+        sh = np.dot(sh_mat_inv, E_stick_sf)
+        rh = kernel_sh_to_rh(sh, rh_order)
+        return rh
 
 
 def I1_stick(bvals, n, mu, lambda_par):
@@ -249,7 +422,7 @@ def SD3_watson_sh(mu, kappa, sh_order=14):
     """
     _, theta_mu, phi_mu = cart2sphere(mu[0], mu[1], mu[2])
     R = utils.rotation_matrix_001_to_xyz(mu[0], mu[1], mu[2])
-    vertices = np.loadtxt(gradient_path + 'sphere_with_cap.txt')
+    vertices = np.loadtxt(join(GRADIENT_TABLES_PATH, 'sphere_with_cap.txt'))
     vertices_rotated = np.dot(vertices, R.T)
     _, theta_rotated, phi_rotated = cart2sphere(vertices_rotated[:, 0],
                                                 vertices_rotated[:, 1],
@@ -261,6 +434,7 @@ def SD3_watson_sh(mu, kappa, sh_order=14):
     sh_mat_inv = np.linalg.pinv(sh_mat)
     watson_sh = np.dot(sh_mat_inv, watson_sf)
     return watson_sh
+
 
 def SD2_bingham_spherical_sh(theta, phi, psi, kappa, beta, sh_order=14):
     r""" The Bingham spherical distribution model in spherical harmonics
@@ -303,7 +477,7 @@ def SD2_bingham_spherical_sh(theta, phi, psi, kappa, beta, sh_order=14):
     """
     x_, y_, z_ = sphere2cart(1., theta, phi)
     R = utils.rotation_matrix_001_to_xyz(float(x_), float(y_), float(z_))
-    vertices = np.loadtxt(gradient_path + 'sphere_with_cap.txt')
+    vertices = np.loadtxt(join(GRADIENT_TABLES_PATH, 'sphere_with_cap.txt'))
     vertices_rotated = np.dot(vertices, R.T)
     _, theta_rotated, phi_rotated = cart2sphere(vertices_rotated[:, 0],
                                                 vertices_rotated[:, 1],
@@ -346,7 +520,7 @@ def I1_stick_rh(bval, lambda_par, sh_order=14):
             diffusion-weighted MR imaging"
            Magnetic Resonance in Medicine (2003)
     """
-    vertices = np.loadtxt(gradient_path + 'sphere_with_cap.txt')
+    vertices = np.loadtxt(join(GRADIENT_TABLES_PATH, 'sphere_with_cap.txt'))
     E_stick_sf = I1_stick(bval, vertices, np.r_[0., 0., 1.], lambda_par)
     _, theta_, phi_ = cart2sphere(vertices[:, 0],
                                   vertices[:, 1],
@@ -385,7 +559,7 @@ def E4_zeppelin_rh(bval, lambda_par, lambda_perp, sh_order=14):
            "Compartment models of the diffusion MR signal in brain white
             matter: a taxonomy and comparison". NeuroImage (2012)
     """
-    vertices = np.loadtxt(gradient_path + 'sphere_with_cap.txt')
+    vertices = np.loadtxt(join(GRADIENT_TABLES_PATH, 'sphere_with_cap.txt'))
     E_zeppelin_sf = E4_zeppelin(bval, vertices, np.r_[0., 0., 1.],
                                 lambda_par, lambda_perp)
     _, theta_, phi_ = cart2sphere(vertices[:, 0],
