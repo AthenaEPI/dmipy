@@ -4,7 +4,7 @@ import numpy as np
 from scipy import stats
 from scipy import integrate
 from scipy import special
-from dipy.core.geometry import cart2sphere
+from dipy.core.geometry import cart2sphere, sphere2cart
 from dipy.reconst.shm import real_sym_sh_mrtrix
 from microstruktur.signal_models.spherical_convolution import kernel_sh_to_rh
 
@@ -261,6 +261,63 @@ def SD3_watson_sh(mu, kappa, sh_order=14):
     sh_mat_inv = np.linalg.pinv(sh_mat)
     watson_sh = np.dot(sh_mat_inv, watson_sf)
     return watson_sh
+
+def SD2_bingham_spherical_sh(theta, phi, psi, kappa, beta, sh_order=14):
+    r""" The Bingham spherical distribution model in spherical harmonics
+    [1, 2].
+
+    Parameters
+    ----------
+    theta : float,
+        inclination of polar angle of main angle mu [0, pi].
+    phi : float,
+        polar angle of main angle mu [-pi, pi].
+    psi : float,
+        angle in radians of the bingham distribution around mu [0, pi].
+    kappa : float,
+        first concentration parameter of the Bingham distribution.
+        defined as kappa = kappa1 - kappa3.
+    beta : float,
+        second concentration parameter of the Bingham distribution.
+        defined as beta = kappa2 - kappa3. Bingham becomes Watson when beta=0.
+    sh_order : int,
+        maximum spherical harmonics order to be used in the approximation.
+        we found 14 to be sufficient to represent concentrations of kappa=17.
+
+    Returns
+    -------
+    bingham_sh : array,
+        spherical harmonics of Watson probability density.
+
+    References
+    ----------
+    .. [1] Kaden et al.
+           "Parametric spherical deconvolution: inferring anatomical
+            connectivity using diffusion MR imaging". NeuroImage (2007)
+    .. [2] Sotiropoulos et al.
+           "Ball and rackets: inferring fiber fanning from
+            diffusion-weighted MRI". NeuroImage (2012)
+    .. [3] Tariq et al.
+           "Bingham--NODDI: Mapping anisotropic orientation dispersion of
+            neurites using diffusion MRI". NeuroImage (2016)
+    """
+    x_, y_, z_ = sphere2cart(1., theta, phi)
+    R = utils.rotation_matrix_001_to_xyz(float(x_), float(y_), float(z_))
+    vertices = np.loadtxt(gradient_path + 'sphere_with_cap.txt')
+    vertices_rotated = np.dot(vertices, R.T)
+    _, theta_rotated, phi_rotated = cart2sphere(vertices_rotated[:, 0],
+                                                vertices_rotated[:, 1],
+                                                vertices_rotated[:, 2])
+
+    bingham_sf = SD2_bingham_spherical(vertices_rotated, theta, phi, psi,
+                                       kappa, beta)
+
+    sh_mat = real_sym_sh_mrtrix(sh_order, theta_rotated, phi_rotated)[0]
+    sh_mat_inv = np.linalg.pinv(sh_mat)
+    bingham_sh = np.dot(sh_mat_inv, bingham_sf)
+    # normalization with spherical mean as there is still the normalization bug
+    bingham_sh /= (bingham_sh[0] * (2 * np.sqrt(np.pi)))
+    return bingham_sh
 
 
 def I1_stick_rh(bval, lambda_par, sh_order=14):

@@ -1,11 +1,26 @@
-from dipy.reconst.shm import real_sym_sh_mrtrix, cart2sphere
+from dipy.reconst.shm import real_sym_sh_mrtrix, cart2sphere, sphere2cart
 from microstruktur.signal_models.three_dimensional_models import (
                 I1_stick, I1_stick_rh, E3_ball, E4_zeppelin_rh, SD3_watson_sh)
 from microstruktur.signal_models.spherical_convolution import sh_convolution
 from microstruktur.signal_models.utils import T1_tortuosity
 from microstruktur.signal_models.spherical_mean import (
                                 spherical_mean_stick, spherical_mean_zeppelin)
+from .constants import CONSTANTS
 import numpy as np
+
+# instra-axonal diffusion constant in mm^2/s
+intra_axonal_diffusivity = CONSTANTS['water_in_axons_diffusion_constant'] * 1e6
+
+
+def ball_and_stick_spherical(bvals, bvecs, f_intra, theta, phi, lambda_par,
+                         lambda_iso):
+    r"""Wrapper function for the Cartesian ball_and_stick model. This function
+    converts the euler angles theta [0, pi] and theta [-pi, pi] to [x, y, z]
+    and returns the Cartesian ball_and_stick function.
+    """
+    x, y, z = sphere2cart(theta, phi)
+    mu = np.r_[x, y, z]
+    return ball_and_stick(bvals, bvecs, f_intra, mu, lambda_par, lambda_iso)
 
 
 def ball_and_stick(bvals, bvecs, f_intra, mu, lambda_par, lambda_iso):
@@ -22,8 +37,7 @@ def ball_and_stick(bvals, bvecs, f_intra, mu, lambda_par, lambda_iso):
     f_intra : float,
         intra-axonal volume fraction [0 - 1].
     mu : array, shape (3),
-        Cartesian unit vector representing the axis of the Watson distribution,
-        in turn describing the orientation of the estimated axon bundle.
+        Cartesian unit vector representing the axis of the Stick model.
     lambda_par : float,
         parallel diffusivity in mm^2/s. Preset to 1.7e-3 according to [1].
     lambda_iso : float,
@@ -163,8 +177,22 @@ def ball_and_stick(bvals, bvecs, f_intra, mu, lambda_par, lambda_iso):
 #    return E
 
 
+def noddi_watson_kaden_spherical(bvals, bvecs, b_shell_indices, f_intra, theta,
+                                 phi, kappa,
+                                 lambda_par=intra_axonal_diffusivity,
+                                 sh_order=14):
+    r"""Wrapper function for the Cartesian noddi_watson_kaden model. This
+    function converts the euler angles theta [0, pi] and theta [-pi, pi] to
+    [x, y, z] and returns the Cartesian noddi_watson_kaden function.
+    """
+    x, y, z = sphere2cart(theta, phi)
+    mu = np.r_[x, y, z]
+    return noddi_watson_kaden(bvals, bvecs, b_shell_indices, f_intra, mu, kappa,
+                              lambda_par, sh_order)
+
+
 def noddi_watson_kaden(bvals, bvecs, b_shell_indices, f_intra, mu, kappa,
-                       lambda_par=1.7e-3, sh_order=14):
+                       lambda_par=intra_axonal_diffusivity, sh_order=14):
     r""" The NODDI microstructure model [1] using using slow-exchange for the
     extra-axonal compartment according to [2], without isotropic compartment.
 

@@ -112,7 +112,7 @@ def rotation_matrix_100_to_theta_phi(theta, phi):
         Rotation matrix.
     """
     x, y, z = sphere2cart(1., theta, phi)
-    return rotation_matrix_100_to_xyz(x, y, z)
+    return rotation_matrix_100_to_xyz(float(x), float(y), float(z))
 
 
 def rotation_matrix_100_to_xyz(x, y, z):
