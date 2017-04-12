@@ -54,6 +54,7 @@ class MicrostrukturModel:
             parameters[parameter] = parameter_vector[
                 current_pos: current_pos + card
             ]
+            current_pos += card
         return parameters
 
     def parameters_to_parameter_vector(self, **parameters):
