@@ -3,6 +3,7 @@ Document Module
 '''
 import pkg_resources
 from os.path import join
+from collections import OrderedDict
 
 import numpy as np
 from scipy import stats
@@ -34,6 +35,53 @@ class MicrostrukturModel:
     @property
     def parameter_constraints(self):
         return self._parameter_constraints()
+
+    @property
+    def parameter_cardinality(self):
+        if hasattr(self, '_parameter_cardinality'):
+            return self._parameter_cardinality
+
+        self._parameter_cardinality = OrderedDict({
+            k: len(np.atleast_2d(self.parameter_ranges[k]))
+            for k in sorted(self.parameter_ranges)
+        })
+        return self._parameter_cardinality
+
+    def parameter_vector_to_parameters(self, parameter_vector):
+        parameters = {}
+        current_pos = 0
+        for parameter, card in self.parameter_cardinality.items():
+            parameters[parameter] = parameter_vector[
+                current_pos: current_pos + card
+            ]
+        return parameters
+
+    def parameters_to_parameter_vector(self, **parameters):
+        parameter_vector = []
+        for parameter, card in self.parameter_cardinality.items():
+            parameter_vector.append(parameters[parameter])
+        return np.hstack(parameter_vector)
+
+    def objective_function(
+        self, parameter_vector,
+        bvals=None, n=None, attenuation=None
+    ):
+        parameters = self.parameter_vector_to_parameters(parameter_vector)
+        return np.sum((
+            self(bvals, n, **parameters) - attenuation
+        ) ** 2) / len(attenuation)
+
+    @property
+    def bounds_for_optimization(self):
+        bounds = []
+        for parameter, card in self.parameter_cardinality.items():
+            range_ = self.parameter_ranges[parameter]
+            if card == 1:
+                bounds.append(range_)
+            else:
+                for i in range(card):
+                    bounds.append((range_[0][i], range_[1][i]))
+        return bounds
 
 
 class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
