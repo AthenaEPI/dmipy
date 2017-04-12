@@ -63,14 +63,15 @@ def perpendicular_vector(v):
         If v is unit vector, v_perp is a Cartesian unit vector perpendicular
         to v.
     """
-    if v[1] == 0 and v[2] == 0:
+    v_ = v * 1.
+    if v_[1] == 0 and v_[2] == 0:
         if v[0] == 0:
             raise ValueError('zero vector')
         else:
-            v_perp = np.cross(v, [0, 1, 0])
+            v_perp = np.cross(v_, [0, 1, 0])
             v_perp /= np.linalg.norm(v_perp)
             return v_perp
-    v_perp = np.cross(v, [1, 0, 0])
+    v_perp = np.cross(v_, [1, 0, 0])
     v_perp /= np.linalg.norm(v_perp)
     return v_perp
 
@@ -111,7 +112,7 @@ def rotation_matrix_100_to_theta_phi(theta, phi):
         Rotation matrix.
     """
     x, y, z = sphere2cart(1., theta, phi)
-    return rotation_matrix_100_to_xyz(x, y, z)
+    return rotation_matrix_100_to_xyz(float(x), float(y), float(z))
 
 
 def rotation_matrix_100_to_xyz(x, y, z):
