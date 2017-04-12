@@ -1,9 +1,11 @@
 '''
 Document Module
 '''
+from __future__ import division
 import pkg_resources
 from os.path import join
 from collections import OrderedDict
+from itertools import chain
 
 import numpy as np
 from scipy import stats
@@ -88,15 +90,16 @@ class MicrostrukturModel:
 class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
     def __init__(
         self, models, partial_volumes=None,
-        parameter_links={}
+        parameter_links=[], optimise_partial_volumes=False
     ):
         if partial_volumes is None:
-            partial_volumes = np.repeat(1 / len(models), len(models))
+            partial_volumes = np.repeat(1 / len(models), len(models) - 1)
 
         model_counts = {}
         self.model_names = []
         self.models = models
         self.partial_volumes = partial_volumes
+        self.optimise_partial_volumes = optimise_partial_volumes
 
         for model in models:
             if model.__class__ not in model_counts:
@@ -117,6 +120,11 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
             for k, v in model.parameter_ranges.items()
         }
 
+        self._parameter_map = {
+            model_name + k: (model, k)
+            for model, model_name in zip(self.models, self.model_names)
+            for k in model.parameter_ranges
+        }
         self.parameter_defaults = {}
         for model_name, model in zip(self.model_names, self.models):
             for parameter in model.parameter_ranges:
@@ -124,18 +132,104 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
                     model, parameter
                 )
 
+        self._parameter_cardinality = self.parameter_cardinality
+        if self.optimise_partial_volumes:
+            self.partial_volume_names = [
+                'partial_volume_{}'.format(i)
+                for i in range(len(self.partial_volumes))
+            ]
+
+            for i, partial_volume_name in enumerate(self.partial_volume_names):
+                self._parameter_ranges[partial_volume_name] = (0, 1)
+                self.parameter_defaults[partial_volume_name] = (
+                    1 / (len(self.partial_volumes) + 1 - i)
+                )
+                self._parameter_map[partial_volume_name] = (
+                    None, partial_volume_name
+                )
+                self._parameter_cardinality[partial_volume_name] = 1
+
+        self._inverted_parameter_map = {
+            v: k for k, v in self._parameter_map.items()
+        }
+
+        self.parameter_links = parameter_links
+        for i, parameter_function in enumerate(parameter_links):
+            parameter_model, parameter_name, parameter_function, arguments = \
+                parameter_function
+
+            if (
+                (parameter_model, parameter_name)
+                not in self._inverted_parameter_map
+            ):
+                raise ValueError(
+                    "Parameter function {} doesn't exist".format(i)
+                )
+
+            parameter_name = self._inverted_parameter_map[
+                (parameter_model, parameter_name)
+            ]
+
+            del self._parameter_ranges[parameter_name]
+            del self.parameter_defaults[parameter_name]
+            del self._parameter_cardinality[parameter_name]
+
+    def add_linked_parameters_to_parameters(self, parameters):
+        if len(self.parameter_links) == 0:
+            return parameters
+        parameters = parameters.copy()
+        for parameter in self.parameter_links:
+            parameter_model, parameter_name, parameter_function, arguments = \
+                parameter
+            parameter_name = self._inverted_parameter_map[
+                (parameter_model, parameter_name)
+            ]
+            argument_values = []
+            for argument in arguments:
+                argument_name = self._inverted_parameter_map[argument]
+                argument_values.append(parameters.get(
+                    argument_name,
+                    self.parameter_defaults[argument_name]
+                ))
+
+            parameters[parameter_name] = parameter_function(*argument_values)
+        return parameters
+
     def __call__(self, bvals, n, **kwargs):
         values = 0
+        kwargs = self.add_linked_parameters_to_parameters(
+            kwargs
+        )
+
+        accumulated_partial_volume = 1
+        if self.optimise_partial_volumes:
+            partial_volumes = [
+                kwargs[p] for p in self.partial_volume_names
+            ]
+        else:
+            partial_volumes = self.partial_volumes
+
         for model_name, model, partial_volume in zip(
-            self.model_names, self.models, self.partial_volumes
+            self.model_names, self.models,
+            chain(partial_volumes, (None,))
         ):
             parameters = {}
             for parameter in model.parameter_ranges:
-                parameter_name = '{}{}'.format(model_name, parameter)
+                parameter_name = self._inverted_parameter_map[
+                    (model, parameter)
+                ]
                 parameters[parameter] = kwargs.get(
-                    parameter_name, self.parameter_defaults[parameter_name]
+                    parameter_name, self.parameter_defaults.get(parameter_name)
                 )
-            values = values + partial_volume * model(bvals, n, **parameters)
+            current_partial_volume = accumulated_partial_volume
+            if partial_volume is not None:
+                current_partial_volume *= partial_volume
+                accumulated_partial_volume *= (1 - partial_volume)
+
+            values = (
+                values +
+                current_partial_volume * model(bvals, n, **parameters)
+            )
         return values
 
 
