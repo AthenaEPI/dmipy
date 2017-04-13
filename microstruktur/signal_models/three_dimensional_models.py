@@ -8,6 +8,7 @@ from collections import OrderedDict
 from itertools import chain
 
 import numpy as np
+from scipy.special import erf
 from scipy import stats
 from scipy import integrate
 from scipy import special
@@ -26,7 +27,7 @@ GRADIENT_TABLES_PATH = pkg_resources.resource_filename(
 SPHERE_CARTESIAN = np.loadtxt(
     join(GRADIENT_TABLES_PATH, 'sphere_with_cap.txt')
 )
-SPHERE_SPHERICAL = np.hstack(cart2sphere(*SPHERE_CARTESIAN.T))
+SPHERE_SPHERICAL = np.vstack(cart2sphere(*SPHERE_CARTESIAN.T))
 
 
 class MicrostrukturModel:
@@ -307,13 +308,6 @@ class I1Stick(MicrostrukturModel):
         -------
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
-
-        References
-        ----------
-        .. [1] Behrens et al.
-               "Characterization and propagation of uncertainty in
-                diffusion-weighted MR imaging"
-               Magnetic Resonance in Medicine (2003)
         """
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
 
@@ -322,46 +316,42 @@ class I1Stick(MicrostrukturModel):
             mu=np.r_[0., 0.], lambda_par=lambda_par
         )
         sh_mat = real_sym_sh_mrtrix(
-            rh_order, SPHERE_SPHERICAL[:, 1], SPHERE_SPHERICAL[:, 0]
+            rh_order, SPHERE_SPHERICAL[1], SPHERE_SPHERICAL[2]
         )[0]
         sh_mat_inv = np.linalg.pinv(sh_mat)
         sh = np.dot(sh_mat_inv, E_stick_sf)
         rh = kernel_sh_to_rh(sh, rh_order)
         return rh
 
+    def spherical_mean(self, bval, **kwargs):
+        """ Spherical mean of the signal attenuation of the Stick model for
+        a given b-value and parallel diffusivity. Analytic expression from
+        Eq. (7) in [1].
 
-def I1_stick(bvals, n, mu, lambda_par):
-    r""" The Stick model [1] - a cylinder with zero radius - for
-    intra-axonal diffusion.
+        Parameters
+        ----------
+        bval : float,
+            b-value in s/mm^2.
+        lambda_par : float,
+            parallel diffusivity in mm^2/s.
 
-    Parameters
-    ----------
-    bvals : float or array, shape(N),
-        b-values in s/mm^2.
-    n : array, shape(N x 3),
-        b-vectors in cartesian coordinates.
-    mu : array, shape(3),
-        unit vector representing orientation of the Stick.
-    lambda_par : float,
-        parallel diffusivity in mm^2/s.
+        Returns
+        -------
+        E_mean : float,
+            spherical mean of the Stick model.
 
-    Returns
-    -------
-    E_stick : float or array, shape(N),
-        signal attenuation
-
-    References
-    ----------
-    .. [1] Behrens et al.
-           "Characterization and propagation of uncertainty in
-            diffusion-weighted MR imaging"
-           Magnetic Resonance in Medicine (2003)
-    """
-    E_stick = np.exp(-bvals * lambda_par * np.dot(n, mu) ** 2)
-    return E_stick
+        References
+        ----------
+        .. [1] Kaden et al. "Multi-compartment microscopic diffusion imaging."
+           NeuroImage 139 (2016): 346-359.
+        """
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        E_mean = ((np.sqrt(np.pi) * erf(np.sqrt(bval * lambda_par))) /
+                  (2 * np.sqrt(bval * lambda_par)))
+        return E_mean
 
 
-def E3_ball(bvals, lambda_iso):
+class E3Ball(MicrostrukturModel):
     r""" The Ball model [1] - an isotropic Tensor with one diffusivity.
 
     Parameters
@@ -371,11 +361,6 @@ def E3_ball(bvals, lambda_iso):
     lambda_iso : float,
         isotropic diffusivity in mm^2/s.
 
-    Returns
-    -------
-    E_ball : float or array, shape(N),
-        signal attenuation
-
     References
     ----------
     .. [1] Behrens et al.
@@ -383,11 +368,33 @@ def E3_ball(bvals, lambda_iso):
             diffusion-weighted MR imaging"
            Magnetic Resonance in Medicine (2003)
     """
-    E_ball = np.exp(-bvals * lambda_iso)
-    return E_ball
+
+    _parameter_ranges = {
+        'lambda_iso': (0, np.inf)
+    }
+
+    def __init__(self, lambda_iso=None):
+        self.lambda_iso = lambda_iso
+
+    def __call__(self, bvals, **kwargs):
+        r'''
+        Parameters
+        ----------
+        bvals : float or array, shape(N),
+            b-values in s/mm^2.
+
+        Returns
+        -------
+        attenuation : float or array, shape(N),
+            signal attenuation
+        '''
+
+        lambda_iso = kwargs.get('lambda_iso', self.lambda_iso)
+        E_ball = np.exp(-bvals * lambda_iso)
+        return E_ball
 
 
-def E4_zeppelin(bvals, n, mu, lambda_par, lambda_perp):
+class E4Zeppelin(MicrostrukturModel):
     r""" The Zeppelin model [1] - an axially symmetric Tensor - for
     extra-axonal diffusion.
 
@@ -415,41 +422,228 @@ def E4_zeppelin(bvals, n, mu, lambda_par, lambda_perp):
            "Compartment models of the diffusion MR signal in brain white
             matter: a taxonomy and comparison". NeuroImage (2012)
     """
-    D_h = np.diag(np.r_[lambda_par, lambda_perp, lambda_perp])
-    R1 = mu
-    R2 = utils.perpendicular_vector(R1)
-    R3 = np.cross(R1, R2)
-    R = np.c_[R1, R2, R3]
-    D = np.dot(np.dot(R, D_h), R.T)
 
-    dim_b = np.ndim(bvals)
-    dim_n = np.ndim(n)
+    _parameter_ranges = {
+        'mu': ([0, -np.pi], [np.pi, np.pi]),
+        'lambda_par': (0, np.inf),
+        'lambda_perp': (0, np.inf)
+    }
 
-    if dim_n == 1:  # if there is only one sampled orientation
-        E_zeppelin = np.exp(-bvals * np.dot(n, np.dot(n, D)))
-    elif dim_b == 0 and dim_n == 2:  # one b-value on sphere
-        E_zeppelin = np.zeros(n.shape[0])
-        for i in range(n.shape[0]):
-            E_zeppelin[i] = np.exp(-bvals * np.dot(n[i], np.dot(n[i], D)))
-    elif dim_b == 1 and dim_n == 2:  # many b-values and orientations
-        E_zeppelin = np.zeros(n.shape[0])
-        for i in range(n.shape[0]):
-            E_zeppelin[i] = np.exp(-bvals[i] * np.dot(n[i], np.dot(n[i], D)))
-    return E_zeppelin
+    def __init__(self, mu=None, lambda_par=None, lambda_perp=None):
+        self.mu = mu
+        self.lambda_par = lambda_par
+        self.lambda_perp = lambda_perp
+
+    def __call__(self, bvals, n, **kwargs):
+        r'''
+        Parameters
+        ----------
+        bvals : float or array, shape(N),
+            b-values in s/mm^2.
+        n : array, shape(N x 3),
+            b-vectors in cartesian coordinates.
+
+        Returns
+        -------
+        attenuation : float or array, shape(N),
+            signal attenuation
+        '''
+
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
+        mu = kwargs.get('mu', self.mu)
+        x, y, z = sphere2cart(1, mu[0], mu[1])
+        mu = np.r_[float(x), float(y), float(z)]
+
+        D_h = np.diag(np.r_[lambda_par, lambda_perp, lambda_perp])
+        R1 = mu
+        R2 = utils.perpendicular_vector(R1)
+        R3 = np.cross(R1, R2)
+        R = np.c_[R1, R2, R3]
+        D = np.dot(np.dot(R, D_h), R.T)
+
+        dim_b = np.ndim(bvals)
+        dim_n = np.ndim(n)
+
+        if dim_n == 1:  # if there is only one sampled orientation
+            E_zeppelin = np.exp(-bvals * np.dot(n, np.dot(n, D)))
+        elif dim_b == 0 and dim_n == 2:  # one b-value on sphere
+            E_zeppelin = np.zeros(n.shape[0])
+            for i in range(n.shape[0]):
+                E_zeppelin[i] = np.exp(-bvals * np.dot(n[i], np.dot(n[i], D)))
+        elif dim_b == 1 and dim_n == 2:  # many b-values and orientations
+            E_zeppelin = np.zeros(n.shape[0])
+            for i in range(n.shape[0]):
+                E_zeppelin[i] = np.exp(-bvals[i] * np.dot(n[i],
+                                                          np.dot(n[i], D)))
+        return E_zeppelin
+
+    def rotational_harmonics_representation(self, bval, rh_order=14, **kwargs):
+        r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
+        Axis aligned with z-axis to be used as kernelfor spherical
+        convolution.
+
+        Parameters
+        ----------
+        bval : float,
+            b-value in s/mm^2.
+        lambda_par : float,
+            parallel diffusivity in mm^2/s.
+        lambda_perp : float,
+            perpendicular diffusivity in mm^2/s.
+        sh_order : int,
+            maximum spherical harmonics order to be used in the approximation.
+            set to 14 to conform with order used for watson distribution.
+
+        Returns
+        -------
+        rh : array,
+            rotational harmonics of stick model aligned with z-axis.
+        """
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
+
+        E_zeppelin_sf = self(
+            bval, SPHERE_CARTESIAN,
+            mu=np.r_[0., 0.], lambda_par=lambda_par, lambda_perp=lambda_perp
+        )
+
+        sh_mat = real_sym_sh_mrtrix(
+            rh_order, SPHERE_SPHERICAL[1], SPHERE_SPHERICAL[2]
+        )[0]
+        sh_mat_inv = np.linalg.pinv(sh_mat)
+        sh = np.dot(sh_mat_inv, E_zeppelin_sf)
+        rh = kernel_sh_to_rh(sh, rh_order)
+        return rh
+
+    def spherical_mean(self, bval, **kwargs):
+        """ Spherical mean of the signal attenuation of the Zeppelin model
+        for a given b-value and parallel and perpendicular diffusivity.
+        Analytic expression from Eq. (8) in [1]).
+
+        Parameters
+        ----------
+        bval : float,
+            b-value in s/mm^2.
+        lambda_par : float,
+            parallel diffusivity in mm^2/s.
+        lambda_perp : float,
+            perpendicular diffusivity in mm^2/s.
+
+        Returns
+        -------
+        E_mean : float,
+            spherical mean of the Zeppelin model.
+
+        References
+        ----------
+        .. [1] Kaden et al. "Multi-compartment microscopic diffusion imaging."
+            NeuroImage 139 (2016): 346-359.
+        """
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
+
+        exp_bl = np.exp(-bval * lambda_perp)
+        sqrt_bl = np.sqrt(bval * (lambda_par - lambda_perp))
+        E_mean = exp_bl * np.sqrt(np.pi) * erf(sqrt_bl) / (2 * sqrt_bl)
+        return E_mean
 
 
-def SD2_bingham_cartesian(n, mu, psi, kappa, beta):
-    r""" Cartesian wrapper function for the Bingham spherical distribution
-    model. Takes principal distribution axis "mu" as a Cartesian unit vector,
-    while leaving the secondary dispersion angle "psi" in euler angles.
-    - Computes the euler angles of mu in terms of theta and phi.
-    - Then calls the spherical Bingham implementation.
+class SD3Watson(MicrostrukturModel):
+    r""" The Watson spherical distribution model [1, 2].
+
+    Parameters
+    ----------
+    n : array of shape(3) or array of shape(N x 3),
+        sampled orientations of the Watson distribution.
+    mu : array, shape(3),
+        unit vector representing orientation of Watson distribution.
+    kappa : float,
+        concentration parameter of the Watson distribution.
+
+    Returns
+    -------
+    Wn: float or array of shape(N),
+        Probability density at orientations n, given mu and kappa.
+
+    References
+    ----------
+    .. [1] Kaden et al.
+           "Parametric spherical deconvolution: inferring anatomical
+            connectivity using diffusion MR imaging". NeuroImage (2007)
+    .. [2] Zhang et al.
+           "NODDI: practical in vivo neurite orientation dispersion and density
+            imaging of the human brain". NeuroImage (2012)
     """
-    _, theta, phi = cart2sphere(mu[0], mu[1], mu[2])
-    return SD2_bingham_spherical(n, theta, phi, psi, kappa, beta)
+
+    _parameter_ranges = {
+        'mu': ([0, -np.pi], [np.pi, np.pi]),
+        'kappa': (0, np.inf),
+    }
+
+    def __init__(self, mu=None, kappa=None):
+        self.mu = mu
+        self.kappa = kappa
+
+    def __call__(self, n, **kwargs):
+        r""" The Watson spherical distribution model [1, 2].
+
+        Parameters
+        ----------
+        n : array of shape(3) or array of shape(N x 3),
+            sampled orientations of the Watson distribution.
+
+        Returns
+        -------
+        Wn: float or array of shape(N),
+            Probability density at orientations n, given mu and kappa.
+        """
+        kappa = kwargs.get('kappa', self.kappa)
+        mu = kwargs.get('mu', self.mu)
+        x, y, z = sphere2cart(1, mu[0], mu[1])
+        mu_cart = np.r_[float(x), float(y), float(z)]
+        numerator = np.exp(kappa * np.dot(n, mu_cart) ** 2)
+        denominator = 4 * np.pi * special.hyp1f1(0.5, 1.5, kappa)
+        Wn = numerator / denominator
+        return Wn
+
+    def spherical_harmonics_representation(self, sh_order=14, **kwargs):
+        r""" The Watson spherical distribution model in spherical harmonics [1, 2].
+
+        Parameters
+        ----------
+        mu : array, shape(3),
+            unit vector representing orientation of Watson distribution.
+        kappa : float,
+            concentration parameter of the Watson distribution.
+        sh_order : int,
+            maximum spherical harmonics order to be used in the approximation.
+            we found 14 to be sufficient to represent concentrations of
+            kappa=17.
+
+        Returns
+        -------
+        watson_sh : array,
+            spherical harmonics of Watson probability density.
+        """
+        kappa = kwargs.get('kappa', self.kappa)
+        mu = kwargs.get('mu', self.mu)
+        x_, y_, z_ = sphere2cart(1., mu[0], mu[1])
+
+        R = utils.rotation_matrix_001_to_xyz(float(x_), float(y_), float(z_))
+        vertices_rotated = np.dot(SPHERE_CARTESIAN, R.T)
+        _, theta_rotated, phi_rotated = cart2sphere(vertices_rotated[:, 0],
+                                                    vertices_rotated[:, 1],
+                                                    vertices_rotated[:, 2])
+
+        watson_sf = self(vertices_rotated, mu=mu, kappa=kappa)
+        sh_mat = real_sym_sh_mrtrix(sh_order, theta_rotated, phi_rotated)[0]
+        sh_mat_inv = np.linalg.pinv(sh_mat)
+        watson_sh = np.dot(sh_mat_inv, watson_sf)
+        return watson_sh
 
 
-def SD2_bingham_spherical(n, theta, phi, psi, kappa, beta):
+class SD2Bingham(MicrostrukturModel):
     r""" The Bingham spherical distribution model [1, 2, 3] using euler angles.
 
     Parameters
@@ -487,232 +681,93 @@ def SD2_bingham_spherical(n, theta, phi, psi, kappa, beta):
            "Bingham--NODDI: Mapping anisotropic orientation dispersion of
             neurites using diffusion MRI". NeuroImage (2016)
     """
-    R = utils.rotation_matrix_100_to_theta_phi_psi(theta, phi, psi)
-    Bdiag = np.diag(np.r_[kappa, beta, 0])
-    B = R.dot(Bdiag).dot(R.T)
-    if np.ndim(n) == 1:
-        numerator = np.exp(n.dot(B).dot(n))
-    else:
-        numerator = np.zeros(n.shape[0])
-        for i, n_ in enumerate(n):
-            numerator[i] = np.exp(n_.dot(B).dot(n_))
 
-    # the denomator to normalize still needs to become a matrix argument B,
-    # but function doesn't take it.
-    denominator = 4 * np.pi * special.hyp1f1(0.5, 1.5, kappa)
-    Bn = numerator / denominator
-    return Bn
+    _parameter_ranges = {
+        'mu': ([0, -np.pi], [np.pi, np.pi]),
+        'psi': (0, np.pi),
+        'kappa': (0, np.inf),
+        'beta': (0, np.inf)  # beta<=kappa in fact
+    }
 
+    def __init__(self, mu=None, psi=None, kappa=None, beta=None):
+        self.mu = mu
+        self.psi = psi
+        self.kappa = kappa
+        self.beta = beta
 
-def SD3_watson(n, mu, kappa):
-    r""" The Watson spherical distribution model [1, 2].
+    def __call__(self, n, **kwargs):
+        r""" The Watson spherical distribution model [1, 2].
 
-    Parameters
-    ----------
-    n : array of shape(3) or array of shape(N x 3),
-        sampled orientations of the Watson distribution.
-    mu : array, shape(3),
-        unit vector representing orientation of Watson distribution.
-    kappa : float,
-        concentration parameter of the Watson distribution.
+        Parameters
+        ----------
+        n : array of shape(3) or array of shape(N x 3),
+            sampled orientations of the Watson distribution.
 
-    Returns
-    -------
-    Wn: float or array of shape(N),
-        Probability density at orientations n, given mu and kappa.
+        Returns
+        -------
+        Bn: float or array of shape(N),
+            Probability density at orientations n, given mu and kappa.
+        """
+        kappa = kwargs.get('kappa', self.kappa)
+        beta = kwargs.get('beta', self.beta)
+        mu = kwargs.get('mu', self.mu)
+        psi = kwargs.get('psi', self.psi)
 
-    References
-    ----------
-    .. [1] Kaden et al.
-           "Parametric spherical deconvolution: inferring anatomical
-            connectivity using diffusion MR imaging". NeuroImage (2007)
-    .. [2] Zhang et al.
-           "NODDI: practical in vivo neurite orientation dispersion and density
-            imaging of the human brain". NeuroImage (2012)
-    """
-    nominator = np.exp(kappa * np.dot(n, mu) ** 2)
-    denominator = 4 * np.pi * special.hyp1f1(0.5, 1.5, kappa)
-    Wn = nominator / denominator
-    return Wn
+        R = utils.rotation_matrix_100_to_theta_phi_psi(mu[0], mu[1], psi)
+        Bdiag = np.diag(np.r_[kappa, beta, 0])
+        B = R.dot(Bdiag).dot(R.T)
+        if np.ndim(n) == 1:
+            numerator = np.exp(n.dot(B).dot(n))
+        else:
+            numerator = np.zeros(n.shape[0])
+            for i, n_ in enumerate(n):
+                numerator[i] = np.exp(n_.dot(B).dot(n_))
 
+        # the denomator to normalize still needs to become a matrix argument B,
+        # but function doesn't take it.
+        denominator = 4 * np.pi * special.hyp1f1(0.5, 1.5, kappa)
+        Bn = numerator / denominator
+        return Bn
 
-def SD3_watson_sh(mu, kappa, sh_order=14):
-    r""" The Watson spherical distribution model in spherical harmonics [1, 2].
+    def spherical_harmonics_representation(self, sh_order=14, **kwargs):
+        r""" The Bingham spherical distribution model in spherical harmonics
+        [1, 2].
 
-    Parameters
-    ----------
-    mu : array, shape(3),
-        unit vector representing orientation of Watson distribution.
-    kappa : float,
-        concentration parameter of the Watson distribution.
-    sh_order : int,
-        maximum spherical harmonics order to be used in the approximation.
-        we found 14 to be sufficient to represent concentrations of kappa=17.
+        Parameters
+        ----------
+        sh_order : int,
+            maximum spherical harmonics order to be used in the approximation.
+            we found 14 to be sufficient to represent concentrations of
+            kappa=17.
 
-    Returns
-    -------
-    watson_sh : array,
-        spherical harmonics of Watson probability density.
+        Returns
+        -------
+        bingham_sh : array,
+            spherical harmonics of Watson probability density.
+        """
+        kappa = kwargs.get('kappa', self.kappa)
+        beta = kwargs.get('beta', self.beta)
+        mu = kwargs.get('mu', self.mu)
+        psi = kwargs.get('psi', self.psi)
 
-    References
-    ----------
-    .. [1] Kaden et al.
-           "Parametric spherical deconvolution: inferring anatomical
-            connectivity using diffusion MR imaging". NeuroImage (2007)
-    .. [2] Zhang et al.
-           "NODDI: practical in vivo neurite orientation dispersion and density
-            imaging of the human brain". NeuroImage (2012)
-    """
-    _, theta_mu, phi_mu = cart2sphere(mu[0], mu[1], mu[2])
-    R = utils.rotation_matrix_001_to_xyz(mu[0], mu[1], mu[2])
-    vertices = np.loadtxt(join(GRADIENT_TABLES_PATH, 'sphere_with_cap.txt'))
-    vertices_rotated = np.dot(vertices, R.T)
-    _, theta_rotated, phi_rotated = cart2sphere(vertices_rotated[:, 0],
-                                                vertices_rotated[:, 1],
-                                                vertices_rotated[:, 2])
+        x_, y_, z_ = sphere2cart(1., mu[0], mu[1])
 
-    watson_sf = SD3_watson(vertices_rotated, mu, kappa)
+        R = utils.rotation_matrix_001_to_xyz(float(x_), float(y_), float(z_))
+        vertices_rotated = np.dot(SPHERE_CARTESIAN, R.T)
+        _, theta_rotated, phi_rotated = cart2sphere(vertices_rotated[:, 0],
+                                                    vertices_rotated[:, 1],
+                                                    vertices_rotated[:, 2])
 
-    sh_mat = real_sym_sh_mrtrix(sh_order, theta_rotated, phi_rotated)[0]
-    sh_mat_inv = np.linalg.pinv(sh_mat)
-    watson_sh = np.dot(sh_mat_inv, watson_sf)
-    return watson_sh
+        bingham_sf = self(vertices_rotated, mu=mu, psi=psi, kappa=kappa,
+                          beta=beta)
 
-
-def SD2_bingham_spherical_sh(theta, phi, psi, kappa, beta, sh_order=14):
-    r""" The Bingham spherical distribution model in spherical harmonics
-    [1, 2].
-
-    Parameters
-    ----------
-    theta : float,
-        inclination of polar angle of main angle mu [0, pi].
-    phi : float,
-        polar angle of main angle mu [-pi, pi].
-    psi : float,
-        angle in radians of the bingham distribution around mu [0, pi].
-    kappa : float,
-        first concentration parameter of the Bingham distribution.
-        defined as kappa = kappa1 - kappa3.
-    beta : float,
-        second concentration parameter of the Bingham distribution.
-        defined as beta = kappa2 - kappa3. Bingham becomes Watson when beta=0.
-    sh_order : int,
-        maximum spherical harmonics order to be used in the approximation.
-        we found 14 to be sufficient to represent concentrations of kappa=17.
-
-    Returns
-    -------
-    bingham_sh : array,
-        spherical harmonics of Watson probability density.
-
-    References
-    ----------
-    .. [1] Kaden et al.
-           "Parametric spherical deconvolution: inferring anatomical
-            connectivity using diffusion MR imaging". NeuroImage (2007)
-    .. [2] Sotiropoulos et al.
-           "Ball and rackets: inferring fiber fanning from
-            diffusion-weighted MRI". NeuroImage (2012)
-    .. [3] Tariq et al.
-           "Bingham--NODDI: Mapping anisotropic orientation dispersion of
-            neurites using diffusion MRI". NeuroImage (2016)
-    """
-    x_, y_, z_ = sphere2cart(1., theta, phi)
-    R = utils.rotation_matrix_001_to_xyz(float(x_), float(y_), float(z_))
-    vertices = np.loadtxt(join(GRADIENT_TABLES_PATH, 'sphere_with_cap.txt'))
-    vertices_rotated = np.dot(vertices, R.T)
-    _, theta_rotated, phi_rotated = cart2sphere(vertices_rotated[:, 0],
-                                                vertices_rotated[:, 1],
-                                                vertices_rotated[:, 2])
-
-    bingham_sf = SD2_bingham_spherical(vertices_rotated, theta, phi, psi,
-                                       kappa, beta)
-
-    sh_mat = real_sym_sh_mrtrix(sh_order, theta_rotated, phi_rotated)[0]
-    sh_mat_inv = np.linalg.pinv(sh_mat)
-    bingham_sh = np.dot(sh_mat_inv, bingham_sf)
-    # normalization with spherical mean as there is still the normalization bug
-    bingham_sh /= (bingham_sh[0] * (2 * np.sqrt(np.pi)))
-    return bingham_sh
-
-
-def I1_stick_rh(bval, lambda_par, sh_order=14):
-    r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
-    Axis aligned with z-axis to be used as kernel for spherical convolution.
-
-    Parameters
-    ----------
-    bval : float,
-        b-value in s/mm^2.
-    lambda_par : float,
-        parallel diffusivity in mm^2/s.
-    sh_order : int,
-        maximum spherical harmonics order to be used in the approximation.
-        set to 14 to conform with order used for watson distribution.
-
-    Returns
-    -------
-    rh : array,
-        rotational harmonics of stick model aligned with z-axis.
-
-    References
-    ----------
-    .. [1] Behrens et al.
-           "Characterization and propagation of uncertainty in
-            diffusion-weighted MR imaging"
-           Magnetic Resonance in Medicine (2003)
-    """
-    vertices = np.loadtxt(join(GRADIENT_TABLES_PATH, 'sphere_with_cap.txt'))
-    E_stick_sf = I1_stick(bval, vertices, np.r_[0., 0., 1.], lambda_par)
-    _, theta_, phi_ = cart2sphere(vertices[:, 0],
-                                  vertices[:, 1],
-                                  vertices[:, 2])
-    sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
-    sh_mat_inv = np.linalg.pinv(sh_mat)
-    sh = np.dot(sh_mat_inv, E_stick_sf)
-    rh = kernel_sh_to_rh(sh, sh_order)
-    return rh
-
-
-def E4_zeppelin_rh(bval, lambda_par, lambda_perp, sh_order=14):
-    r""" The Zeppelin model in rotational harmonics, such that Y_lm = Yl0.
-    Axis aligned with z-axis to be used as kernel for spherical convolution.
-
-    Parameters
-    ----------
-    bval : float,
-        b-value in s/mm^2.
-    lambda_par : float,
-        parallel diffusivity in mm^2/s.
-    lambda_perp : float,
-        perpendicular diffusivity in mm^2/s.
-    sh_order : int,
-        maximum spherical harmonics order to be used in the approximation.
-        set to 14 to conform with order used for watson distribution.
-
-    Returns
-    -------
-    rh : array,
-        rotational harmonics of zeppelin model aligned with z-axis.
-
-    References
-    ----------
-    .. [1] Panagiotaki et al.
-           "Compartment models of the diffusion MR signal in brain white
-            matter: a taxonomy and comparison". NeuroImage (2012)
-    """
-    vertices = np.loadtxt(join(GRADIENT_TABLES_PATH, 'sphere_with_cap.txt'))
-    E_zeppelin_sf = E4_zeppelin(bval, vertices, np.r_[0., 0., 1.],
-                                lambda_par, lambda_perp)
-    _, theta_, phi_ = cart2sphere(vertices[:, 0],
-                                  vertices[:, 1],
-                                  vertices[:, 2])
-    sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
-    sh_mat_inv = np.linalg.pinv(sh_mat)
-    sh = np.dot(sh_mat_inv, E_zeppelin_sf)
-    rh = kernel_sh_to_rh(sh, sh_order)
-    return rh
+        sh_mat = real_sym_sh_mrtrix(sh_order, theta_rotated, phi_rotated)[0]
+        sh_mat_inv = np.linalg.pinv(sh_mat)
+        bingham_sh = np.dot(sh_mat_inv, bingham_sf)
+        # normalization with spherical mean as there is still the
+        # normalization bug
+        bingham_sh /= (bingham_sh[0] * (2 * np.sqrt(np.pi)))
+        return bingham_sh
 
 
 class CylindricalModelGradientEcho:
