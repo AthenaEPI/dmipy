@@ -32,22 +32,24 @@ SPHERE_SPHERICAL = np.hstack(cart2sphere(*SPHERE_CARTESIAN.T))
 class MicrostrukturModel:
     @property
     def parameter_ranges(self):
-        return self._parameter_ranges.copy()
-
-    @property
-    def parameter_constraints(self):
-        return self._parameter_constraints()
+        if not isinstance(self._parameter_ranges, OrderedDict):
+            return OrderedDict([
+                (k, self._parameter_ranges[k])
+                for k in sorted(self._parameter_ranges)
+            ])
+        else:
+            return self._parameter_ranges.copy()
 
     @property
     def parameter_cardinality(self):
         if hasattr(self, '_parameter_cardinality'):
             return self._parameter_cardinality
 
-        self._parameter_cardinality = OrderedDict({
-            k: len(np.atleast_2d(self.parameter_ranges[k]))
-            for k in sorted(self.parameter_ranges)
-        })
-        return self._parameter_cardinality
+        self._parameter_cardinality = OrderedDict([
+            (k, len(np.atleast_2d(self.parameter_ranges[k])))
+            for k in self.parameter_ranges
+        ])
+        return self._parameter_cardinality.copy()
 
     def parameter_vector_to_parameters(self, parameter_vector):
         parameters = {}
@@ -88,73 +90,112 @@ class MicrostrukturModel:
 
 
 class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
+    r'''
+    Class for Partial Volume-Combined Microstrukture Models.
+    Given a set of models :math:`m_1...m_N`, and the partial volume ratios
+    math:`v_1...v_{N-1}`, the partial volume function is
+
+    .. math::
+        v_1 m_1 + (1 - v_1) v_2 m_2 + ... + (1 - v_1)...(1-v_{N-1}) m_N
+
+    Parameters
+    ----------
+    models : list of N MicrostrukturModel instances,
+        the models to mix.
+    partial_volumes : array, shape(N - 1),
+        partial volume factors.
+    parameter_links : list of iterables (model, parameter name, link function,
+        argument list),
+        where model is a Microstruktur model, parameter name is a string
+        with the name of the parameter in that model that will be linked,
+        link function is a function returning the value of that parameter,
+        and argument list is a list of tuples (model, parameter name) where
+        those the parameters of those models will be used as arguments for the
+        link function. If the model is left as None, then the parameter comes
+        from the container partial volume mixing class.
+
+    '''
     def __init__(
         self, models, partial_volumes=None,
         parameter_links=[], optimise_partial_volumes=False
     ):
-        if partial_volumes is None:
-            partial_volumes = np.repeat(1 / len(models), len(models) - 1)
-
-        model_counts = {}
-        self.model_names = []
         self.models = models
         self.partial_volumes = partial_volumes
+        self.parameter_links = parameter_links
         self.optimise_partial_volumes = optimise_partial_volumes
 
-        for model in models:
+        self._prepare_parameters()
+        self._prepare_partial_volumes()
+        self._prepare_parameter_links()
+
+    def _prepare_parameters(self):
+        self.model_names = []
+        model_counts = {}
+
+        for model in self.models:
             if model.__class__ not in model_counts:
                 model_counts[model.__class__] = 1
             else:
                 model_counts[model.__class__] += 1
 
             self.model_names.append(
-                '{}_{}_'.format(
+                '{}_{:d}_'.format(
                     model.__class__.__name__,
                     model_counts[model.__class__]
                 )
             )
 
-        self._parameter_ranges = {
+        self._parameter_ranges = OrderedDict({
             model_name + k: v
             for model, model_name in zip(self.models, self.model_names)
             for k, v in model.parameter_ranges.items()
-        }
+        })
 
         self._parameter_map = {
             model_name + k: (model, k)
             for model, model_name in zip(self.models, self.model_names)
             for k in model.parameter_ranges
         }
-        self.parameter_defaults = {}
+
+        self.parameter_defaults = OrderedDict()
         for model_name, model in zip(self.model_names, self.models):
             for parameter in model.parameter_ranges:
                 self.parameter_defaults[model_name + parameter] = getattr(
                     model, parameter
                 )
 
+        self._inverted_parameter_map = {
+            v: k for k, v in self._parameter_map.items()
+        }
         self._parameter_cardinality = self.parameter_cardinality
+
+    def _prepare_partial_volumes(self):
         if self.optimise_partial_volumes:
             self.partial_volume_names = [
-                'partial_volume_{}'.format(i)
-                for i in range(len(self.partial_volumes))
+                'partial_volume_{:d}'.format(i)
+                for i in range(len(self.models) - 1)
             ]
 
             for i, partial_volume_name in enumerate(self.partial_volume_names):
                 self._parameter_ranges[partial_volume_name] = (0, 1)
                 self.parameter_defaults[partial_volume_name] = (
-                    1 / (len(self.partial_volumes) + 1 - i)
+                    1 / (len(self.models) - i)
                 )
                 self._parameter_map[partial_volume_name] = (
                     None, partial_volume_name
                 )
+                self._inverted_parameter_map[(None, partial_volume_name)] = \
+                    partial_volume_name
                 self._parameter_cardinality[partial_volume_name] = 1
+        else:
+            if self.partial_volumes is None:
+                self.partial_volumes = np.array([
+                    1 / (len(self.models) - i)
+                    for i in range(len(self.models) - 1)
+                ])
 
-        self._inverted_parameter_map = {
-            v: k for k, v in self._parameter_map.items()
-        }
-
-        self.parameter_links = parameter_links
-        for i, parameter_function in enumerate(parameter_links):
+    def _prepare_parameter_links(self):
+        for i, parameter_function in enumerate(self.parameter_links):
             parameter_model, parameter_name, parameter_function, arguments = \
                 parameter_function
 
