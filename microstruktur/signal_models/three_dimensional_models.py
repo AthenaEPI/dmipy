@@ -392,6 +392,112 @@ class I1Stick(MicrostrukturModel):
         return E_mean
 
 
+class I1StickSphericalMean(MicrostrukturModel):
+    """ Spherical mean of the signal attenuation of the Stick model [1] for
+    a given b-value and parallel diffusivity. Analytic expression from
+    Eq. (7) in [2].
+
+    Parameters
+    ----------
+    bval : float,
+        b-value in s/mm^2.
+    lambda_par : float,
+        parallel diffusivity in mm^2/s.
+
+    Returns
+    -------
+    E_mean : float,
+        spherical mean of the Stick model.
+
+    References
+    ----------
+    .. [1] Behrens et al.
+        "Characterization and propagation of uncertainty in
+        diffusion-weighted MR imaging"
+        Magnetic Resonance in Medicine (2003)
+    .. [2] Kaden et al. "Multi-compartment microscopic diffusion imaging."
+        NeuroImage 139 (2016): 346-359.
+    """
+
+    _parameter_ranges = {
+        'lambda_par': (0, np.inf)
+    }
+
+    def __init__(self, mu=None, lambda_par=None):
+        self.lambda_par = lambda_par
+
+    def __call__(self, bvals, n, **kwargs):
+        """ Spherical mean of the signal attenuation of the Stick model for
+        a given b-value and parallel diffusivity. Analytic expression from
+        Eq. (7) in [1].
+
+        Parameters
+        ----------
+        bvals : float,
+            b-values in s/mm^2.
+        lambda_par : float,
+            parallel diffusivity in mm^2/s.
+
+        Returns
+        -------
+        E_mean : float,
+            spherical mean of the Stick model.
+
+        References
+        ----------
+        .. [1] Kaden et al. "Multi-compartment microscopic diffusion imaging."
+           NeuroImage 139 (2016): 346-359.
+        """
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        E_mean = ((np.sqrt(np.pi) * erf(np.sqrt(bvals * lambda_par))) /
+                  (2 * np.sqrt(bvals * lambda_par)))
+        return E_mean
+
+
+class E4ZeppelinSphericalMean(MicrostrukturModel):
+    """ Spherical mean of the signal attenuation of the Zeppelin model
+        for a given b-value and parallel and perpendicular diffusivity.
+        Analytic expression from Eq. (8) in [1]).
+
+        Parameters
+        ----------
+        bval : float,
+            b-value in s/mm^2.
+        lambda_par : float,
+            parallel diffusivity in mm^2/s.
+        lambda_perp : float,
+            perpendicular diffusivity in mm^2/s.
+
+        Returns
+        -------
+        E_mean : float,
+            spherical mean of the Zeppelin model.
+
+        References
+        ----------
+        .. [1] Kaden et al. "Multi-compartment microscopic diffusion imaging."
+            NeuroImage 139 (2016): 346-359.
+        """
+
+    _parameter_ranges = {
+        'lambda_par': (0, np.inf),
+        'lambda_perp': (0, np.inf)
+    }
+
+    def __init__(self, lambda_par=None, lambda_perp=None):
+        self.lambda_par = lambda_par
+        self.lambda_perp = lambda_perp
+
+    def __call__(self, bvals, n, **kwargs):
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
+
+        exp_bl = np.exp(-bvals * lambda_perp)
+        sqrt_bl = np.sqrt(bvals * (lambda_par - lambda_perp))
+        E_mean = exp_bl * np.sqrt(np.pi) * erf(sqrt_bl) / (2 * sqrt_bl)
+        return E_mean
+
+
 class E3Ball(MicrostrukturModel):
     r""" The Ball model [1] - an isotropic Tensor with one diffusivity.
 
@@ -417,7 +523,7 @@ class E3Ball(MicrostrukturModel):
     def __init__(self, lambda_iso=None):
         self.lambda_iso = lambda_iso
 
-    def __call__(self, bvals, **kwargs):
+    def __call__(self, bvals, n, **kwargs):
         r'''
         Parameters
         ----------
