@@ -30,6 +30,7 @@ SPHERE_CARTESIAN = np.loadtxt(
 )
 SPHERE_SPHERICAL = np.vstack(cart2sphere(*SPHERE_CARTESIAN.T))
 WATSON_SH_ORDER = 14
+DIFFUSIVITY_SCALING = 1e-3
 
 
 class MicrostrukturModel:
@@ -311,7 +312,7 @@ class I1Stick(MicrostrukturModel):
         self.mu = mu
         self.lambda_par = lambda_par
 
-    def __call__(self, bvals, n, **kwargs):
+    def __call__(self, bvals, n, shell_indices, **kwargs):
         r'''
         Parameters
         ----------
@@ -326,7 +327,7 @@ class I1Stick(MicrostrukturModel):
             signal attenuation
         '''
 
-        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        lambda_par = kwargs.get('lambda_par', self.lambda_par) * DIFFUSIVITY_SCALING
         mu = kwargs.get('mu', self.mu)
         x, y, z = sphere2cart(1, mu[0], mu[1])
         mu = np.r_[float(x), float(y), float(z)]
@@ -353,10 +354,11 @@ class I1Stick(MicrostrukturModel):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
-        lambda_par = kwargs.get('lambda_par', self.lambda_par)
-
+        lambda_par = kwargs.get('lambda_par', self.lambda_par) * DIFFUSIVITY_SCALING
+        
+        dummy_shell_indices = 1.
         E_stick_sf = self(
-            np.r_[bval], SPHERE_CARTESIAN,
+            np.r_[bval], SPHERE_CARTESIAN, dummy_shell_indices,
             mu=np.r_[0., 0.], lambda_par=lambda_par
         )
         sh_mat = real_sym_sh_mrtrix(
@@ -366,33 +368,6 @@ class I1Stick(MicrostrukturModel):
         sh = np.dot(sh_mat_inv, E_stick_sf)
         rh = kernel_sh_to_rh(sh, rh_order)
         return rh
-
-    def spherical_mean(self, bval, **kwargs):
-        """ Spherical mean of the signal attenuation of the Stick model for
-        a given b-value and parallel diffusivity. Analytic expression from
-        Eq. (7) in [1].
-
-        Parameters
-        ----------
-        bval : float,
-            b-value in s/mm^2.
-        lambda_par : float,
-            parallel diffusivity in mm^2/s.
-
-        Returns
-        -------
-        E_mean : float,
-            spherical mean of the Stick model.
-
-        References
-        ----------
-        .. [1] Kaden et al. "Multi-compartment microscopic diffusion imaging."
-           NeuroImage 139 (2016): 346-359.
-        """
-        lambda_par = kwargs.get('lambda_par', self.lambda_par)
-        E_mean = ((np.sqrt(np.pi) * erf(np.sqrt(bval * lambda_par))) /
-                  (2 * np.sqrt(bval * lambda_par)))
-        return E_mean
 
 
 class I1WatsonDispersedStick(MicrostrukturModel):
@@ -421,7 +396,7 @@ class I1WatsonDispersedStick(MicrostrukturModel):
 
     _parameter_ranges = {
         'mu': ([0, np.pi], [np.pi, np.pi]),
-        'lambda_par': (0, np.inf),
+        'lambda_par': (0, np.inf),   
         'kappa': (0, 16)
     }
 
@@ -589,7 +564,7 @@ class I1StickSphericalMean(MicrostrukturModel):
     def __init__(self, mu=None, lambda_par=None):
         self.lambda_par = lambda_par
 
-    def __call__(self, bvals, n, **kwargs):
+    def __call__(self, bvals, n, shell_indices, **kwargs):
         """ Spherical mean of the signal attenuation of the Stick model for
         a given b-value and parallel diffusivity. Analytic expression from
         Eq. (7) in [1].
@@ -611,7 +586,7 @@ class I1StickSphericalMean(MicrostrukturModel):
         .. [1] Kaden et al. "Multi-compartment microscopic diffusion imaging."
            NeuroImage 139 (2016): 346-359.
         """
-        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        lambda_par = kwargs.get('lambda_par', self.lambda_par) * DIFFUSIVITY_SCALING
         E_mean = ((np.sqrt(np.pi) * erf(np.sqrt(bvals * lambda_par))) /
                   (2 * np.sqrt(bvals * lambda_par)))
         return E_mean
@@ -651,9 +626,9 @@ class E4ZeppelinSphericalMean(MicrostrukturModel):
         self.lambda_par = lambda_par
         self.lambda_perp = lambda_perp
 
-    def __call__(self, bvals, n, **kwargs):
-        lambda_par = kwargs.get('lambda_par', self.lambda_par)
-        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
+    def __call__(self, bvals, n, shell_indices, **kwargs):
+        lambda_par = kwargs.get('lambda_par', self.lambda_par) * DIFFUSIVITY_SCALING
+        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp) * DIFFUSIVITY_SCALING
 
         exp_bl = np.exp(-bvals * lambda_perp)
         sqrt_bl = np.sqrt(bvals * (lambda_par - lambda_perp))
@@ -686,7 +661,7 @@ class E3Ball(MicrostrukturModel):
     def __init__(self, lambda_iso=None):
         self.lambda_iso = lambda_iso
 
-    def __call__(self, bvals, n, **kwargs):
+    def __call__(self, bvals, n, shell_indices, **kwargs):
         r'''
         Parameters
         ----------
@@ -699,7 +674,7 @@ class E3Ball(MicrostrukturModel):
             signal attenuation
         '''
 
-        lambda_iso = kwargs.get('lambda_iso', self.lambda_iso)
+        lambda_iso = kwargs.get('lambda_iso', self.lambda_iso) * DIFFUSIVITY_SCALING
         E_ball = np.exp(-bvals * lambda_iso)
         return E_ball
 
@@ -744,7 +719,7 @@ class E4Zeppelin(MicrostrukturModel):
         self.lambda_par = lambda_par
         self.lambda_perp = lambda_perp
 
-    def __call__(self, bvals, n, **kwargs):
+    def __call__(self, bvals, n, shell_indices, **kwargs):
         r'''
         Parameters
         ----------
@@ -759,8 +734,8 @@ class E4Zeppelin(MicrostrukturModel):
             signal attenuation
         '''
 
-        lambda_par = kwargs.get('lambda_par', self.lambda_par)
-        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
+        lambda_par = kwargs.get('lambda_par', self.lambda_par) * DIFFUSIVITY_SCALING
+        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp) * DIFFUSIVITY_SCALING
         mu = kwargs.get('mu', self.mu)
         x, y, z = sphere2cart(1, mu[0], mu[1])
         mu = np.r_[float(x), float(y), float(z)]
@@ -810,11 +785,12 @@ class E4Zeppelin(MicrostrukturModel):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
-        lambda_par = kwargs.get('lambda_par', self.lambda_par)
-        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
+        lambda_par = kwargs.get('lambda_par', self.lambda_par) * DIFFUSIVITY_SCALING
+        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp) * DIFFUSIVITY_SCALING
 
+        dummy_shell_indices = 1.
         E_zeppelin_sf = self(
-            bval, SPHERE_CARTESIAN,
+            bval, SPHERE_CARTESIAN, dummy_shell_indices,
             mu=np.r_[0., 0.], lambda_par=lambda_par, lambda_perp=lambda_perp
         )
 
@@ -825,38 +801,6 @@ class E4Zeppelin(MicrostrukturModel):
         sh = np.dot(sh_mat_inv, E_zeppelin_sf)
         rh = kernel_sh_to_rh(sh, rh_order)
         return rh
-
-    def spherical_mean(self, bval, **kwargs):
-        """ Spherical mean of the signal attenuation of the Zeppelin model
-        for a given b-value and parallel and perpendicular diffusivity.
-        Analytic expression from Eq. (8) in [1]).
-
-        Parameters
-        ----------
-        bval : float,
-            b-value in s/mm^2.
-        lambda_par : float,
-            parallel diffusivity in mm^2/s.
-        lambda_perp : float,
-            perpendicular diffusivity in mm^2/s.
-
-        Returns
-        -------
-        E_mean : float,
-            spherical mean of the Zeppelin model.
-
-        References
-        ----------
-        .. [1] Kaden et al. "Multi-compartment microscopic diffusion imaging."
-            NeuroImage 139 (2016): 346-359.
-        """
-        lambda_par = kwargs.get('lambda_par', self.lambda_par)
-        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
-
-        exp_bl = np.exp(-bval * lambda_perp)
-        sqrt_bl = np.sqrt(bval * (lambda_par - lambda_perp))
-        E_mean = exp_bl * np.sqrt(np.pi) * erf(sqrt_bl) / (2 * sqrt_bl)
-        return E_mean
 
 
 class SD3Watson(MicrostrukturModel):
