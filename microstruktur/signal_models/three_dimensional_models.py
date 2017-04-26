@@ -14,6 +14,7 @@ from scipy import integrate
 from scipy import special
 from dipy.core.geometry import cart2sphere, sphere2cart
 from dipy.reconst.shm import real_sym_sh_mrtrix
+from microstruktur.signal_models.spherical_convolution import sh_convolution
 
 from . import utils
 from .free_diffusion import free_diffusion_attenuation
@@ -28,6 +29,7 @@ SPHERE_CARTESIAN = np.loadtxt(
     join(GRADIENT_TABLES_PATH, 'sphere_with_cap.txt')
 )
 SPHERE_SPHERICAL = np.vstack(cart2sphere(*SPHERE_CARTESIAN.T))
+WATSON_SH_ORDER = 14
 
 
 class MicrostrukturModel:
@@ -70,11 +72,11 @@ class MicrostrukturModel:
 
     def objective_function(
         self, parameter_vector,
-        bvals=None, n=None, attenuation=None
+        bvals=None, n=None, attenuation=None, shell_indices=None
     ):
         parameters = self.parameter_vector_to_parameters(parameter_vector)
         return np.sum((
-            self(bvals, n, **parameters) - attenuation
+            self(bvals, n, shell_indices, **parameters) - attenuation
         ) ** 2) / len(attenuation)
 
     @property
@@ -237,7 +239,7 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
             parameters[parameter_name] = parameter_function(*argument_values)
         return parameters
 
-    def __call__(self, bvals, n, **kwargs):
+    def __call__(self, bvals, n, shell_indices, **kwargs):
         values = 0
         kwargs = self.add_linked_parameters_to_parameters(
             kwargs
@@ -270,7 +272,8 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
 
             values = (
                 values +
-                current_partial_volume * model(bvals, n, **parameters)
+                current_partial_volume * model(bvals, n, shell_indices, 
+                                               **parameters)
             )
         return values
 
@@ -300,7 +303,7 @@ class I1Stick(MicrostrukturModel):
     """
 
     _parameter_ranges = {
-        'mu': ([0, -np.pi], [np.pi, np.pi]),
+        'mu': ([0, np.pi], [np.pi, np.pi]),
         'lambda_par': (0, np.inf)
     }
 
@@ -390,6 +393,166 @@ class I1Stick(MicrostrukturModel):
         E_mean = ((np.sqrt(np.pi) * erf(np.sqrt(bval * lambda_par))) /
                   (2 * np.sqrt(bval * lambda_par)))
         return E_mean
+
+
+class I1WatsonDispersedStick(MicrostrukturModel):
+    r""" The Watson-Dispersed Stick model [1] - a cylinder with zero radius -
+    for intra-axonal diffusion.
+
+    Parameters
+    ----------
+    bvals : float or array, shape(N),
+        b-values in s/mm^2.
+    n : array, shape(N x 3),
+        b-vectors in cartesian coordinates.
+    mu : array, shape(3),
+        unit vector representing orientation of the Stick.
+    lambda_par : float,
+        parallel diffusivity in mm^2/s.
+
+
+    References
+    ----------
+    .. [1] Behrens et al.
+           "Characterization and propagation of uncertainty in
+            diffusion-weighted MR imaging"
+           Magnetic Resonance in Medicine (2003)
+    """
+
+    _parameter_ranges = {
+        'mu': ([0, np.pi], [np.pi, np.pi]),
+        'lambda_par': (0, np.inf),
+        'kappa': (0, 16)
+    }
+
+    def __init__(self, mu=None, lambda_par=None, kappa=None):
+        self.mu = mu
+        self.lambda_par = lambda_par
+        self.kappa = kappa
+
+    def __call__(self, bvals, n, shell_indices, **kwargs):
+        r'''
+        Parameters
+        ----------
+        bvals : float or array, shape(N),
+            b-values in s/mm^2.
+        n : array, shape(N x 3),
+            b-vectors in cartesian coordinates.
+
+        Returns
+        -------
+        attenuation : float or array, shape(N),
+            signal attenuation
+        '''
+        sh_order = WATSON_SH_ORDER
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        mu = kwargs.get('mu', self.mu)
+        kappa = kwargs.get('kappa', self.kappa)
+        
+        watson = SD3Watson(mu=mu, kappa=kappa)
+        sh_watson = watson.spherical_harmonics_representation()
+        stick = I1Stick(mu=mu, lambda_par=lambda_par)
+
+        E = np.ones_like(bvals)
+        for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
+            bval_mask = shell_indices == shell_index
+            bvecs_shell = n[bval_mask]  # what bvecs in that shell
+            bval_mean = bvals[bval_mask].mean()
+            _, theta_, phi_ = cart2sphere(bvecs_shell[:, 0],
+                                        bvecs_shell[:, 1],
+                                        bvecs_shell[:, 2])
+            sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
+    
+            # rotational harmonics of stick
+            rh_stick = stick.rotational_harmonics_representation(bval=bval_mean)
+            # convolving micro-environment with watson distribution
+            E_dispersed_sh = sh_convolution(sh_watson, rh_stick, sh_order)
+            # recover signal values from watson-convolved spherical harmonics
+            E[bval_mask] = np.dot(sh_mat, E_dispersed_sh)
+        return E
+
+
+class E4WatsonDispersedZeppelin(MicrostrukturModel):
+    r""" The Watson-Dispersed Zeppelin model [1] - a cylinder with zero radius-
+    for intra-axonal diffusion.
+
+    Parameters
+    ----------
+    bvals : float or array, shape(N),
+        b-values in s/mm^2.
+    n : array, shape(N x 3),
+        b-vectors in cartesian coordinates.
+    mu : array, shape(3),
+        unit vector representing orientation of the Stick.
+    lambda_par : float,
+        parallel diffusivity in mm^2/s.
+
+
+    References
+    ----------
+    .. [1] Behrens et al.
+           "Characterization and propagation of uncertainty in
+            diffusion-weighted MR imaging"
+           Magnetic Resonance in Medicine (2003)
+    """
+
+    _parameter_ranges = {
+        'mu': ([0, np.pi], [np.pi, np.pi]),
+        'lambda_par': (0, np.inf),
+        'lambda_perp': (0, np.inf),
+        'kappa': (0, 16)
+    }
+
+    def __init__(self, mu=None, lambda_par=None, lambda_perp=None, kappa=None):
+        self.mu = mu
+        self.lambda_par = lambda_par
+        self.lambda_perp = lambda_perp
+        self.kappa = kappa
+
+    def __call__(self, bvals, n, shell_indices, **kwargs):
+        r'''
+        Parameters
+        ----------
+        bvals : float or array, shape(N),
+            b-values in s/mm^2.
+        n : array, shape(N x 3),
+            b-vectors in cartesian coordinates.
+
+        Returns
+        -------
+        attenuation : float or array, shape(N),
+            signal attenuation
+        '''
+        sh_order = WATSON_SH_ORDER
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
+        mu = kwargs.get('mu', self.mu)
+        kappa = kwargs.get('kappa', self.kappa)
+        
+        watson = SD3Watson(mu=mu, kappa=kappa)
+        sh_watson = watson.spherical_harmonics_representation()
+        zeppelin = E4Zeppelin(mu=mu, lambda_par=lambda_par,
+                              lambda_perp=lambda_perp)
+
+        E = np.ones_like(bvals)
+        for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
+            bval_mask = shell_indices == shell_index
+            bvecs_shell = n[bval_mask]  # what bvecs in that shell
+            bval_mean = bvals[bval_mask].mean()
+            _, theta_, phi_ = cart2sphere(bvecs_shell[:, 0],
+                                        bvecs_shell[:, 1],
+                                        bvecs_shell[:, 2])
+            sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
+    
+            # rotational harmonics of zeppelin
+            rh_zeppelin = zeppelin.rotational_harmonics_representation(
+                bval=bval_mean
+                )
+            # convolving micro-environment with watson distribution
+            E_dispersed_sh = sh_convolution(sh_watson, rh_zeppelin, sh_order)
+            # recover signal values from watson-convolved spherical harmonics
+            E[bval_mask] = np.dot(sh_mat, E_dispersed_sh)
+        return E
 
 
 class I1StickSphericalMean(MicrostrukturModel):
@@ -571,7 +734,7 @@ class E4Zeppelin(MicrostrukturModel):
     """
 
     _parameter_ranges = {
-        'mu': ([0, -np.pi], [np.pi, np.pi]),
+        'mu': ([0, np.pi], [np.pi, np.pi]),
         'lambda_par': (0, np.inf),
         'lambda_perp': (0, np.inf)
     }
@@ -724,7 +887,7 @@ class SD3Watson(MicrostrukturModel):
     """
 
     _parameter_ranges = {
-        'mu': ([0, -np.pi], [np.pi, np.pi]),
+        'mu': ([0, np.pi], [np.pi, np.pi]),
         'kappa': (0, np.inf),
     }
 
@@ -830,7 +993,7 @@ class SD2Bingham(MicrostrukturModel):
     """
 
     _parameter_ranges = {
-        'mu': ([0, -np.pi], [np.pi, np.pi]),
+        'mu': ([0, np.pi], [np.pi, np.pi]),
         'psi': (0, np.pi),
         'kappa': (0, np.inf),
         'beta': (0, np.inf)  # beta<=kappa in fact
