@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 from dipy.reconst.shm import sph_harm_ind_list
 
