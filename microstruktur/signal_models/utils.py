@@ -217,3 +217,8 @@ def T1_tortuosity(f_intra, lambda_par):
     """
     lambda_perp = (1 - f_intra) * lambda_par
     return lambda_perp
+
+
+def parameter_equality(param):
+    "Function to force two model parameters to be equal in the optimization"
+    return param
