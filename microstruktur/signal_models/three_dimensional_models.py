@@ -447,6 +447,90 @@ class I1WatsonDispersedStick(MicrostrukturModel):
         return E
 
 
+class I1BinghamDispersedStick(MicrostrukturModel):
+    r""" The Bingham-Dispersed Stick model [1] - a cylinder with zero radius -
+    for intra-axonal diffusion.
+
+    Parameters
+    ----------
+    bvals : float or array, shape(N),
+        b-values in s/mm^2.
+    n : array, shape(N x 3),
+        b-vectors in cartesian coordinates.
+    mu : array, shape(3),
+        unit vector representing orientation of the Stick.
+    lambda_par : float,
+        parallel diffusivity in mm^2/s.
+
+
+    References
+    ----------
+    .. [1] Behrens et al.
+           "Characterization and propagation of uncertainty in
+            diffusion-weighted MR imaging"
+           Magnetic Resonance in Medicine (2003)
+    """
+
+    _parameter_ranges = {
+        'mu': ([0, np.pi], [np.pi, np.pi]),
+        'lambda_par': (0, 3),
+        'psi': (0, np.pi),
+        'kappa': (0, 16),
+        'beta': (0, 16)
+    }
+
+    def __init__(self, mu=None, lambda_par=None,
+                 kappa=None, beta=None, psi=None):
+        self.mu = mu
+        self.lambda_par = lambda_par
+        self.psi = psi
+        self.kappa = kappa
+        self.beta = beta
+
+
+    def __call__(self, bvals, n, shell_indices, **kwargs):
+        r'''
+        Parameters
+        ----------
+        bvals : float or array, shape(N),
+            b-values in s/mm^2.
+        n : array, shape(N x 3),
+            b-vectors in cartesian coordinates.
+
+        Returns
+        -------
+        attenuation : float or array, shape(N),
+            signal attenuation
+        '''
+        sh_order = WATSON_SH_ORDER
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        mu = kwargs.get('mu', self.mu)
+        psi = kwargs.get('psi', self.psi)
+        kappa = kwargs.get('kappa', self.kappa)
+        beta = kwargs.get('beta', self.beta)
+        
+        bingham = SD2Bingham(mu=mu, psi=psi, kappa=kappa, beta=beta)
+        sh_bingham = bingham.spherical_harmonics_representation()
+        stick = I1Stick(mu=mu, lambda_par=lambda_par)
+
+        E = np.ones_like(bvals)
+        for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
+            bval_mask = shell_indices == shell_index
+            bvecs_shell = n[bval_mask]  # what bvecs in that shell
+            bval_mean = bvals[bval_mask].mean()
+            _, theta_, phi_ = cart2sphere(bvecs_shell[:, 0],
+                                        bvecs_shell[:, 1],
+                                        bvecs_shell[:, 2])
+            sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
+
+            # rotational harmonics of stick
+            rh_stick = stick.rotational_harmonics_representation(bval=bval_mean)
+            # convolving micro-environment with watson distribution
+            E_dispersed_sh = sh_convolution(sh_bingham, rh_stick, sh_order)
+            # recover signal values from watson-convolved spherical harmonics
+            E[bval_mask] = np.dot(sh_mat, E_dispersed_sh)
+        return E
+
 class E4WatsonDispersedZeppelin(MicrostrukturModel):
     r""" The Watson-Dispersed Zeppelin model [1] - a cylinder with zero radius-
     for intra-axonal diffusion.
@@ -739,28 +823,12 @@ class E4Zeppelin(MicrostrukturModel):
         mu = kwargs.get('mu', self.mu)
         x, y, z = sphere2cart(1, mu[0], mu[1])
         mu = np.r_[float(x), float(y), float(z)]
+        mu_perp = utils.perpendicular_vector(mu)
 
-        D_h = np.diag(np.r_[lambda_par, lambda_perp, lambda_perp])
-        R1 = mu
-        R2 = utils.perpendicular_vector(R1)
-        R3 = np.cross(R1, R2)
-        R = np.c_[R1, R2, R3]
-        D = np.dot(np.dot(R, D_h), R.T)
+        E_par = np.exp(-bvals * lambda_par * np.dot(n, mu) ** 2)
+        E_perp = np.exp(-bvals * lambda_perp * np.dot(n, mu_perp) ** 2)
+        E_zeppelin = E_par * E_perp
 
-        dim_b = np.ndim(bvals)
-        dim_n = np.ndim(n)
-
-        if dim_n == 1:  # if there is only one sampled orientation
-            E_zeppelin = np.exp(-bvals * np.dot(n, np.dot(n, D)))
-        elif dim_b == 0 and dim_n == 2:  # one b-value on sphere
-            E_zeppelin = np.zeros(n.shape[0])
-            for i in range(n.shape[0]):
-                E_zeppelin[i] = np.exp(-bvals * np.dot(n[i], np.dot(n[i], D)))
-        elif dim_b == 1 and dim_n == 2:  # many b-values and orientations
-            E_zeppelin = np.zeros(n.shape[0])
-            for i in range(n.shape[0]):
-                E_zeppelin[i] = np.exp(-bvals[i] * np.dot(n[i],
-                                                          np.dot(n[i], D)))
         return E_zeppelin
 
     def rotational_harmonics_representation(self, bval, rh_order=14, **kwargs):
