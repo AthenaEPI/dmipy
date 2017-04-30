@@ -222,3 +222,23 @@ def T1_tortuosity(f_intra, lambda_par):
 def parameter_equality(param):
     "Function to force two model parameters to be equal in the optimization"
     return param
+
+
+def define_shell_indices(bvals, b_value_ranges):
+    "Function to define shell indices given some manual ranges in b-values"
+    shell_indices = np.zeros_like(bvals)
+    shell_counter = 0
+    dwi_counter = 0
+    for b_range in b_value_ranges:
+        lower_range = b_range[0]
+        upper_range = b_range[1]
+        shell_mask = np.all([bvals >= lower_range, bvals <= upper_range],
+                            axis=0)
+        shell_indices[shell_mask] = shell_counter
+        dwi_counter += sum(shell_mask)
+        shell_counter += 1
+    if dwi_counter < len(bvals):
+        msg = ("b_value_ranges only covered " + str(dwi_counter) +
+               " out of " + str(len(bvals)) + " dwis")
+        raise ValueError(msg)
+    return shell_indices
