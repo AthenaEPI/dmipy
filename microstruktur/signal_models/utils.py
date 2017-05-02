@@ -227,6 +227,7 @@ def parameter_equality(param):
 def define_shell_indices(bvals, b_value_ranges):
     "Function to define shell indices given some manual ranges in b-values"
     shell_indices = np.zeros_like(bvals)
+    shell_bvals = np.zeros(len(b_value_ranges))
     shell_counter = 0
     dwi_counter = 0
     for b_range in b_value_ranges:
@@ -235,10 +236,11 @@ def define_shell_indices(bvals, b_value_ranges):
         shell_mask = np.all([bvals >= lower_range, bvals <= upper_range],
                             axis=0)
         shell_indices[shell_mask] = shell_counter
+        shell_bvals[shell_counter] = np.mean(bvals[shell_mask])
         dwi_counter += sum(shell_mask)
         shell_counter += 1
     if dwi_counter < len(bvals):
         msg = ("b_value_ranges only covered " + str(dwi_counter) +
                " out of " + str(len(bvals)) + " dwis")
         raise ValueError(msg)
-    return shell_indices
+    return shell_indices, shell_bvals
