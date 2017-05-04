@@ -66,7 +66,7 @@ def disperse_data(E, bvecs, shell_indices, mu, psi, kappa, beta):
         # convolving micro-environment with bingham distribution
         E_dispersed_sh = spherical_convolution.sh_convolution(
             sh_bingham, rh_data, sh_order
-            )
+        )
         # recover signal values from convolved spherical harmonics
         E_dispersed[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
     return E_dispersed

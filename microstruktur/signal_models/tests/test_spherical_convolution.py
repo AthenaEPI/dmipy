@@ -39,6 +39,6 @@ def test_spherical_convolution_watson_sh(sh_order=4):
         sphere_positions = np.arange(sphere.vertices.shape[0])
         opposite_index = np.all(
             np.round(sphere.vertices - mu_watson, 2) == 0, axis=1
-            )
+        )
         min_position_opposite = sphere_positions[opposite_index]
         assert_equal(min_position_opposite, mu_index)
