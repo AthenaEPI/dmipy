@@ -1,7 +1,4 @@
-from numpy.testing import (assert_almost_equal,
-                           assert_array_almost_equal,
-                           assert_equal,
-                           run_module_suite)
+from numpy.testing import assert_almost_equal, assert_equal
 from dipy.core.geometry import cart2sphere, sphere2cart
 import numpy as np
 from microstruktur.signal_models.utils import (

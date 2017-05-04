@@ -42,6 +42,6 @@ def test_spherical_mean_zeppelin_analytic_vs_sh(bvalue=1e3, lambda_par=1.7e-3,
     sm_zep_analytic = spherical_mean_zeppelin(bvalue, lambda_par, lambda_perp)
     E_zep = E4_zeppelin(bvalue, sphere.vertices, mu, lambda_par, lambda_perp)
     sm_zep_sh = estimate_spherical_mean_shell(E_zep, sphere.vertices)
-    sm_zep_numerical = np.mean(E4_zeppelin(bvalue, sphere.vertices, mu,
-                                           lambda_par, lambda_perp))
+    #sm_zep_numerical = np.mean(E4_zeppelin(bvalue, sphere.vertices, mu,
+    #                                       lambda_par, lambda_perp))
     assert_almost_equal(sm_zep_analytic, sm_zep_sh, 3)
