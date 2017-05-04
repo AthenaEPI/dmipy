@@ -14,7 +14,7 @@ def test_spherical_convolution_watson_sh(sh_order=4):
     np.random.shuffle(indices_sphere_orientations)
     mu_index = indices_sphere_orientations[0]
     mu_watson = sphere.vertices[mu_index]
-    
+
     watson = three_dimensional_models.SD3Watson(mu=mu_watson, kappa=10.)
     f_sf = watson(n=sphere.vertices)
     f_sh = sf_to_sh(f_sf, sphere, sh_order)
@@ -23,7 +23,6 @@ def test_spherical_convolution_watson_sh(sh_order=4):
     lambda_par = 2e-3 * DIFFUSIVITY_SCALING
     stick = three_dimensional_models.I1Stick(mu=[0, 0], lambda_par=lambda_par)
     k_sf = stick(bvals=bval, n=sphere.vertices)
-    #k_sf = I1_stick(bval, sphere.vertices, np.r_[0, 0, 1], lambda_par)
     k_sh = sf_to_sh(k_sf, sphere, sh_order)
     k_rh = kernel_sh_to_rh(k_sh, sh_order)
 

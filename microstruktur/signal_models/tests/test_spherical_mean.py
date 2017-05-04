@@ -2,12 +2,9 @@ import numpy as np
 from numpy.testing import assert_almost_equal
 from dipy.data import get_sphere
 from microstruktur.signal_models.spherical_mean import (
-    spherical_mean_stick,
-    spherical_mean_zeppelin,
     estimate_spherical_mean_shell
 )
 from microstruktur.signal_models import three_dimensional_models
-
 sphere = get_sphere().subdivide()
 
 
@@ -45,7 +42,7 @@ def test_spherical_mean_stick_analytic_vs_sh(bvalue=1e3, lambda_par=1.7,
         lambda_par=lambda_par
     )
     sm_stick_analytic = stick_sm(bvals=bvalue)
-    
+
     stick = three_dimensional_models.I1Stick(mu=mu, lambda_par=lambda_par)
     E_stick = stick(bvals=bvalue, n=sphere.vertices)
     sm_zep_sh = estimate_spherical_mean_shell(E_stick, sphere.vertices)
@@ -59,7 +56,7 @@ def test_spherical_mean_zeppelin_analytic_vs_sh(bvalue=1e3, lambda_par=1.7,
         lambda_par=lambda_par, lambda_perp=lambda_perp
     )
     sm_zep_analytic = zeppelin_sm(bvals=bvalue)
-    
+
     zeppelin = zeppelin = three_dimensional_models.E4Zeppelin(
         lambda_par=lambda_par, lambda_perp=lambda_perp, mu=mu
     )

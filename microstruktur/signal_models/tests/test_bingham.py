@@ -85,11 +85,10 @@ def test_bingham_equal_to_watson(beta_=0):
     # test if bingham with beta=0 equals watson distribution
     mu_ = np.random.rand(2)
     n_cart = utils.sphere2cart(np.r_[1., mu_])
-    theta_ = np.random.rand() * np.pi
-    phi_ = (np.random.rand() - 0.5) * np.pi
     psi_ = np.random.rand() * np.pi
     kappa_ = np.random.rand()
-    bingham = three_dimensional_models.SD2Bingham(mu=mu_, psi=psi_, kappa=kappa_, beta=beta_)
+    bingham = three_dimensional_models.SD2Bingham(mu=mu_, psi=psi_,
+                                                  kappa=kappa_, beta=beta_)
     watson = three_dimensional_models.SD3Watson(mu=mu_, kappa=kappa_)
     Bn = bingham(n=n_cart)
     Wn = watson(n=n_cart)
