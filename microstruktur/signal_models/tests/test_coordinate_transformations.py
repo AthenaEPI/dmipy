@@ -2,6 +2,7 @@ from numpy.testing import assert_almost_equal
 import numpy as np
 from microstruktur.signal_models import utils
 
+
 def test_coordinate_transformation():
     # test for a vector of size 3
     cartesian_vector = np.random.rand(3)
