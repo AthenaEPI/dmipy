@@ -229,15 +229,21 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
             parameter_name = self._inverted_parameter_map[
                 (parameter_model, parameter_name)
             ]
-            argument_values = []
-            for argument in arguments:
-                argument_name = self._inverted_parameter_map[argument]
-                argument_values.append(parameters.get(
-                    argument_name,
-                    self.parameter_defaults[argument_name]
-                ))
 
-            parameters[parameter_name] = parameter_function(*argument_values)
+            if len(arguments) > 0:
+                argument_values = []
+                for argument in arguments:
+                    argument_name = self._inverted_parameter_map[argument]
+                    argument_values.append(parameters.get(
+                        argument_name,
+                        self.parameter_defaults[argument_name]
+                    ))
+
+                parameters[parameter_name] = parameter_function(
+                    *argument_values
+                )
+            else:
+                parameters[parameter_name] = parameter_function()
         return parameters
 
     def __call__(self, bvals, n, shell_indices, **kwargs):
