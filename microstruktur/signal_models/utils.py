@@ -110,7 +110,7 @@ def rotation_matrix_100_to_theta_phi(theta, phi):
     R : array, shape (3 x 3)
         Rotation matrix.
     """
-    x, y, z = sphere2cart(1., theta, phi)
+    x, y, z = sphere2cart(np.r_[1., theta, phi])
     return rotation_matrix_100_to_xyz(float(x), float(y), float(z))
 
 

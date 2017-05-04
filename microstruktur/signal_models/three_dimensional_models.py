@@ -73,11 +73,11 @@ class MicrostrukturModel:
 
     def objective_function(
         self, parameter_vector,
-        bvals=None, n=None, attenuation=None, shell_indices=None
+        bvals=None, n=None, attenuation=None
     ):
         parameters = self.parameter_vector_to_parameters(parameter_vector)
         return np.sum((
-            self(bvals, n, shell_indices, **parameters) - attenuation
+            self(bvals, n, **parameters) - attenuation
         ) ** 2) / len(attenuation)
 
     @property
@@ -246,7 +246,7 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
                 parameters[parameter_name] = parameter_function()
         return parameters
 
-    def __call__(self, bvals, n, shell_indices, **kwargs):
+    def __call__(self, bvals, n, **kwargs):
         values = 0
         kwargs = self.add_linked_parameters_to_parameters(
             kwargs
@@ -279,7 +279,7 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
 
             values = (
                 values +
-                current_partial_volume * model(bvals, n, shell_indices,
+                current_partial_volume * model(bvals, n,
                                                **parameters)
             )
         return values
@@ -318,7 +318,7 @@ class I1Stick(MicrostrukturModel):
         self.mu = mu
         self.lambda_par = lambda_par
 
-    def __call__(self, bvals, n, shell_indices, **kwargs):
+    def __call__(self, bvals, n, **kwargs):
         r'''
         Parameters
         ----------
@@ -363,9 +363,8 @@ class I1Stick(MicrostrukturModel):
         """
         lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
 
-        dummy_shell_indices = 1.
         E_stick_sf = self(
-            np.r_[bval], SPHERE_CARTESIAN, dummy_shell_indices,
+            np.r_[bval], SPHERE_CARTESIAN,
             mu=np.r_[0., 0.], lambda_par=lambda_par_
         )
         sh_mat = real_sym_sh_mrtrix(
@@ -412,7 +411,7 @@ class I1WatsonDispersedStick(MicrostrukturModel):
         self.lambda_par = lambda_par
         self.kappa = kappa
 
-    def __call__(self, bvals, n, shell_indices, **kwargs):
+    def __call__(self, bvals, n, **kwargs):
         r'''
         Parameters
         ----------
@@ -430,6 +429,10 @@ class I1WatsonDispersedStick(MicrostrukturModel):
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
         kappa = kwargs.get('kappa', self.kappa)
+        shell_indices = kwargs.get('shell_indices')
+        if shell_indices is None:
+            msg = "argument shell_indices is needed"
+            raise ValueError(msg)
 
         watson = SD3Watson(mu=mu, kappa=kappa)
         sh_watson = watson.spherical_harmonics_representation()
@@ -495,7 +498,7 @@ class I1BinghamDispersedStick(MicrostrukturModel):
         self.kappa = kappa
         self.beta = beta
 
-    def __call__(self, bvals, n, shell_indices, **kwargs):
+    def __call__(self, bvals, n, **kwargs):
         r'''
         Parameters
         ----------
@@ -515,6 +518,10 @@ class I1BinghamDispersedStick(MicrostrukturModel):
         psi = kwargs.get('psi', self.psi)
         kappa = kwargs.get('kappa', self.kappa)
         beta = kwargs.get('beta', self.beta)
+        shell_indices = kwargs.get('shell_indices')
+        if shell_indices is None:
+            msg = "argument shell_indices is needed"
+            raise ValueError(msg)
 
         bingham = SD2Bingham(mu=mu, psi=psi, kappa=kappa, beta=beta)
         sh_bingham = bingham.spherical_harmonics_representation()
@@ -577,7 +584,7 @@ class E4WatsonDispersedZeppelin(MicrostrukturModel):
         self.lambda_perp = lambda_perp
         self.kappa = kappa
 
-    def __call__(self, bvals, n, shell_indices, **kwargs):
+    def __call__(self, bvals, n, **kwargs):
         r'''
         Parameters
         ----------
@@ -596,6 +603,10 @@ class E4WatsonDispersedZeppelin(MicrostrukturModel):
         lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
         mu = kwargs.get('mu', self.mu)
         kappa = kwargs.get('kappa', self.kappa)
+        shell_indices = kwargs.get('shell_indices')
+        if shell_indices is None:
+            msg = "argument shell_indices is needed"
+            raise ValueError(msg)
 
         watson = SD3Watson(mu=mu, kappa=kappa)
         sh_watson = watson.spherical_harmonics_representation()
@@ -657,7 +668,7 @@ class I1StickSphericalMean(MicrostrukturModel):
     def __init__(self, mu=None, lambda_par=None):
         self.lambda_par = lambda_par
 
-    def __call__(self, bvals, n, shell_indices, **kwargs):
+    def __call__(self, bvals, n=None, **kwargs):
         """ Spherical mean of the signal attenuation of the Stick model for
         a given b-value and parallel diffusivity. Analytic expression from
         Eq. (7) in [1].
@@ -729,7 +740,7 @@ class E4ZeppelinSphericalMean(MicrostrukturModel):
         self.lambda_par = lambda_par
         self.lambda_perp = lambda_perp
 
-    def __call__(self, bvals, n, shell_indices, **kwargs):
+    def __call__(self, bvals, n=None, **kwargs):
         lambda_par = kwargs.get('lambda_par', self.lambda_par) *\
             DIFFUSIVITY_SCALING
         lambda_perp = kwargs.get('lambda_perp', self.lambda_perp) *\
@@ -740,7 +751,7 @@ class E4ZeppelinSphericalMean(MicrostrukturModel):
         E_mean = exp_bl * np.sqrt(np.pi) * erf(sqrt_bl) / (2 * sqrt_bl)
         return E_mean
 
-    def derivative(self, bvals, n, shell_indices, **kwargs):
+    def derivative(self, bvals, n, **kwargs):
         lambda_par = kwargs.get('lambda_par', self.lambda_par) *\
             DIFFUSIVITY_SCALING
         lambda_perp = kwargs.get('lambda_perp', self.lambda_perp) *\
@@ -783,7 +794,7 @@ class E3Ball(MicrostrukturModel):
     def __init__(self, lambda_iso=None):
         self.lambda_iso = lambda_iso
 
-    def __call__(self, bvals, n, shell_indices, **kwargs):
+    def __call__(self, bvals, n, **kwargs):
         r'''
         Parameters
         ----------
@@ -842,7 +853,7 @@ class E4Zeppelin(MicrostrukturModel):
         self.lambda_par = lambda_par
         self.lambda_perp = lambda_perp
 
-    def __call__(self, bvals, n, shell_indices, **kwargs):
+    def __call__(self, bvals, n, **kwargs):
         r'''
         Parameters
         ----------
@@ -897,9 +908,8 @@ class E4Zeppelin(MicrostrukturModel):
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
 
-        dummy_shell_indices = 1.
         E_zeppelin_sf = self(
-            bval, SPHERE_CARTESIAN, dummy_shell_indices,
+            bval, SPHERE_CARTESIAN,
             mu=np.r_[0., 0.], lambda_par=lambda_par, lambda_perp=lambda_perp
         )
 

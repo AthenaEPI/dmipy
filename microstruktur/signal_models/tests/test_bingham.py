@@ -1,13 +1,11 @@
 from numpy.testing import assert_almost_equal, assert_equal
-from dipy.core.geometry import cart2sphere, sphere2cart
+from microstruktur.signal_models import utils
 import numpy as np
 from microstruktur.signal_models.utils import (
     rotation_matrix_100_to_theta_phi, rotation_matrix_around_100,
     rotation_matrix_100_to_theta_phi_psi
 )
-from microstruktur.signal_models.three_dimensional_models import (
-    SD2_bingham_cartesian, SD3_watson
-)
+from microstruktur.signal_models import three_dimensional_models
 
 
 def test_rotation_100_to_theta_phi():
@@ -15,8 +13,8 @@ def test_rotation_100_to_theta_phi():
     theta_ = np.random.rand() * np.pi
     phi_ = (np.random.rand() - .5) * np.pi
     R100_to_theta_pi = rotation_matrix_100_to_theta_phi(theta_, phi_)
-    x_, y_, z_ = np.dot(R100_to_theta_pi, np.r_[1, 0, 0])
-    _, theta_rec, phi_rec = cart2sphere(x_, y_, z_)
+    xyz = np.dot(R100_to_theta_pi, np.r_[1, 0, 0])
+    _, theta_rec, phi_rec = utils.cart2sphere(xyz)
     assert_almost_equal(theta_, theta_rec)
     assert_almost_equal(phi_, phi_rec)
 
@@ -36,8 +34,8 @@ def test_psi_insensitivity_when_doing_psi_theta_phi_rotation():
     phi_ = (np.random.rand() - .5) * np.pi
     psi_ = np.random.rand() * np.pi
     R_ = rotation_matrix_100_to_theta_phi_psi(theta_, phi_, psi_)
-    x_, y_, z_ = np.dot(R_, np.r_[1, 0, 0])
-    _, theta_rec, phi_rec = cart2sphere(x_, y_, z_)
+    xyz = np.dot(R_, np.r_[1, 0, 0])
+    _, theta_rec, phi_rec = utils.cart2sphere(xyz)
     assert_almost_equal(theta_, theta_rec)
     assert_almost_equal(phi_, phi_rec)
 
@@ -66,8 +64,7 @@ def test_rotation_on_bingham_tensor():
     B_ = R_.dot(Bdiag_).dot(R_.T)
     eigvals, eigvecs = np.linalg.eigh(B_)
     main_evec = eigvecs[:, np.argmax(eigvals)]
-    _, theta_rec0, phi_rec0 = cart2sphere(main_evec[0], main_evec[1],
-                                          main_evec[2])
+    _, theta_rec0, phi_rec0 = utils.cart2sphere(main_evec)
 
     # checking if the angles are antipodal to each other
     if abs(theta_ - theta_rec0) > 1e-5:
@@ -86,13 +83,14 @@ def test_rotation_on_bingham_tensor():
 
 def test_bingham_equal_to_watson(beta_=0):
     # test if bingham with beta=0 equals watson distribution
-    n_ = np.random.rand(3)
-    n_ /= np.linalg.norm(n_)
+    mu_ = np.random.rand(2)
+    n_cart = utils.sphere2cart(np.r_[1., mu_])
     theta_ = np.random.rand() * np.pi
     phi_ = (np.random.rand() - 0.5) * np.pi
     psi_ = np.random.rand() * np.pi
     kappa_ = np.random.rand()
-    mu_ = sphere2cart(1., theta_, phi_)
-    Bn = SD2_bingham_cartesian(n_, mu_, psi_, kappa_, beta_)
-    Wn = SD3_watson(n_, mu_, kappa_)
+    bingham = three_dimensional_models.SD2Bingham(mu=mu_, psi=psi_, kappa=kappa_, beta=beta_)
+    watson = three_dimensional_models.SD3Watson(mu=mu_, kappa=kappa_)
+    Bn = bingham(n=n_cart)
+    Wn = watson(n=n_cart)
     assert_almost_equal(Bn, Wn)

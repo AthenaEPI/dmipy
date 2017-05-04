@@ -1,11 +1,11 @@
 from numpy.testing import assert_almost_equal, assert_equal
-from microstruktur.signal_models.three_dimensional_models import (SD3_watson,
-                                                                  I1_stick)
+from microstruktur.signal_models import three_dimensional_models
 from microstruktur.signal_models.spherical_convolution import (kernel_sh_to_rh,
                                                                sh_convolution)
 from dipy.reconst.shm import sf_to_sh, sh_to_sf
 from dipy.data import get_sphere
 import numpy as np
+DIFFUSIVITY_SCALING = 1e-3
 
 
 def test_spherical_convolution_watson_sh(sh_order=4):
@@ -14,13 +14,16 @@ def test_spherical_convolution_watson_sh(sh_order=4):
     np.random.shuffle(indices_sphere_orientations)
     mu_index = indices_sphere_orientations[0]
     mu_watson = sphere.vertices[mu_index]
-
-    f_sf = SD3_watson(n=sphere.vertices, mu=mu_watson, kappa=10.)
+    
+    watson = three_dimensional_models.SD3Watson(mu=mu_watson, kappa=10.)
+    f_sf = watson(n=sphere.vertices)
     f_sh = sf_to_sh(f_sf, sphere, sh_order)
 
     bval = 1e3
-    lambda_par = 2e-3
-    k_sf = I1_stick(bval, sphere.vertices, np.r_[0, 0, 1], lambda_par)
+    lambda_par = 2e-3 * DIFFUSIVITY_SCALING
+    stick = three_dimensional_models.I1Stick(mu=[0, 0], lambda_par=lambda_par)
+    k_sf = stick(bvals=bval, n=sphere.vertices)
+    #k_sf = I1_stick(bval, sphere.vertices, np.r_[0, 0, 1], lambda_par)
     k_sh = sf_to_sh(k_sf, sphere, sh_order)
     k_rh = kernel_sh_to_rh(k_sh, sh_order)
 
