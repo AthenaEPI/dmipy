@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from dipy.core.geometry import sphere2cart
 from dipy.data import get_sphere
 SPHERE = get_sphere('symmetric362')
 
@@ -244,3 +243,75 @@ def define_shell_indices(bvals, b_value_ranges):
                " out of " + str(len(bvals)) + " dwis")
         raise ValueError(msg)
     return shell_indices, shell_bvals
+
+
+def cart2sphere(cartesian_coordinates):
+    """"Function to estimate spherical coordinates from cartesian coordinates
+    according to wikipedia. Conforms with the dipy notation.
+
+    Parameters
+    ----------
+    cartesian_coordinates : array of size (3) or (N x 3),
+        array of cartesian coordinate vectors [x, y, z].
+
+    Returns
+    -------
+    spherical_coordinates : array of size (3) or (N x 3),
+        array of spherical coordinate vectors [r, theta, phi].
+        range of theta [0, pi]. range of phi [-pi, pi].
+    """
+    if np.ndim(cartesian_coordinates) == 1:
+        x, y, z = cartesian_coordinates
+        r = np.sqrt(x ** 2 + y ** 2 + z ** 2)
+        if r > 0:
+            theta = np.arccos(z / r)
+        else:
+            theta = 0
+        phi = np.arctan2(y, x)
+        spherical_coordinates = np.r_[r, theta, phi]
+    elif np.ndim(cartesian_coordinates) == 2:
+        x, y, z = cartesian_coordinates.T
+        r = np.sqrt(x ** 2 + y ** 2 + z ** 2)
+        theta = np.arccos(z / r)
+        theta = np.where(r > 0, theta, 0.)
+        phi = np.arctan2(y, x)
+        spherical_coordinates = np.c_[r, theta, phi]
+    else:
+        msg = "coordinates must be array of size 3 or N x 3."
+        raise ValueError(msg)
+    return spherical_coordinates
+
+
+def sphere2cart(spherical_coordinates):
+    """"Function to estimate cartesian coordinates from spherical coordinates
+    according to wikipedia. Conforms with the dipy notation.
+
+    Parameters
+    ----------
+    spherical_coordinates : array of size (3) or (N x 3),
+        array of spherical coordinate vectors [r, theta, phi].
+        range of theta [0, pi]. range of phi [-pi, pi].
+
+    Returns
+    -------
+    cartesian_coordinates : array of size (3) or (N x 3),
+        array of cartesian coordinate vectors [x, y, z].
+    """
+    if np.ndim(spherical_coordinates) == 1:
+        r, theta, phi = spherical_coordinates
+        sintheta = np.sin(theta)
+        x = r * sintheta * np.cos(phi)
+        y = r * sintheta * np.sin(phi)
+        z = r * np.cos(theta)
+        cartesian_coordinates = np.r_[x, y, z]
+    elif np.ndim(spherical_coordinates) == 2:
+        r, theta, phi = spherical_coordinates.T
+        sintheta = np.sin(theta)
+        x = r * sintheta * np.cos(phi)
+        y = r * sintheta * np.sin(phi)
+        z = r * np.cos(theta)
+        cartesian_coordinates = np.c_[x, y, z]
+    else:
+        msg = "coordinates must be array of size 3 or N x 3."
+        raise ValueError(msg)
+    return cartesian_coordinates
