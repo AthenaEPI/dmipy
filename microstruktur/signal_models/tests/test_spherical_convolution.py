@@ -1,7 +1,4 @@
-from numpy.testing import (assert_almost_equal,
-                           assert_array_almost_equal,
-                           assert_equal,
-                           run_module_suite)
+from numpy.testing import assert_almost_equal, assert_equal
 from microstruktur.signal_models.three_dimensional_models import (SD3_watson,
                                                                   I1_stick)
 from microstruktur.signal_models.spherical_convolution import (kernel_sh_to_rh,
@@ -40,7 +37,8 @@ def test_spherical_convolution_watson_sh(sh_order=4):
         assert_equal(min_position, mu_index)
     else:  # then it's the opposite direction
         sphere_positions = np.arange(sphere.vertices.shape[0])
-        opposite_index = np.all(np.round(
-                    sphere.vertices - mu_watson, 2) == 0, axis=1)
+        opposite_index = np.all(
+            np.round(sphere.vertices - mu_watson, 2) == 0, axis=1
+            )
         min_position_opposite = sphere_positions[opposite_index]
         assert_equal(min_position_opposite, mu_index)

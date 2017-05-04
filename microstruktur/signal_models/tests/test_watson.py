@@ -1,7 +1,4 @@
-from numpy.testing import (assert_almost_equal,
-                           assert_array_almost_equal,
-                           assert_equal,
-                           run_module_suite)
+from numpy.testing import assert_almost_equal, assert_equal
 import numpy as np
 from microstruktur.signal_models.three_dimensional_models import SD3_watson
 from dipy.data import get_sphere

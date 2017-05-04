@@ -2,11 +2,12 @@ from numpy.testing import assert_almost_equal, assert_equal
 from dipy.core.geometry import cart2sphere, sphere2cart
 import numpy as np
 from microstruktur.signal_models.utils import (
-                                rotation_matrix_100_to_theta_phi,
-                                rotation_matrix_around_100,
-                                rotation_matrix_100_to_theta_phi_psi)
+    rotation_matrix_100_to_theta_phi, rotation_matrix_around_100,
+    rotation_matrix_100_to_theta_phi_psi
+)
 from microstruktur.signal_models.three_dimensional_models import (
-                                            SD2_bingham_cartesian, SD3_watson)
+    SD2_bingham_cartesian, SD3_watson
+)
 
 
 def test_rotation_100_to_theta_phi():

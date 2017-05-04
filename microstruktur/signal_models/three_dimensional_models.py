@@ -615,7 +615,7 @@ class E4WatsonDispersedZeppelin(MicrostrukturModel):
             # rotational harmonics of zeppelin
             rh_zeppelin = zeppelin.rotational_harmonics_representation(
                 bval=bval_mean
-                )
+            )
             # convolving micro-environment with watson distribution
             E_dispersed_sh = sh_convolution(sh_watson, rh_zeppelin, sh_order)
             # recover signal values from watson-convolved spherical harmonics
