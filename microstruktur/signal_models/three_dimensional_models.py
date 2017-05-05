@@ -368,7 +368,7 @@ class I1Stick(MicrostrukturModel):
             mu=np.r_[0., 0.], lambda_par=lambda_par_
         )
         sh_mat = real_sym_sh_mrtrix(
-            rh_order, SPHERE_SPHERICAL[1], SPHERE_SPHERICAL[2]
+            rh_order, SPHERE_SPHERICAL[:, 1], SPHERE_SPHERICAL[:, 2]
         )[0]
         sh_mat_inv = np.linalg.pinv(sh_mat)
         sh = np.dot(sh_mat_inv, E_stick_sf)
@@ -868,11 +868,33 @@ class E4Zeppelin(MicrostrukturModel):
             DIFFUSIVITY_SCALING
         mu = kwargs.get('mu', self.mu)
         mu = utils.sphere2cart(np.r_[1, mu])
-        mu_perp = utils.perpendicular_vector(mu)
+        #mu_perp = utils.perpendicular_vector(mu)
 
-        E_par = np.exp(-bvals * lambda_par * np.dot(n, mu) ** 2)
-        E_perp = np.exp(-bvals * lambda_perp * np.dot(n, mu_perp) ** 2)
-        E_zeppelin = E_par * E_perp
+        #E_par = np.exp(-bvals * lambda_par * np.dot(n, mu) ** 2)
+        #E_perp = np.exp(-bvals * lambda_perp * np.dot(n, mu_perp) ** 2)
+        #E_zeppelin = E_par * E_perp
+        
+        D_h = np.diag(np.r_[lambda_par, lambda_perp, lambda_perp])
+        R1 = mu
+        R2 = utils.perpendicular_vector(R1)
+        R3 = np.cross(R1, R2)
+        R = np.c_[R1, R2, R3]
+        D = np.dot(np.dot(R, D_h), R.T)
+
+        dim_b = np.ndim(bvals)
+        dim_n = np.ndim(n)
+
+        if dim_n == 1:  # if there is only one sampled orientation
+            E_zeppelin = np.exp(-bvals * np.dot(n, np.dot(n, D)))
+        elif dim_b == 0 and dim_n == 2:  # one b-value on sphere
+            E_zeppelin = np.zeros(n.shape[0])
+            for i in range(n.shape[0]):
+                E_zeppelin[i] = np.exp(-bvals * np.dot(n[i], np.dot(n[i], D)))
+        elif dim_b == 1 and dim_n == 2:  # many b-values and orientations
+            E_zeppelin = np.zeros(n.shape[0])
+            for i in range(n.shape[0]):
+                E_zeppelin[i] = np.exp(-bvals[i] * np.dot(n[i],
+                                                          np.dot(n[i], D)))
 
         return E_zeppelin
 
@@ -907,7 +929,7 @@ class E4Zeppelin(MicrostrukturModel):
         )
 
         sh_mat = real_sym_sh_mrtrix(
-            rh_order, SPHERE_SPHERICAL[1], SPHERE_SPHERICAL[2]
+            rh_order, SPHERE_SPHERICAL[:, 1], SPHERE_SPHERICAL[:, 2]
         )[0]
         sh_mat_inv = np.linalg.pinv(sh_mat)
         sh = np.dot(sh_mat_inv, E_zeppelin_sf)
