@@ -17,6 +17,7 @@ from microstruktur.signal_models.spherical_convolution import sh_convolution
 
 from . import utils
 from .free_diffusion import free_diffusion_attenuation
+from ..signal_models.gradient_conversions import g_from_b
 from . import CONSTANTS
 from ..signal_models.spherical_convolution import kernel_sh_to_rh
 
@@ -72,10 +73,16 @@ class MicrostrukturModel:
 
     def objective_function(
         self, parameter_vector,
-        bvals=None, n=None, attenuation=None, shell_indices=None
+        bvals=None, n=None, attenuation=None,
+        shell_indices=None, delta=None, Delta=None
     ):
-        parameters = self.parameter_vector_to_parameters(parameter_vector)
+        parameters = {}
         parameters['shell_indices'] = shell_indices
+        parameters['delta'] = delta
+        parameters['Delta'] = Delta
+        parameters.update(
+            self.parameter_vector_to_parameters(parameter_vector)
+        )
         return np.sum((
             self(bvals, n, **parameters) - attenuation
         ) ** 2) / len(attenuation)
@@ -272,7 +279,9 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
                 parameters[parameter] = kwargs.get(
                     parameter_name, self.parameter_defaults.get(parameter_name)
                 )
-            parameters['shell_indices'] = kwargs['shell_indices']
+            parameters['shell_indices'] = kwargs.get('shell_indices', None)
+            parameters['delta'] = kwargs.get('delta', None)
+            parameters['Delta'] = kwargs.get('Delta', None)
             current_partial_volume = accumulated_partial_volume
             if partial_volume is not None:
                 current_partial_volume *= partial_volume
@@ -374,6 +383,129 @@ class I1Stick(MicrostrukturModel):
         sh = np.dot(sh_mat_inv, E_stick_sf)
         rh = kernel_sh_to_rh(sh, rh_order)
         return rh
+
+
+class I3CylinderGaussianPhaseApproximation(MicrostrukturModel):
+    r""" The cylinder model [1] - a cylinder with given radius - for
+    intra-axonal diffusion. The perpendicular diffusion is modelled
+    after Van Gelderen's solution for the disk.
+
+    Parameters
+    ----------
+    bvals : float or array, shape(N),
+        b-values in s/mm^2.
+    n : array, shape(N x 3),
+        b-vectors in cartesian coordinates.
+    mu : array, shape(3),
+        unit vector representing orientation of the Stick.
+    lambda_par : float,
+        parallel diffusivity in mm^2/s.
+
+
+    References
+    ----------
+    .. [1] Van Gelderen et al.
+           "Evaluation of Restricted Diffusion 
+           in Cylinders. Phosphocreatine in Rabbit Leg Muscle"
+           Journal of Magnetic Resonance Series B (1994)
+    """
+
+    _parameter_ranges = {
+        'mu': ([0, -np.pi], [np.pi, np.pi]),
+        'lambda_par': (0, np.inf),
+        'diameter': (1e-10, 50e-6)
+    }
+    CYLINDER_TRASCENDENTAL_ROOTS = np.sort(special.jnp_zeros(1, 1000))
+
+    def __init__(
+        self,
+        mu=None, lambda_par=None,
+        diameter=None,
+        diffusion_perpendicular=CONSTANTS['water_in_axons_diffusion_constant'],
+        gyromagnetic_ratio=CONSTANTS['water_gyromagnetic_ratio'],
+        number_of_approximation_terms=10,
+    ):
+        '''
+        length is the radius
+        '''
+        if (mu is None or lambda_par is None or diameter is None):
+            raise ValueError('All arguments must be not None')
+        self.mu = mu
+        self.lambda_par = lambda_par
+        self.N = number_of_approximation_terms
+        self.diffusion_perpendicular = diffusion_perpendicular
+        self.gyromagnetic_ratio = gyromagnetic_ratio
+        self.diameter = diameter
+
+    def perpendicular_attenuation(
+        self, gradient_strength, delta, Delta, diameter
+    ):
+        D = self.diffusion_perpendicular
+        gamma = self.gyromagnetic_ratio
+        radius = diameter / 2
+
+        first_factor = -2 * (gradient_strength * gamma) ** 2
+        alpha = self.CYLINDER_TRASCENDENTAL_ROOTS / radius
+        alpha2 = alpha ** 2
+        alpha2D = alpha2 * D
+
+        summands = (
+            2 * alpha2D * delta - 2 +
+            2 * np.exp(-alpha2D * delta) +
+            2 * np.exp(-alpha2D * Delta) -
+            np.exp(-alpha2D * (Delta - delta)) -
+            np.exp(-alpha2D * (Delta + delta))
+        ) / (D ** 2 * alpha ** 6 * (radius ** 2 * alpha2 - 1))
+
+        E = np.exp(
+            first_factor *
+            summands.sum()
+        )
+
+        return E
+
+    def __call__(self, bvals, n, delta=None, Delta=None, **kwargs):
+        r'''
+        Parameters
+        ----------
+        bvals : float or array, shape(N),
+            b-values in s/mm^2.
+        n : array, shape(N x 3),
+            b-vectors in cartesian coordinates.
+        delta: float or array, shape (N),
+            delta parameter in seconds.
+        Delta: float or array, shape (N),
+            Delta parameter in seconds.
+
+        Returns
+        -------
+        attenuation : float or array, shape(N),
+            signal attenuation
+        '''
+        if (
+            delta is None or Delta is None
+        ):
+            raise ValueError('This class needs non None delta and Delta')
+        diameter = kwargs.get('diameter', self.diameter)
+        lambda_par_ = kwargs.get('lambda_par', self.lambda_par) *\
+            DIFFUSIVITY_SCALING
+        mu = kwargs.get('mu', self.mu)
+        mu = utils.sphere2cart(np.r_[1, mu])
+        mu_perpendicular_plane = np.eye(3) - np.outer(mu, mu)
+        magnitude_parallel = np.dot(n, mu)
+        magnitude_perpendicular = np.linalg.norm(
+            np.dot(mu_perpendicular_plane, n.T),
+            axis=0
+        )
+        E_parallel = np.exp(-bvals * lambda_par_ * magnitude_parallel ** 2)
+        g = g_from_b(
+            bvals, delta, Delta,
+            gyromagnetic_ratio=self.gyromagnetic_ratio
+        )
+        E_perpendicular = self.perpendicular_attenuation(
+            g * magnitude_perpendicular, delta, Delta, diameter
+        )
+        return E_parallel * E_perpendicular
 
 
 class I1WatsonDispersedStick(MicrostrukturModel):
