@@ -868,12 +868,7 @@ class E4Zeppelin(MicrostrukturModel):
             DIFFUSIVITY_SCALING
         mu = kwargs.get('mu', self.mu)
         mu = utils.sphere2cart(np.r_[1, mu])
-        #mu_perp = utils.perpendicular_vector(mu)
 
-        #E_par = np.exp(-bvals * lambda_par * np.dot(n, mu) ** 2)
-        #E_perp = np.exp(-bvals * lambda_perp * np.dot(n, mu_perp) ** 2)
-        #E_zeppelin = E_par * E_perp
-        
         D_h = np.diag(np.r_[lambda_par, lambda_perp, lambda_perp])
         R1 = mu
         R2 = utils.perpendicular_vector(R1)
