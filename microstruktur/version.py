@@ -74,4 +74,4 @@ VERSION = __version__
 PACKAGE_DATA = {
     'microstruktur': [pjoin('data', 'gradient_tables', '*')]
 }
-REQUIRES = ["numpy"]
+REQUIRES = ["numpy", 'dipy']
