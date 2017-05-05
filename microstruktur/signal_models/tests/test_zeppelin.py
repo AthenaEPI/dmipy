@@ -1,8 +1,7 @@
 from numpy.testing import assert_almost_equal
 import numpy as np
-from microstruktur.signal_models import three_dimensional_models
+from microstruktur.signal_models import three_dimensional_models, utils
 from microstruktur.signal_models.utils import perpendicular_vector
-from dipy.core.geometry import sphere2cart
 DIFFUSIVITY_SCALING = 1e-3
 
 
@@ -10,8 +9,7 @@ def test_orienting_zeppelin():
     # test for orienting the axis of the Zeppelin along mu
     # first test to see if Ezeppelin equals Gaussian with lambda_par along mu
     random_mu = np.random.rand(2) * np.pi
-    x, y, z = sphere2cart(1, random_mu[0], random_mu[1])
-    n = np.array([x, y, z])
+    n = utils.sphere2cart(np.r_[1, random_mu])
     random_bval = np.r_[np.random.rand() * 1000.]
     random_lambda_par = np.random.rand() * 3
     random_lambda_perp = random_lambda_par / 2.

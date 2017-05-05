@@ -31,7 +31,7 @@ def test_spherical_convolution_watson_sh(sh_order=4):
     fk_convolved_sf = sh_to_sf(fk_convolved_sh, sphere, sh_order)
     
     # assert if spherical mean is the same between kernel and convolved kernel
-    assert_almost_equal(np.mean(k_sf), np.mean(fk_convolved_sf), 2)
+    assert_almost_equal(abs(np.mean(k_sf) - np.mean(fk_convolved_sf)), 0., 2)
     # assert if the lowest signal attenuation (E(b,n)) is orientation along
     # the orientation of the watson distribution.
     min_position = np.argmin(fk_convolved_sf)

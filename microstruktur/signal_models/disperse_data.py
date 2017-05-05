@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 from dipy.reconst.shm import real_sym_sh_mrtrix
-from dipy.core.geometry import cart2sphere
 import numpy as np
-from . import three_dimensional_models, spherical_convolution
+from . import three_dimensional_models, spherical_convolution, utils
 BINGHAM_SH_ORDER = 14
 
 
@@ -57,9 +56,7 @@ def disperse_data(E, bvecs, shell_indices, mu, psi, kappa, beta):
         shell_mask = shell_indices == shell_index
         bvecs_shell = bvecs[shell_mask]  # what bvecs in that shell
         data_shell = E[shell_mask]
-        _, theta_, phi_ = cart2sphere(bvecs_shell[:, 0],
-                                      bvecs_shell[:, 1],
-                                      bvecs_shell[:, 2])
+        _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
         sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
         sh_data = np.dot(np.linalg.pinv(sh_mat), data_shell)
         rh_data = spherical_convolution.kernel_sh_to_rh(sh_data, sh_order)
