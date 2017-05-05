@@ -54,7 +54,7 @@ install:
 
 script:
 - flake8 --ignore N802,N806,E731 `find . -name \*.py | grep -v setup.py | grep -v /doc/`
-- nosetest --with-coverage
+- nosetests --with-coverage
   # - mkdir for_test
   # - cd for_test
   #- py.test --pyargs microstruktur --cov-report term-missing --cov=microstruktur
