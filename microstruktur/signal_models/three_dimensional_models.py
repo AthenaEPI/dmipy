@@ -12,7 +12,6 @@ from scipy.special import erf
 from scipy import stats
 from scipy import integrate
 from scipy import special
-from dipy.core.geometry import cart2sphere, sphere2cart
 from dipy.reconst.shm import real_sym_sh_mrtrix
 from microstruktur.signal_models.spherical_convolution import sh_convolution
 
@@ -28,7 +27,7 @@ GRADIENT_TABLES_PATH = pkg_resources.resource_filename(
 SPHERE_CARTESIAN = np.loadtxt(
     join(GRADIENT_TABLES_PATH, 'sphere_with_cap.txt')
 )
-SPHERE_SPHERICAL = np.vstack(cart2sphere(*SPHERE_CARTESIAN.T))
+SPHERE_SPHERICAL = utils.cart2sphere(SPHERE_CARTESIAN)
 WATSON_SH_ORDER = 14
 DIFFUSIVITY_SCALING = 1e-3
 
@@ -338,8 +337,7 @@ class I1Stick(MicrostrukturModel):
         lambda_par_ = kwargs.get('lambda_par', self.lambda_par) *\
             DIFFUSIVITY_SCALING
         mu = kwargs.get('mu', self.mu)
-        x, y, z = sphere2cart(1, mu[0], mu[1])
-        mu = np.r_[float(x), float(y), float(z)]
+        mu = utils.sphere2cart(np.r_[1, mu])
         E_stick = np.exp(-bvals * lambda_par_ * np.dot(n, mu) ** 2)
         return E_stick
 
@@ -445,9 +443,7 @@ class I1WatsonDispersedStick(MicrostrukturModel):
             bval_mask = shell_indices == shell_index
             bvecs_shell = n[bval_mask]  # what bvecs in that shell
             bval_mean = bvals[bval_mask].mean()
-            _, theta_, phi_ = cart2sphere(bvecs_shell[:, 0],
-                                          bvecs_shell[:, 1],
-                                          bvecs_shell[:, 2])
+            _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
             sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
 
             # rotational harmonics of stick
@@ -534,9 +530,7 @@ class I1BinghamDispersedStick(MicrostrukturModel):
             bval_mask = shell_indices == shell_index
             bvecs_shell = n[bval_mask]  # what bvecs in that shell
             bval_mean = bvals[bval_mask].mean()
-            _, theta_, phi_ = cart2sphere(bvecs_shell[:, 0],
-                                          bvecs_shell[:, 1],
-                                          bvecs_shell[:, 2])
+            _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
             sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
 
             # rotational harmonics of stick
@@ -620,9 +614,7 @@ class E4WatsonDispersedZeppelin(MicrostrukturModel):
             bval_mask = shell_indices == shell_index
             bvecs_shell = n[bval_mask]  # what bvecs in that shell
             bval_mean = bvals[bval_mask].mean()
-            _, theta_, phi_ = cart2sphere(bvecs_shell[:, 0],
-                                          bvecs_shell[:, 1],
-                                          bvecs_shell[:, 2])
+            _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
             sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
 
             # rotational harmonics of zeppelin
@@ -875,8 +867,7 @@ class E4Zeppelin(MicrostrukturModel):
         lambda_perp = kwargs.get('lambda_perp', self.lambda_perp) *\
             DIFFUSIVITY_SCALING
         mu = kwargs.get('mu', self.mu)
-        x, y, z = sphere2cart(1, mu[0], mu[1])
-        mu = np.r_[float(x), float(y), float(z)]
+        mu = utils.sphere2cart(np.r_[1, mu])
         mu_perp = utils.perpendicular_vector(mu)
 
         E_par = np.exp(-bvals * lambda_par * np.dot(n, mu) ** 2)
@@ -975,8 +966,7 @@ class SD3Watson(MicrostrukturModel):
         """
         kappa = kwargs.get('kappa', self.kappa)
         mu = kwargs.get('mu', self.mu)
-        x, y, z = sphere2cart(1, mu[0], mu[1])
-        mu_cart = np.r_[float(x), float(y), float(z)]
+        mu_cart = utils.sphere2cart(np.r_[1., mu])
         numerator = np.exp(kappa * np.dot(n, mu_cart) ** 2)
         denominator = 4 * np.pi * special.hyp1f1(0.5, 1.5, kappa)
         Wn = numerator / denominator
@@ -1003,13 +993,11 @@ class SD3Watson(MicrostrukturModel):
         """
         kappa = kwargs.get('kappa', self.kappa)
         mu = kwargs.get('mu', self.mu)
-        x_, y_, z_ = sphere2cart(1., mu[0], mu[1])
+        x_, y_, z_ = utils.sphere2cart(np.r_[1., mu])
 
-        R = utils.rotation_matrix_001_to_xyz(float(x_), float(y_), float(z_))
+        R = utils.rotation_matrix_001_to_xyz(x_, y_, z_)
         vertices_rotated = np.dot(SPHERE_CARTESIAN, R.T)
-        _, theta_rotated, phi_rotated = cart2sphere(vertices_rotated[:, 0],
-                                                    vertices_rotated[:, 1],
-                                                    vertices_rotated[:, 2])
+        _, theta_rotated, phi_rotated = utils.cart2sphere(vertices_rotated).T
 
         watson_sf = self(vertices_rotated, mu=mu, kappa=kappa)
         sh_mat = real_sym_sh_mrtrix(sh_order, theta_rotated, phi_rotated)[0]
@@ -1125,13 +1113,11 @@ class SD2Bingham(MicrostrukturModel):
         mu = kwargs.get('mu', self.mu)
         psi = kwargs.get('psi', self.psi)
 
-        x_, y_, z_ = sphere2cart(1., mu[0], mu[1])
+        x_, y_, z_ = utils.sphere2cart(np.r_[1., mu])
 
-        R = utils.rotation_matrix_001_to_xyz(float(x_), float(y_), float(z_))
+        R = utils.rotation_matrix_001_to_xyz(x_, y_, z_)
         vertices_rotated = np.dot(SPHERE_CARTESIAN, R.T)
-        _, theta_rotated, phi_rotated = cart2sphere(vertices_rotated[:, 0],
-                                                    vertices_rotated[:, 1],
-                                                    vertices_rotated[:, 2])
+        _, theta_rotated, phi_rotated = utils.cart2sphere(vertices_rotated).T
 
         bingham_sf = self(vertices_rotated, mu=mu, psi=psi, kappa=kappa,
                           beta=beta)
