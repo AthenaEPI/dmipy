@@ -628,6 +628,98 @@ class E4WatsonDispersedZeppelin(MicrostrukturModel):
         return E
 
 
+class E4BinghamDispersedZeppelin(MicrostrukturModel):
+    r""" The Watson-Dispersed Zeppelin model [1] - a cylinder with zero radius-
+    for intra-axonal diffusion.
+
+    Parameters
+    ----------
+    bvals : float or array, shape(N),
+        b-values in s/mm^2.
+    n : array, shape(N x 3),
+        b-vectors in cartesian coordinates.
+    mu : array, shape(3),
+        unit vector representing orientation of the Stick.
+    lambda_par : float,
+        parallel diffusivity in mm^2/s.
+
+
+    References
+    ----------
+    .. [1] Behrens et al.
+           "Characterization and propagation of uncertainty in
+            diffusion-weighted MR imaging"
+           Magnetic Resonance in Medicine (2003)
+    """
+
+    _parameter_ranges = {
+        'mu': ([0, -np.pi], [np.pi, np.pi]),
+        'lambda_par': (0, 3),
+        'lambda_perp': (0, 3),
+        'psi': (0, np.pi),
+        'kappa': (0, 16),
+        'beta': (0, 16)
+    }
+
+    def __init__(self, mu=None, lambda_par=None, lambda_perp=None,
+                 kappa=None, beta=None, psi=None):
+        self.mu = mu
+        self.lambda_par = lambda_par
+        self.lambda_perp = lambda_perp
+        self.psi = psi
+        self.kappa = kappa
+        self.beta = beta
+
+    def __call__(self, bvals, n, **kwargs):
+        r'''
+        Parameters
+        ----------
+        bvals : float or array, shape(N),
+            b-values in s/mm^2.
+        n : array, shape(N x 3),
+            b-vectors in cartesian coordinates.
+
+        Returns
+        -------
+        attenuation : float or array, shape(N),
+            signal attenuation
+        '''
+        sh_order = WATSON_SH_ORDER
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
+        mu = kwargs.get('mu', self.mu)
+        kappa = kwargs.get('kappa', self.kappa)
+        beta = kwargs.get('beta', self.beta)
+        psi = kwargs.get('psi', self.psi)
+        shell_indices = kwargs.get('shell_indices')
+        if shell_indices is None:
+            msg = "argument shell_indices is needed"
+            raise ValueError(msg)
+
+        bingham = SD2Bingham(mu=mu, kappa=kappa, beta=beta, psi=psi)
+        sh_bingham = bingham.spherical_harmonics_representation()
+        zeppelin = E4Zeppelin(mu=mu, lambda_par=lambda_par,
+                              lambda_perp=lambda_perp)
+
+        E = np.ones_like(bvals)
+        for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
+            bval_mask = shell_indices == shell_index
+            bvecs_shell = n[bval_mask]  # what bvecs in that shell
+            bval_mean = bvals[bval_mask].mean()
+            _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
+            sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
+
+            # rotational harmonics of zeppelin
+            rh_zeppelin = zeppelin.rotational_harmonics_representation(
+                bval=bval_mean
+            )
+            # convolving micro-environment with watson distribution
+            E_dispersed_sh = sh_convolution(sh_bingham, rh_zeppelin, sh_order)
+            # recover signal values from watson-convolved spherical harmonics
+            E[bval_mask] = np.dot(sh_mat, E_dispersed_sh)
+        return E
+
+
 class I1StickSphericalMean(MicrostrukturModel):
     """ Spherical mean of the signal attenuation of the Stick model [1] for
     a given b-value and parallel diffusivity. Analytic expression from
