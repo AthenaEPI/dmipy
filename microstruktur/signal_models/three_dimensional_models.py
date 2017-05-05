@@ -73,9 +73,10 @@ class MicrostrukturModel:
 
     def objective_function(
         self, parameter_vector,
-        bvals=None, n=None, attenuation=None
+        bvals=None, n=None, attenuation=None, shell_indices=None
     ):
         parameters = self.parameter_vector_to_parameters(parameter_vector)
+        parameters['shell_indices'] = shell_indices
         return np.sum((
             self(bvals, n, **parameters) - attenuation
         ) ** 2) / len(attenuation)
@@ -272,6 +273,7 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
                 parameters[parameter] = kwargs.get(
                     parameter_name, self.parameter_defaults.get(parameter_name)
                 )
+            parameters['shell_indices'] = kwargs['shell_indices']
             current_partial_volume = accumulated_partial_volume
             if partial_volume is not None:
                 current_partial_volume *= partial_volume
