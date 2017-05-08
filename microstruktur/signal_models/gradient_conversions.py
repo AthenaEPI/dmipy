@@ -2,6 +2,24 @@ import numpy as np
 from .constants import CONSTANTS
 
 
+def q_from_b(
+    b, delta, Delta
+):
+    """Compute q-value from b-value. Units are standard units."""
+    tau = Delta - delta / 3
+    q = np.sqrt(b / tau) / (2 * np.pi)
+    return q
+
+
+def b_from_q(
+    q, delta, Delta
+):
+    """Compute b-value from q-value. Units are standard units."""
+    tau = Delta - delta / 3
+    b = (q * (2 * np.pi)) ** 2 * tau
+    return b
+
+
 def q_from_g(
     g, delta,
     gyromagnetic_ratio=CONSTANTS['water_gyromagnetic_ratio']
