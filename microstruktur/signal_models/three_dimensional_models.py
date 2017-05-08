@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Document Module
 '''
@@ -17,7 +18,7 @@ from microstruktur.signal_models.spherical_convolution import sh_convolution
 
 from . import utils
 from .free_diffusion import free_diffusion_attenuation
-from ..signal_models.gradient_conversions import g_from_b
+from ..signal_models.gradient_conversions import g_from_b, q_from_b
 from . import CONSTANTS
 from ..signal_models.spherical_convolution import kernel_sh_to_rh
 
@@ -385,7 +386,107 @@ class I1Stick(MicrostrukturModel):
         return rh
 
 
-class I3CylinderGaussianPhaseApproximation(MicrostrukturModel):
+class I2CylinderSodermanApproximation(MicrostrukturModel):
+    r""" Calculates the perpendicular diffusion signal E(q) in a cylinder of
+    radius R using the Soderman model [1]_. Assumes that the pulse length
+    is infinitely short and the diffusion time is infinitely long.
+
+    Parameters
+    ----------
+    bvals : float or array, shape(N),
+        b-values in s/mm^2.
+    n : array, shape(N x 3),
+        b-vectors in cartesian coordinates.
+    mu : array, shape(3),
+        unit vector representing orientation of the Stick.
+    lambda_par : float,
+        parallel diffusivity in mm^2/s.
+    diameter : float,
+        axon (cylinder) diameter.
+
+    Returns
+    -------
+    E : array, shape (N,)
+        signal attenuation
+
+    References
+    ----------
+    .. [1]_ Söderman, Olle, and Bengt Jönsson. "Restricted diffusion in
+            cylindrical geometry." Journal of Magnetic Resonance, Series A
+            117.1 (1995): 94-97.
+    """
+
+    _parameter_ranges = {
+        'mu': ([0, -np.pi], [np.pi, np.pi]),
+        'lambda_par': (0, np.inf),
+        'diameter': (1e-10, 50e-6)
+    }
+
+    def __init__(
+        self,
+        mu=None, lambda_par=None,
+        diameter=None
+    ):
+        self.mu = mu
+        self.lambda_par = lambda_par
+        self.diameter = diameter
+
+    def perpendicular_attenuation(
+        self, q, diameter
+    ):
+        radius = diameter / 2
+        # Eq. [6] in the paper
+        E = ((2 * special.jn(1, 2 * np.pi * q * radius)) ** 2 /
+            (2 * np.pi * q * radius) ** 2
+        )
+        return E
+
+    def __call__(self, bvals, n, delta=None, Delta=None, **kwargs):
+        r'''
+        Parameters
+        ----------
+        bvals : float or array, shape(N),
+            b-values in s/mm^2.
+        n : array, shape(N x 3),
+            b-vectors in cartesian coordinates.
+        delta: float or array, shape (N),
+            delta parameter in seconds.
+        Delta: float or array, shape (N),
+            Delta parameter in seconds.
+
+        Returns
+        -------
+        attenuation : float or array, shape(N),
+            signal attenuation
+        '''
+        if (
+            delta is None or Delta is None
+        ):
+            raise ValueError('This class needs non-None delta and Delta')
+        diameter = kwargs.get('diameter', self.diameter)
+        lambda_par_ = kwargs.get('lambda_par', self.lambda_par) *\
+            DIFFUSIVITY_SCALING
+        mu = kwargs.get('mu', self.mu)
+        mu = utils.sphere2cart(np.r_[1, mu])
+        mu_perpendicular_plane = np.eye(3) - np.outer(mu, mu)
+        magnitude_parallel = np.dot(n, mu)
+        magnitude_perpendicular = np.linalg.norm(
+            np.dot(mu_perpendicular_plane, n.T),
+            axis=0
+        )
+        E_parallel = np.exp(-bvals * lambda_par_ * magnitude_parallel ** 2)
+        q = q_from_b(
+            bvals, delta, Delta
+        )
+        E_perpendicular = np.ones_like(q)
+        q_nonzero = q > 0
+        E_perpendicular[q_nonzero] = self.perpendicular_attenuation(
+            (q * magnitude_perpendicular)[q_nonzero], diameter
+        )
+        return E_parallel * E_perpendicular
+
+
+class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
     r""" The cylinder model [1] - a cylinder with given radius - for
     intra-axonal diffusion. The perpendicular diffusion is modelled
     after Van Gelderen's solution for the disk.
@@ -425,11 +526,6 @@ class I3CylinderGaussianPhaseApproximation(MicrostrukturModel):
         gyromagnetic_ratio=CONSTANTS['water_gyromagnetic_ratio'],
         number_of_approximation_terms=10,
     ):
-        '''
-        length is the radius
-        '''
-        if (mu is None or lambda_par is None or diameter is None):
-            raise ValueError('All arguments must be not None')
         self.mu = mu
         self.lambda_par = lambda_par
         self.N = number_of_approximation_terms
@@ -485,7 +581,7 @@ class I3CylinderGaussianPhaseApproximation(MicrostrukturModel):
         if (
             delta is None or Delta is None
         ):
-            raise ValueError('This class needs non None delta and Delta')
+            raise ValueError('This class needs non-None delta and Delta')
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par_ = kwargs.get('lambda_par', self.lambda_par) *\
             DIFFUSIVITY_SCALING
