@@ -437,8 +437,7 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
         radius = diameter / 2
         # Eq. [6] in the paper
         E = ((2 * special.jn(1, 2 * np.pi * q * radius)) ** 2 /
-            (2 * np.pi * q * radius) ** 2
-        )
+             (2 * np.pi * q * radius) ** 2)
         return E
 
     def __call__(self, bvals, n, delta=None, Delta=None, **kwargs):
@@ -479,9 +478,147 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
             bvals, delta, Delta
         )
         E_perpendicular = np.ones_like(q)
-        q_nonzero = q > 0
+        q_perp = q * magnitude_perpendicular
+        q_nonzero = q_perp > 0  # only q>0 attenuate
         E_perpendicular[q_nonzero] = self.perpendicular_attenuation(
-            (q * magnitude_perpendicular)[q_nonzero], diameter
+            q_perp[q_nonzero], diameter
+        )
+        return E_parallel * E_perpendicular
+
+
+class I3CylinderCallaghanApproximation(MicrostrukturModel):
+    r""" The cylinder model [1] - a cylinder with given radius - for
+    intra-axonal diffusion. The perpendicular diffusion is modelled
+    after Callaghan's solution for the disk.
+
+    Parameters
+    ----------
+    bvals : float or array, shape(N),
+        b-values in s/mm^2.
+    n : array, shape(N x 3),
+        b-vectors in cartesian coordinates.
+    mu : array, shape(3),
+        unit vector representing orientation of the Stick.
+    lambda_par : float,
+        parallel diffusivity in mm^2/s.
+
+
+    References
+    ----------
+    .. [1] Van Gelderen et al.
+           "Evaluation of Restricted Diffusion
+           in Cylinders. Phosphocreatine in Rabbit Leg Muscle"
+           Journal of Magnetic Resonance Series B (1994)
+    """
+
+    _parameter_ranges = {
+        'mu': ([0, -np.pi], [np.pi, np.pi]),
+        'lambda_par': (0, np.inf),
+        'diameter': (1e-10, 50e-6)
+    }
+
+    def __init__(
+        self,
+        mu=None, lambda_par=None,
+        diameter=None,
+        diffusion_perpendicular=CONSTANTS['water_in_axons_diffusion_constant'],
+        gyromagnetic_ratio=CONSTANTS['water_gyromagnetic_ratio'],
+        number_of_roots=10,
+        number_of_functions=10,
+    ):
+        self.mu = mu
+        self.lambda_par = lambda_par
+        self.diffusion_perpendicular = diffusion_perpendicular
+        self.gyromagnetic_ratio = gyromagnetic_ratio
+        self.diameter = diameter
+
+        self.alpha = np.empty((number_of_roots, number_of_functions))
+        self.alpha[0, 0] = 0
+        if number_of_roots > 1:
+            self.alpha[1:, 0] = special.jnp_zeros(0, number_of_roots - 1)
+        for m in xrange(1, number_of_functions):
+            self.alpha[:, m] = special.jnp_zeros(m, number_of_roots)
+
+        self.xi = np.array(range(number_of_roots)) * np.pi
+        self.zeta = np.array(range(number_of_roots)) * np.pi + np.pi / 2.0
+
+    def perpendicular_attenuation(self, q, tau, diameter):
+        """Implements the finite time Callaghan model for cylinders [1]
+        """
+        radius = diameter / 2.
+        alpha = self.alpha
+        q_argument = 2 * np.pi * q * radius
+        q_argument_2 = q_argument ** 2
+        res = np.zeros_like(q)
+        
+        J = special.j1(q_argument) ** 2
+        for k in xrange(0, self.alpha.shape[0]):
+            alpha2 = alpha[k, 0] ** 2
+            update = (
+                4 * np.exp(-alpha2 * self.diffusion_perpendicular * tau  / radius ** 2) *
+                q_argument_2  /
+                (q_argument_2 - alpha2) ** 2
+                * J
+            )
+            res += update
+                
+        for m in xrange(1, self.alpha.shape[1]):
+            J = special.jvp(m, q_argument, 1)
+            q_argument_J = (q_argument * J) ** 2
+            for k in xrange(self.alpha.shape[0]):
+                    alpha2 = self.alpha[k, m] ** 2
+                    update = (
+                        8 * np.exp(-alpha2 * self.diffusion_perpendicular * tau  / radius ** 2) *
+                        alpha2 / (alpha2 - m ** 2) *
+                        q_argument_J /
+                        (q_argument_2 - alpha2) ** 2
+                    )
+                    res += update
+        return res
+
+    def __call__(self, bvals, n, delta=None, Delta=None, **kwargs):
+        r'''
+        Parameters
+        ----------
+        bvals : float or array, shape(N),
+            b-values in s/mm^2.
+        n : array, shape(N x 3),
+            b-vectors in cartesian coordinates.
+        delta: float or array, shape (N),
+            delta parameter in seconds.
+        Delta: float or array, shape (N),
+            Delta parameter in seconds.
+
+        Returns
+        -------
+        attenuation : float or array, shape(N),
+            signal attenuation
+        '''
+        if (
+            delta is None or Delta is None
+        ):
+            raise ValueError('This class needs non-None delta and Delta')
+        diameter = kwargs.get('diameter', self.diameter)
+        lambda_par_ = kwargs.get('lambda_par', self.lambda_par) *\
+            DIFFUSIVITY_SCALING
+        mu = kwargs.get('mu', self.mu)
+        mu = utils.sphere2cart(np.r_[1, mu])
+        mu_perpendicular_plane = np.eye(3) - np.outer(mu, mu)
+        magnitude_parallel = np.dot(n, mu)
+        magnitude_perpendicular = np.linalg.norm(
+            np.dot(mu_perpendicular_plane, n.T),
+            axis=0
+        )
+        E_parallel = np.exp(-bvals * lambda_par_ * magnitude_parallel ** 2)
+        q = q_from_b(
+            bvals, delta, Delta
+        )
+        tau = Delta - delta / 3.
+        E_perpendicular = np.ones_like(q)
+        q_perp = q * magnitude_perpendicular
+        q_nonzero = q_perp > 0  # only q>0 attenuate
+        E_perpendicular[q_nonzero] = self.perpendicular_attenuation(
+            q_perp[q_nonzero], tau[q_nonzero], diameter
         )
         return E_parallel * E_perpendicular
 
@@ -506,7 +643,7 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
     References
     ----------
     .. [1] Van Gelderen et al.
-           "Evaluation of Restricted Diffusion 
+           "Evaluation of Restricted Diffusion
            in Cylinders. Phosphocreatine in Rabbit Leg Muscle"
            Journal of Magnetic Resonance Series B (1994)
     """
@@ -598,8 +735,11 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
             bvals, delta, Delta,
             gyromagnetic_ratio=self.gyromagnetic_ratio
         )
+        E_perpendicular = np.ones_like(g)
+        g_perp = g * magnitude_perpendicular
+        g_nonzero = g_perp > 0  # only q>0 attenuate
         E_perpendicular = self.perpendicular_attenuation(
-            g * magnitude_perpendicular, delta, Delta, diameter
+            g_perp[g_nonzero], delta[g_nonzero], Delta[g_nonzero], diameter
         )
         return E_parallel * E_perpendicular
 
@@ -1201,16 +1341,139 @@ class E4Zeppelin(MicrostrukturModel):
 
         if dim_n == 1:  # if there is only one sampled orientation
             E_zeppelin = np.exp(-bvals * np.dot(n, np.dot(n, D)))
-        elif dim_b == 0 and dim_n == 2:  # one b-value on sphere
-            E_zeppelin = np.zeros(n.shape[0])
-            for i in range(n.shape[0]):
-                E_zeppelin[i] = np.exp(-bvals * np.dot(n[i], np.dot(n[i], D)))
         elif dim_b == 1 and dim_n == 2:  # many b-values and orientations
             E_zeppelin = np.zeros(n.shape[0])
             for i in range(n.shape[0]):
                 E_zeppelin[i] = np.exp(-bvals[i] * np.dot(n[i],
                                                           np.dot(n[i], D)))
 
+        return E_zeppelin
+
+    def rotational_harmonics_representation(self, bval, rh_order=14, **kwargs):
+        r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
+        Axis aligned with z-axis to be used as kernelfor spherical
+        convolution.
+
+        Parameters
+        ----------
+        bval : float,
+            b-value in s/mm^2.
+        lambda_par : float,
+            parallel diffusivity in mm^2/s.
+        lambda_perp : float,
+            perpendicular diffusivity in mm^2/s.
+        sh_order : int,
+            maximum spherical harmonics order to be used in the approximation.
+            set to 14 to conform with order used for watson distribution.
+
+        Returns
+        -------
+        rh : array,
+            rotational harmonics of stick model aligned with z-axis.
+        """
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
+
+        E_zeppelin_sf = self(
+            bval, SPHERE_CARTESIAN,
+            mu=np.r_[0., 0.], lambda_par=lambda_par, lambda_perp=lambda_perp
+        )
+
+        sh_mat = real_sym_sh_mrtrix(
+            rh_order, SPHERE_SPHERICAL[:, 1], SPHERE_SPHERICAL[:, 2]
+        )[0]
+        sh_mat_inv = np.linalg.pinv(sh_mat)
+        sh = np.dot(sh_mat_inv, E_zeppelin_sf)
+        rh = kernel_sh_to_rh(sh, rh_order)
+        return rh
+
+
+class E5RestrictedZeppelin(MicrostrukturModel):
+    r""" The restricted Zeppelin model [1] - an axially symmetric Tensor - for
+    extra-axonal diffusion.
+
+    Parameters
+    ----------
+    bvals : float or array, shape(N),
+        b-values in s/mm^2.
+    n : array, shape(N x 3),
+        b-vectors in cartesian coordinates.
+    mu : array, shape(3),
+        unit vector representing orientation of the Stick.
+    lambda_par : float,
+        parallel diffusivity in mm^2/s.
+    lambda_perp : float,
+        perpendicular diffusivity in mm^2/s.
+    A: float,
+        characteristic coefficient.
+
+    Returns
+    -------
+    E_zeppelin : float or array, shape(N),
+        signal attenuation.
+
+    References
+    ----------
+    .. [1] Burcaw
+    """
+
+    _parameter_ranges = {
+        'mu': ([0, -np.pi], [np.pi, np.pi]),
+        'lambda_par': (0, np.inf),
+        'lambda_perp': (0, np.inf),
+        'A': (0, np.inf)
+    }
+
+    def __init__(self, mu=None, lambda_par=None, lambda_perp=None, A=None):
+        self.mu = mu
+        self.lambda_par = lambda_par
+        self.lambda_perp = lambda_perp
+        self.A = A
+
+    def __call__(self, bvals, n, delta=None, Delta=None, **kwargs):
+        r'''
+        Parameters
+        ----------
+        bvals : float or array, shape(N),
+            b-values in s/mm^2.
+        n : array, shape(N x 3),
+            b-vectors in cartesian coordinates.
+        delta : float or array, shape (N),
+            pulse duration in s.
+        Delta : float or array, shape (N),
+            pulse separation in s.
+
+        Returns
+        -------
+        attenuation : float or array, shape(N),
+            signal attenuation
+        '''
+
+        lambda_par = kwargs.get('lambda_par', self.lambda_par) *\
+            DIFFUSIVITY_SCALING
+        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp) *\
+            DIFFUSIVITY_SCALING
+        A = kwargs.get('A', self.A)
+        mu = kwargs.get('mu', self.mu)
+        mu = utils.sphere2cart(np.r_[1, mu])
+
+        R1 = mu
+        R2 = utils.perpendicular_vector(R1)
+        R3 = np.cross(R1, R2)
+        R = np.c_[R1, R2, R3]
+
+        E_zeppelin = np.ones_like(bvals)
+        for i, bval_, n_, delta_, Delta_ in enumerate(
+            zip(bvals, n, delta, Delta)
+        ):
+            # lambda_perp and A must be in the same unit
+            restricted_term = (
+                A * (np.log(Delta_ / delta_) + 3 / 2.) / (Delta_ - delta_ / 3.)
+            )
+            D_perp = lambda_perp + restricted_term
+            D_h = np.diag(np.r_[lambda_par, D_perp, D_perp])
+            D = np.dot(np.dot(R, D_h), R.T)
+            E_zeppelin[i] = np.exp(-bval_ * np.dot(n_, np.dot(n_, D)))
         return E_zeppelin
 
     def rotational_harmonics_representation(self, bval, rh_order=14, **kwargs):
