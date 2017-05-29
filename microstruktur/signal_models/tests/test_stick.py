@@ -2,7 +2,7 @@ from numpy.testing import assert_almost_equal
 import numpy as np
 from microstruktur.signal_models import three_dimensional_models, utils
 from microstruktur.signal_models.utils import perpendicular_vector
-DIFFUSIVITY_SCALING = 1e-3
+DIFFUSIVITY_SCALING = 1e-9
 
 
 def test_orienting_stick():
@@ -10,7 +10,7 @@ def test_orienting_stick():
     # first test to see if Estick equals Gaussian with lambda_par along mu
     random_n_mu_vector = np.random.rand(2) * np.pi
     n = utils.sphere2cart(np.r_[1, random_n_mu_vector])
-    random_bval = np.r_[np.random.rand() * 1000.]
+    random_bval = np.r_[np.random.rand() * 1e9]
     random_lambda_par = np.random.rand() * 3
     shell_index = np.r_[1]
 

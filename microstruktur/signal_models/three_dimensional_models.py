@@ -31,7 +31,7 @@ SPHERE_CARTESIAN = np.loadtxt(
 )
 SPHERE_SPHERICAL = utils.cart2sphere(SPHERE_CARTESIAN)
 WATSON_SH_ORDER = 14
-DIFFUSIVITY_SCALING = 1e-3
+DIFFUSIVITY_SCALING = 1e-9
 
 
 class MicrostrukturModel:
@@ -1273,7 +1273,7 @@ class E4Zeppelin(MicrostrukturModel):
 
     Parameters
     ----------
-    bvals : float or array, shape(N),
+    bvals : array, shape(N),
         b-values in s/mm^2.
     n : array, shape(N x 3),
         b-vectors in cartesian coordinates.
@@ -1336,16 +1336,14 @@ class E4Zeppelin(MicrostrukturModel):
         R = np.c_[R1, R2, R3]
         D = np.dot(np.dot(R, D_h), R.T)
 
-        dim_b = np.ndim(bvals)
-        dim_n = np.ndim(n)
+        #dim_b = np.ndim(bvals)
+        #dim_n = np.ndim(n)
 
-        if dim_n == 1:  # if there is only one sampled orientation
-            E_zeppelin = np.exp(-bvals * np.dot(n, np.dot(n, D)))
-        elif dim_b == 1 and dim_n == 2:  # many b-values and orientations
-            E_zeppelin = np.zeros(n.shape[0])
-            for i in range(n.shape[0]):
-                E_zeppelin[i] = np.exp(-bvals[i] * np.dot(n[i],
-                                                          np.dot(n[i], D)))
+        #if dim_b == 1 and dim_n == 2:  # many b-values and orientations
+        E_zeppelin = np.zeros(n.shape[0])
+        for i in range(n.shape[0]):
+            E_zeppelin[i] = np.exp(-bvals[i] * np.dot(n[i],
+                                                        np.dot(n[i], D)))
 
         return E_zeppelin
 

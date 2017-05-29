@@ -2,15 +2,15 @@ from numpy.testing import assert_almost_equal
 import numpy as np
 from microstruktur.signal_models import three_dimensional_models, utils
 from microstruktur.signal_models.utils import perpendicular_vector
-DIFFUSIVITY_SCALING = 1e-3
+DIFFUSIVITY_SCALING = 1e-9
 
 
 def test_orienting_zeppelin():
     # test for orienting the axis of the Zeppelin along mu
     # first test to see if Ezeppelin equals Gaussian with lambda_par along mu
     random_mu = np.random.rand(2) * np.pi
-    n = utils.sphere2cart(np.r_[1, random_mu])
-    random_bval = np.r_[np.random.rand() * 1000.]
+    n = np.array([utils.sphere2cart(np.r_[1, random_mu])])
+    random_bval = np.r_[np.random.rand() * 1e9]
     random_lambda_par = np.random.rand() * 3
     random_lambda_perp = random_lambda_par / 2.
     shell_index = np.r_[1]
@@ -25,7 +25,7 @@ def test_orienting_zeppelin():
 
     # second test to see if Ezeppelin equals Gaussian with lambda_perp
     # perpendicular to mu
-    n_perp = perpendicular_vector(n)
+    n_perp = np.array([perpendicular_vector(n[0])])
     E_zep_perp = zeppelin(bvals=random_bval, n=n_perp,
                           shell_indices=shell_index)
     E_check_perp = np.exp(-random_bval * random_lambda_perp *

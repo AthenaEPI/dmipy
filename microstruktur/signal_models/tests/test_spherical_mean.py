@@ -8,7 +8,7 @@ from microstruktur.signal_models import three_dimensional_models
 sphere = get_sphere().subdivide()
 
 
-def test_spherical_mean_stick_analytic_vs_numerical(bvalue=1e3,
+def test_spherical_mean_stick_analytic_vs_numerical(bvalue=1e9,
                                                     lambda_par=1.7,
                                                     mu=np.r_[0, 0]):
     stick = three_dimensional_models.I1Stick(mu=mu, lambda_par=lambda_par)
@@ -20,7 +20,7 @@ def test_spherical_mean_stick_analytic_vs_numerical(bvalue=1e3,
     assert_almost_equal(sm_stick_analytic, sm_stick_numerical, 3)
 
 
-def test_spherical_mean_zeppelin_analytic_vs_numerical(bvalue=1e3,
+def test_spherical_mean_zeppelin_analytic_vs_numerical(bvalue=1e9,
                                                        lambda_par=1.7,
                                                        lambda_perp=0.8,
                                                        mu=np.r_[0, 0]):
@@ -32,11 +32,12 @@ def test_spherical_mean_zeppelin_analytic_vs_numerical(bvalue=1e3,
     zeppelin = three_dimensional_models.E4Zeppelin(
         lambda_par=lambda_par, lambda_perp=lambda_perp, mu=mu
     )
-    sm_zep_numerical = np.mean(zeppelin(bvals=bvalue, n=sphere.vertices))
+    bvals_ = np.tile(bvalue, sphere.vertices.shape[0])
+    sm_zep_numerical = np.mean(zeppelin(bvals=bvals_, n=sphere.vertices))
     assert_almost_equal(sm_zep_analytic, sm_zep_numerical, 3)
 
 
-def test_spherical_mean_stick_analytic_vs_sh(bvalue=1e3, lambda_par=1.7,
+def test_spherical_mean_stick_analytic_vs_sh(bvalue=1e9, lambda_par=1.7,
                                              mu=np.r_[0, 0]):
     stick_sm = three_dimensional_models.I1StickSphericalMean(
         lambda_par=lambda_par
@@ -49,7 +50,7 @@ def test_spherical_mean_stick_analytic_vs_sh(bvalue=1e3, lambda_par=1.7,
     assert_almost_equal(sm_stick_analytic, sm_zep_sh, 3)
 
 
-def test_spherical_mean_zeppelin_analytic_vs_sh(bvalue=1e3, lambda_par=1.7,
+def test_spherical_mean_zeppelin_analytic_vs_sh(bvalue=1e9, lambda_par=1.7,
                                                 lambda_perp=0.8,
                                                 mu=np.r_[0, 0]):
     zeppelin_sm = three_dimensional_models.E4ZeppelinSphericalMean(
@@ -60,6 +61,7 @@ def test_spherical_mean_zeppelin_analytic_vs_sh(bvalue=1e3, lambda_par=1.7,
     zeppelin = zeppelin = three_dimensional_models.E4Zeppelin(
         lambda_par=lambda_par, lambda_perp=lambda_perp, mu=mu
     )
-    E_zep = zeppelin(bvals=bvalue, n=sphere.vertices)
+    bvals_ = np.tile(bvalue, sphere.vertices.shape[0])
+    E_zep = zeppelin(bvals=bvals_, n=sphere.vertices)
     sm_zep_sh = estimate_spherical_mean_shell(E_zep, sphere.vertices)
     assert_almost_equal(sm_zep_analytic, sm_zep_sh, 3)

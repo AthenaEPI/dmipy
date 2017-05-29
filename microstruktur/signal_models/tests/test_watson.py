@@ -38,7 +38,7 @@ def test_watson_orienting():
     kappa = np.random.rand() + 0.1  # just to be sure kappa>0
     watson = three_dimensional_models.SD3Watson(mu=mu_sphere, kappa=kappa)
     Wn_vector = watson(n=n)
-    assert_equal(Wn_vector[mu_index] == max(Wn_vector), True)
+    assert_almost_equal(Wn_vector[mu_index], max(Wn_vector))
 
     # second test to see if Wn is lowest prependicular to mu
     mu_perp = utils.perpendicular_vector(mu_cart)
