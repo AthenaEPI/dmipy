@@ -485,6 +485,48 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
         )
         return E_parallel * E_perpendicular
 
+    def rotational_harmonics_representation(self, bval,
+            delta=None, Delta=None, rh_order=14, **kwargs):
+        r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
+        Axis aligned with z-axis to be used as kernelfor spherical
+        convolution.
+
+        Parameters
+        ----------
+        bval : float,
+            b-value in s/mm^2.
+        lambda_par : float,
+            parallel diffusivity in mm^2/s.
+        sh_order : int,
+            maximum spherical harmonics order to be used in the approximation.
+            set to 14 to conform with order used for watson distribution.
+
+        Returns
+        -------
+        rh : array,
+            rotational harmonics of stick model aligned with z-axis.
+        """
+        if (
+            delta is None or Delta is None
+        ):
+            raise ValueError('This class needs non-None delta and Delta')
+        diameter_ = kwargs.get('diameter', self.diameter)
+        lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
+        bvals = np.tile(bval, SPHERE_CARTESIAN.shape[0])
+        deltas = np.tile(delta, SPHERE_CARTESIAN.shape[0])
+        Deltas = np.tile(Delta, SPHERE_CARTESIAN.shape[0])
+        E_stick_sf = self(
+            bvals, SPHERE_CARTESIAN, deltas, Deltas,
+            mu=np.r_[0., 0.], lambda_par=lambda_par_, diameter=diameter_
+        )
+        sh_mat = real_sym_sh_mrtrix(
+            rh_order, SPHERE_SPHERICAL[:, 1], SPHERE_SPHERICAL[:, 2]
+        )[0]
+        sh_mat_inv = np.linalg.pinv(sh_mat)
+        sh = np.dot(sh_mat_inv, E_stick_sf)
+        rh = kernel_sh_to_rh(sh, rh_order)
+        return rh
+
 
 class I3CylinderCallaghanApproximation(MicrostrukturModel):
     r""" The cylinder model [1] - a cylinder with given radius - for
@@ -622,6 +664,48 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
         )
         return E_parallel * E_perpendicular
 
+    def rotational_harmonics_representation(self, bval,
+            delta=None, Delta=None, rh_order=14, **kwargs):
+        r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
+        Axis aligned with z-axis to be used as kernelfor spherical
+        convolution.
+
+        Parameters
+        ----------
+        bval : float,
+            b-value in s/mm^2.
+        lambda_par : float,
+            parallel diffusivity in mm^2/s.
+        sh_order : int,
+            maximum spherical harmonics order to be used in the approximation.
+            set to 14 to conform with order used for watson distribution.
+
+        Returns
+        -------
+        rh : array,
+            rotational harmonics of stick model aligned with z-axis.
+        """
+        if (
+            delta is None or Delta is None
+        ):
+            raise ValueError('This class needs non-None delta and Delta')
+        diameter_ = kwargs.get('diameter', self.diameter)
+        lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
+        bvals = np.tile(bval, SPHERE_CARTESIAN.shape[0])
+        deltas = np.tile(delta, SPHERE_CARTESIAN.shape[0])
+        Deltas = np.tile(Delta, SPHERE_CARTESIAN.shape[0])
+        E_stick_sf = self(
+            bvals, SPHERE_CARTESIAN, deltas, Deltas,
+            mu=np.r_[0., 0.], lambda_par=lambda_par_, diameter=diameter_
+        )
+        sh_mat = real_sym_sh_mrtrix(
+            rh_order, SPHERE_SPHERICAL[:, 1], SPHERE_SPHERICAL[:, 2]
+        )[0]
+        sh_mat_inv = np.linalg.pinv(sh_mat)
+        sh = np.dot(sh_mat_inv, E_stick_sf)
+        rh = kernel_sh_to_rh(sh, rh_order)
+        return rh
+
 
 class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
     r""" The cylinder model [1] - a cylinder with given radius - for
@@ -755,6 +839,48 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
                 g_perp[mask], delta_, Delta_, diameter
             )
         return E_parallel * E_perpendicular
+
+    def rotational_harmonics_representation(self, bval,
+            delta=None, Delta=None, rh_order=14, **kwargs):
+        r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
+        Axis aligned with z-axis to be used as kernelfor spherical
+        convolution.
+
+        Parameters
+        ----------
+        bval : float,
+            b-value in s/mm^2.
+        lambda_par : float,
+            parallel diffusivity in mm^2/s.
+        sh_order : int,
+            maximum spherical harmonics order to be used in the approximation.
+            set to 14 to conform with order used for watson distribution.
+
+        Returns
+        -------
+        rh : array,
+            rotational harmonics of stick model aligned with z-axis.
+        """
+        if (
+            delta is None or Delta is None
+        ):
+            raise ValueError('This class needs non-None delta and Delta')
+        diameter_ = kwargs.get('diameter', self.diameter)
+        lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
+        bvals = np.tile(bval, SPHERE_CARTESIAN.shape[0])
+        deltas = np.tile(delta, SPHERE_CARTESIAN.shape[0])
+        Deltas = np.tile(Delta, SPHERE_CARTESIAN.shape[0])
+        E_stick_sf = self(
+            bvals, SPHERE_CARTESIAN, deltas, Deltas,
+            mu=np.r_[0., 0.], lambda_par=lambda_par_, diameter=diameter_
+        )
+        sh_mat = real_sym_sh_mrtrix(
+            rh_order, SPHERE_SPHERICAL[:, 1], SPHERE_SPHERICAL[:, 2]
+        )[0]
+        sh_mat_inv = np.linalg.pinv(sh_mat)
+        sh = np.dot(sh_mat_inv, E_stick_sf)
+        rh = kernel_sh_to_rh(sh, rh_order)
+        return rh
 
 
 class I1WatsonDispersedStick(MicrostrukturModel):
