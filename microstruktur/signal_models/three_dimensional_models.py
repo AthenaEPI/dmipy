@@ -738,9 +738,22 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
         E_perpendicular = np.ones_like(g)
         g_perp = g * magnitude_perpendicular
         g_nonzero = g_perp > 0  # only q>0 attenuate
-        E_perpendicular = self.perpendicular_attenuation(
-            g_perp[g_nonzero], delta[g_nonzero], Delta[g_nonzero], diameter
+
+        # select unique delta, Delta combinations
+        deltas = np.c_[delta, Delta]
+        temp = np.ascontiguousarray(deltas).view(
+            np.dtype((np.void, deltas.dtype.itemsize * deltas.shape[1]))
         )
+        deltas_unique = np.unique(temp).view(deltas.dtype).reshape(
+            -1, deltas.shape[1]
+        )
+
+        # for every unique combination get the perpendicular attenuation
+        for delta_, Delta_ in deltas_unique:
+            mask = np.all([g_nonzero, delta==delta_, Delta==Delta_], axis=0)
+            E_perpendicular[mask] = self.perpendicular_attenuation(
+                g_perp[mask], delta_, Delta_, diameter
+            )
         return E_parallel * E_perpendicular
 
 
