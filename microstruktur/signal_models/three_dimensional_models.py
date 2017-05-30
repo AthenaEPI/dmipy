@@ -308,7 +308,7 @@ class I1Stick(MicrostrukturModel):
         theta is inclination of polar angle of main angle mu [0, pi].
         phi is polar angle of main angle mu [-pi, pi].
     lambda_par : float,
-        parallel diffusivity in mm^2/s.
+        parallel diffusivity in 10^9 m^2/s.
 
     References
     ----------
@@ -332,7 +332,7 @@ class I1Stick(MicrostrukturModel):
         Parameters
         ----------
         bvals : float or array, shape(N),
-            b-values in s/mm^2.
+            b-values in s/m^2.
         n : array, shape(N x 3),
             b-vectors in cartesian coordinates.
 
@@ -357,7 +357,7 @@ class I1Stick(MicrostrukturModel):
         Parameters
         ----------
         bval : float,
-            b-value in s/mm^2.
+            b-value in s/m^2.
         sh_order : int,
             maximum spherical harmonics order to be used in the approximation.
             set to 14 to conform with order used for watson distribution.
@@ -394,7 +394,7 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
         theta is inclination of polar angle of main angle mu [0, pi].
         phi is polar angle of main angle mu [-pi, pi].
     lambda_par : float,
-        parallel diffusivity in mm^2/s.
+        parallel diffusivity in 10^9 m^2/s.
     diameter : float,
         axon (cylinder) diameter.
 
@@ -439,7 +439,7 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
         Parameters
         ----------
         bvals : float or array, shape(N),
-            b-values in s/mm^2.
+            b-values in s/m^2.
         n : array, shape(N x 3),
             b-vectors in cartesian coordinates.
         delta: float or array, shape (N),
@@ -488,7 +488,7 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
         Parameters
         ----------
         bval : float,
-            b-value in s/mm^2.
+            b-value in s/m^2.
         delta: float,
             delta parameter in seconds.
         Delta: float,
@@ -536,7 +536,7 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
         theta is inclination of polar angle of main angle mu [0, pi].
         phi is polar angle of main angle mu [-pi, pi].
     lambda_par : float,
-        parallel diffusivity in mm^2/s.
+        parallel diffusivity in 10^9 m^2/s.
     diameter : float,
         cylinder (axon) diameter in meters.
 
@@ -619,7 +619,7 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
         Parameters
         ----------
         bvals : float or array, shape(N),
-            b-values in s/mm^2.
+            b-values in s/m^2.
         n : array, shape(N x 3),
             b-vectors in cartesian coordinates.
         delta: array, shape (N),
@@ -669,7 +669,7 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
         Parameters
         ----------
         bval : float,
-            b-value in s/mm^2.
+            b-value in s/m^2.
         delta: float,
             delta parameter in seconds.
         Delta: float,
@@ -717,7 +717,7 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
         theta is inclination of polar angle of main angle mu [0, pi].
         phi is polar angle of main angle mu [-pi, pi].
     lambda_par : float,
-        parallel diffusivity in mm^2/s.
+        parallel diffusivity in 10^9 m^2/s.
     diameter : float,
         cylinder (axon) diameter in meters.
 
@@ -784,7 +784,7 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
         Parameters
         ----------
         bvals : array, shape(N),
-            b-values in s/mm^2.
+            b-values in s/m^2.
         n : array, shape(N x 3),
             b-vectors in cartesian coordinates.
         delta : array, shape (N),
@@ -847,7 +847,7 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
         Parameters
         ----------
         bval : float,
-            b-value in s/mm^2.
+            b-value in s/m^2.
         delta: float,
             delta parameter in seconds.
         Delta: float,
@@ -891,7 +891,7 @@ class I1StickSphericalMean(MicrostrukturModel):
     Parameters
     ----------
     lambda_par : float,
-        parallel diffusivity in mm^2/s.
+        parallel diffusivity in 10^9 m^2/s.
 
     References
     ----------
@@ -914,8 +914,8 @@ class I1StickSphericalMean(MicrostrukturModel):
         """ 
         Parameters
         ----------
-        bvals : float,
-            b-values in s/m^2.
+        bvals : float or array, shape(number of shells)
+            b-value in s/m^2.
 
         Returns
         -------
@@ -950,11 +950,6 @@ class E4ZeppelinSphericalMean(MicrostrukturModel):
         lambda_perp : float,
             perpendicular diffusivity in 10^9 m^2/s.
 
-        Returns
-        -------
-        E_mean : float,
-            spherical mean of the Zeppelin model.
-
         References
         ----------
         .. [1] Kaden et al. "Multi-compartment microscopic diffusion imaging."
@@ -971,6 +966,17 @@ class E4ZeppelinSphericalMean(MicrostrukturModel):
         self.lambda_perp = lambda_perp
 
     def __call__(self, bvals, n=None, **kwargs):
+        """
+        Parameters
+        ----------
+        bvals : float or array, shape(number of shells)
+            b-value in s/m^2.
+
+        Returns
+        -------
+        E_mean : float,
+            spherical mean of the Zeppelin model.
+        """
         lambda_par = kwargs.get('lambda_par', self.lambda_par) *\
             DIFFUSIVITY_SCALING
         lambda_perp = kwargs.get('lambda_perp', self.lambda_perp) *\
@@ -997,6 +1003,74 @@ class E4ZeppelinSphericalMean(MicrostrukturModel):
             (2 * np.sqrt(bllext) - np.exp(bllext) * np.sqrt(np.pi) *
              erf(bllext)) / (4 * bllext ** (3 / 2.))
         return der_lambda_par, der_lambda_perp
+
+
+class E5RestrictedZeppelinSphericalMean(MicrostrukturModel):
+    """ Spherical mean of the signal attenuation of the restricted Zeppelin
+        model [1] for a given b-value, parallel and perpendicular diffusivity, and
+        characteristic coefficient A. The function is the same as the zeppelin
+        spherical mean [2] but lambda_perp is replaced with the restricted
+        function.
+
+        Parameters
+        ----------
+        lambda_par : float,
+            parallel diffusivity in 10^9 m^2/s.
+        lambda_inf : float,
+            bulk diffusivity constant 10^9 m^2/s.
+        A: float,
+            characteristic coefficient in 10^6 m^2
+
+        References
+        ----------
+        .. [1] Burcaw, L.M., Fieremans, E., Novikov, D.S., 2015. Mesoscopic
+            structure of neuronal tracts from time-dependent diffusion.
+            NeuroImage 114, 18.
+        .. [2] Kaden et al. "Multi-compartment microscopic diffusion imaging."
+            NeuroImage 139 (2016): 346-359.
+        """
+
+    _parameter_ranges = {
+        'lambda_par': (0, np.inf),
+        'lambda_inf': (0, np.inf),
+        'A': (0, np.inf)
+    }
+
+    def __init__(self, lambda_par=None, lambda_perp=None, A=None):
+        self.lambda_par = lambda_par
+        self.lambda_perp = lambda_perp
+        self.A = A
+
+    def __call__(self, bvals, n=None, delta=None, Delta=None, **kwargs):
+        """
+        Parameters
+        ----------
+        bvals : float or array, shape(number of shells)
+            b-value in s/m^2.
+        delta: float or array, shape(number of shells)
+            delta parameter in seconds.
+        Delta: float or array, shape(number of shells)
+            Delta parameter in seconds.
+
+        Returns
+        -------
+        E_mean : float,
+            spherical mean of the Zeppelin model.
+        """
+        lambda_par = kwargs.get('lambda_par', self.lambda_par) *\
+            DIFFUSIVITY_SCALING
+        lambda_inf = kwargs.get('lambda_inf', self.lambda_inf) *\
+            DIFFUSIVITY_SCALING
+        A = kwargs.get('A', self.A) * A_SCALING
+        
+        restricted_term = (
+            A * (np.log(Delta / delta) + 3 / 2.) / (Delta - delta / 3.)
+        )
+        lambda_perp = lambda_inf + restricted_term
+        exp_bl = np.exp(-bvals * lambda_perp)
+        sqrt_bl = np.sqrt(bvals * (lambda_par - lambda_perp))
+        E_mean = exp_bl * np.sqrt(np.pi) * erf(sqrt_bl) / (2 * sqrt_bl)
+        return E_mean
 
 
 class E2Dot(MicrostrukturModel):
@@ -1123,7 +1197,7 @@ class E4Zeppelin(MicrostrukturModel):
         Parameters
         ----------
         bvals : float or array, shape(N),
-            b-values in s/mm^2.
+            b-values in s/m^2.
         n : array, shape(N x 3),
             b-vectors in cartesian coordinates.
 
@@ -1205,7 +1279,7 @@ class E5RestrictedZeppelin(MicrostrukturModel):
         phi is polar angle of main angle mu [-pi, pi].
     lambda_par : float,
         parallel diffusivity in 10^9 m^2/s.
-    lambda_perp : float,
+    lambda_inf : float,
         bulk diffusivity constant 10^9 m^2/s.
     A: float,
         characteristic coefficient in 10^6 m^2
@@ -1223,7 +1297,7 @@ class E5RestrictedZeppelin(MicrostrukturModel):
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
         'lambda_par': (0, np.inf),
-        'lambda_perp': (0, np.inf),
+        'lambda_inf': (0, np.inf),
         'A': (0, np.inf)
     }
 
@@ -1238,7 +1312,7 @@ class E5RestrictedZeppelin(MicrostrukturModel):
         Parameters
         ----------
         bvals : array, shape(N),
-            b-values in s/mm^2.
+            b-values in s/m^2.
         n : array, shape(N x 3),
             b-vectors in cartesian coordinates.
         delta : array, shape (N),
@@ -1254,7 +1328,7 @@ class E5RestrictedZeppelin(MicrostrukturModel):
 
         lambda_par = kwargs.get('lambda_par', self.lambda_par) *\
             DIFFUSIVITY_SCALING
-        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp) *\
+        lambda_inf = kwargs.get('lambda_inf', self.lambda_inf) *\
             DIFFUSIVITY_SCALING
         A = kwargs.get('A', self.A) * A_SCALING
         mu = kwargs.get('mu', self.mu)
@@ -1273,7 +1347,7 @@ class E5RestrictedZeppelin(MicrostrukturModel):
             restricted_term = (
                 A * (np.log(Delta_ / delta_) + 3 / 2.) / (Delta_ - delta_ / 3.)
             )
-            D_perp = lambda_perp + restricted_term
+            D_perp = lambda_inf + restricted_term
             D_h = np.diag(np.r_[lambda_par, D_perp, D_perp])
             D = np.dot(np.dot(R, D_h), R.T)
             E_zeppelin[i] = np.exp(-bval_ * np.dot(n_, np.dot(n_, D)))
@@ -1288,7 +1362,7 @@ class E5RestrictedZeppelin(MicrostrukturModel):
         Parameters
         ----------
         bval : float,
-            b-value in s/mm^2.
+            b-value in s/m^2.
         delta: float,
             delta parameter in seconds.
         Delta: float,
@@ -1303,12 +1377,12 @@ class E5RestrictedZeppelin(MicrostrukturModel):
             rotational harmonics of the model aligned with z-axis.
         """
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
-        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
+        lambda_inf = kwargs.get('lambda_inf', self.lambda_inf)
         A = kwargs.get('A', self.A)
 
         E_zeppelin_sf = self(
             bval, SPHERE_CARTESIAN,
-            mu=np.r_[0., 0.], lambda_par=lambda_par, lambda_perp=lambda_perp,
+            mu=np.r_[0., 0.], lambda_par=lambda_par, lambda_perp=lambda_inf,
             A=A, Delta=Delta, delta=delta
         )
 
