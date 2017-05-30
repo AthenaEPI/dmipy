@@ -7,6 +7,7 @@ from dipy.reconst.shm import real_sym_sh_mrtrix
 MicrostrukturModel = three_dimensional_models.MicrostrukturModel
 WATSON_SH_ORDER = 14
 
+
 class SD2I1BinghamDispersedStick(MicrostrukturModel):
     r""" The Bingham-Dispersed [1] Stick model [2] - a cylinder with zero
     radius - for intra-axonal diffusion. Allows for anisotropic dispersion.
@@ -427,7 +428,7 @@ class SD2I4BinghamDispersedGaussianPhaseCylinder(MicrostrukturModel):
         bingham = three_dimensional_models.SD2Bingham(mu=mu, psi=psi,
                                                       kappa=kappa, beta=beta)
         sh_bingham = bingham.spherical_harmonics_representation()
-        vangelderen = three_dimensional_models.I4CylinderGaussianPhaseApproximation(
+        vg = three_dimensional_models.I4CylinderGaussianPhaseApproximation(
             mu=mu, lambda_par=lambda_par, diameter=diameter
         )
 
@@ -442,7 +443,7 @@ class SD2I4BinghamDispersedGaussianPhaseCylinder(MicrostrukturModel):
             sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
 
             # rotational harmonics of stick
-            rh_stick = vangelderen.rotational_harmonics_representation(
+            rh_stick = vg.rotational_harmonics_representation(
                 bval=bval_mean, delta=delta_mean, Delta=Delta_mean)
             # convolving micro-environment with bingham distribution
             E_dispersed_sh = sh_convolution(sh_bingham, rh_stick, sh_order)
@@ -823,7 +824,7 @@ class SD3I4WatsonDispersedGaussianPhaseCylinder(MicrostrukturModel):
         sh_watson = watson.spherical_harmonics_representation(
             sh_order=sh_order
         )
-        vangelderen = three_dimensional_models.I4CylinderGaussianPhaseApproximation(
+        vg = three_dimensional_models.I4CylinderGaussianPhaseApproximation(
             mu=mu, lambda_par=lambda_par, diameter=diameter
         )
 
@@ -838,7 +839,7 @@ class SD3I4WatsonDispersedGaussianPhaseCylinder(MicrostrukturModel):
             sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
 
             # rotational harmonics of stick
-            rh_stick = vangelderen.rotational_harmonics_representation(
+            rh_stick = vg.rotational_harmonics_representation(
                 bval=bval_mean, delta=delta_mean, Delta=Delta_mean)
             # convolving micro-environment with watson distribution
             E_dispersed_sh = sh_convolution(sh_watson, rh_stick, sh_order)
@@ -927,8 +928,8 @@ class SD2E4BinghamDispersedZeppelin(MicrostrukturModel):
         bingham = three_dimensional_models.SD2Bingham(mu=mu, kappa=kappa,
                                                       beta=beta, psi=psi)
         sh_bingham = bingham.spherical_harmonics_representation()
-        zeppelin = three_dimensional_models.E4Zeppelin(mu=mu,
-            lambda_par=lambda_par, lambda_perp=lambda_perp
+        zeppelin = three_dimensional_models.E4Zeppelin(
+            mu=mu, lambda_par=lambda_par, lambda_perp=lambda_perp
         )
 
         E = np.ones_like(bvals)
@@ -1017,8 +1018,8 @@ class SD3E4WatsonDispersedZeppelin(MicrostrukturModel):
         watson = three_dimensional_models.SD3Watson(mu=mu, kappa=kappa)
         sh_watson = watson.spherical_harmonics_representation()
         zeppelin = three_dimensional_models.E4Zeppelin(mu=mu,
-            lambda_par=lambda_par, lambda_perp=lambda_perp
-        )
+                                                       lambda_par=lambda_par,
+                                                       lambda_perp=lambda_perp)
 
         E = np.ones_like(bvals)
         for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell

@@ -588,25 +588,26 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
         q_argument = 2 * np.pi * q * radius
         q_argument_2 = q_argument ** 2
         res = np.zeros_like(q)
-        
+
         J = special.j1(q_argument) ** 2
         for k in xrange(0, self.alpha.shape[0]):
             alpha2 = alpha[k, 0] ** 2
             update = (
-                4 * np.exp(-alpha2 * self.diffusion_perpendicular * tau  / radius ** 2) *
-                q_argument_2  /
-                (q_argument_2 - alpha2) ** 2
-                * J
+                4 * np.exp(-alpha2 * self.diffusion_perpendicular *
+                           tau / radius ** 2) *
+                q_argument_2 /
+                (q_argument_2 - alpha2) ** 2 * J
             )
             res += update
-                
+
         for m in xrange(1, self.alpha.shape[1]):
             J = special.jvp(m, q_argument, 1)
             q_argument_J = (q_argument * J) ** 2
             for k in xrange(self.alpha.shape[0]):
                     alpha2 = self.alpha[k, m] ** 2
                     update = (
-                        8 * np.exp(-alpha2 * self.diffusion_perpendicular * tau  / radius ** 2) *
+                        8 * np.exp(-alpha2 * self.diffusion_perpendicular *
+                                   tau / radius ** 2) *
                         alpha2 / (alpha2 - m ** 2) *
                         q_argument_J /
                         (q_argument_2 - alpha2) ** 2
@@ -660,8 +661,8 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
         )
         return E_parallel * E_perpendicular
 
-    def rotational_harmonics_representation(self, bval,
-            delta=None, Delta=None, rh_order=14, **kwargs):
+    def rotational_harmonics_representation(self, bval, delta=None, Delta=None,
+                                            rh_order=14, **kwargs):
         r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernelfor spherical
         convolution.
@@ -832,14 +833,15 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
 
         # for every unique combination get the perpendicular attenuation
         for delta_, Delta_ in deltas_unique:
-            mask = np.all([g_nonzero, delta==delta_, Delta==Delta_], axis=0)
+            mask = np.all([g_nonzero, delta == delta_, Delta == Delta_],
+                          axis=0)
             E_perpendicular[mask] = self.perpendicular_attenuation(
                 g_perp[mask], delta_, Delta_, diameter
             )
         return E_parallel * E_perpendicular
 
-    def rotational_harmonics_representation(self, bval,
-            delta=None, Delta=None, rh_order=14, **kwargs):
+    def rotational_harmonics_representation(self, bval, delta=None, Delta=None,
+                                            rh_order=14, **kwargs):
         r""" The model in rotational harmonics, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernelfor spherical
         convolution.
@@ -911,7 +913,7 @@ class I1StickSphericalMean(MicrostrukturModel):
         self.lambda_par = lambda_par
 
     def __call__(self, bvals, n=None, **kwargs):
-        """ 
+        """
         Parameters
         ----------
         bvals : float or array, shape(number of shells)
@@ -1007,10 +1009,10 @@ class E4ZeppelinSphericalMean(MicrostrukturModel):
 
 class E5RestrictedZeppelinSphericalMean(MicrostrukturModel):
     """ Spherical mean of the signal attenuation of the restricted Zeppelin
-        model [1] for a given b-value, parallel and perpendicular diffusivity, and
-        characteristic coefficient A. The function is the same as the zeppelin
-        spherical mean [2] but lambda_perp is replaced with the restricted
-        function.
+        model [1] for a given b-value, parallel and perpendicular diffusivity,
+        and characteristic coefficient A. The function is the same as the
+        zeppelin spherical mean [2] but lambda_perp is replaced with the
+        restricted function.
 
         Parameters
         ----------
@@ -1062,7 +1064,7 @@ class E5RestrictedZeppelinSphericalMean(MicrostrukturModel):
         lambda_inf = kwargs.get('lambda_inf', self.lambda_inf) *\
             DIFFUSIVITY_SCALING
         A = kwargs.get('A', self.A) * A_SCALING
-        
+
         restricted_term = (
             A * (np.log(Delta / delta) + 3 / 2.) / (Delta - delta / 3.)
         )
@@ -1221,14 +1223,10 @@ class E4Zeppelin(MicrostrukturModel):
         R = np.c_[R1, R2, R3]
         D = np.dot(np.dot(R, D_h), R.T)
 
-        #dim_b = np.ndim(bvals)
-        #dim_n = np.ndim(n)
-
-        #if dim_b == 1 and dim_n == 2:  # many b-values and orientations
         E_zeppelin = np.zeros(n.shape[0])
         for i in range(n.shape[0]):
             E_zeppelin[i] = np.exp(-bvals[i] * np.dot(n[i],
-                                                        np.dot(n[i], D)))
+                                                      np.dot(n[i], D)))
 
         return E_zeppelin
 
