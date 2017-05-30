@@ -1591,6 +1591,51 @@ class SD2Bingham(MicrostrukturModel):
         return bingham_sh
 
 
+class DD1GammaDistribution(MicrostrukturModel):
+    r"""The Gamma distribution for cylinder models as used by [1].
+
+    Parameters
+    ----------
+    alpha : float,
+        shape of the gamma distribution.
+    beta : float,
+        scale of the gamma distrubution. Different from Bingham distribution!
+
+    References
+    ----------
+    .. [1] Assaf, Yaniv, et al. "AxCaliber: a method for measuring axon
+        diameter distribution from diffusion MRI." Magnetic resonance in
+        medicine 59.6 (2008): 1347-1354.
+    """
+    _parameter_ranges = {
+        'alpha': (1e-10, np.inf),
+        'beta': (1e-10, np.inf)
+    }
+
+    def __init__(self, alpha=None, beta=None):
+        self.alpha = alpha
+        self.beta = beta
+
+    def __call__(self, diameter, **kwargs):
+        r"""
+        Parameters
+        ----------
+        diameter : float or array, shape (N)
+            cylinder (axon) diameter in meters.
+
+        Returns
+        -------
+        Pgamma : float or array, shape (N)
+            probability of cylinder diameter for given alpha and beta.
+        """
+        alpha = kwargs.get('alpha', self.alpha)
+        beta = kwargs.get('beta', self.beta)
+        radius = diameter / 2.
+        gamma_dist = stats.gamma(alpha, scale=beta)
+        Pgamma = gamma_dist.pdf(radius)
+        return Pgamma
+
+
 class CylindricalModelGradientEcho:
     '''
     Different Gradient Strength Echo protocols
