@@ -32,6 +32,7 @@ SPHERE_CARTESIAN = np.loadtxt(
 SPHERE_SPHERICAL = utils.cart2sphere(SPHERE_CARTESIAN)
 WATSON_SH_ORDER = 14
 DIFFUSIVITY_SCALING = 1e-9
+A_SCALING = 1e-6
 
 
 class MicrostrukturModel:
@@ -302,15 +303,12 @@ class I1Stick(MicrostrukturModel):
 
     Parameters
     ----------
-    bvals : float or array, shape(N),
-        b-values in s/mm^2.
-    n : array, shape(N x 3),
-        b-vectors in cartesian coordinates.
-    mu : array, shape(3),
-        unit vector representing orientation of the Stick.
+    mu : array, shape(2),
+        angles [theta, phi] representing main orientation on the sphere.
+        theta is inclination of polar angle of main angle mu [0, pi].
+        phi is polar angle of main angle mu [-pi, pi].
     lambda_par : float,
         parallel diffusivity in mm^2/s.
-
 
     References
     ----------
@@ -360,8 +358,6 @@ class I1Stick(MicrostrukturModel):
         ----------
         bval : float,
             b-value in s/mm^2.
-        lambda_par : float,
-            parallel diffusivity in mm^2/s.
         sh_order : int,
             maximum spherical harmonics order to be used in the approximation.
             set to 14 to conform with order used for watson distribution.
@@ -393,12 +389,10 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
 
     Parameters
     ----------
-    bvals : float or array, shape(N),
-        b-values in s/mm^2.
-    n : array, shape(N x 3),
-        b-vectors in cartesian coordinates.
-    mu : array, shape(3),
-        unit vector representing orientation of the Stick.
+    mu : array, shape(2),
+        angles [theta, phi] representing main orientation on the sphere.
+        theta is inclination of polar angle of main angle mu [0, pi].
+        phi is polar angle of main angle mu [-pi, pi].
     lambda_par : float,
         parallel diffusivity in mm^2/s.
     diameter : float,
@@ -495,8 +489,10 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
         ----------
         bval : float,
             b-value in s/mm^2.
-        lambda_par : float,
-            parallel diffusivity in mm^2/s.
+        delta: float,
+            delta parameter in seconds.
+        Delta: float,
+            Delta parameter in seconds.
         sh_order : int,
             maximum spherical harmonics order to be used in the approximation.
             set to 14 to conform with order used for watson distribution.
@@ -535,14 +531,14 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
 
     Parameters
     ----------
-    bvals : float or array, shape(N),
-        b-values in s/mm^2.
-    n : array, shape(N x 3),
-        b-vectors in cartesian coordinates.
-    mu : array, shape(3),
-        unit vector representing orientation of the Stick.
+    mu : array, shape(2),
+        angles [theta, phi] representing main orientation on the sphere.
+        theta is inclination of polar angle of main angle mu [0, pi].
+        phi is polar angle of main angle mu [-pi, pi].
     lambda_par : float,
         parallel diffusivity in mm^2/s.
+    diameter : float,
+        cylinder (axon) diameter in meters.
 
 
     References
@@ -626,9 +622,9 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
             b-values in s/mm^2.
         n : array, shape(N x 3),
             b-vectors in cartesian coordinates.
-        delta: float or array, shape (N),
+        delta: array, shape (N),
             delta parameter in seconds.
-        Delta: float or array, shape (N),
+        Delta: array, shape (N),
             Delta parameter in seconds.
 
         Returns
@@ -674,8 +670,10 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
         ----------
         bval : float,
             b-value in s/mm^2.
-        lambda_par : float,
-            parallel diffusivity in mm^2/s.
+        delta: float,
+            delta parameter in seconds.
+        Delta: float,
+            Delta parameter in seconds.
         sh_order : int,
             maximum spherical harmonics order to be used in the approximation.
             set to 14 to conform with order used for watson distribution.
@@ -714,14 +712,14 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
 
     Parameters
     ----------
-    bvals : float or array, shape(N),
-        b-values in s/mm^2.
-    n : array, shape(N x 3),
-        b-vectors in cartesian coordinates.
-    mu : array, shape(3),
-        unit vector representing orientation of the Stick.
+    mu : array, shape(2),
+        angles [theta, phi] representing main orientation on the sphere.
+        theta is inclination of polar angle of main angle mu [0, pi].
+        phi is polar angle of main angle mu [-pi, pi].
     lambda_par : float,
         parallel diffusivity in mm^2/s.
+    diameter : float,
+        cylinder (axon) diameter in meters.
 
 
     References
@@ -785,13 +783,13 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
         r'''
         Parameters
         ----------
-        bvals : float or array, shape(N),
+        bvals : array, shape(N),
             b-values in s/mm^2.
         n : array, shape(N x 3),
             b-vectors in cartesian coordinates.
-        delta: float or array, shape (N),
+        delta : array, shape (N),
             delta parameter in seconds.
-        Delta: float or array, shape (N),
+        Delta : array, shape (N),
             Delta parameter in seconds.
 
         Returns
@@ -842,7 +840,7 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
 
     def rotational_harmonics_representation(self, bval,
             delta=None, Delta=None, rh_order=14, **kwargs):
-        r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
+        r""" The model in rotational harmonics, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernelfor spherical
         convolution.
 
@@ -850,8 +848,10 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
         ----------
         bval : float,
             b-value in s/mm^2.
-        lambda_par : float,
-            parallel diffusivity in mm^2/s.
+        delta: float,
+            delta parameter in seconds.
+        Delta: float,
+            Delta parameter in seconds.
         sh_order : int,
             maximum spherical harmonics order to be used in the approximation.
             set to 14 to conform with order used for watson distribution.
@@ -883,350 +883,6 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
         return rh
 
 
-class I1WatsonDispersedStick(MicrostrukturModel):
-    r""" The Watson-Dispersed Stick model [1] - a cylinder with zero radius -
-    for intra-axonal diffusion.
-
-    Parameters
-    ----------
-    bvals : float or array, shape(N),
-        b-values in s/mm^2.
-    n : array, shape(N x 3),
-        b-vectors in cartesian coordinates.
-    mu : array, shape(3),
-        unit vector representing orientation of the Stick.
-    lambda_par : float,
-        parallel diffusivity in mm^2/s.
-
-
-    References
-    ----------
-    .. [1] Behrens et al.
-           "Characterization and propagation of uncertainty in
-            diffusion-weighted MR imaging"
-           Magnetic Resonance in Medicine (2003)
-    """
-
-    _parameter_ranges = {
-        'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'lambda_par': (0, np.inf),
-        'kappa': (0, 16)
-    }
-
-    def __init__(self, mu=None, lambda_par=None, kappa=None):
-        self.mu = mu
-        self.lambda_par = lambda_par
-        self.kappa = kappa
-
-    def __call__(self, bvals, n, **kwargs):
-        r'''
-        Parameters
-        ----------
-        bvals : float or array, shape(N),
-            b-values in s/mm^2.
-        n : array, shape(N x 3),
-            b-vectors in cartesian coordinates.
-
-        Returns
-        -------
-        attenuation : float or array, shape(N),
-            signal attenuation
-        '''
-        sh_order = WATSON_SH_ORDER
-        lambda_par = kwargs.get('lambda_par', self.lambda_par)
-        mu = kwargs.get('mu', self.mu)
-        kappa = kwargs.get('kappa', self.kappa)
-        shell_indices = kwargs.get('shell_indices')
-        if shell_indices is None:
-            msg = "argument shell_indices is needed"
-            raise ValueError(msg)
-
-        watson = SD3Watson(mu=mu, kappa=kappa)
-        sh_watson = watson.spherical_harmonics_representation()
-        stick = I1Stick(mu=mu, lambda_par=lambda_par)
-
-        E = np.ones_like(bvals)
-        for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
-            bval_mask = shell_indices == shell_index
-            bvecs_shell = n[bval_mask]  # what bvecs in that shell
-            bval_mean = bvals[bval_mask].mean()
-            _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
-            sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
-
-            # rotational harmonics of stick
-            rh_stick = stick.rotational_harmonics_representation(
-                bval=bval_mean)
-            # convolving micro-environment with watson distribution
-            E_dispersed_sh = sh_convolution(sh_watson, rh_stick, sh_order)
-            # recover signal values from watson-convolved spherical harmonics
-            E[bval_mask] = np.dot(sh_mat, E_dispersed_sh)
-        return E
-
-
-class I1BinghamDispersedStick(MicrostrukturModel):
-    r""" The Bingham-Dispersed Stick model [1] - a cylinder with zero radius -
-    for intra-axonal diffusion.
-
-    Parameters
-    ----------
-    bvals : float or array, shape(N),
-        b-values in s/mm^2.
-    n : array, shape(N x 3),
-        b-vectors in cartesian coordinates.
-    mu : array, shape(3),
-        unit vector representing orientation of the Stick.
-    lambda_par : float,
-        parallel diffusivity in mm^2/s.
-
-
-    References
-    ----------
-    .. [1] Behrens et al.
-           "Characterization and propagation of uncertainty in
-            diffusion-weighted MR imaging"
-           Magnetic Resonance in Medicine (2003)
-    """
-
-    _parameter_ranges = {
-        'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'lambda_par': (0, 3),
-        'psi': (0, np.pi),
-        'kappa': (0, 16),
-        'beta': (0, 16)
-    }
-
-    def __init__(self, mu=None, lambda_par=None,
-                 kappa=None, beta=None, psi=None):
-        self.mu = mu
-        self.lambda_par = lambda_par
-        self.psi = psi
-        self.kappa = kappa
-        self.beta = beta
-
-    def __call__(self, bvals, n, **kwargs):
-        r'''
-        Parameters
-        ----------
-        bvals : float or array, shape(N),
-            b-values in s/mm^2.
-        n : array, shape(N x 3),
-            b-vectors in cartesian coordinates.
-
-        Returns
-        -------
-        attenuation : float or array, shape(N),
-            signal attenuation
-        '''
-        sh_order = WATSON_SH_ORDER
-        lambda_par = kwargs.get('lambda_par', self.lambda_par)
-        mu = kwargs.get('mu', self.mu)
-        psi = kwargs.get('psi', self.psi)
-        kappa = kwargs.get('kappa', self.kappa)
-        beta = kwargs.get('beta', self.beta)
-        shell_indices = kwargs.get('shell_indices')
-        if shell_indices is None:
-            msg = "argument shell_indices is needed"
-            raise ValueError(msg)
-
-        bingham = SD2Bingham(mu=mu, psi=psi, kappa=kappa, beta=beta)
-        sh_bingham = bingham.spherical_harmonics_representation()
-        stick = I1Stick(mu=mu, lambda_par=lambda_par)
-
-        E = np.ones_like(bvals)
-        for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
-            bval_mask = shell_indices == shell_index
-            bvecs_shell = n[bval_mask]  # what bvecs in that shell
-            bval_mean = bvals[bval_mask].mean()
-            _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
-            sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
-
-            # rotational harmonics of stick
-            rh_stick = stick.rotational_harmonics_representation(
-                bval=bval_mean)
-            # convolving micro-environment with watson distribution
-            E_dispersed_sh = sh_convolution(sh_bingham, rh_stick, sh_order)
-            # recover signal values from watson-convolved spherical harmonics
-            E[bval_mask] = np.dot(sh_mat, E_dispersed_sh)
-        return E
-
-
-class E4WatsonDispersedZeppelin(MicrostrukturModel):
-    r""" The Watson-Dispersed Zeppelin model [1] - a cylinder with zero radius-
-    for intra-axonal diffusion.
-
-    Parameters
-    ----------
-    bvals : float or array, shape(N),
-        b-values in s/mm^2.
-    n : array, shape(N x 3),
-        b-vectors in cartesian coordinates.
-    mu : array, shape(3),
-        unit vector representing orientation of the Stick.
-    lambda_par : float,
-        parallel diffusivity in mm^2/s.
-
-
-    References
-    ----------
-    .. [1] Behrens et al.
-           "Characterization and propagation of uncertainty in
-            diffusion-weighted MR imaging"
-           Magnetic Resonance in Medicine (2003)
-    """
-
-    _parameter_ranges = {
-        'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'lambda_par': (0, np.inf),
-        'lambda_perp': (0, np.inf),
-        'kappa': (0, 16)
-    }
-
-    def __init__(self, mu=None, lambda_par=None, lambda_perp=None, kappa=None):
-        self.mu = mu
-        self.lambda_par = lambda_par
-        self.lambda_perp = lambda_perp
-        self.kappa = kappa
-
-    def __call__(self, bvals, n, **kwargs):
-        r'''
-        Parameters
-        ----------
-        bvals : float or array, shape(N),
-            b-values in s/mm^2.
-        n : array, shape(N x 3),
-            b-vectors in cartesian coordinates.
-
-        Returns
-        -------
-        attenuation : float or array, shape(N),
-            signal attenuation
-        '''
-        sh_order = WATSON_SH_ORDER
-        lambda_par = kwargs.get('lambda_par', self.lambda_par)
-        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
-        mu = kwargs.get('mu', self.mu)
-        kappa = kwargs.get('kappa', self.kappa)
-        shell_indices = kwargs.get('shell_indices')
-        if shell_indices is None:
-            msg = "argument shell_indices is needed"
-            raise ValueError(msg)
-
-        watson = SD3Watson(mu=mu, kappa=kappa)
-        sh_watson = watson.spherical_harmonics_representation()
-        zeppelin = E4Zeppelin(mu=mu, lambda_par=lambda_par,
-                              lambda_perp=lambda_perp)
-
-        E = np.ones_like(bvals)
-        for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
-            bval_mask = shell_indices == shell_index
-            bvecs_shell = n[bval_mask]  # what bvecs in that shell
-            bval_mean = bvals[bval_mask].mean()
-            _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
-            sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
-
-            # rotational harmonics of zeppelin
-            rh_zeppelin = zeppelin.rotational_harmonics_representation(
-                bval=bval_mean
-            )
-            # convolving micro-environment with watson distribution
-            E_dispersed_sh = sh_convolution(sh_watson, rh_zeppelin, sh_order)
-            # recover signal values from watson-convolved spherical harmonics
-            E[bval_mask] = np.dot(sh_mat, E_dispersed_sh)
-        return E
-
-
-class E4BinghamDispersedZeppelin(MicrostrukturModel):
-    r""" The Watson-Dispersed Zeppelin model [1] - a cylinder with zero radius-
-    for intra-axonal diffusion.
-
-    Parameters
-    ----------
-    bvals : float or array, shape(N),
-        b-values in s/mm^2.
-    n : array, shape(N x 3),
-        b-vectors in cartesian coordinates.
-    mu : array, shape(3),
-        unit vector representing orientation of the Stick.
-    lambda_par : float,
-        parallel diffusivity in mm^2/s.
-
-
-    References
-    ----------
-    .. [1] Behrens et al.
-           "Characterization and propagation of uncertainty in
-            diffusion-weighted MR imaging"
-           Magnetic Resonance in Medicine (2003)
-    """
-
-    _parameter_ranges = {
-        'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'lambda_par': (0, 3),
-        'lambda_perp': (0, 3),
-        'psi': (0, np.pi),
-        'kappa': (0, 16),
-        'beta': (0, 16)
-    }
-
-    def __init__(self, mu=None, lambda_par=None, lambda_perp=None,
-                 kappa=None, beta=None, psi=None):
-        self.mu = mu
-        self.lambda_par = lambda_par
-        self.lambda_perp = lambda_perp
-        self.psi = psi
-        self.kappa = kappa
-        self.beta = beta
-
-    def __call__(self, bvals, n, **kwargs):
-        r'''
-        Parameters
-        ----------
-        bvals : float or array, shape(N),
-            b-values in s/mm^2.
-        n : array, shape(N x 3),
-            b-vectors in cartesian coordinates.
-
-        Returns
-        -------
-        attenuation : float or array, shape(N),
-            signal attenuation
-        '''
-        sh_order = WATSON_SH_ORDER
-        lambda_par = kwargs.get('lambda_par', self.lambda_par)
-        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
-        mu = kwargs.get('mu', self.mu)
-        kappa = kwargs.get('kappa', self.kappa)
-        beta = kwargs.get('beta', self.beta)
-        psi = kwargs.get('psi', self.psi)
-        shell_indices = kwargs.get('shell_indices')
-        if shell_indices is None:
-            msg = "argument shell_indices is needed"
-            raise ValueError(msg)
-
-        bingham = SD2Bingham(mu=mu, kappa=kappa, beta=beta, psi=psi)
-        sh_bingham = bingham.spherical_harmonics_representation()
-        zeppelin = E4Zeppelin(mu=mu, lambda_par=lambda_par,
-                              lambda_perp=lambda_perp)
-
-        E = np.ones_like(bvals)
-        for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
-            bval_mask = shell_indices == shell_index
-            bvecs_shell = n[bval_mask]  # what bvecs in that shell
-            bval_mean = bvals[bval_mask].mean()
-            _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
-            sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
-
-            # rotational harmonics of zeppelin
-            rh_zeppelin = zeppelin.rotational_harmonics_representation(
-                bval=bval_mean
-            )
-            # convolving micro-environment with watson distribution
-            E_dispersed_sh = sh_convolution(sh_bingham, rh_zeppelin, sh_order)
-            # recover signal values from watson-convolved spherical harmonics
-            E[bval_mask] = np.dot(sh_mat, E_dispersed_sh)
-        return E
-
-
 class I1StickSphericalMean(MicrostrukturModel):
     """ Spherical mean of the signal attenuation of the Stick model [1] for
     a given b-value and parallel diffusivity. Analytic expression from
@@ -1234,15 +890,8 @@ class I1StickSphericalMean(MicrostrukturModel):
 
     Parameters
     ----------
-    bval : float,
-        b-value in s/mm^2.
     lambda_par : float,
         parallel diffusivity in mm^2/s.
-
-    Returns
-    -------
-    E_mean : float,
-        spherical mean of the Stick model.
 
     References
     ----------
@@ -1262,26 +911,16 @@ class I1StickSphericalMean(MicrostrukturModel):
         self.lambda_par = lambda_par
 
     def __call__(self, bvals, n=None, **kwargs):
-        """ Spherical mean of the signal attenuation of the Stick model for
-        a given b-value and parallel diffusivity. Analytic expression from
-        Eq. (7) in [1].
-
+        """ 
         Parameters
         ----------
         bvals : float,
-            b-values in s/mm^2.
-        lambda_par : float,
-            parallel diffusivity in mm^2/s.
+            b-values in s/m^2.
 
         Returns
         -------
         E_mean : float,
             spherical mean of the Stick model.
-
-        References
-        ----------
-        .. [1] Kaden et al. "Multi-compartment microscopic diffusion imaging."
-           NeuroImage 139 (2016): 346-359.
         """
         lambda_par = kwargs.get('lambda_par', self.lambda_par) *\
             DIFFUSIVITY_SCALING
@@ -1306,12 +945,10 @@ class E4ZeppelinSphericalMean(MicrostrukturModel):
 
         Parameters
         ----------
-        bval : float,
-            b-value in s/mm^2.
         lambda_par : float,
-            parallel diffusivity in mm^2/s.
+            parallel diffusivity in 10^9 m^2/s.
         lambda_perp : float,
-            perpendicular diffusivity in mm^2/s.
+            perpendicular diffusivity in 10^9 m^2/s.
 
         Returns
         -------
@@ -1362,15 +999,52 @@ class E4ZeppelinSphericalMean(MicrostrukturModel):
         return der_lambda_par, der_lambda_perp
 
 
+class E2Dot(MicrostrukturModel):
+    r""" The Dot model [1] - an non-diffusing compartment.
+
+    Parameters
+    ----------
+    no parameters
+
+    References
+    ----------
+    .. [1] Panagiotaki et al.
+           "Compartment models of the diffusion MR signal in brain white
+            matter: a taxonomy and comparison". NeuroImage (2012)
+    """
+
+    _parameter_ranges = {
+    }
+
+    def __init__(self, dummy=None):
+        self.dummy = dummy
+
+    def __call__(self, bvals, n=None, **kwargs):
+        r'''
+        Parameters
+        ----------
+        bvals : float or array, shape(N),
+            b-values in s/m^2.
+        n : array, shape(N x 3),
+            b-vectors in cartesian coordinates.
+
+        Returns
+        -------
+        attenuation : float or array, shape(N),
+            signal attenuation
+        '''
+
+        E_dot = np.ones(bvals.shape[0])
+        return E_dot
+
+
 class E3Ball(MicrostrukturModel):
     r""" The Ball model [1] - an isotropic Tensor with one diffusivity.
 
     Parameters
     ----------
-    bvals : float or array, shape(N),
-        b-values in s/mm^2.
     lambda_iso : float,
-        isotropic diffusivity in mm^2/s.
+        isotropic diffusivity in 10^9 m^2/s.
 
     References
     ----------
@@ -1392,7 +1066,7 @@ class E3Ball(MicrostrukturModel):
         Parameters
         ----------
         bvals : float or array, shape(N),
-            b-values in s/mm^2.
+            b-values in s/m^2.
 
         Returns
         -------
@@ -1412,16 +1086,14 @@ class E4Zeppelin(MicrostrukturModel):
 
     Parameters
     ----------
-    bvals : array, shape(N),
-        b-values in s/mm^2.
-    n : array, shape(N x 3),
-        b-vectors in cartesian coordinates.
-    mu : array, shape(3),
-        unit vector representing orientation of the Stick.
+    mu : array, shape(2),
+        angles [theta, phi] representing main orientation on the sphere.
+        theta is inclination of polar angle of main angle mu [0, pi].
+        phi is polar angle of main angle mu [-pi, pi].
     lambda_par : float,
-        parallel diffusivity in mm^2/s.
+        parallel diffusivity in 10^9 m^2/s.
     lambda_perp : float,
-        perpendicular diffusivity in mm^2/s.
+        perpendicular diffusivity in 10^9 m^2/s.
 
     Returns
     -------
@@ -1494,11 +1166,7 @@ class E4Zeppelin(MicrostrukturModel):
         Parameters
         ----------
         bval : float,
-            b-value in s/mm^2.
-        lambda_par : float,
-            parallel diffusivity in mm^2/s.
-        lambda_perp : float,
-            perpendicular diffusivity in mm^2/s.
+            b-value in s/m^2.
         sh_order : int,
             maximum spherical harmonics order to be used in the approximation.
             set to 14 to conform with order used for watson distribution.
@@ -1531,18 +1199,16 @@ class E5RestrictedZeppelin(MicrostrukturModel):
 
     Parameters
     ----------
-    bvals : float or array, shape(N),
-        b-values in s/mm^2.
-    n : array, shape(N x 3),
-        b-vectors in cartesian coordinates.
-    mu : array, shape(3),
-        unit vector representing orientation of the Stick.
+    mu : array, shape(2),
+        angles [theta, phi] representing main orientation on the sphere.
+        theta is inclination of polar angle of main angle mu [0, pi].
+        phi is polar angle of main angle mu [-pi, pi].
     lambda_par : float,
-        parallel diffusivity in mm^2/s.
+        parallel diffusivity in 10^9 m^2/s.
     lambda_perp : float,
-        perpendicular diffusivity in mm^2/s.
+        bulk diffusivity constant 10^9 m^2/s.
     A: float,
-        characteristic coefficient.
+        characteristic coefficient in 10^6 m^2
 
     Returns
     -------
@@ -1571,13 +1237,13 @@ class E5RestrictedZeppelin(MicrostrukturModel):
         r'''
         Parameters
         ----------
-        bvals : float or array, shape(N),
+        bvals : array, shape(N),
             b-values in s/mm^2.
         n : array, shape(N x 3),
             b-vectors in cartesian coordinates.
-        delta : float or array, shape (N),
+        delta : array, shape (N),
             pulse duration in s.
-        Delta : float or array, shape (N),
+        Delta : array, shape (N),
             pulse separation in s.
 
         Returns
@@ -1590,7 +1256,7 @@ class E5RestrictedZeppelin(MicrostrukturModel):
             DIFFUSIVITY_SCALING
         lambda_perp = kwargs.get('lambda_perp', self.lambda_perp) *\
             DIFFUSIVITY_SCALING
-        A = kwargs.get('A', self.A)
+        A = kwargs.get('A', self.A) * A_SCALING
         mu = kwargs.get('mu', self.mu)
         mu = utils.sphere2cart(np.r_[1, mu])
 
@@ -1613,8 +1279,9 @@ class E5RestrictedZeppelin(MicrostrukturModel):
             E_zeppelin[i] = np.exp(-bval_ * np.dot(n_, np.dot(n_, D)))
         return E_zeppelin
 
-    def rotational_harmonics_representation(self, bval, rh_order=14, **kwargs):
-        r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
+    def rotational_harmonics_representation(self, bval, delta=None, Delta=None,
+                                            rh_order=14, **kwargs):
+        r""" The model in rotational harmonics, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernelfor spherical
         convolution.
 
@@ -1622,10 +1289,10 @@ class E5RestrictedZeppelin(MicrostrukturModel):
         ----------
         bval : float,
             b-value in s/mm^2.
-        lambda_par : float,
-            parallel diffusivity in mm^2/s.
-        lambda_perp : float,
-            perpendicular diffusivity in mm^2/s.
+        delta: float,
+            delta parameter in seconds.
+        Delta: float,
+            Delta parameter in seconds.
         sh_order : int,
             maximum spherical harmonics order to be used in the approximation.
             set to 14 to conform with order used for watson distribution.
@@ -1633,14 +1300,16 @@ class E5RestrictedZeppelin(MicrostrukturModel):
         Returns
         -------
         rh : array,
-            rotational harmonics of stick model aligned with z-axis.
+            rotational harmonics of the model aligned with z-axis.
         """
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
+        A = kwargs.get('A', self.A)
 
         E_zeppelin_sf = self(
             bval, SPHERE_CARTESIAN,
-            mu=np.r_[0., 0.], lambda_par=lambda_par, lambda_perp=lambda_perp
+            mu=np.r_[0., 0.], lambda_par=lambda_par, lambda_perp=lambda_perp,
+            A=A, Delta=Delta, delta=delta
         )
 
         sh_mat = real_sym_sh_mrtrix(
@@ -1657,17 +1326,12 @@ class SD3Watson(MicrostrukturModel):
 
     Parameters
     ----------
-    n : array of shape(3) or array of shape(N x 3),
-        sampled orientations of the Watson distribution.
-    mu : array, shape(3),
-        unit vector representing orientation of Watson distribution.
+    mu : array, shape(2),
+        angles [theta, phi] representing main orientation on the sphere.
+        theta is inclination of polar angle of main angle mu [0, pi].
+        phi is polar angle of main angle mu [-pi, pi].
     kappa : float,
         concentration parameter of the Watson distribution.
-
-    Returns
-    -------
-    Wn: float or array of shape(N),
-        Probability density at orientations n, given mu and kappa.
 
     References
     ----------
@@ -1714,10 +1378,6 @@ class SD3Watson(MicrostrukturModel):
 
         Parameters
         ----------
-        mu : array, shape(3),
-            unit vector representing orientation of Watson distribution.
-        kappa : float,
-            concentration parameter of the Watson distribution.
         sh_order : int,
             maximum spherical harmonics order to be used in the approximation.
             we found 14 to be sufficient to represent concentrations of
@@ -1744,16 +1404,14 @@ class SD3Watson(MicrostrukturModel):
 
 
 class SD2Bingham(MicrostrukturModel):
-    r""" The Bingham spherical distribution model [1, 2, 3] using euler angles.
+    r""" The Bingham spherical distribution model [1, 2, 3] using angles.
 
     Parameters
     ----------
-    n : array of shape(3) or array of shape(N x 3),
-        sampled orientations of the Bingham distribution.
-    theta : float,
-        inclination of polar angle of main angle mu [0, pi].
-    phi : float,
-        polar angle of main angle mu [-pi, pi].
+    mu : array, shape(2),
+        angles [theta, phi] representing main orientation on the sphere.
+        theta is inclination of polar angle of main angle mu [0, pi].
+        phi is polar angle of main angle mu [-pi, pi].
     psi : float,
         angle in radians of the bingham distribution around mu [0, pi].
     kappa : float,
@@ -1762,12 +1420,6 @@ class SD2Bingham(MicrostrukturModel):
     beta : float,
         second concentration parameter of the Bingham distribution.
         defined as beta = kappa2 - kappa3. Bingham becomes Watson when beta=0.
-
-    Returns
-    -------
-    Bn: float or array of shape(N),
-        Probability density at orientations n, given theta, phi, psi, kappa
-        and beta.
 
     References
     ----------
