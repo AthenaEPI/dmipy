@@ -12,11 +12,17 @@ editeable journal article file: https://www.overleaf.com/7710782nxbwpxvyxkwq
 
 ## Getting Started
 
-## Examples of Microstructure Models in Literature
-- Ball and Stick
-- Ball and Racket
-- NODDI-Watson
-- NODDI-Bingham
-- Multi-Compartment Spherical Mean Technique
-- AxCaliber
-- ActiveAx
+## Explanations and Illustrations of Biophysical Models in the Toolbox
+- Intra-axonal Cylinder models
+- Extra-axonal Gaussian models
+- Axon dispersion models
+
+## Examples of how to implement Microstructure Models in Literature
+- Ball and Stick [Behrens et al. 2003]
+- Ball and Racket [Sotiropoulos et al. 2012]
+- NODDI-Watson [Zhang et al. 2012]
+- NODDI-Bingham [Tariq et al. 2016]
+- Multi-Compartment Spherical Mean Technique [Kaden et al. 2016]
+- AxCaliber [Assaf et al. 2008]
+- AxCaliber with restricted extra-axonal diffusion [Burcaw et al. 2015]
+- ActiveAx [Alexander et al. 2010]
