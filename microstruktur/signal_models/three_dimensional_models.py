@@ -14,7 +14,6 @@ from scipy import stats
 from scipy import integrate
 from scipy import special
 from dipy.reconst.shm import real_sym_sh_mrtrix
-from microstruktur.signal_models.spherical_convolution import sh_convolution
 
 from . import utils
 from .free_diffusion import free_diffusion_attenuation
@@ -479,8 +478,9 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
         )
         return E_parallel * E_perpendicular
 
-    def rotational_harmonics_representation(self, bval,
-            delta=None, Delta=None, rh_order=14, **kwargs):
+    def rotational_harmonics_representation(
+            self, bval, delta=None, Delta=None, rh_order=14, **kwargs
+            ):
         r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernelfor spherical
         convolution.

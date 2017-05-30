@@ -4,10 +4,11 @@ from microstruktur.signal_models import three_dimensional_models
 from microstruktur.signal_models.gradient_conversions import b_from_q
 DIFFUSIVITY_SCALING = 1e-9
 
-def test_RTAP_to_diameter_soderman_callaghan(samples = 10000):
-    mu=[0,0]
-    lambda_par=1.7
-    diameter=10e-6
+
+def test_RTAP_to_diameter_soderman_callaghan(samples=10000):
+    mu = [0, 0]
+    lambda_par = 1.7
+    diameter = 10e-6
 
     delta = np.tile(1e-10, samples)  # delta towards zero
     Delta = np.tile(1e10, samples)  # Delta towards infinity

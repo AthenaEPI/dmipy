@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.special import erf
 from dipy.reconst.shm import real_sym_sh_mrtrix
 from microstruktur.signal_models import utils
 
