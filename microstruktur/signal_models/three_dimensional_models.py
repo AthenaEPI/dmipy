@@ -478,9 +478,8 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
         )
         return E_parallel * E_perpendicular
 
-    def rotational_harmonics_representation(
-            self, bval, delta=None, Delta=None, rh_order=14, **kwargs
-            ):
+    def rotational_harmonics_representation(self, bval, delta=None, Delta=None,
+                                            rh_order=14, **kwargs):
         r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernelfor spherical
         convolution.
