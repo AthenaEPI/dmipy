@@ -4,6 +4,7 @@ from . import three_dimensional_models
 from . import utils
 from microstruktur.signal_models.spherical_convolution import sh_convolution
 from dipy.reconst.shm import real_sym_sh_mrtrix
+from scipy import stats
 MicrostrukturModel = three_dimensional_models.MicrostrukturModel
 WATSON_SH_ORDER = 14
 
@@ -1037,4 +1038,103 @@ class SD3E4WatsonDispersedZeppelin(MicrostrukturModel):
             E_dispersed_sh = sh_convolution(sh_watson, rh_zeppelin, sh_order)
             # recover signal values from watson-convolved spherical harmonics
             E[bval_mask] = np.dot(sh_mat, E_dispersed_sh)
+        return E
+
+
+class DD1I4GammaDistributedGaussianPhaseCylinder(MicrostrukturModel):
+    r""" The Watson-Dispersed [1] Van Gelderen cylinder model [2] - assuming
+    finite pulse separation and pulse duration - for intra-axonal diffusion.
+
+    Parameters
+    ----------
+    mu : array, shape(2),
+        angles [theta, phi] representing main orientation on the sphere.
+        theta is inclination of polar angle of main angle mu [0, pi].
+        phi is polar angle of main angle mu [-pi, pi].
+    lambda_par : float,
+        parallel diffusivity in 10^9 m^2/s.
+    alpha : float,
+        shape of the gamma distribution.
+    beta : float,
+        scale of the gamma distrubution. Different from Bingham distribution!
+
+    References
+    ----------
+    .. [1] Kaden et al.
+        "Parametric spherical deconvolution: inferring anatomical
+        connectivity using diffusion MR imaging". NeuroImage (2007)
+    .. [1] Van Gelderen et al.
+        "Evaluation of Restricted Diffusion
+        in Cylinders. Phosphocreatine in Rabbit Leg Muscle"
+        Journal of Magnetic Resonance Series B (1994)
+    """
+
+    _parameter_ranges = {
+        'mu': ([0, -np.pi], [np.pi, np.pi]),
+        'lambda_par': (0, np.inf),
+        'alpha': (1e-10, np.inf),
+        'beta': (1e-10, np.inf),
+    }
+
+    def __init__(self, mu=None, lambda_par=None, alpha=None, beta=None,
+                 radius_integral_steps=35):
+        self.mu = mu
+        self.lambda_par = lambda_par
+        self.alpha = alpha
+        self.beta = beta
+        self.radius_integral_steps = radius_integral_steps
+
+    def __call__(self, bvals, n, delta=None, Delta=None, **kwargs):
+        r"""
+        Parameters
+        ----------
+        bvals : array, shape(N),
+            b-values in s/m^2.
+        n : array, shape(N x 3),
+            b-vectors in cartesian coordinates.
+        delta : array, shape(N),
+            pulse duration in seconds.
+        Delta : array, shape(N),
+            pulse separation in seconds
+
+        Returns
+        -------
+        E : array, shape(N),
+            signal attenuation
+        """
+        if (
+            delta is None or Delta is None
+        ):
+            raise ValueError('This class needs non-None delta and Delta')
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        mu = kwargs.get('mu', self.mu)
+        alpha = kwargs.get('alpha', self.alpha)
+        beta = kwargs.get('beta', self.beta)
+
+        gamma_dist = stats.gamma(alpha, scale=beta)
+        radius_max = gamma_dist.mean() + 6 * gamma_dist.std()
+        radii = np.linspace(1e-50, radius_max, self.radius_integral_steps)
+        area = np.pi * radii ** 2
+        radii_pdf = gamma_dist.pdf(radii)
+        radii_pdf_area = radii_pdf * area
+        radii_pdf_normalized = (
+            radii_pdf_area /
+            np.trapz(x=radii, y=radii_pdf_area)
+        )
+
+        vg = three_dimensional_models.I4CylinderGaussianPhaseApproximation(
+            mu=mu, lambda_par=lambda_par
+        )
+        
+        E = np.empty(
+            (self.radius_integral_steps, len(bvals)),
+            dtype=float
+        )
+        for i, radius in enumerate(radii):
+            E[i] = (
+                radii_pdf_normalized[i] *
+                vg(bvals, n=n, delta=delta, Delta=Delta, diameter=radius * 2)
+            )
+
+        E = np.trapz(E, x=radii, axis=0)
         return E
