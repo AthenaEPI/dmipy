@@ -18,7 +18,7 @@ editeable journal article file: https://www.overleaf.com/7710782nxbwpxvyxkwq
 - [Axon dispersion models](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_watson_bingham.ipynb)
 
 ## Examples of how to implement Microstructure Models in Literature
-- Ball and Stick [Behrens et al. 2003]
+- [Ball and Stick [Behrens et al. 2003]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_ball_and_stick.ipynb)
 - Ball and Racket [Sotiropoulos et al. 2012]
 - NODDI-Watson [Zhang et al. 2012]
 - NODDI-Bingham [Tariq et al. 2016]
