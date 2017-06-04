@@ -15,7 +15,7 @@ editeable journal article file: https://www.overleaf.com/7710782nxbwpxvyxkwq
 ## Explanations and Illustrations of Biophysical Models in the Toolbox
 - Intra-axonal Cylinder models
 - Extra-axonal Gaussian models
-- Axon dispersion models
+- [Axon dispersion models](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_watson_bingham.ipynb)
 
 ## Examples of how to implement Microstructure Models in Literature
 - Ball and Stick [Behrens et al. 2003]
