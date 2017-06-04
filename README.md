@@ -6,8 +6,6 @@ This microstructure toolbox unifies most state-of-the-art Microstructure Imaging
 We also provide a common data set that includes the effects of axon diameter, axon dispersion, varying diffusivities and intra-axonal volume fractions, which we also used to produce results for our journal paper, which has been submitted:
 editeable journal article file: https://www.overleaf.com/7710782nxbwpxvyxkwq
 
-[link to Google!](http://google.com)
-
 ## Installation
 - clone repository
 - python setup.py install
@@ -17,7 +15,7 @@ editeable journal article file: https://www.overleaf.com/7710782nxbwpxvyxkwq
 ## Explanations and Illustrations of Biophysical Models in the Toolbox
 - Intra-axonal Cylinder models
 - Extra-axonal Gaussian models
-- Axon dispersion models
+- [Axon dispersion models](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_watson_bingham.ipynb)
 
 ## Examples of how to implement Microstructure Models in Literature
 - Ball and Stick [Behrens et al. 2003]
