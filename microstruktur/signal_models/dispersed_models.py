@@ -639,7 +639,7 @@ class SD3I2WatsonDispersedSodermanCylinder(MicrostrukturModel):
 
 
 class SD3I3WatsonDispersedCallaghanCylinder(MicrostrukturModel):
-    r""" The Watson-Dispersed [1] Calalghan cylinder model [2] - assuming
+    r""" The Watson-Dispersed [1] Callaghan cylinder model [2] - assuming
     finite pulse separation and the limit of pulse duration towards zero - for
     intra-axonal diffusion.
 
@@ -1041,8 +1041,203 @@ class SD3E4WatsonDispersedZeppelin(MicrostrukturModel):
         return E
 
 
+class DD1I2GammaDistributedSodermanCylinder(MicrostrukturModel):
+    r""" The Gamma-Distributed Soderman cylinder model [1] - assuming
+    limits of pulse separation towards infinity and pulse duration towards zero
+    - for intra-axonal diffusion.
+
+    Parameters
+    ----------
+    mu : array, shape(2),
+        angles [theta, phi] representing main orientation on the sphere.
+        theta is inclination of polar angle of main angle mu [0, pi].
+        phi is polar angle of main angle mu [-pi, pi].
+    lambda_par : float,
+        parallel diffusivity in 10^9 m^2/s.
+    alpha : float,
+        shape of the gamma distribution.
+    beta : float,
+        scale of the gamma distrubution. Different from Bingham distribution!
+
+    References
+    ----------
+    .. [1] Söderman, Olle, and Bengt Jönsson. "Restricted diffusion in
+        cylindrical geometry." Journal of Magnetic Resonance, Series A
+        117.1 (1995): 94-97.
+    """
+
+    _parameter_ranges = {
+        'mu': ([0, -np.pi], [np.pi, np.pi]),
+        'lambda_par': (0, np.inf),
+        'alpha': (1e-10, np.inf),
+        'beta': (1e-10, np.inf),
+    }
+
+    def __init__(self, mu=None, lambda_par=None, alpha=None, beta=None,
+                 radius_integral_steps=35):
+        self.mu = mu
+        self.lambda_par = lambda_par
+        self.alpha = alpha
+        self.beta = beta
+        self.radius_integral_steps = radius_integral_steps
+
+    def __call__(self, bvals, n, delta=None, Delta=None, **kwargs):
+        r"""
+        Parameters
+        ----------
+        bvals : array, shape(N),
+            b-values in s/m^2.
+        n : array, shape(N x 3),
+            b-vectors in cartesian coordinates.
+        delta : array, shape(N),
+            pulse duration in seconds.
+        Delta : array, shape(N),
+            pulse separation in seconds
+
+        Returns
+        -------
+        E : array, shape(N),
+            signal attenuation
+        """
+        if (
+            delta is None or Delta is None
+        ):
+            raise ValueError('This class needs non-None delta and Delta')
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        mu = kwargs.get('mu', self.mu)
+        alpha = kwargs.get('alpha', self.alpha)
+        beta = kwargs.get('beta', self.beta)
+
+        gamma_dist = stats.gamma(alpha, scale=beta)
+        radius_max = gamma_dist.mean() + 6 * gamma_dist.std()
+        radii = np.linspace(1e-50, radius_max, self.radius_integral_steps)
+        area = np.pi * radii ** 2
+        radii_pdf = gamma_dist.pdf(radii)
+        radii_pdf_area = radii_pdf * area
+        radii_pdf_normalized = (
+            radii_pdf_area /
+            np.trapz(x=radii, y=radii_pdf_area)
+        )
+
+        soderman = three_dimensional_models.I2CylinderSodermanApproximation(
+            mu=mu, lambda_par=lambda_par
+        )
+        
+        E = np.empty(
+            (self.radius_integral_steps, len(bvals)),
+            dtype=float
+        )
+        for i, radius in enumerate(radii):
+            E[i] = (
+                radii_pdf_normalized[i] *
+                soderman(bvals, n=n, delta=delta, Delta=Delta,
+                         diameter=radius * 2)
+            )
+
+        E = np.trapz(E, x=radii, axis=0)
+        return E
+
+
+class DD1I3GammaDistributedCallaghanCylinder(MicrostrukturModel):
+    r""" Gamma-distributed Callaghan cylinder model [1] - assuming
+    finite pulse separation and the limit of pulse duration towards zero - for
+    intra-axonal diffusion.
+
+    Parameters
+    ----------
+    mu : array, shape(2),
+        angles [theta, phi] representing main orientation on the sphere.
+        theta is inclination of polar angle of main angle mu [0, pi].
+        phi is polar angle of main angle mu [-pi, pi].
+    lambda_par : float,
+        parallel diffusivity in 10^9 m^2/s.
+    alpha : float,
+        shape of the gamma distribution.
+    beta : float,
+        scale of the gamma distrubution. Different from Bingham distribution!
+
+    References
+    ----------
+    .. [1] Callaghan, Paul T. "Pulsed-gradient spin-echo NMR for planar,
+        cylindrical, and spherical pores under conditions of wall
+        relaxation." Journal of magnetic resonance, Series A 113.1 (1995):
+        53-59.
+    """
+
+    _parameter_ranges = {
+        'mu': ([0, -np.pi], [np.pi, np.pi]),
+        'lambda_par': (0, np.inf),
+        'alpha': (1e-10, np.inf),
+        'beta': (1e-10, np.inf),
+    }
+
+    def __init__(self, mu=None, lambda_par=None, alpha=None, beta=None,
+                 radius_integral_steps=35):
+        self.mu = mu
+        self.lambda_par = lambda_par
+        self.alpha = alpha
+        self.beta = beta
+        self.radius_integral_steps = radius_integral_steps
+
+    def __call__(self, bvals, n, delta=None, Delta=None, **kwargs):
+        r"""
+        Parameters
+        ----------
+        bvals : array, shape(N),
+            b-values in s/m^2.
+        n : array, shape(N x 3),
+            b-vectors in cartesian coordinates.
+        delta : array, shape(N),
+            pulse duration in seconds.
+        Delta : array, shape(N),
+            pulse separation in seconds
+
+        Returns
+        -------
+        E : array, shape(N),
+            signal attenuation
+        """
+        if (
+            delta is None or Delta is None
+        ):
+            raise ValueError('This class needs non-None delta and Delta')
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        mu = kwargs.get('mu', self.mu)
+        alpha = kwargs.get('alpha', self.alpha)
+        beta = kwargs.get('beta', self.beta)
+
+        gamma_dist = stats.gamma(alpha, scale=beta)
+        radius_max = gamma_dist.mean() + 6 * gamma_dist.std()
+        radii = np.linspace(1e-50, radius_max, self.radius_integral_steps)
+        area = np.pi * radii ** 2
+        radii_pdf = gamma_dist.pdf(radii)
+        radii_pdf_area = radii_pdf * area
+        radii_pdf_normalized = (
+            radii_pdf_area /
+            np.trapz(x=radii, y=radii_pdf_area)
+        )
+
+        callaghan = three_dimensional_models.I3CylinderCallaghanApproximation(
+            mu=mu, lambda_par=lambda_par
+        )
+        
+        E = np.empty(
+            (self.radius_integral_steps, len(bvals)),
+            dtype=float
+        )
+        for i, radius in enumerate(radii):
+            E[i] = (
+                radii_pdf_normalized[i] *
+                callaghan(bvals, n=n, delta=delta, Delta=Delta,
+                          diameter=radius * 2)
+            )
+
+        E = np.trapz(E, x=radii, axis=0)
+        return E
+
+
 class DD1I4GammaDistributedGaussianPhaseCylinder(MicrostrukturModel):
-    r""" The Watson-Dispersed [1] Van Gelderen cylinder model [2] - assuming
+    r""" The Watson-Dispersed Van Gelderen cylinder model [1] - assuming
     finite pulse separation and pulse duration - for intra-axonal diffusion.
 
     Parameters
@@ -1060,9 +1255,6 @@ class DD1I4GammaDistributedGaussianPhaseCylinder(MicrostrukturModel):
 
     References
     ----------
-    .. [1] Kaden et al.
-        "Parametric spherical deconvolution: inferring anatomical
-        connectivity using diffusion MR imaging". NeuroImage (2007)
     .. [1] Van Gelderen et al.
         "Evaluation of Restricted Diffusion
         in Cylinders. Phosphocreatine in Rabbit Leg Muscle"

@@ -1,6 +1,7 @@
 from numpy.testing import assert_almost_equal
 import numpy as np
 from microstruktur.signal_models import three_dimensional_models
+from microstruktur.signal_models import dispersed_models
 from microstruktur.signal_models.gradient_conversions import b_from_q
 DIFFUSIVITY_SCALING = 1e-9
 
