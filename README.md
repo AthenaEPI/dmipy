@@ -19,7 +19,7 @@ editeable journal article file: https://www.overleaf.com/7710782nxbwpxvyxkwq
 
 ## Examples of how to implement Microstructure Models in Literature
 - [Ball and Stick [Behrens et al. 2003]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_ball_and_stick.ipynb)
-- Ball and Racket [Sotiropoulos et al. 2012]
+- [Ball and Racket [Sotiropoulos et al. 2012]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_ball_and_racket.ipynb)
 - [NODDI-Watson [Zhang et al. 2012]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_noddi_watson.ipynb)
 - NODDI-Bingham [Tariq et al. 2016]
 - [Multi-Compartment Spherical Mean Technique [Kaden et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_multi_compartment_spherical_mean_technique.ipynb)
