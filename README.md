@@ -26,3 +26,11 @@ editeable journal article file: https://www.overleaf.com/7710782nxbwpxvyxkwq
 - AxCaliber [Assaf et al. 2008]
 - AxCaliber with restricted extra-axonal diffusion [Burcaw et al. 2015]
 - ActiveAx [Alexander et al. 2010]
+
+## Idea Box
+### Estimating extra-axonal restriction using spherical mean of restricted zeppelin
+The idea is to modify the multi-compartment spherical mean technique to have a rotation-, dispersion-, and crossing-invariant method of estimating extra-axonal restriction. The technique modifies the spherical mean of the zeppelin (E4) to use the spherical mean of the restricted zeppelin (E5). If acquisition shells with multiple b-values, big delta and small delta are acquired, then the perpendicular diffusivity can be disentangled from the extra-axonal restriction parameter using the spherical mean framework. Proof of working [here](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_extra-axonal_restriction_estimation_using_spherical_mean.ipynb)
+### Using a cascade style estimation framework to obtain robust measures (no degeneracy) in estimated microstructure parameters.
+- First use spherical mean technique to get estimates of perpendicular en parallel diffusivity and volume fraction.
+- input obtained parameters into NODDIDA to obtain dispersion.
+- put combination of parameters in dispersed axcaliber model to obtain axon diameter.
