@@ -17,7 +17,7 @@ def test_spherical_mean_stick_analytic_vs_numerical(bvalue=1e9,
     stick_sm = three_dimensional_models.I1StickSphericalMean(
         lambda_par=lambda_par
     )
-    sm_stick_analytic = stick_sm(bvals=bvalue)
+    sm_stick_analytic = stick_sm(bvals=np.r_[bvalue])
     assert_almost_equal(sm_stick_analytic, sm_stick_numerical, 3)
 
 
@@ -43,7 +43,7 @@ def test_spherical_mean_stick_analytic_vs_sh(bvalue=1e9, lambda_par=1.7,
     stick_sm = three_dimensional_models.I1StickSphericalMean(
         lambda_par=lambda_par
     )
-    sm_stick_analytic = stick_sm(bvals=bvalue)
+    sm_stick_analytic = stick_sm(bvals=np.r_[bvalue])
 
     stick = three_dimensional_models.I1Stick(mu=mu, lambda_par=lambda_par)
     E_stick = stick(bvals=bvalue, n=sphere.vertices)
