@@ -31,7 +31,7 @@ SPHERE_CARTESIAN = np.loadtxt(
 SPHERE_SPHERICAL = utils.cart2sphere(SPHERE_CARTESIAN)
 WATSON_SH_ORDER = 14
 DIFFUSIVITY_SCALING = 1e-9
-A_SCALING = 1e-6
+A_SCALING = 1e-12
 
 
 class MicrostrukturModel:
@@ -925,8 +925,12 @@ class I1StickSphericalMean(MicrostrukturModel):
         """
         lambda_par = kwargs.get('lambda_par', self.lambda_par) *\
             DIFFUSIVITY_SCALING
-        E_mean = ((np.sqrt(np.pi) * erf(np.sqrt(bvals * lambda_par))) /
-                  (2 * np.sqrt(bvals * lambda_par)))
+        E_mean = np.ones_like(bvals)
+        bval_indices_above0 = bvals>0
+        bvals_ = bvals[bval_indices_above0]
+        E_mean_ = ((np.sqrt(np.pi) * erf(np.sqrt(bvals_ * lambda_par))) /
+                   (2 * np.sqrt(bvals_ * lambda_par)))
+        E_mean[bval_indices_above0] = E_mean_
         return E_mean
 
     def derivative(self, bvals, **kwargs):
@@ -1037,9 +1041,9 @@ class E5RestrictedZeppelinSphericalMean(MicrostrukturModel):
         'A': (0, np.inf)
     }
 
-    def __init__(self, lambda_par=None, lambda_perp=None, A=None):
+    def __init__(self, lambda_par=None, lambda_inf=None, A=None):
         self.lambda_par = lambda_par
-        self.lambda_perp = lambda_perp
+        self.lambda_inf = lambda_inf
         self.A = A
 
     def __call__(self, bvals, n=None, delta=None, Delta=None, **kwargs):
