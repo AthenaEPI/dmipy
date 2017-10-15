@@ -511,6 +511,23 @@ class SD3I1WatsonDispersedStick(MicrostrukturModel):
             msg = "argument shell_indices is needed"
             raise ValueError(msg)
 
+        if len(bvals) != len(n) or len(n) != len(shell_indices):
+            msg = "bvals, n, and shell_indices must have the same length. "
+            msg += "Currently their lengths are {}, {} and {}.".format(
+                len(bvals), len(n), len(shell_indices)
+            )
+            raise ValueError(msg)
+        if bvals.ndim > 1 or shell_indices.ndim > 1:
+            msg = "bvals and shell_indices must be one-dimensional arrays. "
+            msg += "Currently their dimensions are {} and {}.".format(
+                bvals.ndim, shell_indices.ndim
+            )
+            raise ValueError(msg)
+        if n.ndim != 2 or n.shape[1] != 3:
+            msg = "b-vectors n must be two dimensional array of shape [N, 3]. "
+            msg += "Currently its shape is {}.".format(n.shape)
+            raise ValueError(msg)
+
         watson = three_dimensional_models.SD3Watson(mu=mu, kappa=kappa)
         sh_watson = watson.spherical_harmonics_representation()
         stick = three_dimensional_models.I1Stick(mu=mu, lambda_par=lambda_par)
