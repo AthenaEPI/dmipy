@@ -1255,7 +1255,7 @@ class E4Zeppelin(MicrostrukturModel):
         lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
 
         E_zeppelin_sf = self(
-            bval, SPHERE_CARTESIAN,
+            np.tile(bval, len(SPHERE_CARTESIAN)), SPHERE_CARTESIAN,
             mu=np.r_[0., 0.], lambda_par=lambda_par, lambda_perp=lambda_perp
         )
 
