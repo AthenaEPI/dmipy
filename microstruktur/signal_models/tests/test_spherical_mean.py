@@ -59,13 +59,49 @@ def test_spherical_mean_zeppelin_analytic_vs_sh(bvalue=1e9, lambda_par=1.7,
     )
     sm_zep_analytic = zeppelin_sm(bvals=bvalue)
 
-    zeppelin = zeppelin = three_dimensional_models.E4Zeppelin(
+    zeppelin = three_dimensional_models.E4Zeppelin(
         lambda_par=lambda_par, lambda_perp=lambda_perp, mu=mu
     )
     bvals_ = np.tile(bvalue, sphere.vertices.shape[0])
     E_zep = zeppelin(bvals=bvals_, n=sphere.vertices)
     sm_zep_sh = estimate_spherical_mean_shell(E_zep, sphere.vertices)
     assert_almost_equal(sm_zep_analytic, sm_zep_sh, 3)
+
+
+def test_restricted_vs_regular_zeppelin_analytic(
+        bvalue=1e9, lambda_par=1.7, lambda_perp=0.8, lambda_inf=0.8, A=0.):
+    rest_zeppelin_sm = three_dimensional_models.E5RestrictedZeppelinSphericalMean(
+        lambda_par=lambda_par, lambda_inf=lambda_inf, A=A
+    )
+    delta = 0.01
+    Delta = 0.03
+    E_rest_zep_analytic = rest_zeppelin_sm(bvalue, delta=delta, Delta=Delta)
+
+    zeppelin_sm = three_dimensional_models.E4ZeppelinSphericalMean(
+        lambda_par=lambda_par, lambda_perp=lambda_perp)
+    E_zep_analytic = zeppelin_sm(bvalue)
+    assert_almost_equal(E_rest_zep_analytic, E_zep_analytic)
+
+
+def test_restricted_spherical_mean_zeppelin_analytic_vs_sh(
+        bvalue=1e9, lambda_par=1.7, lambda_inf=0.8, mu=np.r_[0, 0], A=1.):
+    rest_zeppelin_sm = three_dimensional_models.E5RestrictedZeppelinSphericalMean(
+        lambda_par=lambda_par, lambda_inf=lambda_inf, A=A
+    )
+    delta = 0.01
+    Delta = 0.03
+    sm_rest_zep_analytic = rest_zeppelin_sm(bvalue, delta=delta, Delta=Delta)
+
+    zeppelin = three_dimensional_models.E5RestrictedZeppelin(
+        mu=mu, lambda_par=lambda_par, lambda_inf=lambda_inf, A=A)
+    N_samples = len(sphere.vertices)
+    bvals_ = np.tile(bvalue, N_samples)
+    delta_ = np.tile(delta, N_samples)
+    Delta_ = np.tile(Delta, N_samples)
+    E_zep = zeppelin(bvals=bvals_, n=sphere.vertices,
+                     delta=delta_, Delta=Delta_)
+    sm_zep_sh = estimate_spherical_mean_shell(E_zep, sphere.vertices)
+    assert_almost_equal(sm_zep_sh, sm_rest_zep_analytic, 3)
 
 
 def test_estimate_spherical_mean_multi_shell(bvalue_1=1e9, bvalue_2=15e9,
