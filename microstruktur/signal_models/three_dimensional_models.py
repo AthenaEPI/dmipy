@@ -1302,10 +1302,10 @@ class E5RestrictedZeppelin(MicrostrukturModel):
         'A': (0, np.inf)
     }
 
-    def __init__(self, mu=None, lambda_par=None, lambda_perp=None, A=None):
+    def __init__(self, mu=None, lambda_par=None, lambda_inf=None, A=None):
         self.mu = mu
         self.lambda_par = lambda_par
-        self.lambda_perp = lambda_perp
+        self.lambda_inf = lambda_inf
         self.A = A
 
     def __call__(self, bvals, n, delta=None, Delta=None, **kwargs):
@@ -1341,7 +1341,7 @@ class E5RestrictedZeppelin(MicrostrukturModel):
         R = np.c_[R1, R2, R3]
 
         E_zeppelin = np.ones_like(bvals)
-        for i, bval_, n_, delta_, Delta_ in enumerate(
+        for i, (bval_, n_, delta_, Delta_) in enumerate(
             zip(bvals, n, delta, Delta)
         ):
             # lambda_perp and A must be in the same unit
