@@ -30,3 +30,37 @@ def test_simple_stick_optimization():
     )
     res = stick.fit(E, bvals, gradient_directions, x0)[0]
     assert_array_almost_equal(np.r_[gt_lambda_par, gt_mu], res, 4)
+
+
+def test_simple_ball_and_stick_optimization():
+    stick = three_dimensional_models.I1Stick()
+    ball = three_dimensional_models.E3Ball()
+
+    ball_and_stick = three_dimensional_models.PartialVolumeCombinedMicrostrukturModel(
+        models=[ball, stick],
+        parameter_links=[],
+        optimise_partial_volumes=True
+    )
+    gt_mu = np.clip(np.random.rand(2), .3, np.inf)
+    gt_lambda_par = np.random.rand() + 1.
+    gt_lambda_iso = gt_lambda_par / 2.
+    gt_partial_volume = 0.3
+
+    gt_parameter_vector = ball_and_stick.parameters_to_parameter_vector(
+        I1Stick_1_lambda_par=gt_lambda_par,
+        E3Ball_1_lambda_iso=gt_lambda_iso,
+        I1Stick_1_mu=gt_mu,
+        partial_volume_0=gt_partial_volume
+    )
+
+    E = ball_and_stick(bvals, gradient_directions,
+                       **ball_and_stick.parameter_vector_to_parameters(gt_parameter_vector))
+
+    x0 = ball_and_stick.parameters_to_parameter_vector(
+        I1Stick_1_lambda_par=np.random.rand() + 1.,
+        E3Ball_1_lambda_iso=gt_lambda_par / 2.,
+        I1Stick_1_mu=np.random.rand(2),
+        partial_volume_0=np.random.rand()
+    )
+    res = ball_and_stick.fit(E, bvals, gradient_directions, x0)[0]
+    assert_array_almost_equal(gt_parameter_vector, res, 3)
