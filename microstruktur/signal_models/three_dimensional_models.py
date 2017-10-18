@@ -13,6 +13,7 @@ from scipy.special import erf
 from scipy import stats
 from scipy import integrate
 from scipy import special
+from scipy.optimize import minimize
 from dipy.reconst.shm import real_sym_sh_mrtrix
 
 from . import utils
@@ -20,6 +21,7 @@ from .free_diffusion import free_diffusion_attenuation
 from ..signal_models.gradient_conversions import g_from_b, q_from_b
 from . import CONSTANTS
 from ..signal_models.spherical_convolution import kernel_sh_to_rh
+from .spherical_mean import estimate_spherical_mean_multi_shell
 
 SPHERICAL_INTEGRATOR = utils.SphericalIntegrator()
 GRADIENT_TABLES_PATH = pkg_resources.resource_filename(
@@ -88,6 +90,45 @@ class MicrostrukturModel:
             self(bvals, n, **parameters) - attenuation
         ) ** 2) / len(attenuation)
 
+    def fit(self, data, bvals, n, x0,
+            shell_indices=None, delta=None, Delta=None):
+
+        if self.need_shell_indices and shell_indices is None:
+            msg = "shell_indices are missing."
+            raise ValueError(msg)
+        if ((self.needs_delta_Delta and delta is None) or
+                (self.need_delta_Delta and Delta is None)):
+            msg = "delta and/or Delta are missing."
+            raise ValueError(msg)
+
+        parameter_keys = self.parameter_cardinality.keys()
+        number_of_parameters = np.sum(
+            [self.parameter_cardinality[key] for key in parameter_keys])
+        data_at_least_2d = np.atleast_2d(data)
+        res = np.zeros(np.r_[data_at_least_2d.shape[:-1],
+                             number_of_parameters])
+
+        for i, voxel_data in enumerate(data_at_least_2d):
+            if self.spherical_mean:
+                voxel_data_spherical_mean = (
+                    estimate_spherical_mean_multi_shell(voxel_data, n,
+                                                        shell_indices))
+                shell_bvals = (
+                    np.r_[[np.mean(bvals[shell_indices == j])
+                           for j in np.unique(shell_indices)[1:]]]
+                )
+                res_ = minimize(self.objective_function, x0,
+                                (shell_bvals, n, voxel_data_spherical_mean,
+                                 shell_indices, delta, Delta),
+                                bounds=self.bounds_for_optimization)
+            else:
+                res_ = minimize(self.objective_function, x0,
+                                (bvals, n, voxel_data,
+                                 shell_indices, delta, Delta),
+                                bounds=self.bounds_for_optimization)
+            res[i] = res_.x
+        return res
+
     @property
     def bounds_for_optimization(self):
         bounds = []
@@ -139,6 +180,7 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
         self._prepare_parameters()
         self._prepare_partial_volumes()
         self._prepare_parameter_links()
+        self._verify_model_input_requirements()
 
     def _prepare_parameters(self):
         self.model_names = []
@@ -226,6 +268,20 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
             del self._parameter_ranges[parameter_name]
             del self.parameter_defaults[parameter_name]
             del self._parameter_cardinality[parameter_name]
+
+    def _verify_model_input_requirements(self):
+        models_spherical_mean = [model.spherical_mean for model in self.models]
+        if len(np.unique(models_spherical_mean)) > 1:
+            msg = "Cannot mix spherical mean and non-spherical mean models. "
+            msg = "Current model selection is {}".format(self.models)
+            raise ValueError(msg)
+        self.spherical_mean = np.all(models_spherical_mean)
+        self.need_delta_Delta = (
+            np.all([model.needs_delta_Delta for model in self.models])
+        )
+        self.need_shell_indices = (
+            np.all([model.need_shell_indices for model in self.models])
+        )
 
     def add_linked_parameters_to_parameters(self, parameters):
         if len(self.parameter_links) == 0:
@@ -321,6 +377,9 @@ class I1Stick(MicrostrukturModel):
         'mu': ([0, -np.pi], [np.pi, np.pi]),
         'lambda_par': (0, np.inf)
     }
+    spherical_mean = False
+    needs_delta_Delta = False
+    needs_shell_indices = False
 
     def __init__(self, mu=None, lambda_par=None):
         self.mu = mu
@@ -414,6 +473,9 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
         'lambda_par': (0, np.inf),
         'diameter': (1e-10, 50e-6)
     }
+    spherical_mean = False
+    needs_delta_Delta = True
+    needs_shell_indices = False
 
     def __init__(
         self,
@@ -553,6 +615,9 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
         'lambda_par': (0, np.inf),
         'diameter': (1e-10, 50e-6)
     }
+    spherical_mean = False
+    needs_delta_Delta = True
+    needs_shell_indices = False
 
     def __init__(
         self,
@@ -735,6 +800,9 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
         'lambda_par': (0, np.inf),
         'diameter': (1e-10, 50e-6)
     }
+    spherical_mean = False
+    needs_delta_Delta = True
+    needs_shell_indices = False
     CYLINDER_TRASCENDENTAL_ROOTS = np.sort(special.jnp_zeros(1, 1000))
 
     def __init__(
@@ -743,11 +811,9 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
         diameter=None,
         diffusion_perpendicular=CONSTANTS['water_in_axons_diffusion_constant'],
         gyromagnetic_ratio=CONSTANTS['water_gyromagnetic_ratio'],
-        number_of_approximation_terms=10,
     ):
         self.mu = mu
         self.lambda_par = lambda_par
-        self.N = number_of_approximation_terms
         self.diffusion_perpendicular = diffusion_perpendicular
         self.gyromagnetic_ratio = gyromagnetic_ratio
         self.diameter = diameter
@@ -907,6 +973,9 @@ class I1StickSphericalMean(MicrostrukturModel):
     _parameter_ranges = {
         'lambda_par': (0, np.inf)
     }
+    spherical_mean = True
+    needs_delta_Delta = False
+    needs_shell_indices = True
 
     def __init__(self, mu=None, lambda_par=None):
         self.lambda_par = lambda_par
@@ -965,6 +1034,9 @@ class E4ZeppelinSphericalMean(MicrostrukturModel):
         'lambda_par': (0, np.inf),
         'lambda_perp': (0, np.inf)
     }
+    spherical_mean = True
+    needs_delta_Delta = False
+    needs_shell_indices = True
 
     def __init__(self, lambda_par=None, lambda_perp=None):
         self.lambda_par = lambda_par
@@ -1040,6 +1112,9 @@ class E5RestrictedZeppelinSphericalMean(MicrostrukturModel):
         'lambda_inf': (0, np.inf),
         'A': (0, np.inf)
     }
+    spherical_mean = True
+    needs_delta_Delta = True
+    needs_shell_indices = True
 
     def __init__(self, lambda_par=None, lambda_inf=None, A=None):
         self.lambda_par = lambda_par
@@ -1094,6 +1169,9 @@ class E2Dot(MicrostrukturModel):
 
     _parameter_ranges = {
     }
+    spherical_mean = False
+    needs_delta_Delta = False
+    needs_shell_indices = False
 
     def __init__(self, dummy=None):
         self.dummy = dummy
@@ -1136,6 +1214,9 @@ class E3Ball(MicrostrukturModel):
     _parameter_ranges = {
         'lambda_iso': (0, np.inf)
     }
+    spherical_mean = False
+    needs_delta_Delta = False
+    needs_shell_indices = False
 
     def __init__(self, lambda_iso=None):
         self.lambda_iso = lambda_iso
@@ -1191,6 +1272,9 @@ class E4Zeppelin(MicrostrukturModel):
         'lambda_par': (0, np.inf),
         'lambda_perp': (0, np.inf)
     }
+    spherical_mean = False
+    needs_delta_Delta = False
+    needs_shell_indices = False
 
     def __init__(self, mu=None, lambda_par=None, lambda_perp=None):
         self.mu = mu
@@ -1301,6 +1385,9 @@ class E5RestrictedZeppelin(MicrostrukturModel):
         'lambda_inf': (0, np.inf),
         'A': (0, np.inf)
     }
+    spherical_mean = False
+    needs_delta_Delta = True
+    needs_shell_indices = False
 
     def __init__(self, mu=None, lambda_par=None, lambda_inf=None, A=None):
         self.mu = mu
@@ -1422,6 +1509,9 @@ class SD3Watson(MicrostrukturModel):
         'mu': ([0, -np.pi], [np.pi, np.pi]),
         'kappa': (0, np.inf),
     }
+    spherical_mean = False
+    needs_delta_Delta = False
+    needs_shell_indices = False
 
     def __init__(self, mu=None, kappa=None):
         self.mu = mu
@@ -1515,6 +1605,9 @@ class SD2Bingham(MicrostrukturModel):
         'kappa': (0, np.inf),
         'beta': (0, np.inf)  # beta<=kappa in fact
     }
+    spherical_mean = False
+    needs_delta_Delta = False
+    needs_shell_indices = False
 
     def __init__(self, mu=None, psi=None, kappa=None, beta=None):
         self.mu = mu
@@ -1615,6 +1708,9 @@ class DD1GammaDistribution(MicrostrukturModel):
         'alpha': (1e-10, np.inf),
         'beta': (1e-10, np.inf)
     }
+    spherical_mean = False
+    needs_delta_Delta = False
+    needs_shell_indices = False
 
     def __init__(self, alpha=None, beta=None):
         self.alpha = alpha
