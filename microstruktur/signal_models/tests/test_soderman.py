@@ -33,12 +33,6 @@ def test_RTAP_to_diameter_soderman(samples=10000):
     assert_almost_equal(diameter_soderman, diameter, 7)
 
 
-def test_callaghan_profile_narrow_pulse_not_restricted():
-    # in short diffusion times the model should approach a Gaussian
-    # profile as np.exp(-b * lambda_perp)
-    return None
-
-
 def test_watson_dispersed_soderman_kappa0(
     lambda_par=1.7, diameter=8e-6, bvalue=1e9, mu=[0, 0], kappa=0
 ):
