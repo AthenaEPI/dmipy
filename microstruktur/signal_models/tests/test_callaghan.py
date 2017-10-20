@@ -1,4 +1,7 @@
-from numpy.testing import assert_almost_equal, assert_equal
+from numpy.testing import (
+    assert_almost_equal,
+    assert_equal,
+    assert_array_almost_equal)
 import numpy as np
 from microstruktur.signal_models import three_dimensional_models
 from microstruktur.signal_models import dispersed_models
@@ -56,6 +59,31 @@ def test_callaghan_profile_narrow_pulse_not_restricted(samples=100):
     E_callaghan = callaghan(bvals_perp, n_perp, delta=delta, Delta=Delta)
     E_free_diffusion = np.exp(-bvals_perp * diffusion_perpendicular)
     assert_equal(np.max(np.abs(E_callaghan - E_free_diffusion)) < 0.01, True)
+
+
+def test_soderman_equivalent_to_callaghan_with_one_root_and_function(
+        samples=100):
+    mu = [0, 0]
+    lambda_par = .1
+    diameter = 10e-5
+    diffusion_perpendicular = 1.7e-09
+
+    delta = np.tile(1e-3, samples)  # delta towards zero
+    Delta = np.tile(.15e-2, samples)  # Delta towards infinity
+    qvals_perp = np.linspace(0, 1e5, samples)
+    bvals_perp = b_from_q(qvals_perp, delta, Delta)
+    n_perp = np.tile(np.r_[1., 0., 0.], (samples, 1))
+
+    soderman = three_dimensional_models.I2CylinderSodermanApproximation(
+        mu=mu, lambda_par=lambda_par, diameter=diameter)
+    callaghan = three_dimensional_models.I3CylinderCallaghanApproximation(
+        number_of_roots=1, number_of_functions=1,
+        mu=mu, lambda_par=lambda_par, diameter=diameter,
+        diffusion_perpendicular=diffusion_perpendicular)
+
+    E_soderman = soderman(bvals_perp, n_perp, delta=delta, Delta=Delta)
+    E_callaghan = callaghan(bvals_perp, n_perp, delta=delta, Delta=Delta)
+    assert_array_almost_equal(E_soderman, E_callaghan)
 
 
 def test_watson_dispersed_callaghan_kappa0(
