@@ -224,9 +224,35 @@ def parameter_equality(param):
 
 
 def define_shell_indices(bvals, b_value_ranges):
-    "Function to define shell indices given some manual ranges in b-values"
+    """ Function to facilitate defining shell indices given some manual ranges
+    in b-values. This function is useful as in practice the actual b-values may
+    fluctuate slightly around the planned b-value. This information is needed
+    by some models doing spherical convolutions or spherical means.
+    CAUTION: If a data set has variations in pulse duration delta and/or pulse
+    separation Delta, then different shells can have similar b-values. This
+    means these shells may not be separable in b-value, and you'll have to do
+    it manually.
+
+    Parameters
+    ----------
+    bvals : 1D array of size (N_data),
+        The b-values corresponding to the measured DWIs.
+    b_value_ranges : 2D array of size (N_shells, 2)
+        A list indicating for every shell the lower and upper b-value range.
+
+    Returns
+    -------
+    shell_indices : 1D integer array of size (N_data),
+        The shell indices corresponding to each DWI measurement. The index 0
+        corresponds with the b0 measurements, while higher numbers indicate
+        other shells. The numbers are ordered in the same order they are given
+        in b_value_ranges.
+    mean_shell_bvals : 1D array of size (N_shells),
+        The mean b-value in each shell.
+    """
+
     shell_indices = np.zeros_like(bvals)
-    shell_bvals = np.zeros(len(b_value_ranges))
+    mean_shell_bvals = np.zeros(len(b_value_ranges))
     shell_counter = 0
     dwi_counter = 0
     for b_range in b_value_ranges:
@@ -235,14 +261,14 @@ def define_shell_indices(bvals, b_value_ranges):
         shell_mask = np.all([bvals >= lower_range, bvals <= upper_range],
                             axis=0)
         shell_indices[shell_mask] = shell_counter
-        shell_bvals[shell_counter] = np.mean(bvals[shell_mask])
+        mean_shell_bvals[shell_counter] = np.mean(bvals[shell_mask])
         dwi_counter += sum(shell_mask)
         shell_counter += 1
     if dwi_counter < len(bvals):
         msg = ("b_value_ranges only covered " + str(dwi_counter) +
                " out of " + str(len(bvals)) + " dwis")
         raise ValueError(msg)
-    return shell_indices, shell_bvals
+    return shell_indices, mean_shell_bvals
 
 
 def cart2sphere(cartesian_coordinates):

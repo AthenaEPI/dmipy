@@ -96,6 +96,40 @@ class MicrostrukturModel:
 
     def fit(self, data, bvals, n, x0,
             shell_indices=None, delta=None, Delta=None):
+        """ The data fitting function of a multi-compartment model.
+        Parameters
+        ----------
+        data : N-dimensional array of size (N_x, N_y, ..., N_data),
+            The measured DWI signal attenuation array of either a single voxel
+            or an N-dimensional dataset.
+        bvals : 1D array of size (N_data)
+            The corresponding b-values of the DWI measurements in [s/m^2].
+            For example, a DTI measurement at b-value 1000 s/mm^2 must be given
+            as 1e9 s/m^2.
+        n : 2D array of size (N_data, 3)
+            The corresponding gradient orientations as unit vectors.
+        x0 : 1D array of size (N_parameters) or N-dimensional array the same
+            size as the data.
+            The initial condition for the scipy minimize function.
+            If a 1D array is given, this is the same initial condition for
+            every fitted voxel. If a higher-dimenensional array the same size
+            as the data is given, then every voxel can possibly be given a
+            different initial condition.
+        shell_indices : 1D integer array of size (N_data)
+            array of integers indicating to which acquisition shell each
+            measurement belongs. This array can be conveniently generated using
+            utils.define_shell_indices.
+        delta : 1D array of size (N_data)
+            The pulse duration for every DWI measurement in seconds.
+        Delta : 1D array of size (N_data)
+            The pulse separation for every DWI measurement in seconds.
+
+        Returns
+        -------
+        fitted_parameters: 1D array of size (N_parameters) or N-dimensional
+            array the same size as the data.
+            The fitted parameters of the microstructure model.
+        """
 
         if self.needs_shell_indices and shell_indices is None:
             msg = "shell_indices are missing."
@@ -109,8 +143,8 @@ class MicrostrukturModel:
         number_of_parameters = np.sum(
             [self.parameter_cardinality[key] for key in parameter_keys])
         data_at_least_2d = np.atleast_2d(data)
-        res = np.zeros(np.r_[data_at_least_2d.shape[:-1],
-                             number_of_parameters])
+        fitted_parameters = np.zeros(np.r_[data_at_least_2d.shape[:-1],
+                                           number_of_parameters])
 
         for i, voxel_data in enumerate(data_at_least_2d):
             if self.spherical_mean:
@@ -130,8 +164,8 @@ class MicrostrukturModel:
                                 (bvals, n, voxel_data,
                                  shell_indices, delta, Delta),
                                 bounds=self.bounds_for_optimization)
-            res[i] = res_.x
-        return res
+            fitted_parameters[i] = res_.x
+        return fitted_parameters
 
     @property
     def bounds_for_optimization(self):
