@@ -4,7 +4,8 @@ from microstruktur.signal_models import (
 from microstruktur.signal_models.utils import (
     T1_tortuosity, parameter_equality, define_shell_indices
 )
-from numpy.testing import assert_equal, assert_array_almost_equal
+from numpy.testing import (
+    assert_equal, assert_array_almost_equal, assert_array_equal)
 import numpy as np
 
 
@@ -87,6 +88,7 @@ def test_multi_dimensional_x0():
     E_array = np.empty((10, 10, len(bvals)), dtype=float)
     gt_mu_array = np.empty((10, 10, 2))
 
+    # I'm putting the orientation of the stick all over the sphere.
     for i, mu1 in enumerate(np.linspace(0, np.pi, 10)):
         for j, mu2 in enumerate(np.linspace(-np.pi, np.pi, 10)):
             gt_mu = np.r_[mu1, mu2]
@@ -104,6 +106,7 @@ def test_multi_dimensional_x0():
                     gt_parameter_vector)
             )
 
+    # I'm giving a voxel-dependent initial condition with gt_mu_array
     x0_gt = ball_and_stick.parameters_to_parameter_vector(
         I1Stick_1_lambda_par=gt_lambda_par,
         E3Ball_1_lambda_iso=gt_lambda_iso,
@@ -111,7 +114,14 @@ def test_multi_dimensional_x0():
         partial_volume_0=gt_partial_volume
     )
     res = ball_and_stick.fit(E_array, bvals, gradient_directions, x0_gt)
+    # optimization should stop immediately as I'm giving the ground truth.
     assert_equal(np.all(np.ravel(res - x0_gt) == 0.), True)
+    # and the parameter vector dictionaries of the results and x0 should also
+    # be the same.
+    res_parameters = ball_and_stick.parameter_vector_to_parameters(res)
+    x0_parameters = ball_and_stick.parameter_vector_to_parameters(x0_gt)
+    for key in res_parameters.keys():
+        assert_array_equal(x0_parameters[key], res_parameters[key])
 
 
 def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():

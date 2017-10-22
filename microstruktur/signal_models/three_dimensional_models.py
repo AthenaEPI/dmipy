@@ -61,11 +61,18 @@ class MicrostrukturModel:
     def parameter_vector_to_parameters(self, parameter_vector):
         parameters = {}
         current_pos = 0
-        for parameter, card in self.parameter_cardinality.items():
-            parameters[parameter] = parameter_vector[
-                current_pos: current_pos + card
-            ]
-            current_pos += card
+        if parameter_vector.ndim == 1:
+            for parameter, card in self.parameter_cardinality.items():
+                parameters[parameter] = parameter_vector[
+                    current_pos: current_pos + card
+                ]
+                current_pos += card
+        else:
+            for parameter, card in self.parameter_cardinality.items():
+                parameters[parameter] = parameter_vector[
+                    ..., current_pos: current_pos + card
+                ]
+                current_pos += card
         return parameters
 
     def parameters_to_parameter_vector(self, **parameters):
