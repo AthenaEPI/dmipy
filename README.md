@@ -11,7 +11,7 @@ editeable journal article file: https://www.overleaf.com/7710782nxbwpxvyxkwq
 - python setup.py install
 
 ## Getting Started
-
+To understand the basic usage of the toolbox check this [tutorial](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_basic_usage.ipynb).
 ## Explanations and Illustrations of Biophysical Models in the Toolbox
 - Intra-axonal Cylinder models
 - Extra-axonal Gaussian models
