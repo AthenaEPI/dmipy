@@ -70,9 +70,36 @@ class MicrostrukturModel:
 
     def parameters_to_parameter_vector(self, **parameters):
         parameter_vector = []
+        parameter_shapes = []
         for parameter, card in self.parameter_cardinality.items():
-            parameter_vector.append(parameters[parameter])
-        return np.hstack(parameter_vector)
+            value = np.atleast_1d(parameters[parameter])
+            if card == 1 and not np.all(value.shape == np.r_[1]):
+                parameter_shapes.append(value.shape)
+            if card == 2 and not np.all(value.shape == np.r_[2]):
+                parameter_shapes.append(value.shape[:-1])
+
+        if len(np.unique(parameter_shapes)) > 1:
+            msg = "parameter shapes are inconsistent."
+            raise ValueError(msg)
+        elif len(np.unique(parameter_shapes)) == 0:
+            for parameter, card in self.parameter_cardinality.items():
+                parameter_vector.append(parameters[parameter])
+            parameter_vector = np.hstack(parameter_vector)
+        elif len(np.unique(parameter_shapes)) == 1:
+            for parameter, card in self.parameter_cardinality.items():
+                value = np.atleast_1d(parameters[parameter])
+                if card == 1 and np.all(value.shape == np.r_[1]):
+                    parameter_vector.append(
+                        np.tile(value[0], np.r_[parameter_shapes[0], 1])
+                    )
+                elif card == 2 and np.all(value.shape == np.r_[2]):
+                    parameter_vector.append(
+                        np.tile(value, np.r_[parameter_shapes[0], 1])
+                    )
+                else:
+                    parameter_vector.append(parameters[parameter])
+            parameter_vector = np.concatenate(parameter_vector, axis=-1)
+        return parameter_vector
 
     def objective_function(
         self, parameter_vector,
@@ -97,6 +124,7 @@ class MicrostrukturModel:
     def fit(self, data, bvals, n, x0,
             shell_indices=None, delta=None, Delta=None):
         """ The data fitting function of a multi-compartment model.
+
         Parameters
         ----------
         data : N-dimensional array of size (N_x, N_y, ..., N_data),
@@ -139,14 +167,27 @@ class MicrostrukturModel:
             msg = "delta and/or Delta are missing."
             raise ValueError(msg)
 
-        parameter_keys = self.parameter_cardinality.keys()
-        number_of_parameters = np.sum(
-            [self.parameter_cardinality[key] for key in parameter_keys])
         data_at_least_2d = np.atleast_2d(data)
-        fitted_parameters = np.zeros(np.r_[data_at_least_2d.shape[:-1],
-                                           number_of_parameters])
+        x0_at_least_2d = np.atleast_2d(x0)
+        if x0.ndim == 1 and data.ndim > 1:
+            # the same x0 will be used for every voxel in N-dimensional data.
+            x0_at_least_2d = np.tile(x0, np.r_[data.shape[:-1], 1])
+            data_at_least_2d = data
+        if not np.all(
+            x0_at_least_2d.shape[:-1] == data_at_least_2d.shape[:-1]
+        ):
+            # if x0 and data are both N-dimensional but have different shapes.
+            msg = "data and x0 both N-dimensional but have different shapes. "
+            msg += "Current shapes are {} and {}.".format(
+                data_at_least_2d.shape[:-1],
+                x0_at_least_2d.shape[:-1])
+            raise ValueError(msg)
 
-        for i, voxel_data in enumerate(data_at_least_2d):
+        data_2d = data_at_least_2d.reshape(-1, data_at_least_2d.shape[-1])
+        x0_2d = x0_at_least_2d.reshape(-1, x0_at_least_2d.shape[-1])
+        fitted_parameters = np.empty(x0_2d.shape, dtype=float)
+
+        for idx, (voxel_data, voxel_x0) in enumerate(zip(data_2d, x0_2d)):
             if self.spherical_mean:
                 voxel_data_spherical_mean = (
                     estimate_spherical_mean_multi_shell(voxel_data, n,
@@ -155,17 +196,17 @@ class MicrostrukturModel:
                     np.r_[[np.mean(bvals[shell_indices == j])
                            for j in np.unique(shell_indices)[1:]]]
                 )
-                res_ = minimize(self.objective_function, x0,
+                res_ = minimize(self.objective_function, voxel_x0,
                                 (shell_bvals, n, voxel_data_spherical_mean,
                                  shell_indices, delta, Delta),
                                 bounds=self.bounds_for_optimization)
             else:
-                res_ = minimize(self.objective_function, x0,
+                res_ = minimize(self.objective_function, voxel_x0,
                                 (bvals, n, voxel_data,
                                  shell_indices, delta, Delta),
                                 bounds=self.bounds_for_optimization)
-            fitted_parameters[i] = res_.x
-        return fitted_parameters
+            fitted_parameters[idx] = res_.x
+        return fitted_parameters.reshape(x0_at_least_2d.shape)
 
     @property
     def bounds_for_optimization(self):

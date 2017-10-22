@@ -4,7 +4,7 @@ from microstruktur.signal_models import (
 from microstruktur.signal_models.utils import (
     T1_tortuosity, parameter_equality, define_shell_indices
 )
-from numpy.testing import assert_array_almost_equal
+from numpy.testing import assert_equal, assert_array_almost_equal
 import numpy as np
 
 
@@ -39,10 +39,11 @@ def test_simple_ball_and_stick_optimization():
     stick = three_dimensional_models.I1Stick()
     ball = three_dimensional_models.E3Ball()
 
-    ball_and_stick = three_dimensional_models.PartialVolumeCombinedMicrostrukturModel(
-        models=[ball, stick],
-        parameter_links=[],
-        optimise_partial_volumes=True
+    ball_and_stick = (
+        three_dimensional_models.PartialVolumeCombinedMicrostrukturModel(
+            models=[ball, stick],
+            parameter_links=[],
+            optimise_partial_volumes=True)
     )
     gt_mu = np.clip(np.random.rand(2), .3, np.inf)
     gt_lambda_par = np.random.rand() + 1.
@@ -56,8 +57,9 @@ def test_simple_ball_and_stick_optimization():
         partial_volume_0=gt_partial_volume
     )
 
-    E = ball_and_stick(bvals, gradient_directions,
-                       **ball_and_stick.parameter_vector_to_parameters(gt_parameter_vector))
+    E = ball_and_stick(
+        bvals, gradient_directions,
+        **ball_and_stick.parameter_vector_to_parameters(gt_parameter_vector))
 
     x0 = ball_and_stick.parameters_to_parameter_vector(
         I1Stick_1_lambda_par=np.random.rand() + 1.,
@@ -67,6 +69,49 @@ def test_simple_ball_and_stick_optimization():
     )
     res = ball_and_stick.fit(E, bvals, gradient_directions, x0)[0]
     assert_array_almost_equal(gt_parameter_vector, res, 3)
+
+
+def test_multi_dimensional_x0():
+    stick = three_dimensional_models.I1Stick()
+    ball = three_dimensional_models.E3Ball()
+
+    ball_and_stick = (
+        three_dimensional_models.PartialVolumeCombinedMicrostrukturModel(
+            models=[ball, stick],
+            parameter_links=[],
+            optimise_partial_volumes=True)
+    )
+    gt_lambda_par = np.random.rand() + 1.
+    gt_lambda_iso = gt_lambda_par / 2.
+    gt_partial_volume = 0.3
+    E_array = np.empty((10, 10, len(bvals)), dtype=float)
+    gt_mu_array = np.empty((10, 10, 2))
+
+    for i, mu1 in enumerate(np.linspace(0, np.pi, 10)):
+        for j, mu2 in enumerate(np.linspace(-np.pi, np.pi, 10)):
+            gt_mu = np.r_[mu1, mu2]
+            gt_mu_array[i, j] = gt_mu
+            gt_parameter_vector = (
+                ball_and_stick.parameters_to_parameter_vector(
+                    I1Stick_1_lambda_par=gt_lambda_par,
+                    E3Ball_1_lambda_iso=gt_lambda_iso,
+                    I1Stick_1_mu=gt_mu,
+                    partial_volume_0=gt_partial_volume)
+            )
+            E_array[i, j] = ball_and_stick(
+                bvals, gradient_directions,
+                **ball_and_stick.parameter_vector_to_parameters(
+                    gt_parameter_vector)
+            )
+
+    x0_gt = ball_and_stick.parameters_to_parameter_vector(
+        I1Stick_1_lambda_par=gt_lambda_par,
+        E3Ball_1_lambda_iso=gt_lambda_iso,
+        I1Stick_1_mu=gt_mu_array,
+        partial_volume_0=gt_partial_volume
+    )
+    res = ball_and_stick.fit(E_array, bvals, gradient_directions, x0_gt)
+    assert_equal(np.all(np.ravel(res - x0_gt) == 0.), True)
 
 
 def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
@@ -107,23 +152,28 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
         )
     ]
 
-    stick_and_tortuous_zeppelin = three_dimensional_models.PartialVolumeCombinedMicrostrukturModel(
-        models=[stick, zeppelin],
-        parameter_links=parameter_links_stick_and_tortuous_zeppelin,
-        optimise_partial_volumes=True
+    stick_and_tortuous_zeppelin = (
+        three_dimensional_models.PartialVolumeCombinedMicrostrukturModel(
+            models=[stick, zeppelin],
+            parameter_links=parameter_links_stick_and_tortuous_zeppelin,
+            optimise_partial_volumes=True)
     )
 
-    gt_parameter_vector = stick_and_tortuous_zeppelin.parameters_to_parameter_vector(
-        I1Stick_1_lambda_par=gt_lambda_par,
-        I1Stick_1_mu=gt_mu,
-        partial_volume_0=gt_partial_volume
+    gt_parameter_vector = (
+        stick_and_tortuous_zeppelin.parameters_to_parameter_vector(
+            I1Stick_1_lambda_par=gt_lambda_par,
+            I1Stick_1_mu=gt_mu,
+            partial_volume_0=gt_partial_volume)
     )
 
-    E = stick_and_tortuous_zeppelin(bvals, gradient_directions,
-                                    **stick_and_tortuous_zeppelin.parameter_vector_to_parameters(gt_parameter_vector))
+    E = stick_and_tortuous_zeppelin(
+        bvals, gradient_directions,
+        **stick_and_tortuous_zeppelin.parameter_vector_to_parameters(
+            gt_parameter_vector)
+    )
 
-    # now we make the stick and zeppelin spherical mean model and check if the same
-    # lambda_par and volume fraction result as the 3D generated data.
+    # now we make the stick and zeppelin spherical mean model and check if the
+    # same lambda_par and volume fraction result as the 3D generated data.
     stick_sm = three_dimensional_models.I1StickSphericalMean()
     zeppelin_sm = three_dimensional_models.E4ZeppelinSphericalMean()
 
@@ -143,10 +193,11 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
         )
     ]
 
-    stick_and_tortuous_zeppelin_sm = three_dimensional_models.PartialVolumeCombinedMicrostrukturModel(
-        models=[stick_sm, zeppelin_sm],
-        parameter_links=parameter_links_stick_and_tortuous_zeppelin_smt,
-        optimise_partial_volumes=True
+    stick_and_tortuous_zeppelin_sm = (
+        three_dimensional_models.PartialVolumeCombinedMicrostrukturModel(
+            models=[stick_sm, zeppelin_sm],
+            parameter_links=parameter_links_stick_and_tortuous_zeppelin_smt,
+            optimise_partial_volumes=True)
     )
     x0 = stick_and_tortuous_zeppelin_sm.parameters_to_parameter_vector(
         I1StickSphericalMean_1_lambda_par=.6,  # initialization diffusivity
