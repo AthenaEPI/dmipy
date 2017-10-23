@@ -9,47 +9,6 @@ MicrostrukturModel = three_dimensional_models.MicrostrukturModel
 WATSON_SH_ORDER = 14
 
 
-def check_bvals_n_shell_indices_delta_Delta(
-        bvals, n, shell_indices, delta=None, Delta=None
-    ):
-    if len(bvals) != len(n) or len(n) != len(shell_indices):
-        msg = "bvals, n, and shell_indices must have the same length. "
-        msg += "Currently their lengths are {}, {} and {}.".format(
-            len(bvals), len(n), len(shell_indices)
-        )
-        raise ValueError(msg)
-    if delta is not None and Delta is not None:
-        if len(bvals) != len(delta) or len(bvals) != len(Delta):
-            msg = "bvals, delta and Delta must have the same length. "
-            msg += "Currently their lengths are {}, {} and {}.".format(
-                len(bvals), len(delta), len(Delta)
-            )
-        if delta.ndim > 1 or Delta.ndim > 1:
-            msg = "delta and Delta must be one-dimensional arrays. "
-            msg += "Currently their dimensions are {} and {}.".format(
-                delta.ndim, Delta.ndim
-            )
-        if np.min(delta) < 0 or np.min(Delta) < 0:
-            msg = "delta and Delta must be zero or positive. "
-            msg += "Currently their minimum values are {} and {}.".format(
-                np.min(delta), np.min(Delta)
-            )
-    if bvals.ndim > 1 or shell_indices.ndim > 1:
-        msg = "bvals and shell_indices must be one-dimensional arrays. "
-        msg += "Currently their dimensions are {} and {}.".format(
-            bvals.ndim, shell_indices.ndim
-        )
-        raise ValueError(msg)
-    if n.ndim != 2 or n.shape[1] != 3:
-        msg = "b-vectors n must be two dimensional array of shape [N, 3]. "
-        msg += "Currently its shape is {}.".format(n.shape)
-        raise ValueError(msg)
-    if np.min(bvals) < 0.:
-        msg = "bvals must be zero or positive. "
-        msg += "Minimum value found is {}.".format(bvals.min)
-    # should check for unity of bvectors but will do it every time when fitting
-
-
 class SD2I1BinghamDispersedStick(MicrostrukturModel):
     r""" The Bingham-Dispersed [1] Stick model [2] - a cylinder with zero
     radius - for intra-axonal diffusion. Allows for anisotropic dispersion.
@@ -472,8 +431,6 @@ class SD2I4BinghamDispersedGaussianPhaseCylinder(MicrostrukturModel):
         if shell_indices is None:
             msg = "This class needs non-None shell_indices"
             raise ValueError(msg)
-        check_bvals_n_shell_indices_delta_Delta(bvals, n, shell_indices,
-                                                delta, Delta)
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
@@ -568,7 +525,6 @@ class SD3I1WatsonDispersedStick(MicrostrukturModel):
         if shell_indices is None:
             msg = "argument shell_indices is needed"
             raise ValueError(msg)
-        check_bvals_n_shell_indices_delta_Delta(bvals, n, shell_indices)
 
         watson = three_dimensional_models.SD3Watson(mu=mu, kappa=kappa)
         sh_watson = watson.spherical_harmonics_representation()
@@ -1199,7 +1155,7 @@ class DD1I2GammaDistributedSodermanCylinder(MicrostrukturModel):
         soderman = three_dimensional_models.I2CylinderSodermanApproximation(
             mu=mu, lambda_par=lambda_par
         )
-        
+
         E = np.empty(
             (self.radius_integral_steps, len(bvals)),
             dtype=float
@@ -1300,7 +1256,7 @@ class DD1I3GammaDistributedCallaghanCylinder(MicrostrukturModel):
         callaghan = three_dimensional_models.I3CylinderCallaghanApproximation(
             mu=mu, lambda_par=lambda_par
         )
-        
+
         E = np.empty(
             (self.radius_integral_steps, len(bvals)),
             dtype=float

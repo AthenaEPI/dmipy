@@ -166,6 +166,8 @@ class MicrostrukturModel:
             The fitted parameters of the microstructure model.
         """
 
+        utils.check_bvals_n_shell_indices_delta_Delta(
+            bvals, n, shell_indices, delta, Delta)
         if self.needs_shell_indices and shell_indices is None:
             msg = "shell_indices are missing."
             raise ValueError(msg)
