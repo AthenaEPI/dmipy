@@ -33,6 +33,7 @@ SPHERE_CARTESIAN = np.loadtxt(
 SPHERE_SPHERICAL = utils.cart2sphere(SPHERE_CARTESIAN)
 WATSON_SH_ORDER = 14
 DIFFUSIVITY_SCALING = 1e-9
+DIAMETER_SCALING = 1e-6
 A_SCALING = 1e-12
 
 
@@ -46,6 +47,16 @@ class MicrostrukturModel:
             ])
         else:
             return self._parameter_ranges.copy()
+
+    @property
+    def parameter_scales(self):
+        if not isinstance(self._parameter_scales, OrderedDict):
+            return OrderedDict([
+                (k, self._parameter_scales[k])
+                for k in sorted(self._parameter_scales)
+            ])
+        else:
+            return self._parameter_scales.copy()
 
     @property
     def parameter_cardinality(self):
@@ -128,6 +139,25 @@ class MicrostrukturModel:
         # todo analytic jacobian... 2(objective)D model(parameter)/D parameter
         return objective
 
+    @property
+    def bounds_for_optimization(self):
+        bounds = []
+        for parameter, card in self.parameter_cardinality.items():
+            range_ = self.parameter_ranges[parameter]
+            if card == 1:
+                bounds.append(range_)
+            else:
+                for i in range(card):
+                    bounds.append((range_[0][i], range_[1][i]))
+        return bounds
+
+    def simulate_signal(self, bvals, n, x0, shell_indices=None,
+                        delta=None, Delta=None):
+        """ Function to simulate diffusion data using the defined
+        microstructure model and acquisition parameters.
+        """
+        return None  # self(bvals, n, **kwargs)
+
     def fit(self, data, bvals, n, x0,
             shell_indices=None, delta=None, Delta=None):
         """ The data fitting function of a multi-compartment model.
@@ -168,13 +198,6 @@ class MicrostrukturModel:
 
         utils.check_bvals_n_shell_indices_delta_Delta(
             bvals, n, shell_indices, delta, Delta)
-        if self.needs_shell_indices and shell_indices is None:
-            msg = "shell_indices are missing."
-            raise ValueError(msg)
-        if ((self.needs_delta_Delta and delta is None) or
-                (self.needs_delta_Delta and Delta is None)):
-            msg = "delta and/or Delta are missing."
-            raise ValueError(msg)
 
         data_at_least_2d = np.atleast_2d(data)
         x0_at_least_2d = np.atleast_2d(x0)
@@ -217,18 +240,6 @@ class MicrostrukturModel:
             fitted_parameters[idx] = res_.x
         return fitted_parameters.reshape(x0_at_least_2d.shape)
 
-    @property
-    def bounds_for_optimization(self):
-        bounds = []
-        for parameter, card in self.parameter_cardinality.items():
-            range_ = self.parameter_ranges[parameter]
-            if card == 1:
-                bounds.append(range_)
-            else:
-                for i in range(card):
-                    bounds.append((range_[0][i], range_[1][i]))
-        return bounds
-
 
 class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
     r'''
@@ -256,6 +267,7 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
         from the container partial volume mixing class.
 
     '''
+
     def __init__(
         self, models, partial_volumes=None,
         parameter_links=[], optimise_partial_volumes=False
@@ -293,6 +305,12 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
             for k, v in model.parameter_ranges.items()
         })
 
+        self._parameter_scales = OrderedDict({
+            model_name + k: v
+            for model, model_name in zip(self.models, self.model_names)
+            for k, v in model.parameter_scales.items()
+        })
+
         self._parameter_map = {
             model_name + k: (model, k)
             for model, model_name in zip(self.models, self.model_names)
@@ -320,6 +338,7 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
 
             for i, partial_volume_name in enumerate(self.partial_volume_names):
                 self._parameter_ranges[partial_volume_name] = (0, 1)
+                self._parameter_scales[partial_volume_name] = 1.
                 self.parameter_defaults[partial_volume_name] = (
                     1 / (len(self.models) - i)
                 )
@@ -364,12 +383,6 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
             msg = "Current model selection is {}".format(self.models)
             raise ValueError(msg)
         self.spherical_mean = np.all(models_spherical_mean)
-        self.needs_delta_Delta = (
-            np.all([model.needs_delta_Delta for model in self.models])
-        )
-        self.needs_shell_indices = (
-            np.all([model.needs_shell_indices for model in self.models])
-        )
 
     def add_linked_parameters_to_parameters(self, parameters):
         if len(self.parameter_links) == 0:
@@ -465,9 +478,11 @@ class I1Stick(MicrostrukturModel):
         'mu': ([0, -np.pi], [np.pi, np.pi]),
         'lambda_par': (0, np.inf)
     }
+    _parameter_scales = {
+        'mu': 1.,
+        'lambda_par': DIFFUSIVITY_SCALING
+    }
     spherical_mean = False
-    needs_delta_Delta = False
-    needs_shell_indices = False
 
     def __init__(self, mu=None, lambda_par=None):
         self.mu = mu
@@ -561,9 +576,12 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
         'lambda_par': (0, np.inf),
         'diameter': (1e-10, 50e-6)
     }
+    _parameter_scales = {
+        'mu': 1.,
+        'lambda_par': DIFFUSIVITY_SCALING,
+        'diameter': DIAMETER_SCALING
+    }
     spherical_mean = False
-    needs_delta_Delta = True
-    needs_shell_indices = False
 
     def __init__(
         self,
@@ -703,9 +721,12 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
         'lambda_par': (0, np.inf),
         'diameter': (1e-10, 50e-6)
     }
+    _parameter_scales = {
+        'mu': 1.,
+        'lambda_par': DIFFUSIVITY_SCALING,
+        'diameter': DIAMETER_SCALING
+    }
     spherical_mean = False
-    needs_delta_Delta = True
-    needs_shell_indices = False
 
     def __init__(
         self,
@@ -756,15 +777,15 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
             J = special.jvp(m, q_argument, 1)
             q_argument_J = (q_argument * J) ** 2
             for k in xrange(self.alpha.shape[0]):
-                    alpha2 = self.alpha[k, m] ** 2
-                    update = (
-                        8 * np.exp(-alpha2 * self.diffusion_perpendicular *
-                                   tau / radius ** 2) *
-                        alpha2 / (alpha2 - m ** 2) *
-                        q_argument_J /
-                        (q_argument_2 - alpha2) ** 2
-                    )
-                    res += update
+                alpha2 = self.alpha[k, m] ** 2
+                update = (
+                    8 * np.exp(-alpha2 * self.diffusion_perpendicular *
+                               tau / radius ** 2) *
+                    alpha2 / (alpha2 - m ** 2) *
+                    q_argument_J /
+                    (q_argument_2 - alpha2) ** 2
+                )
+                res += update
         return res
 
     def __call__(self, bvals, n, delta=None, Delta=None, **kwargs):
@@ -888,9 +909,12 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
         'lambda_par': (0, np.inf),
         'diameter': (1e-10, 50e-6)
     }
+    _parameter_scales = {
+        'mu': 1.,
+        'lambda_par': DIFFUSIVITY_SCALING,
+        'diameter': DIAMETER_SCALING
+    }
     spherical_mean = False
-    needs_delta_Delta = True
-    needs_shell_indices = False
     CYLINDER_TRASCENDENTAL_ROOTS = np.sort(special.jnp_zeros(1, 1000))
 
     def __init__(
@@ -1061,9 +1085,10 @@ class I1StickSphericalMean(MicrostrukturModel):
     _parameter_ranges = {
         'lambda_par': (0, np.inf)
     }
+    _parameter_scales = {
+        'lambda_par': DIFFUSIVITY_SCALING,
+    }
     spherical_mean = True
-    needs_delta_Delta = False
-    needs_shell_indices = True
 
     def __init__(self, mu=None, lambda_par=None):
         self.lambda_par = lambda_par
@@ -1083,7 +1108,7 @@ class I1StickSphericalMean(MicrostrukturModel):
         lambda_par = kwargs.get('lambda_par', self.lambda_par) *\
             DIFFUSIVITY_SCALING
         E_mean = np.ones_like(bvals)
-        bval_indices_above0 = bvals>0
+        bval_indices_above0 = bvals > 0
         bvals_ = bvals[bval_indices_above0]
         E_mean_ = ((np.sqrt(np.pi) * erf(np.sqrt(bvals_ * lambda_par))) /
                    (2 * np.sqrt(bvals_ * lambda_par)))
@@ -1122,9 +1147,11 @@ class E4ZeppelinSphericalMean(MicrostrukturModel):
         'lambda_par': (0, np.inf),
         'lambda_perp': (0, np.inf)
     }
+    _parameter_scales = {
+        'lambda_par': DIFFUSIVITY_SCALING,
+        'lambda_perp': DIFFUSIVITY_SCALING
+    }
     spherical_mean = True
-    needs_delta_Delta = False
-    needs_shell_indices = True
 
     def __init__(self, lambda_par=None, lambda_perp=None):
         self.lambda_par = lambda_par
@@ -1200,9 +1227,12 @@ class E5RestrictedZeppelinSphericalMean(MicrostrukturModel):
         'lambda_inf': (0, np.inf),
         'A': (0, np.inf)
     }
+    _parameter_scales = {
+        'lambda_par': DIFFUSIVITY_SCALING,
+        'lambda_inf': DIFFUSIVITY_SCALING,
+        'A': A_SCALING
+    }
     spherical_mean = True
-    needs_delta_Delta = True
-    needs_shell_indices = True
 
     def __init__(self, lambda_par=None, lambda_inf=None, A=None):
         self.lambda_par = lambda_par
@@ -1257,9 +1287,9 @@ class E2Dot(MicrostrukturModel):
 
     _parameter_ranges = {
     }
+    _parameter_scales = {
+    }
     spherical_mean = False
-    needs_delta_Delta = False
-    needs_shell_indices = False
 
     def __init__(self, dummy=None):
         self.dummy = dummy
@@ -1302,9 +1332,10 @@ class E3Ball(MicrostrukturModel):
     _parameter_ranges = {
         'lambda_iso': (0, np.inf)
     }
+    _parameter_scales = {
+        'lambda_iso': DIFFUSIVITY_SCALING
+    }
     spherical_mean = False
-    needs_delta_Delta = False
-    needs_shell_indices = False
 
     def __init__(self, lambda_iso=None):
         self.lambda_iso = lambda_iso
@@ -1360,9 +1391,12 @@ class E4Zeppelin(MicrostrukturModel):
         'lambda_par': (0, np.inf),
         'lambda_perp': (0, np.inf)
     }
+    _parameter_scales = {
+        'mu': 1.,
+        'lambda_par': DIFFUSIVITY_SCALING,
+        'lambda_perp': DIFFUSIVITY_SCALING
+    }
     spherical_mean = False
-    needs_delta_Delta = False
-    needs_shell_indices = False
 
     def __init__(self, mu=None, lambda_par=None, lambda_perp=None):
         self.mu = mu
@@ -1467,9 +1501,13 @@ class E5RestrictedZeppelin(MicrostrukturModel):
         'lambda_inf': (0, np.inf),
         'A': (0, np.inf)
     }
+    _parameter_scales = {
+        'mu': 1.,
+        'lambda_par': DIFFUSIVITY_SCALING,
+        'lambda_perp': DIFFUSIVITY_SCALING,
+        'A': A_SCALING
+    }
     spherical_mean = False
-    needs_delta_Delta = True
-    needs_shell_indices = False
 
     def __init__(self, mu=None, lambda_par=None, lambda_inf=None, A=None):
         self.mu = mu
@@ -1591,9 +1629,11 @@ class SD3Watson(MicrostrukturModel):
         'mu': ([0, -np.pi], [np.pi, np.pi]),
         'kappa': (0, np.inf),
     }
+    _parameter_scales = {
+        'mu': 1.,
+        'kappa': 1.,
+    }
     spherical_mean = False
-    needs_delta_Delta = False
-    needs_shell_indices = False
 
     def __init__(self, mu=None, kappa=None):
         self.mu = mu
@@ -1687,9 +1727,13 @@ class SD2Bingham(MicrostrukturModel):
         'kappa': (0, np.inf),
         'beta': (0, np.inf)  # beta<=kappa in fact
     }
+    _parameter_scales = {
+        'mu': 1.,
+        'psi': 1.,
+        'kappa': 1.,
+        'beta': 1.
+    }
     spherical_mean = False
-    needs_delta_Delta = False
-    needs_shell_indices = False
 
     def __init__(self, mu=None, psi=None, kappa=None, beta=None):
         self.mu = mu
@@ -1796,9 +1840,11 @@ class DD1GammaDistribution(MicrostrukturModel):
         'alpha': (1e-10, np.inf),
         'beta': (1e-10, np.inf)
     }
+    _parameter_scales = {
+        'alpha': 1.,
+        'beta': 1.,
+    }
     spherical_mean = False
-    needs_delta_Delta = False
-    needs_shell_indices = False
 
     def __init__(self, alpha=None, beta=None):
         self.alpha = alpha

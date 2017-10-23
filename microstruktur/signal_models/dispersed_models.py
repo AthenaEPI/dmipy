@@ -7,6 +7,10 @@ from dipy.reconst.shm import real_sym_sh_mrtrix
 from scipy import stats
 MicrostrukturModel = three_dimensional_models.MicrostrukturModel
 WATSON_SH_ORDER = 14
+DIFFUSIVITY_SCALING = 1e-9
+DIAMETER_SCALING = 1e-6
+BETA_SCALING = 1e-6
+A_SCALING = 1e-12
 
 
 class SD2I1BinghamDispersedStick(MicrostrukturModel):
@@ -45,9 +49,14 @@ class SD2I1BinghamDispersedStick(MicrostrukturModel):
         'kappa': (0, 16),
         'beta': (0, 16)
     }
+    _parameter_scales = {
+        'mu': 1.,
+        'lambda_par': DIFFUSIVITY_SCALING,
+        'psi': 1.,
+        'kappa': 1.,
+        'beta': 1.
+    }
     spherical_mean = False
-    needs_delta_Delta = False
-    needs_shell_indices = True
 
     def __init__(self, mu=None, lambda_par=None,
                  kappa=None, beta=None, psi=None):
@@ -146,9 +155,15 @@ class SD2I2BinghamDispersedSodermanCylinder(MicrostrukturModel):
         'kappa': (0, 16),
         'beta': (0, 16)
     }
+    _parameter_scales = {
+        'mu': 1.,
+        'lambda_par': DIFFUSIVITY_SCALING,
+        'diameter': DIAMETER_SCALING,
+        'psi': 1.,
+        'kappa': 1.,
+        'beta': 1.
+    }
     spherical_mean = False
-    needs_delta_Delta = True
-    needs_shell_indices = True
 
     def __init__(self, mu=None, lambda_par=None, diameter=None,
                  kappa=None, beta=None, psi=None):
@@ -267,9 +282,15 @@ class SD2I3BinghamDispersedCallaghanCylinder(MicrostrukturModel):
         'kappa': (0, 16),
         'beta': (0, 16)
     }
+    _parameter_scales = {
+        'mu': 1.,
+        'lambda_par': DIFFUSIVITY_SCALING,
+        'diameter': DIAMETER_SCALING,
+        'psi': 1.,
+        'kappa': 1.,
+        'beta': 1.
+    }
     spherical_mean = False
-    needs_delta_Delta = True
-    needs_shell_indices = True
 
     def __init__(self, mu=None, lambda_par=None, diameter=None,
                  kappa=None, beta=None, psi=None):
@@ -387,9 +408,15 @@ class SD2I4BinghamDispersedGaussianPhaseCylinder(MicrostrukturModel):
         'kappa': (0, 16),
         'beta': (0, 16)
     }
+    _parameter_scales = {
+        'mu': 1.,
+        'lambda_par': DIFFUSIVITY_SCALING,
+        'diameter': DIAMETER_SCALING,
+        'psi': 1.,
+        'kappa': 1.,
+        'beta': 1.
+    }
     spherical_mean = False
-    needs_delta_Delta = True
-    needs_shell_indices = True
 
     def __init__(self, mu=None, lambda_par=None, diameter=None,
                  kappa=None, beta=None, psi=None):
@@ -494,9 +521,12 @@ class SD3I1WatsonDispersedStick(MicrostrukturModel):
         'lambda_par': (0, np.inf),
         'kappa': (0, 16)
     }
+    _parameter_scales = {
+        'mu': 1.,
+        'lambda_par': DIFFUSIVITY_SCALING,
+        'kappa': 1.,
+    }
     spherical_mean = False
-    needs_delta_Delta = False
-    needs_shell_indices = True
 
     def __init__(self, mu=None, lambda_par=None, kappa=None):
         self.mu = mu
@@ -582,9 +612,13 @@ class SD3I2WatsonDispersedSodermanCylinder(MicrostrukturModel):
         'kappa': (0, 16),
         'diameter': (1e-10, 50e-6),
     }
+    _parameter_scales = {
+        'mu': 1.,
+        'lambda_par': DIFFUSIVITY_SCALING,
+        'kappa': 1.,
+        'diameter': DIAMETER_SCALING,
+    }
     spherical_mean = False
-    needs_delta_Delta = True
-    needs_shell_indices = True
 
     def __init__(self, mu=None, lambda_par=None, kappa=None, diameter=None):
         self.mu = mu
@@ -691,9 +725,13 @@ class SD3I3WatsonDispersedCallaghanCylinder(MicrostrukturModel):
         'kappa': (0, 16),
         'diameter': (1e-10, 50e-6),
     }
+    _parameter_scales = {
+        'mu': 1.,
+        'lambda_par': DIFFUSIVITY_SCALING,
+        'kappa': 1.,
+        'diameter': DIAMETER_SCALING,
+    }
     spherical_mean = False
-    needs_delta_Delta = True
-    needs_shell_indices = True
 
     def __init__(self, mu=None, lambda_par=None, kappa=None, diameter=None):
         self.mu = mu
@@ -799,9 +837,13 @@ class SD3I4WatsonDispersedGaussianPhaseCylinder(MicrostrukturModel):
         'kappa': (0, 16),
         'diameter': (1e-10, 50e-6),
     }
+    _parameter_scales = {
+        'mu': 1.,
+        'lambda_par': DIFFUSIVITY_SCALING,
+        'kappa': 1.,
+        'diameter': DIAMETER_SCALING,
+    }
     spherical_mean = False
-    needs_delta_Delta = True
-    needs_shell_indices = True
 
     def __init__(self, mu=None, lambda_par=None, kappa=None, diameter=None):
         self.mu = mu
@@ -911,9 +953,15 @@ class SD2E4BinghamDispersedZeppelin(MicrostrukturModel):
         'kappa': (0, 16),
         'beta': (0, 16)
     }
+    _parameter_scales = {
+        'mu': 1.,
+        'lambda_par': DIFFUSIVITY_SCALING,
+        'lambda_perp': DIFFUSIVITY_SCALING,
+        'psi': 1.,
+        'kappa': 1.,
+        'beta': 1.
+    }
     spherical_mean = False
-    needs_delta_Delta = False
-    needs_shell_indices = True
 
     def __init__(self, mu=None, lambda_par=None, lambda_perp=None,
                  kappa=None, beta=None, psi=None):
@@ -1003,14 +1051,18 @@ class SD3E4WatsonDispersedZeppelin(MicrostrukturModel):
             matter: a taxonomy and comparison". NeuroImage (2012)
     """
     spherical_mean = False
-    needs_delta_Delta = False
-    needs_shell_indices = True
 
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
         'lambda_par': (0, np.inf),
         'lambda_perp': (0, np.inf),
         'kappa': (0, 16)
+    }
+    _parameter_scales = {
+        'mu': 1.,
+        'lambda_par': DIFFUSIVITY_SCALING,
+        'lambda_perp': DIFFUSIVITY_SCALING,
+        'kappa': 1.,
     }
 
     def __init__(self, mu=None, lambda_par=None, lambda_perp=None, kappa=None):
@@ -1102,9 +1154,13 @@ class DD1I2GammaDistributedSodermanCylinder(MicrostrukturModel):
         'alpha': (1e-10, np.inf),
         'beta': (1e-10, np.inf),
     }
+    _parameter_scales = {
+        'mu': 1.,
+        'lambda_par': DIFFUSIVITY_SCALING,
+        'alpha': 1.,
+        'beta': BETA_SCALING
+    }
     spherical_mean = False
-    needs_delta_Delta = True
-    needs_shell_indices = False
 
     def __init__(self, mu=None, lambda_par=None, alpha=None, beta=None,
                  radius_integral_steps=35):
@@ -1203,9 +1259,13 @@ class DD1I3GammaDistributedCallaghanCylinder(MicrostrukturModel):
         'alpha': (1e-10, np.inf),
         'beta': (1e-10, np.inf),
     }
+    _parameter_scales = {
+        'mu': 1.,
+        'lambda_par': DIFFUSIVITY_SCALING,
+        'alpha': 1.,
+        'beta': BETA_SCALING
+    }
     spherical_mean = False
-    needs_delta_Delta = True
-    needs_shell_indices = False
 
     def __init__(self, mu=None, lambda_par=None, alpha=None, beta=None,
                  radius_integral_steps=35):
@@ -1303,9 +1363,13 @@ class DD1I4GammaDistributedGaussianPhaseCylinder(MicrostrukturModel):
         'alpha': (1e-10, np.inf),
         'beta': (1e-10, np.inf),
     }
+    _parameter_scales = {
+        'mu': 1.,
+        'lambda_par': DIFFUSIVITY_SCALING,
+        'alpha': 1.,
+        'beta': BETA_SCALING
+    }
     spherical_mean = False
-    needs_delta_Delta = True
-    needs_shell_indices = False
 
     def __init__(self, mu=None, lambda_par=None, alpha=None, beta=None,
                  radius_integral_steps=35):
