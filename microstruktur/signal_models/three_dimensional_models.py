@@ -124,6 +124,9 @@ class MicrostrukturModel:
         bvals=None, n=None, attenuation=None,
         shell_indices=None, delta=None, Delta=None
     ):
+        scaling = np.hstack([scale for parameter, scale in
+                             self.parameter_scales.items()])
+        parameter_vector = parameter_vector * scaling
         parameters = {}
         parameters['shell_indices'] = shell_indices
         parameters['delta'] = delta
@@ -219,6 +222,9 @@ class MicrostrukturModel:
         x0_2d = x0_at_least_2d.reshape(-1, x0_at_least_2d.shape[-1])
         fitted_parameters = np.empty(x0_2d.shape, dtype=float)
 
+        scaling = np.hstack([scale for parameter, scale in
+                             self.parameter_scales.items()])
+        x0_2d = x0_2d / scaling
         for idx, (voxel_data, voxel_x0) in enumerate(zip(data_2d, x0_2d)):
             if self.spherical_mean:
                 voxel_data_spherical_mean = (
@@ -238,6 +244,7 @@ class MicrostrukturModel:
                                  shell_indices, delta, Delta),
                                 bounds=self.bounds_for_optimization)
             fitted_parameters[idx] = res_.x
+        fitted_parameters *= scaling
         return fitted_parameters.reshape(x0_at_least_2d.shape)
 
 
@@ -479,7 +486,7 @@ class I1Stick(MicrostrukturModel):
         'lambda_par': (0, np.inf)
     }
     _parameter_scales = {
-        'mu': 1.,
+        'mu': np.r_[1., 1.],
         'lambda_par': DIFFUSIVITY_SCALING
     }
     spherical_mean = False
@@ -503,8 +510,7 @@ class I1Stick(MicrostrukturModel):
             signal attenuation
         '''
 
-        lambda_par_ = kwargs.get('lambda_par', self.lambda_par) *\
-            DIFFUSIVITY_SCALING
+        lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
         mu = utils.sphere2cart(np.r_[1, mu])
         E_stick = np.exp(-bvals * lambda_par_ * np.dot(n, mu) ** 2)
@@ -577,7 +583,7 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
         'diameter': (1e-10, 50e-6)
     }
     _parameter_scales = {
-        'mu': 1.,
+        'mu': np.r_[1., 1.],
         'lambda_par': DIFFUSIVITY_SCALING,
         'diameter': DIAMETER_SCALING
     }
@@ -624,8 +630,7 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
         ):
             raise ValueError('This class needs non-None delta and Delta')
         diameter = kwargs.get('diameter', self.diameter)
-        lambda_par_ = kwargs.get('lambda_par', self.lambda_par) *\
-            DIFFUSIVITY_SCALING
+        lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
         mu = utils.sphere2cart(np.r_[1, mu])
         mu_perpendicular_plane = np.eye(3) - np.outer(mu, mu)
@@ -722,7 +727,7 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
         'diameter': (1e-10, 50e-6)
     }
     _parameter_scales = {
-        'mu': 1.,
+        'mu': np.r_[1., 1.],
         'lambda_par': DIFFUSIVITY_SCALING,
         'diameter': DIAMETER_SCALING
     }
@@ -811,8 +816,7 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
         ):
             raise ValueError('This class needs non-None delta and Delta')
         diameter = kwargs.get('diameter', self.diameter)
-        lambda_par_ = kwargs.get('lambda_par', self.lambda_par) *\
-            DIFFUSIVITY_SCALING
+        lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
         mu = utils.sphere2cart(np.r_[1, mu])
         mu_perpendicular_plane = np.eye(3) - np.outer(mu, mu)
@@ -910,7 +914,7 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
         'diameter': (1e-10, 50e-6)
     }
     _parameter_scales = {
-        'mu': 1.,
+        'mu': np.r_[1., 1.],
         'lambda_par': DIFFUSIVITY_SCALING,
         'diameter': DIAMETER_SCALING
     }
@@ -980,8 +984,7 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
         ):
             raise ValueError('This class needs non-None delta and Delta')
         diameter = kwargs.get('diameter', self.diameter)
-        lambda_par_ = kwargs.get('lambda_par', self.lambda_par) *\
-            DIFFUSIVITY_SCALING
+        lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
         mu = utils.sphere2cart(np.r_[1, mu])
         mu_perpendicular_plane = np.eye(3) - np.outer(mu, mu)
@@ -1105,8 +1108,7 @@ class I1StickSphericalMean(MicrostrukturModel):
         E_mean : float,
             spherical mean of the Stick model.
         """
-        lambda_par = kwargs.get('lambda_par', self.lambda_par) *\
-            DIFFUSIVITY_SCALING
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
         E_mean = np.ones_like(bvals)
         bval_indices_above0 = bvals > 0
         bvals_ = bvals[bval_indices_above0]
@@ -1116,8 +1118,7 @@ class I1StickSphericalMean(MicrostrukturModel):
         return E_mean
 
     def derivative(self, bvals, **kwargs):
-        lambda_par = kwargs.get('lambda_par', self.lambda_par) *\
-            DIFFUSIVITY_SCALING
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
         blambda = bvals * lambda_par
         der = np.exp(-blambda) / (2 * lambda_par) *\
             (bvals * np.sqrt(np.pi) * erf(np.sqrt(blambda))) /\
@@ -1169,10 +1170,8 @@ class E4ZeppelinSphericalMean(MicrostrukturModel):
         E_mean : float,
             spherical mean of the Zeppelin model.
         """
-        lambda_par = kwargs.get('lambda_par', self.lambda_par) *\
-            DIFFUSIVITY_SCALING
-        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp) *\
-            DIFFUSIVITY_SCALING
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
 
         exp_bl = np.exp(-bvals * lambda_perp)
         sqrt_bl = np.sqrt(bvals * (lambda_par - lambda_perp))
@@ -1180,10 +1179,8 @@ class E4ZeppelinSphericalMean(MicrostrukturModel):
         return E_mean
 
     def derivative(self, bvals, n, **kwargs):
-        lambda_par = kwargs.get('lambda_par', self.lambda_par) *\
-            DIFFUSIVITY_SCALING
-        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp) *\
-            DIFFUSIVITY_SCALING
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
         bllext = bvals * (lambda_par - lambda_perp)
 
         der_lambda_perp = bvals * np.exp(-bvals * lambda_par) *\
@@ -1255,11 +1252,9 @@ class E5RestrictedZeppelinSphericalMean(MicrostrukturModel):
         E_mean : float,
             spherical mean of the Zeppelin model.
         """
-        lambda_par = kwargs.get('lambda_par', self.lambda_par) *\
-            DIFFUSIVITY_SCALING
-        lambda_inf = kwargs.get('lambda_inf', self.lambda_inf) *\
-            DIFFUSIVITY_SCALING
-        A = kwargs.get('A', self.A) * A_SCALING
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        lambda_inf = kwargs.get('lambda_inf', self.lambda_inf)
+        A = kwargs.get('A', self.A)
 
         restricted_term = (
             A * (np.log(Delta / delta) + 3 / 2.) / (Delta - delta / 3.)
@@ -1353,8 +1348,7 @@ class E3Ball(MicrostrukturModel):
             signal attenuation
         '''
 
-        lambda_iso = kwargs.get('lambda_iso', self.lambda_iso) *\
-            DIFFUSIVITY_SCALING
+        lambda_iso = kwargs.get('lambda_iso', self.lambda_iso)
         E_ball = np.exp(-bvals * lambda_iso)
         return E_ball
 
@@ -1392,7 +1386,7 @@ class E4Zeppelin(MicrostrukturModel):
         'lambda_perp': (0, np.inf)
     }
     _parameter_scales = {
-        'mu': 1.,
+        'mu': np.r_[1., 1.],
         'lambda_par': DIFFUSIVITY_SCALING,
         'lambda_perp': DIFFUSIVITY_SCALING
     }
@@ -1418,10 +1412,8 @@ class E4Zeppelin(MicrostrukturModel):
             signal attenuation
         '''
 
-        lambda_par = kwargs.get('lambda_par', self.lambda_par) *\
-            DIFFUSIVITY_SCALING
-        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp) *\
-            DIFFUSIVITY_SCALING
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
         mu = kwargs.get('mu', self.mu)
 
         R1 = utils.sphere2cart(np.r_[1, mu])
@@ -1502,7 +1494,7 @@ class E5RestrictedZeppelin(MicrostrukturModel):
         'A': (0, np.inf)
     }
     _parameter_scales = {
-        'mu': 1.,
+        'mu': np.r_[1., 1.],
         'lambda_par': DIFFUSIVITY_SCALING,
         'lambda_perp': DIFFUSIVITY_SCALING,
         'A': A_SCALING
@@ -1534,11 +1526,9 @@ class E5RestrictedZeppelin(MicrostrukturModel):
             signal attenuation
         '''
 
-        lambda_par = kwargs.get('lambda_par', self.lambda_par) *\
-            DIFFUSIVITY_SCALING
-        lambda_inf = kwargs.get('lambda_inf', self.lambda_inf) *\
-            DIFFUSIVITY_SCALING
-        A = kwargs.get('A', self.A) * A_SCALING
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        lambda_inf = kwargs.get('lambda_inf', self.lambda_inf)
+        A = kwargs.get('A', self.A)
         mu = kwargs.get('mu', self.mu)
         mu = utils.sphere2cart(np.r_[1, mu])
 
@@ -1630,7 +1620,7 @@ class SD3Watson(MicrostrukturModel):
         'kappa': (0, np.inf),
     }
     _parameter_scales = {
-        'mu': 1.,
+        'mu': np.r_[1., 1.],
         'kappa': 1.,
     }
     spherical_mean = False
@@ -1728,7 +1718,7 @@ class SD2Bingham(MicrostrukturModel):
         'beta': (0, np.inf)  # beta<=kappa in fact
     }
     _parameter_scales = {
-        'mu': 1.,
+        'mu': np.r_[1., 1.],
         'psi': 1.,
         'kappa': 1.,
         'beta': 1.

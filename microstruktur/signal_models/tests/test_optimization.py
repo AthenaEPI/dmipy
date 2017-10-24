@@ -22,14 +22,14 @@ gradient_directions = np.loadtxt(
 
 def test_simple_stick_optimization():
     gt_mu = np.random.rand(2)
-    gt_lambda_par = np.random.rand() + 1.
+    gt_lambda_par = (np.random.rand() + 1.) * 1e-9
     stick = three_dimensional_models.I1Stick(
         mu=gt_mu, lambda_par=gt_lambda_par)
 
     E = stick(bvals, gradient_directions)
 
     x0 = stick.parameters_to_parameter_vector(
-        lambda_par=np.random.rand(),
+        lambda_par=(np.random.rand() + 1.) * 1e-9,
         mu=np.random.rand(2)
     )
     res = stick.fit(E, bvals, gradient_directions, x0)[0]
@@ -47,7 +47,7 @@ def test_simple_ball_and_stick_optimization():
             optimise_partial_volumes=True)
     )
     gt_mu = np.clip(np.random.rand(2), .3, np.inf)
-    gt_lambda_par = np.random.rand() + 1.
+    gt_lambda_par = (np.random.rand() + 1.) * 1e-9
     gt_lambda_iso = gt_lambda_par / 2.
     gt_partial_volume = 0.3
 
@@ -63,7 +63,7 @@ def test_simple_ball_and_stick_optimization():
         **ball_and_stick.parameter_vector_to_parameters(gt_parameter_vector))
 
     x0 = ball_and_stick.parameters_to_parameter_vector(
-        I1Stick_1_lambda_par=np.random.rand() + 1.,
+        I1Stick_1_lambda_par=(np.random.rand() + 1.) * 1e-9,
         E3Ball_1_lambda_iso=gt_lambda_par / 2.,
         I1Stick_1_mu=np.random.rand(2),
         partial_volume_0=np.random.rand()
@@ -82,7 +82,7 @@ def test_multi_dimensional_x0():
             parameter_links=[],
             optimise_partial_volumes=True)
     )
-    gt_lambda_par = np.random.rand() + 1.
+    gt_lambda_par = (np.random.rand() + 1.) * 1e-9
     gt_lambda_iso = gt_lambda_par / 2.
     gt_partial_volume = 0.3
     E_array = np.empty((10, 10, len(bvals)), dtype=float)
@@ -134,7 +134,7 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
     volume fraction between the 3D and spherical mean models correspond."""
 
     gt_mu = np.clip(np.random.rand(2), .3, np.inf)
-    gt_lambda_par = np.random.rand() + 1.
+    gt_lambda_par = (np.random.rand() + 1.) * 1e-9
     gt_partial_volume = 0.3
 
     stick = three_dimensional_models.I1Stick()
@@ -210,8 +210,8 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
             optimise_partial_volumes=True)
     )
     x0 = stick_and_tortuous_zeppelin_sm.parameters_to_parameter_vector(
-        I1StickSphericalMean_1_lambda_par=.6,  # initialization diffusivity
-        partial_volume_0=0.55  # initialization volume fraction parameter
+        I1StickSphericalMean_1_lambda_par=.6 * 1e-9,
+        partial_volume_0=0.55
     )
 
     shell_indices, _ = define_shell_indices(
