@@ -10,7 +10,6 @@ from dipy.data import get_sphere
 from microstruktur.signal_models.spherical_mean import (
     estimate_spherical_mean_shell
 )
-DIFFUSIVITY_SCALING = 1e-9
 sphere = get_sphere().subdivide()
 
 
@@ -20,7 +19,7 @@ def test_orienting_stick():
     random_n_mu_vector = np.random.rand(2) * np.pi
     n = utils.sphere2cart(np.r_[1, random_n_mu_vector])
     random_bval = np.r_[np.random.rand() * 1e9]
-    random_lambda_par = np.random.rand() * 3
+    random_lambda_par = np.random.rand() * 3e-9
 
     # initialize model
     stick = three_dimensional_models.I1Stick(mu=random_n_mu_vector,
@@ -28,7 +27,7 @@ def test_orienting_stick():
 
     # test if parallel direction attenuation as a Gaussian
     E_stick = stick(bvals=random_bval, n=n)
-    E_check = np.exp(-random_bval * (random_lambda_par * DIFFUSIVITY_SCALING))
+    E_check = np.exp(-random_bval * (random_lambda_par))
     assert_almost_equal(E_stick, E_check)
 
     # test if perpendicular direction does not attenuate
@@ -37,8 +36,9 @@ def test_orienting_stick():
     assert_almost_equal(E_stick_perp, 1.)
 
 
-def test_watson_dispersed_stick_kappa0(lambda_par=1.7, bvalue=1e9, mu=[0, 0],
-                                       kappa=0):
+def test_watson_dispersed_stick_kappa0(
+    lambda_par=1.7e-9, bvalue=1e9, mu=[0, 0], kappa=0
+):
     # for comparison we do spherical mean of stick.
     sm_stick = three_dimensional_models.I1StickSphericalMean(
         lambda_par=lambda_par
@@ -62,7 +62,7 @@ def test_watson_dispersed_stick_kappa0(lambda_par=1.7, bvalue=1e9, mu=[0, 0],
 
 
 def test_watson_dispersed_stick_kappa_positive(
-    lambda_par=1.7, bvalue=1e9, mu=[0, 0], kappa=10
+    lambda_par=1.7e-9, bvalue=1e9, mu=[0, 0], kappa=10
 ):
     # for comparison we do spherical mean of stick.
     sm_stick = three_dimensional_models.I1StickSphericalMean(
@@ -88,7 +88,7 @@ def test_watson_dispersed_stick_kappa_positive(
 
 
 def test_bingham_dispersed_stick_kappa0(
-    lambda_par=1.7, bvalue=1e9, mu=[0, 0], kappa=0, beta=0, psi=0
+    lambda_par=1.7e-9, bvalue=1e9, mu=[0, 0], kappa=0, beta=0, psi=0
 ):
     # for comparison we do spherical mean of stick.
     sm_stick = three_dimensional_models.I1StickSphericalMean(
@@ -114,7 +114,7 @@ def test_bingham_dispersed_stick_kappa0(
 
 
 def test_bingham_dispersed_stick_kappa_positive(
-        lambda_par=1.7, bvalue=1e9, mu=[0, 0], kappa=10, beta=0, psi=0
+        lambda_par=1.7e-9, bvalue=1e9, mu=[0, 0], kappa=10, beta=0, psi=0
 ):
     # for comparison we do spherical mean of stick.
     sm_stick = three_dimensional_models.I1StickSphericalMean(

@@ -11,7 +11,6 @@ from microstruktur.signal_models.spherical_mean import (
 )
 from dipy.data import get_sphere
 sphere = get_sphere().subdivide()
-DIFFUSIVITY_SCALING = 1e-9
 
 
 def test_orienting_zeppelin():
@@ -20,28 +19,26 @@ def test_orienting_zeppelin():
     random_mu = np.random.rand(2) * np.pi
     n = np.array([utils.sphere2cart(np.r_[1, random_mu])])
     random_bval = np.r_[np.random.rand() * 1e9]
-    random_lambda_par = np.random.rand() * 3
+    random_lambda_par = np.random.rand() * 3 * 1e-9
     random_lambda_perp = random_lambda_par / 2.
 
     zeppelin = three_dimensional_models.E4Zeppelin(
         mu=random_mu, lambda_par=random_lambda_par,
         lambda_perp=random_lambda_perp)
     E_zep_par = zeppelin(bvals=random_bval, n=n)
-    E_check_par = np.exp(-random_bval * random_lambda_par *
-                         DIFFUSIVITY_SCALING)
+    E_check_par = np.exp(-random_bval * random_lambda_par)
     assert_almost_equal(E_zep_par, E_check_par)
 
     # second test to see if Ezeppelin equals Gaussian with lambda_perp
     # perpendicular to mu
     n_perp = np.array([perpendicular_vector(n[0])])
     E_zep_perp = zeppelin(bvals=random_bval, n=n_perp)
-    E_check_perp = np.exp(-random_bval * random_lambda_perp *
-                          DIFFUSIVITY_SCALING)
+    E_check_perp = np.exp(-random_bval * random_lambda_perp)
     assert_almost_equal(E_zep_perp, E_check_perp)
 
 
 def test_watson_dispersed_zeppelin_kappa0(
-    lambda_par=1.7, lambda_perp=1., bvalue=1e9, mu=[0, 0], kappa=0
+    lambda_par=1.7e-9, lambda_perp=1e-9, bvalue=1e9, mu=[0, 0], kappa=0
 ):
     # for comparison we do spherical mean of zeppelin.
     sm_zeppelin = three_dimensional_models.E4ZeppelinSphericalMean(
@@ -66,7 +63,7 @@ def test_watson_dispersed_zeppelin_kappa0(
 
 
 def test_watson_dispersed_zeppelin_kappa_positive(
-    lambda_par=1.7, lambda_perp=1., bvalue=1e9, mu=[0, 0], kappa=10
+    lambda_par=1.7e-9, lambda_perp=1e-9, bvalue=1e9, mu=[0, 0], kappa=10
 ):
     # for comparison we do spherical mean of zeppelin.
     sm_zeppelin = three_dimensional_models.E4ZeppelinSphericalMean(
@@ -93,8 +90,8 @@ def test_watson_dispersed_zeppelin_kappa_positive(
 
 
 def test_bingham_dispersed_zeppelin_kappa0(
-    lambda_par=1.7, lambda_perp=1., bvalue=1e9, mu=[0, 0], kappa=0, beta=0,
-    psi=0
+    lambda_par=1.7e-9, lambda_perp=1e-9, bvalue=1e9, mu=[0, 0],
+    kappa=0, beta=0, psi=0
 ):
     # for comparison we do spherical mean of zeppelin.
     sm_zeppelin = three_dimensional_models.E4ZeppelinSphericalMean(
@@ -121,7 +118,7 @@ def test_bingham_dispersed_zeppelin_kappa0(
 
 
 def test_bingham_dispersed_zeppelin_kappa_positive(
-    lambda_par=1.7, lambda_perp=1., bvalue=1e9, mu=[0, 0], kappa=10,
+    lambda_par=1.7e-9, lambda_perp=1e-9, bvalue=1e9, mu=[0, 0], kappa=10,
     beta=0, psi=0
 ):
     # for comparison we do spherical mean of zeppelin.

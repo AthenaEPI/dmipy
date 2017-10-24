@@ -382,6 +382,7 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
             del self._parameter_ranges[parameter_name]
             del self.parameter_defaults[parameter_name]
             del self._parameter_cardinality[parameter_name]
+            del self._parameter_scales[parameter_name]
 
     def _verify_model_input_requirements(self):
         models_spherical_mean = [model.spherical_mean for model in self.models]
