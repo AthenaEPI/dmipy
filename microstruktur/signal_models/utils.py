@@ -251,7 +251,7 @@ def define_shell_indices(bvals, b_value_ranges):
         The mean b-value in each shell.
     """
 
-    shell_indices = np.zeros_like(bvals)
+    shell_indices = np.empty_like(bvals, dtype=int)
     mean_shell_bvals = np.zeros(len(b_value_ranges))
     shell_counter = 0
     dwi_counter = 0
