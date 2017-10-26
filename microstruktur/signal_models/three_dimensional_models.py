@@ -163,8 +163,54 @@ class MicrostrukturModel:
                         delta=None, Delta=None):
         """ Function to simulate diffusion data using the defined
         microstructure model and acquisition parameters.
+
+                Parameters
+        ----------
+        bvals : 1D array of size (N_data)
+            The corresponding b-values of the DWI measurements in [s/m^2].
+            For example, a DTI measurement at b-value 1000 s/mm^2 must be given
+            as 1e9 s/m^2.
+        n : 2D array of size (N_data, 3)
+            The corresponding gradient orientations as unit vectors.
+        x0 : 1D array of size (N_parameters) or N-dimensional array the same
+            size as the data.
+            The model parameters of the microstructure model.
+            If a 1D array is given, this is the same initial condition for
+            every fitted voxel. If a higher-dimenensional array the same size
+            as the data is given, then every voxel can possibly be given a
+            different initial condition.
+        shell_indices : 1D integer array of size (N_data)
+            array of integers indicating to which acquisition shell each
+            measurement belongs. This array can be conveniently generated using
+            utils.define_shell_indices.
+        delta : 1D array of size (N_data)
+            The pulse duration for every DWI measurement in seconds.
+        Delta : 1D array of size (N_data)
+            The pulse separation for every DWI measurement in seconds.
+
+        Returns
+        -------
+        E_simulated: 1D array of size (N_parameters) or N-dimensional
+            array the same size as x0.
+            The simulated signal of the microstructure model.
         """
-        return None  # self(bvals, n, **kwargs)
+        utils.check_bvals_n_shell_indices_delta_Delta(
+            bvals, n, shell_indices, delta, Delta)
+
+        x0_at_least_2d = np.atleast_2d(x0)
+        x0_2d = x0_at_least_2d.reshape(-1, x0_at_least_2d.shape[-1])
+        E_2d = np.empty(np.r_[x0_2d.shape[:-1], len(bvals)])
+        for i, x0_ in enumerate(x0_2d):
+            parameters = self.parameter_vector_to_parameters(x0_)
+            E_2d[i] = self(bvals, n, shell_indices=shell_indices,
+                           delta=delta, Delta=Delta, **parameters)
+        E_simulated = E_2d.reshape(
+            np.r_[x0_at_least_2d.shape[:-1], len(bvals)])
+
+        if x0.ndim == 1:
+            return np.squeeze(E_simulated)
+        else:
+            return E_simulated
 
     def fit(self, data, bvals, n, x0,
             shell_indices=None, delta=None, Delta=None):
@@ -250,7 +296,11 @@ class MicrostrukturModel:
                                 bounds=self.bounds_for_optimization)
             fitted_parameters[idx] = res_.x
         fitted_parameters *= scaling
-        return fitted_parameters.reshape(x0_at_least_2d.shape)
+
+        if data.ndim == 1:
+            return np.squeeze(fitted_parameters.reshape(x0_at_least_2d.shape))
+        else:
+            return fitted_parameters.reshape(x0_at_least_2d.shape)
 
 
 class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):

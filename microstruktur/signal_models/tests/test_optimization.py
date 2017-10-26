@@ -21,18 +21,19 @@ gradient_directions = np.loadtxt(
 
 
 def test_simple_stick_optimization():
+    stick = three_dimensional_models.I1Stick()
     gt_mu = np.random.rand(2)
     gt_lambda_par = (np.random.rand() + 1.) * 1e-9
-    stick = three_dimensional_models.I1Stick(
-        mu=gt_mu, lambda_par=gt_lambda_par)
-
-    E = stick(bvals, gradient_directions)
+    gt_parameter_vector = stick.parameters_to_parameter_vector(
+        lambda_par=gt_lambda_par, mu=gt_mu)
+    
+    E = stick.simulate_signal(bvals, gradient_directions, gt_parameter_vector)
 
     x0 = stick.parameters_to_parameter_vector(
         lambda_par=(np.random.rand() + 1.) * 1e-9,
         mu=np.random.rand(2)
     )
-    res = stick.fit(E, bvals, gradient_directions, x0)[0]
+    res = stick.fit(E, bvals, gradient_directions, x0)
     assert_array_almost_equal(np.r_[gt_lambda_par, gt_mu], res, 4)
 
 
@@ -58,9 +59,8 @@ def test_simple_ball_and_stick_optimization():
         partial_volume_0=gt_partial_volume
     )
 
-    E = ball_and_stick(
-        bvals, gradient_directions,
-        **ball_and_stick.parameter_vector_to_parameters(gt_parameter_vector))
+    E = ball_and_stick.simulate_signal(
+        bvals, gradient_directions, gt_parameter_vector)
 
     x0 = ball_and_stick.parameters_to_parameter_vector(
         I1Stick_1_lambda_par=(np.random.rand() + 1.) * 1e-9,
@@ -68,14 +68,13 @@ def test_simple_ball_and_stick_optimization():
         I1Stick_1_mu=np.random.rand(2),
         partial_volume_0=np.random.rand()
     )
-    res = ball_and_stick.fit(E, bvals, gradient_directions, x0)[0]
+    res = ball_and_stick.fit(E, bvals, gradient_directions, x0)
     assert_array_almost_equal(gt_parameter_vector, res, 3)
 
 
 def test_multi_dimensional_x0():
     stick = three_dimensional_models.I1Stick()
     ball = three_dimensional_models.E3Ball()
-
     ball_and_stick = (
         three_dimensional_models.PartialVolumeCombinedMicrostrukturModel(
             models=[ball, stick],
@@ -85,41 +84,33 @@ def test_multi_dimensional_x0():
     gt_lambda_par = (np.random.rand() + 1.) * 1e-9
     gt_lambda_iso = gt_lambda_par / 2.
     gt_partial_volume = 0.3
-    E_array = np.empty((10, 10, len(bvals)), dtype=float)
     gt_mu_array = np.empty((10, 10, 2))
-
+    
     # I'm putting the orientation of the stick all over the sphere.
     for i, mu1 in enumerate(np.linspace(0, np.pi, 10)):
         for j, mu2 in enumerate(np.linspace(-np.pi, np.pi, 10)):
-            gt_mu = np.r_[mu1, mu2]
-            gt_mu_array[i, j] = gt_mu
-            gt_parameter_vector = (
-                ball_and_stick.parameters_to_parameter_vector(
-                    I1Stick_1_lambda_par=gt_lambda_par,
-                    E3Ball_1_lambda_iso=gt_lambda_iso,
-                    I1Stick_1_mu=gt_mu,
-                    partial_volume_0=gt_partial_volume)
-            )
-            E_array[i, j] = ball_and_stick(
-                bvals, gradient_directions,
-                **ball_and_stick.parameter_vector_to_parameters(
-                    gt_parameter_vector)
-            )
-
-    # I'm giving a voxel-dependent initial condition with gt_mu_array
-    x0_gt = ball_and_stick.parameters_to_parameter_vector(
-        I1Stick_1_lambda_par=gt_lambda_par,
-        E3Ball_1_lambda_iso=gt_lambda_iso,
-        I1Stick_1_mu=gt_mu_array,
-        partial_volume_0=gt_partial_volume
+            gt_mu_array[i, j] = np.r_[mu1, mu2]
+    
+    gt_parameter_vector = (
+        ball_and_stick.parameters_to_parameter_vector(
+            I1Stick_1_lambda_par=gt_lambda_par,
+            E3Ball_1_lambda_iso=gt_lambda_iso,
+            I1Stick_1_mu=gt_mu_array,
+            partial_volume_0=gt_partial_volume)
     )
-    res = ball_and_stick.fit(E_array, bvals, gradient_directions, x0_gt)
+    
+    E_array = ball_and_stick.simulate_signal(
+        bvals, gradient_directions,gt_parameter_vector)
+    
+    # I'm giving a voxel-dependent initial condition with gt_mu_array
+    res = ball_and_stick.fit(E_array, bvals, gradient_directions,
+                            gt_parameter_vector)
     # optimization should stop immediately as I'm giving the ground truth.
-    assert_equal(np.all(np.ravel(res - x0_gt) == 0.), True)
+    assert_equal(np.all(np.ravel(res - gt_parameter_vector) == 0.), True)
     # and the parameter vector dictionaries of the results and x0 should also
     # be the same.
     res_parameters = ball_and_stick.parameter_vector_to_parameters(res)
-    x0_parameters = ball_and_stick.parameter_vector_to_parameters(x0_gt)
+    x0_parameters = ball_and_stick.parameter_vector_to_parameters(gt_parameter_vector)
     for key in res_parameters.keys():
         assert_array_equal(x0_parameters[key], res_parameters[key])
 
@@ -176,11 +167,8 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
             partial_volume_0=gt_partial_volume)
     )
 
-    E = stick_and_tortuous_zeppelin(
-        bvals, gradient_directions,
-        **stick_and_tortuous_zeppelin.parameter_vector_to_parameters(
-            gt_parameter_vector)
-    )
+    E = stick_and_tortuous_zeppelin.simulate_signal(
+        bvals, gradient_directions, gt_parameter_vector)
 
     # now we make the stick and zeppelin spherical mean model and check if the
     # same lambda_par and volume fraction result as the 3D generated data.
@@ -219,7 +207,7 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
     )
 
     res_sm = stick_and_tortuous_zeppelin_sm.fit(
-        E, bvals, gradient_directions, x0, shell_indices=shell_indices)[0]
+        E, bvals, gradient_directions, x0, shell_indices=shell_indices)
 
     assert_array_almost_equal(
         np.r_[gt_lambda_par, gt_partial_volume], res_sm, 2)
