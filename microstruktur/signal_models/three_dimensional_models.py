@@ -31,6 +31,11 @@ SPHERE_CARTESIAN = np.loadtxt(
     join(GRADIENT_TABLES_PATH, 'sphere_with_cap.txt')
 )
 SPHERE_SPHERICAL = utils.cart2sphere(SPHERE_CARTESIAN)
+inverse_rh_matrix_kernel = {
+    rh_order : np.linalg.pinv(real_sym_sh_mrtrix(
+        rh_order, SPHERE_SPHERICAL[:, 1], SPHERE_SPHERICAL[:, 2]
+    )[0]) for rh_order in np.arange(0, 15, 2)
+}
 WATSON_SH_ORDER = 14
 DIFFUSIVITY_SCALING = 1e-9
 DIAMETER_SCALING = 1e-6
@@ -537,15 +542,11 @@ class I1Stick(MicrostrukturModel):
         """
         lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
 
-        E_stick_sf = self(
+        E_kernel_sf = self(
             np.r_[bval], SPHERE_CARTESIAN,
             mu=np.r_[0., 0.], lambda_par=lambda_par_
         )
-        sh_mat = real_sym_sh_mrtrix(
-            rh_order, SPHERE_SPHERICAL[:, 1], SPHERE_SPHERICAL[:, 2]
-        )[0]
-        sh_mat_inv = np.linalg.pinv(sh_mat)
-        sh = np.dot(sh_mat_inv, E_stick_sf)
+        sh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         rh = kernel_sh_to_rh(sh, rh_order)
         return rh
 
@@ -684,15 +685,11 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
         bvals = np.tile(bval, SPHERE_CARTESIAN.shape[0])
         deltas = np.tile(delta, SPHERE_CARTESIAN.shape[0])
         Deltas = np.tile(Delta, SPHERE_CARTESIAN.shape[0])
-        E_stick_sf = self(
+        E_kernel_sf = self(
             bvals, SPHERE_CARTESIAN, deltas, Deltas,
             mu=np.r_[0., 0.], lambda_par=lambda_par_, diameter=diameter_
         )
-        sh_mat = real_sym_sh_mrtrix(
-            rh_order, SPHERE_SPHERICAL[:, 1], SPHERE_SPHERICAL[:, 2]
-        )[0]
-        sh_mat_inv = np.linalg.pinv(sh_mat)
-        sh = np.dot(sh_mat_inv, E_stick_sf)
+        sh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         rh = kernel_sh_to_rh(sh, rh_order)
         return rh
 
@@ -871,15 +868,11 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
         bvals = np.tile(bval, SPHERE_CARTESIAN.shape[0])
         deltas = np.tile(delta, SPHERE_CARTESIAN.shape[0])
         Deltas = np.tile(Delta, SPHERE_CARTESIAN.shape[0])
-        E_stick_sf = self(
+        E_kernel_sf = self(
             bvals, SPHERE_CARTESIAN, deltas, Deltas,
             mu=np.r_[0., 0.], lambda_par=lambda_par_, diameter=diameter_
         )
-        sh_mat = real_sym_sh_mrtrix(
-            rh_order, SPHERE_SPHERICAL[:, 1], SPHERE_SPHERICAL[:, 2]
-        )[0]
-        sh_mat_inv = np.linalg.pinv(sh_mat)
-        sh = np.dot(sh_mat_inv, E_stick_sf)
+        sh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         rh = kernel_sh_to_rh(sh, rh_order)
         return rh
 
@@ -1053,15 +1046,11 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
         bvals = np.tile(bval, SPHERE_CARTESIAN.shape[0])
         deltas = np.tile(delta, SPHERE_CARTESIAN.shape[0])
         Deltas = np.tile(Delta, SPHERE_CARTESIAN.shape[0])
-        E_stick_sf = self(
+        E_kernel_sf = self(
             bvals, SPHERE_CARTESIAN, deltas, Deltas,
             mu=np.r_[0., 0.], lambda_par=lambda_par_, diameter=diameter_
         )
-        sh_mat = real_sym_sh_mrtrix(
-            rh_order, SPHERE_SPHERICAL[:, 1], SPHERE_SPHERICAL[:, 2]
-        )[0]
-        sh_mat_inv = np.linalg.pinv(sh_mat)
-        sh = np.dot(sh_mat_inv, E_stick_sf)
+        sh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         rh = kernel_sh_to_rh(sh, rh_order)
         return rh
 
@@ -1447,16 +1436,11 @@ class E4Zeppelin(MicrostrukturModel):
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
 
-        E_zeppelin_sf = self(
+        E_kernel_sf = self(
             np.tile(bval, len(SPHERE_CARTESIAN)), SPHERE_CARTESIAN,
             mu=np.r_[0., 0.], lambda_par=lambda_par, lambda_perp=lambda_perp
         )
-
-        sh_mat = real_sym_sh_mrtrix(
-            rh_order, SPHERE_SPHERICAL[:, 1], SPHERE_SPHERICAL[:, 2]
-        )[0]
-        sh_mat_inv = np.linalg.pinv(sh_mat)
-        sh = np.dot(sh_mat_inv, E_zeppelin_sf)
+        sh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         rh = kernel_sh_to_rh(sh, rh_order)
         return rh
 
