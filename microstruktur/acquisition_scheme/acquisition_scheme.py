@@ -11,9 +11,6 @@ class AcquisitionScheme:
 
     def __init__(self, bvalues, gradient_directions, qvalues,
                  gradient_strengths, delta, Delta, shell_indices):
-
-        # check_bvals_n_shell_indices_delta_Delta(bvalues, gradient_directions,
-        #                                         shell_indices, delta, Delta)
         self.bvalues = bvalues
         self.gradient_directions = gradient_directions
         self.qvalues = qvalues
@@ -25,9 +22,11 @@ class AcquisitionScheme:
         self.shell_indices = shell_indices
 
         self.shell_sh_matrices = {}
-        for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
-            # what bvecs in that shell
-            bvecs_shell = self.n[shell_indices == shell_index]
+        self.shell_bvalues = np.zeros(np.max(shell_indices) + 1)
+        for shell_index in np.arange(1, shell_indices.max() + 1):
+            shell_mask = shell_indices == shell_index
+            self.shell_bvalues[shell_index] = np.mean(bvalues[shell_mask])
+            bvecs_shell = self.n[shell_mask]
             _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
             self.shell_sh_matrices[shell_index] = real_sym_sh_mrtrix(
                 sh_order, theta_, phi_)[0]
@@ -35,6 +34,7 @@ class AcquisitionScheme:
 
 def acquisition_scheme_from_bvalues(
         bvalues, gradient_directions, delta, Delta, shell_indices):
+        # check input value function
     qvalues = q_from_b(bvalues, delta, Delta)
     gradient_strengths = g_from_b(bvalues, delta, Delta)
     return AcquisitionScheme(bvalues, gradient_directions, qvalues,
@@ -43,6 +43,7 @@ def acquisition_scheme_from_bvalues(
 
 def acquisition_scheme_from_qvalues(
         qvalues, gradient_directions, delta, Delta, shell_indices):
+        # check input value function
     bvalues = b_from_q(qvalues, delta, Delta)
     gradient_strengths = g_from_q(qvalues, delta)
     return AcquisitionScheme(bvalues, gradient_directions, qvalues,
@@ -51,6 +52,7 @@ def acquisition_scheme_from_qvalues(
 
 def acquisition_scheme_from_gradient_strengths(
         gradient_strengths, gradient_directions, delta, Delta, shell_indices):
+        # check input value function
     bvalues = b_from_g(gradient_strengths, delta, Delta)
     qvalues = q_from_g(gradient_strengths, delta)
     return AcquisitionScheme(bvalues, gradient_directions, qvalues,
