@@ -4,13 +4,16 @@ from microstruktur.signal_models.gradient_conversions import (
 )
 from microstruktur.signal_models import utils
 from dipy.reconst.shm import real_sym_sh_mrtrix
+from scipy.cluster.hierarchy import fcluster, linkage
+
 sh_order = 14
 
 
 class AcquisitionScheme:
 
     def __init__(self, bvalues, gradient_directions, qvalues,
-                 gradient_strengths, delta, Delta, shell_indices):
+                 gradient_strengths, delta, Delta):
+        check_scheme_from_bvalues(bvalues, gradient_directions, delta, Delta)
         self.bvalues = bvalues
         self.gradient_directions = gradient_directions
         self.qvalues = qvalues
@@ -19,12 +22,12 @@ class AcquisitionScheme:
         self.delta = delta
         self.Delta = Delta
         self.tau = Delta - delta / 3.
-        self.shell_indices = shell_indices
+        self.shell_indices, self.shell_bvalues = (
+            calculate_shell_bvalues_and_indices(bvalues))
 
         self.shell_sh_matrices = {}
-        self.shell_bvalues = np.zeros(np.max(shell_indices) + 1)
-        for shell_index in np.arange(1, shell_indices.max() + 1):
-            shell_mask = shell_indices == shell_index
+        for shell_index in np.arange(1, self.shell_indices.max() + 1):
+            shell_mask = self.shell_indices == shell_index
             self.shell_bvalues[shell_index] = np.mean(bvalues[shell_mask])
             bvecs_shell = self.n[shell_mask]
             _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
@@ -33,91 +36,100 @@ class AcquisitionScheme:
 
 
 def acquisition_scheme_from_bvalues(
-        bvalues, gradient_directions, delta, Delta, shell_indices):
-        # check input value function
-    qvalues = q_from_b(bvalues, delta, Delta)
-    gradient_strengths = g_from_b(bvalues, delta, Delta)
+        bvalues, gradient_directions, delta, Delta):
+    delta_, Delta_ = unify_length_reference_delta_Delta(bvalues, delta, Delta)
+    qvalues = q_from_b(bvalues, delta_, Delta_)
+    gradient_strengths = g_from_b(bvalues, delta_, Delta_)
     return AcquisitionScheme(bvalues, gradient_directions, qvalues,
-                             gradient_strengths, delta, Delta, shell_indices)
+                             gradient_strengths, delta_, Delta_)
 
 
 def acquisition_scheme_from_qvalues(
-        qvalues, gradient_directions, delta, Delta, shell_indices):
-        # check input value function
+        qvalues, gradient_directions, delta, Delta):
+    delta_, Delta_ = unify_length_reference_delta_Delta(qvalues, delta, Delta)
     bvalues = b_from_q(qvalues, delta, Delta)
     gradient_strengths = g_from_q(qvalues, delta)
     return AcquisitionScheme(bvalues, gradient_directions, qvalues,
-                             gradient_strengths, delta, Delta, shell_indices)
+                             gradient_strengths, delta, Delta)
 
 
 def acquisition_scheme_from_gradient_strengths(
-        gradient_strengths, gradient_directions, delta, Delta, shell_indices):
-        # check input value function
+        gradient_strengths, gradient_directions, delta, Delta):
+    delta_, Delta_ = unify_length_reference_delta_Delta(gradient_strengths,
+                                                        delta, Delta)
     bvalues = b_from_g(gradient_strengths, delta, Delta)
     qvalues = q_from_g(gradient_strengths, delta)
     return AcquisitionScheme(bvalues, gradient_directions, qvalues,
-                             gradient_strengths, delta, Delta, shell_indices)
+                             gradient_strengths, delta, Delta)
 
 
-# def check_bvals_n_shell_indices_delta_Delta(
-#     bvals, n, shell_indices, delta, Delta
-# ):
+def unify_length_reference_delta_Delta(reference_array, delta, Delta):
+    if isinstance(delta, float):
+        delta_ = np.tile(delta, len(reference_array))
+    else:
+        delta_ = delta.copy()
+    if isinstance(Delta, float):
+        Delta_ = np.tile(Delta, len(reference_array))
+    else:
+        Delta_ = Delta.copy()
+    return delta_, Delta_
 
-def check_bvals_n_shell_indices_delta_Delta(
-    bvals, n, shell_indices, delta=None, Delta=None
-):
-    # Function that tests the validity of the input acquisition parameters.
-    if len(bvals) != len(n):
-        msg = "bvals and n must have the same length. "
+
+def calculate_shell_bvalues_and_indices(bvalues, max_distance=50e6):
+    linkage_matrix = linkage(np.c_[bvalues])
+    clusters = fcluster(linkage_matrix, max_distance, criterion='distance')
+    shell_indices = np.empty_like(bvalues, dtype=int)
+    cluster_bvalues = np.zeros((np.max(clusters), 2))
+    for ind in np.unique(clusters):
+        cluster_bvalues[ind - 1] = np.mean(bvalues[clusters == ind]), ind
+    shell_bvalues, ordered_cluster_indices = (
+        cluster_bvalues[cluster_bvalues[:, 0].argsort()].T)
+    for i, ind in enumerate(ordered_cluster_indices):
+        shell_indices[clusters == ind] = i
+    return shell_indices, shell_bvalues
+
+
+def check_scheme_from_bvalues(
+        bvalues, gradient_directions, delta, Delta):
+    if len(bvalues) != len(gradient_directions):
+        msg = "bvalues and gradient_directions must have the same length. "
         msg += "Currently their lengths are {} and {}.".format(
-            len(bvals), len(n)
+            len(bvalues), len(gradient_directions)
         )
         raise ValueError(msg)
-    if shell_indices is not None and len(bvals) != len(shell_indices):
-        msg = "bvals and shell_indices must have the same length. "
-        msg += "Currently their lengths are {} and {}.".format(
-            len(bvals), len(shell_indices)
+    if len(bvalues) != len(delta) or len(bvalues) != len(Delta):
+        msg = "bvalues, delta and Delta must have the same length. "
+        msg += "Currently their lengths are {}, {} and {}.".format(
+            len(bvalues), len(delta), len(Delta)
         )
         raise ValueError(msg)
-    if not np.all(abs(np.linalg.norm(n, axis=1) - 1.) < 0.001):
-        msg = "gradient orientations n are not unit vectors. "
+    if delta.ndim > 1 or Delta.ndim > 1:
+        msg = "delta and Delta must be one-dimensional arrays. "
+        msg += "Currently their dimensions are {} and {}.".format(
+            delta.ndim, Delta.ndim
+        )
         raise ValueError(msg)
-    if delta is not None and Delta is not None:
-        if len(bvals) != len(delta) or len(bvals) != len(Delta):
-            msg = "bvals, delta and Delta must have the same length. "
-            msg += "Currently their lengths are {}, {} and {}.".format(
-                len(bvals), len(delta), len(Delta)
-            )
-            raise ValueError(msg)
-        if delta.ndim > 1 or Delta.ndim > 1:
-            msg = "delta and Delta must be one-dimensional arrays. "
-            msg += "Currently their dimensions are {} and {}.".format(
-                delta.ndim, Delta.ndim
-            )
-            raise ValueError(msg)
-        if np.min(delta) < 0 or np.min(Delta) < 0:
-            msg = "delta and Delta must be zero or positive. "
-            msg += "Currently their minimum values are {} and {}.".format(
-                np.min(delta), np.min(Delta)
-            )
-            raise ValueError(msg)
-    if bvals.ndim > 1:
-        msg = "bvals must be a one-dimensional array. "
+    if np.min(delta) < 0 or np.min(Delta) < 0:
+        msg = "delta and Delta must be zero or positive. "
+        msg += "Currently their minimum values are {} and {}.".format(
+            np.min(delta), np.min(Delta)
+        )
+        raise ValueError(msg)
+    if bvalues.ndim > 1:
+        msg = "bvalues must be a one-dimensional array. "
         msg += "Currently its dimensions is {}.".format(
-            bvals.ndim
+            bvalues.ndim
         )
         raise ValueError(msg)
-    if shell_indices is not None and shell_indices.ndim > 1:
-        msg = "shell_indices must be a one-dimensional array. "
-        msg += "Currently its dimension is {}.".format(
-            shell_indices.ndim
-        )
-        raise ValueError(msg)
-    if n.ndim != 2 or n.shape[1] != 3:
+    if gradient_directions.ndim != 2 or gradient_directions.shape[1] != 3:
         msg = "b-vectors n must be two dimensional array of shape [N, 3]. "
-        msg += "Currently its shape is {}.".format(n.shape)
+        msg += "Currently its shape is {}.".format(gradient_directions.shape)
         raise ValueError(msg)
-    if np.min(bvals) < 0.:
-        msg = "bvals must be zero or positive. "
-        msg += "Minimum value found is {}.".format(bvals.min)
+    if np.min(bvalues) < 0.:
+        msg = "bvalues must be zero or positive. "
+        msg += "Minimum value found is {}.".format(bvalues.min())
+        raise ValueError(msg)
+    if not np.all(
+            abs(np.linalg.norm(gradient_directions, axis=1) - 1.) < 0.001):
+        msg = "gradient orientations n are not unit vectors. "
         raise ValueError(msg)
