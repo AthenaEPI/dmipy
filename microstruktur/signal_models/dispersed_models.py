@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from . import three_dimensional_models
-from . import utils
 from microstruktur.signal_models.spherical_convolution import sh_convolution
-from dipy.reconst.shm import real_sym_sh_mrtrix
 from scipy import stats
 MicrostrukturModel = three_dimensional_models.MicrostrukturModel
 WATSON_SH_ORDER = 14
@@ -98,10 +96,10 @@ class SD2I1BinghamDispersedStick(MicrostrukturModel):
         for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
             shell_mask = shell_indices == shell_index
             sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
-            shell_bval = acquisition_scheme.shell_bvalues[shell_index]
             # rotational harmonics of stick
             rh_stick = stick.rotational_harmonics_representation(
-                bval=shell_bval, rh_order=sh_order)
+                bvalue=acquisition_scheme.shell_bvalues[shell_index],
+                rh_order=sh_order)
             # convolving micro-environment with bingham distribution
             E_dispersed_sh = sh_convolution(sh_bingham, rh_stick, sh_order)
             # recover signal values from bingham-convolved spherical harmonics
@@ -170,8 +168,7 @@ class SD2I2BinghamDispersedSodermanCylinder(MicrostrukturModel):
         self.kappa = kappa
         self.beta = beta
 
-    def __call__(self, bvals, n, delta=None, Delta=None, shell_indices=None,
-                 **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         r"""
         Parameters
         ----------
@@ -194,13 +191,8 @@ class SD2I2BinghamDispersedSodermanCylinder(MicrostrukturModel):
             signal attenuation.
         """
         sh_order = WATSON_SH_ORDER
-        if (
-            delta is None or Delta is None
-        ):
-            raise ValueError('This class needs non-None delta and Delta')
-        if shell_indices is None:
-            msg = "This class needs non-None shell_indices"
-            raise ValueError(msg)
+        shell_indices = acquisition_scheme.shell_indices
+
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
@@ -215,23 +207,20 @@ class SD2I2BinghamDispersedSodermanCylinder(MicrostrukturModel):
             mu=mu, lambda_par=lambda_par, diameter=diameter
         )
 
-        E = np.ones_like(bvals)
+        E = np.ones(acquisition_scheme.number_of_measurements)
         for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
-            bval_mask = shell_indices == shell_index
-            bvecs_shell = n[bval_mask]  # what bvecs in that shell
-            bval_mean = bvals[bval_mask].mean()
-            delta_mean = delta[bval_mask].mean()
-            Delta_mean = Delta[bval_mask].mean()
-            _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
-            sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
-
+            shell_mask = shell_indices == shell_index
+            sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
             # rotational harmonics of stick
             rh_stick = soderman.rotational_harmonics_representation(
-                bval=bval_mean, delta=delta_mean, Delta=Delta_mean)
+                bvalue=acquisition_scheme.shell_bvalues[shell_index],
+                delta=acquisition_scheme.shell_delta[shell_index],
+                Delta=acquisition_scheme.shell_Delta[shell_index],
+                rh_order=sh_order)
             # convolving micro-environment with bingham distribution
             E_dispersed_sh = sh_convolution(sh_bingham, rh_stick, sh_order)
             # recover signal values from bingham-convolved spherical harmonics
-            E[bval_mask] = np.dot(sh_mat, E_dispersed_sh)
+            E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
         return E
 
 
@@ -297,8 +286,7 @@ class SD2I3BinghamDispersedCallaghanCylinder(MicrostrukturModel):
         self.kappa = kappa
         self.beta = beta
 
-    def __call__(self, bvals, n, delta=None, Delta=None, shell_indices=None,
-                 **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         r"""
         Parameters
         ----------
@@ -321,13 +309,8 @@ class SD2I3BinghamDispersedCallaghanCylinder(MicrostrukturModel):
             signal attenuation.
         """
         sh_order = WATSON_SH_ORDER
-        if (
-            delta is None or Delta is None
-        ):
-            raise ValueError('This class needs non-None delta and Delta')
-        if shell_indices is None:
-            msg = "This class needs non-None shell_indices"
-            raise ValueError(msg)
+        shell_indices = acquisition_scheme.shell_indices
+
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
@@ -342,23 +325,20 @@ class SD2I3BinghamDispersedCallaghanCylinder(MicrostrukturModel):
             mu=mu, lambda_par=lambda_par, diameter=diameter
         )
 
-        E = np.ones_like(bvals)
+        E = np.ones(acquisition_scheme.number_of_measurements)
         for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
-            bval_mask = shell_indices == shell_index
-            bvecs_shell = n[bval_mask]  # what bvecs in that shell
-            bval_mean = bvals[bval_mask].mean()
-            delta_mean = delta[bval_mask].mean()
-            Delta_mean = Delta[bval_mask].mean()
-            _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
-            sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
-
+            shell_mask = shell_indices == shell_index
+            sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
             # rotational harmonics of stick
             rh_stick = callaghan.rotational_harmonics_representation(
-                bval=bval_mean, delta=delta_mean, Delta=Delta_mean)
+                bvalue=acquisition_scheme.shell_bvalues[shell_index],
+                delta=acquisition_scheme.shell_delta[shell_index],
+                Delta=acquisition_scheme.shell_Delta[shell_index],
+                rh_order=sh_order)
             # convolving micro-environment with bingham distribution
             E_dispersed_sh = sh_convolution(sh_bingham, rh_stick, sh_order)
             # recover signal values from bingham-convolved spherical harmonics
-            E[bval_mask] = np.dot(sh_mat, E_dispersed_sh)
+            E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
         return E
 
 
@@ -423,8 +403,7 @@ class SD2I4BinghamDispersedGaussianPhaseCylinder(MicrostrukturModel):
         self.kappa = kappa
         self.beta = beta
 
-    def __call__(self, bvals, n, delta=None, Delta=None, shell_indices=None,
-                 **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         r"""
         Parameters
         ----------
@@ -447,13 +426,8 @@ class SD2I4BinghamDispersedGaussianPhaseCylinder(MicrostrukturModel):
             signal attenuation.
         """
         sh_order = WATSON_SH_ORDER
-        if (
-            delta is None or Delta is None
-        ):
-            raise ValueError('This class needs non-None delta and Delta')
-        if shell_indices is None:
-            msg = "This class needs non-None shell_indices"
-            raise ValueError(msg)
+        shell_indices = acquisition_scheme.shell_indices
+
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
@@ -468,23 +442,20 @@ class SD2I4BinghamDispersedGaussianPhaseCylinder(MicrostrukturModel):
             mu=mu, lambda_par=lambda_par, diameter=diameter
         )
 
-        E = np.ones_like(bvals)
+        E = np.ones(acquisition_scheme.number_of_measurements)
         for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
-            bval_mask = shell_indices == shell_index
-            bvecs_shell = n[bval_mask]  # what bvecs in that shell
-            bval_mean = bvals[bval_mask].mean()
-            delta_mean = delta[bval_mask].mean()
-            Delta_mean = Delta[bval_mask].mean()
-            _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
-            sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
-
+            shell_mask = shell_indices == shell_index
+            sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
             # rotational harmonics of stick
             rh_stick = vg.rotational_harmonics_representation(
-                bval=bval_mean, delta=delta_mean, Delta=Delta_mean)
+                bvalue=acquisition_scheme.shell_bvalues[shell_index],
+                delta=acquisition_scheme.shell_delta[shell_index],
+                Delta=acquisition_scheme.shell_Delta[shell_index],
+                rh_order=sh_order)
             # convolving micro-environment with bingham distribution
             E_dispersed_sh = sh_convolution(sh_bingham, rh_stick, sh_order)
             # recover signal values from bingham-convolved spherical harmonics
-            E[bval_mask] = np.dot(sh_mat, E_dispersed_sh)
+            E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
         return E
 
 
@@ -529,7 +500,7 @@ class SD3I1WatsonDispersedStick(MicrostrukturModel):
         self.lambda_par = lambda_par
         self.kappa = kappa
 
-    def __call__(self, bvals, n, **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         r'''
         Parameters
         ----------
@@ -544,33 +515,28 @@ class SD3I1WatsonDispersedStick(MicrostrukturModel):
             signal attenuation
         '''
         sh_order = WATSON_SH_ORDER
+        shell_indices = acquisition_scheme.shell_indices
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
         kappa = kwargs.get('kappa', self.kappa)
         shell_indices = kwargs.get('shell_indices')
-        if shell_indices is None:
-            msg = "argument shell_indices is needed"
-            raise ValueError(msg)
 
         watson = three_dimensional_models.SD3Watson(mu=mu, kappa=kappa)
         sh_watson = watson.spherical_harmonics_representation()
         stick = three_dimensional_models.I1Stick(mu=mu, lambda_par=lambda_par)
 
-        E = np.ones_like(bvals)
+        E = np.ones(acquisition_scheme.number_of_measurements)
         for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
-            bval_mask = shell_indices == shell_index
-            bvecs_shell = n[bval_mask]  # what bvecs in that shell
-            bval_mean = bvals[bval_mask].mean()
-            _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
-            sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
-
+            shell_mask = shell_indices == shell_index
+            sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
             # rotational harmonics of stick
             rh_stick = stick.rotational_harmonics_representation(
-                bval=bval_mean)
+                bvalue=acquisition_scheme.shell_bvalues[shell_index],
+                rh_order=sh_order)
             # convolving micro-environment with watson distribution
             E_dispersed_sh = sh_convolution(sh_watson, rh_stick, sh_order)
             # recover signal values from watson-convolved spherical harmonics
-            E[bval_mask] = np.dot(sh_mat, E_dispersed_sh)
+            E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
         return E
 
 
@@ -622,8 +588,7 @@ class SD3I2WatsonDispersedSodermanCylinder(MicrostrukturModel):
         self.kappa = kappa
         self.diameter = diameter
 
-    def __call__(self, bvals, n, delta=None, Delta=None, shell_indices=None,
-                 **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         r"""
         Parameters
         ----------
@@ -646,13 +611,8 @@ class SD3I2WatsonDispersedSodermanCylinder(MicrostrukturModel):
             signal attenuation.
         """
         sh_order = WATSON_SH_ORDER
-        if (
-            delta is None or Delta is None
-        ):
-            raise ValueError('This class needs non-None delta and Delta')
-        if shell_indices is None:
-            msg = "This class needs non-None shell_indices"
-            raise ValueError(msg)
+        shell_indices = acquisition_scheme.shell_indices
+
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
@@ -666,23 +626,20 @@ class SD3I2WatsonDispersedSodermanCylinder(MicrostrukturModel):
             mu=mu, lambda_par=lambda_par, diameter=diameter
         )
 
-        E = np.ones_like(bvals)
+        E = np.ones(acquisition_scheme.number_of_measurements)
         for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
-            bval_mask = shell_indices == shell_index
-            bvecs_shell = n[bval_mask]  # what bvecs in that shell
-            bval_mean = bvals[bval_mask].mean()
-            delta_mean = delta[bval_mask].mean()
-            Delta_mean = Delta[bval_mask].mean()
-            _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
-            sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
-
+            shell_mask = shell_indices == shell_index
+            sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
             # rotational harmonics of stick
             rh_stick = soderman.rotational_harmonics_representation(
-                bval=bval_mean, delta=delta_mean, Delta=Delta_mean)
+                bvalue=acquisition_scheme.shell_bvalues[shell_index],
+                delta=acquisition_scheme.shell_delta[shell_index],
+                Delta=acquisition_scheme.shell_Delta[shell_index],
+                rh_order=sh_order)
             # convolving micro-environment with watson distribution
             E_dispersed_sh = sh_convolution(sh_watson, rh_stick, sh_order)
             # recover signal values from watson-convolved spherical harmonics
-            E[bval_mask] = np.dot(sh_mat, E_dispersed_sh)
+            E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
         return E
 
 
@@ -735,8 +692,7 @@ class SD3I3WatsonDispersedCallaghanCylinder(MicrostrukturModel):
         self.kappa = kappa
         self.diameter = diameter
 
-    def __call__(self, bvals, n, delta=None, Delta=None, shell_indices=None,
-                 **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         r"""
         Parameters
         ----------
@@ -759,13 +715,8 @@ class SD3I3WatsonDispersedCallaghanCylinder(MicrostrukturModel):
             signal attenuation.
         """
         sh_order = WATSON_SH_ORDER
-        if (
-            delta is None or Delta is None
-        ):
-            raise ValueError('This class needs non-None delta and Delta')
-        if shell_indices is None:
-            msg = "This class needs non-None shell_indices"
-            raise ValueError(msg)
+        shell_indices = acquisition_scheme.shell_indices
+
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
@@ -779,23 +730,20 @@ class SD3I3WatsonDispersedCallaghanCylinder(MicrostrukturModel):
             mu=mu, lambda_par=lambda_par, diameter=diameter
         )
 
-        E = np.ones_like(bvals)
+        E = np.ones(acquisition_scheme.number_of_measurements)
         for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
-            bval_mask = shell_indices == shell_index
-            bvecs_shell = n[bval_mask]  # what bvecs in that shell
-            bval_mean = bvals[bval_mask].mean()
-            delta_mean = delta[bval_mask].mean()
-            Delta_mean = Delta[bval_mask].mean()
-            _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
-            sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
-
+            shell_mask = shell_indices == shell_index
+            sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
             # rotational harmonics of stick
             rh_stick = callaghan.rotational_harmonics_representation(
-                bval=bval_mean, delta=delta_mean, Delta=Delta_mean)
+                bvalue=acquisition_scheme.shell_bvalues[shell_index],
+                delta=acquisition_scheme.shell_delta[shell_index],
+                Delta=acquisition_scheme.shell_Delta[shell_index],
+                rh_order=sh_order)
             # convolving micro-environment with watson distribution
             E_dispersed_sh = sh_convolution(sh_watson, rh_stick, sh_order)
             # recover signal values from watson-convolved spherical harmonics
-            E[bval_mask] = np.dot(sh_mat, E_dispersed_sh)
+            E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
         return E
 
 
@@ -847,8 +795,7 @@ class SD3I4WatsonDispersedGaussianPhaseCylinder(MicrostrukturModel):
         self.kappa = kappa
         self.diameter = diameter
 
-    def __call__(self, bvals, n, delta=None, Delta=None, shell_indices=None,
-                 **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         r"""
         Parameters
         ----------
@@ -871,13 +818,8 @@ class SD3I4WatsonDispersedGaussianPhaseCylinder(MicrostrukturModel):
             signal attenuation
         """
         sh_order = WATSON_SH_ORDER
-        if (
-            delta is None or Delta is None
-        ):
-            raise ValueError('This class needs non-None delta and Delta')
-        if shell_indices is None:
-            msg = "This class needs non-None shell_indices"
-            raise ValueError(msg)
+        shell_indices = acquisition_scheme.shell_indices
+
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
@@ -891,23 +833,20 @@ class SD3I4WatsonDispersedGaussianPhaseCylinder(MicrostrukturModel):
             mu=mu, lambda_par=lambda_par, diameter=diameter
         )
 
-        E = np.ones_like(bvals)
+        E = np.ones(acquisition_scheme.number_of_measurements)
         for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
-            bval_mask = shell_indices == shell_index
-            bvecs_shell = n[bval_mask]  # what bvecs in that shell
-            bval_mean = bvals[bval_mask].mean()
-            delta_mean = delta[bval_mask].mean()
-            Delta_mean = Delta[bval_mask].mean()
-            _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
-            sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
-
+            shell_mask = shell_indices == shell_index
+            sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
             # rotational harmonics of stick
             rh_stick = vg.rotational_harmonics_representation(
-                bval=bval_mean, delta=delta_mean, Delta=Delta_mean)
+                bvalue=acquisition_scheme.shell_bvalues[shell_index],
+                delta=acquisition_scheme.shell_delta[shell_index],
+                Delta=acquisition_scheme.shell_Delta[shell_index],
+                rh_order=sh_order)
             # convolving micro-environment with watson distribution
             E_dispersed_sh = sh_convolution(sh_watson, rh_stick, sh_order)
             # recover signal values from watson-convolved spherical harmonics
-            E[bval_mask] = np.dot(sh_mat, E_dispersed_sh)
+            E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
         return E
 
 
@@ -968,7 +907,7 @@ class SD2E4BinghamDispersedZeppelin(MicrostrukturModel):
         self.kappa = kappa
         self.beta = beta
 
-    def __call__(self, bvals, n, shell_indices=None, **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         r'''
         Parameters
         ----------
@@ -987,15 +926,14 @@ class SD2E4BinghamDispersedZeppelin(MicrostrukturModel):
             signal attenuation
         '''
         sh_order = WATSON_SH_ORDER
+        shell_indices = acquisition_scheme.shell_indices
+
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
         mu = kwargs.get('mu', self.mu)
         kappa = kwargs.get('kappa', self.kappa)
         beta = kwargs.get('beta', self.beta)
         psi = kwargs.get('psi', self.psi)
-        if shell_indices is None:
-            msg = "argument shell_indices is needed"
-            raise ValueError(msg)
 
         bingham = three_dimensional_models.SD2Bingham(mu=mu, kappa=kappa,
                                                       beta=beta, psi=psi)
@@ -1004,22 +942,17 @@ class SD2E4BinghamDispersedZeppelin(MicrostrukturModel):
             mu=mu, lambda_par=lambda_par, lambda_perp=lambda_perp
         )
 
-        E = np.ones_like(bvals)
+        E = np.ones(acquisition_scheme.number_of_measurements)
         for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
-            bval_mask = shell_indices == shell_index
-            bvecs_shell = n[bval_mask]  # what bvecs in that shell
-            bval_mean = bvals[bval_mask].mean()
-            _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
-            sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
-
+            shell_mask = shell_indices == shell_index
+            sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
             # rotational harmonics of zeppelin
             rh_zeppelin = zeppelin.rotational_harmonics_representation(
-                bval=bval_mean
-            )
+                bvalue=acquisition_scheme.shell_bvalues[shell_index])
             # convolving micro-environment with bingham distribution
             E_dispersed_sh = sh_convolution(sh_bingham, rh_zeppelin, sh_order)
             # recover signal values from bingham-convolved spherical harmonics
-            E[bval_mask] = np.dot(sh_mat, E_dispersed_sh)
+            E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
         return E
 
 
@@ -1067,7 +1000,7 @@ class SD3E4WatsonDispersedZeppelin(MicrostrukturModel):
         self.lambda_perp = lambda_perp
         self.kappa = kappa
 
-    def __call__(self, bvals, n, shell_indices=None, **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         r'''
         Parameters
         ----------
@@ -1086,13 +1019,12 @@ class SD3E4WatsonDispersedZeppelin(MicrostrukturModel):
             signal attenuation
         '''
         sh_order = WATSON_SH_ORDER
+        shell_indices = acquisition_scheme.shell_indices
+
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
         mu = kwargs.get('mu', self.mu)
         kappa = kwargs.get('kappa', self.kappa)
-        if shell_indices is None:
-            msg = "argument shell_indices is needed"
-            raise ValueError(msg)
 
         watson = three_dimensional_models.SD3Watson(mu=mu, kappa=kappa)
         sh_watson = watson.spherical_harmonics_representation()
@@ -1100,22 +1032,17 @@ class SD3E4WatsonDispersedZeppelin(MicrostrukturModel):
                                                        lambda_par=lambda_par,
                                                        lambda_perp=lambda_perp)
 
-        E = np.ones_like(bvals)
+        E = np.ones(acquisition_scheme.number_of_measurements)
         for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
-            bval_mask = shell_indices == shell_index
-            bvecs_shell = n[bval_mask]  # what bvecs in that shell
-            bval_mean = bvals[bval_mask].mean()
-            _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
-            sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
-
+            shell_mask = shell_indices == shell_index
+            sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
             # rotational harmonics of zeppelin
             rh_zeppelin = zeppelin.rotational_harmonics_representation(
-                bval=bval_mean
-            )
+                bvalue=acquisition_scheme.shell_bvalues[shell_index])
             # convolving micro-environment with watson distribution
             E_dispersed_sh = sh_convolution(sh_watson, rh_zeppelin, sh_order)
             # recover signal values from watson-convolved spherical harmonics
-            E[bval_mask] = np.dot(sh_mat, E_dispersed_sh)
+            E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
         return E
 
 
@@ -1166,7 +1093,7 @@ class DD1I2GammaDistributedSodermanCylinder(MicrostrukturModel):
         self.beta = beta
         self.radius_integral_steps = radius_integral_steps
 
-    def __call__(self, bvals, n, delta=None, Delta=None, **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         r"""
         Parameters
         ----------
@@ -1184,10 +1111,6 @@ class DD1I2GammaDistributedSodermanCylinder(MicrostrukturModel):
         E : array, shape(N),
             signal attenuation
         """
-        if (
-            delta is None or Delta is None
-        ):
-            raise ValueError('This class needs non-None delta and Delta')
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
         alpha = kwargs.get('alpha', self.alpha)
@@ -1209,14 +1132,12 @@ class DD1I2GammaDistributedSodermanCylinder(MicrostrukturModel):
         )
 
         E = np.empty(
-            (self.radius_integral_steps, len(bvals)),
-            dtype=float
-        )
+            (self.radius_integral_steps,
+             acquisition_scheme.number_of_measurements))
         for i, radius in enumerate(radii):
             E[i] = (
                 radii_pdf_normalized[i] *
-                soderman(bvals, n=n, delta=delta, Delta=Delta,
-                         diameter=radius * 2)
+                soderman(acquisition_scheme, diameter=radius * 2)
             )
 
         E = np.trapz(E, x=radii, axis=0)
@@ -1271,7 +1192,7 @@ class DD1I3GammaDistributedCallaghanCylinder(MicrostrukturModel):
         self.beta = beta
         self.radius_integral_steps = radius_integral_steps
 
-    def __call__(self, bvals, n, delta=None, Delta=None, **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         r"""
         Parameters
         ----------
@@ -1289,10 +1210,6 @@ class DD1I3GammaDistributedCallaghanCylinder(MicrostrukturModel):
         E : array, shape(N),
             signal attenuation
         """
-        if (
-            delta is None or Delta is None
-        ):
-            raise ValueError('This class needs non-None delta and Delta')
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
         alpha = kwargs.get('alpha', self.alpha)
@@ -1314,14 +1231,12 @@ class DD1I3GammaDistributedCallaghanCylinder(MicrostrukturModel):
         )
 
         E = np.empty(
-            (self.radius_integral_steps, len(bvals)),
-            dtype=float
-        )
+            (self.radius_integral_steps,
+             acquisition_scheme.number_of_measurements))
         for i, radius in enumerate(radii):
             E[i] = (
                 radii_pdf_normalized[i] *
-                callaghan(bvals, n=n, delta=delta, Delta=Delta,
-                          diameter=radius * 2)
+                callaghan(acquisition_scheme, diameter=radius * 2)
             )
 
         E = np.trapz(E, x=radii, axis=0)
@@ -1375,7 +1290,7 @@ class DD1I4GammaDistributedGaussianPhaseCylinder(MicrostrukturModel):
         self.beta = beta
         self.radius_integral_steps = radius_integral_steps
 
-    def __call__(self, bvals, n, delta=None, Delta=None, **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         r"""
         Parameters
         ----------
@@ -1393,10 +1308,6 @@ class DD1I4GammaDistributedGaussianPhaseCylinder(MicrostrukturModel):
         E : array, shape(N),
             signal attenuation
         """
-        if (
-            delta is None or Delta is None
-        ):
-            raise ValueError('This class needs non-None delta and Delta')
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
         alpha = kwargs.get('alpha', self.alpha)
@@ -1418,13 +1329,12 @@ class DD1I4GammaDistributedGaussianPhaseCylinder(MicrostrukturModel):
         )
 
         E = np.empty(
-            (self.radius_integral_steps, len(bvals)),
-            dtype=float
-        )
+            (self.radius_integral_steps,
+             acquisition_scheme.number_of_measurements))
         for i, radius in enumerate(radii):
             E[i] = (
                 radii_pdf_normalized[i] *
-                vg(bvals, n=n, delta=delta, Delta=Delta, diameter=radius * 2)
+                vg(acquisition_scheme, diameter=radius * 2)
             )
 
         E = np.trapz(E, x=radii, axis=0)

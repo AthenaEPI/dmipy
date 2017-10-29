@@ -16,7 +16,6 @@ from scipy.optimize import minimize
 from dipy.reconst.shm import real_sym_sh_mrtrix
 
 from . import utils
-from ..signal_models.gradient_conversions import g_from_b, q_from_b
 from . import CONSTANTS
 from ..signal_models.spherical_convolution import kernel_sh_to_rh
 from .spherical_mean import estimate_spherical_mean_multi_shell
@@ -556,7 +555,7 @@ class I1Stick(MicrostrukturModel):
         E_stick = np.exp(-bvals * lambda_par_ * np.dot(n, mu) ** 2)
         return E_stick
 
-    def rotational_harmonics_representation(self, bval, rh_order=14):
+    def rotational_harmonics_representation(self, bvalue, rh_order=14):
         r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernelfor spherical
         convolution.
@@ -574,8 +573,8 @@ class I1Stick(MicrostrukturModel):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
-        simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(bval,
-                                                         SPHERE_CARTESIAN)
+        simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(
+            bvalue, SPHERE_CARTESIAN)
         E_kernel_sf = self(simple_acq_scheme_rh, mu=np.r_[0., 0.])
         sh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         rh = kernel_sh_to_rh(sh, rh_order)
@@ -681,8 +680,8 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
         )
         return E_parallel * E_perpendicular
 
-    def rotational_harmonics_representation(self, bval, delta=None, Delta=None,
-                                            rh_order=14, **kwargs):
+    def rotational_harmonics_representation(self, bvalue, delta, Delta,
+                                            rh_order=14):
         r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernelfor spherical
         convolution.
@@ -704,15 +703,9 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
-        diameter_ = kwargs.get('diameter', self.diameter)
-        lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
-        bvals = np.tile(bval, SPHERE_CARTESIAN.shape[0])
-        deltas = np.tile(delta, SPHERE_CARTESIAN.shape[0])
-        Deltas = np.tile(Delta, SPHERE_CARTESIAN.shape[0])
-        E_kernel_sf = self(
-            bvals, SPHERE_CARTESIAN, deltas, Deltas,
-            mu=np.r_[0., 0.], lambda_par=lambda_par_, diameter=diameter_
-        )
+        simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(
+            bvalue, SPHERE_CARTESIAN, delta=delta, Delta=Delta)
+        E_kernel_sf = self(simple_acq_scheme_rh, mu=np.r_[0., 0.])
         sh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         rh = kernel_sh_to_rh(sh, rh_order)
         return rh
@@ -857,8 +850,8 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
         )
         return E_parallel * E_perpendicular
 
-    def rotational_harmonics_representation(self, bval, delta=None, Delta=None,
-                                            rh_order=14, **kwargs):
+    def rotational_harmonics_representation(
+            self, bvalue, delta=None, Delta=None, rh_order=14):
         r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernelfor spherical
         convolution.
@@ -880,19 +873,9 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
-        if (
-            delta is None or Delta is None
-        ):
-            raise ValueError('This class needs non-None delta and Delta')
-        diameter_ = kwargs.get('diameter', self.diameter)
-        lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
-        bvals = np.tile(bval, SPHERE_CARTESIAN.shape[0])
-        deltas = np.tile(delta, SPHERE_CARTESIAN.shape[0])
-        Deltas = np.tile(Delta, SPHERE_CARTESIAN.shape[0])
-        E_kernel_sf = self(
-            bvals, SPHERE_CARTESIAN, deltas, Deltas,
-            mu=np.r_[0., 0.], lambda_par=lambda_par_, diameter=diameter_
-        )
+        simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(
+            bvalue, SPHERE_CARTESIAN, delta=delta, Delta=Delta)
+        E_kernel_sf = self(simple_acq_scheme_rh, mu=np.r_[0., 0.])
         sh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         rh = kernel_sh_to_rh(sh, rh_order)
         return rh
@@ -1033,8 +1016,8 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
             )
         return E_parallel * E_perpendicular
 
-    def rotational_harmonics_representation(self, bval, delta=None, Delta=None,
-                                            rh_order=14, **kwargs):
+    def rotational_harmonics_representation(
+            self, bvalue, delta=None, Delta=None, rh_order=14):
         r""" The model in rotational harmonics, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernelfor spherical
         convolution.
@@ -1056,19 +1039,9 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
-        if (
-            delta is None or Delta is None
-        ):
-            raise ValueError('This class needs non-None delta and Delta')
-        diameter_ = kwargs.get('diameter', self.diameter)
-        lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
-        bvals = np.tile(bval, SPHERE_CARTESIAN.shape[0])
-        deltas = np.tile(delta, SPHERE_CARTESIAN.shape[0])
-        Deltas = np.tile(Delta, SPHERE_CARTESIAN.shape[0])
-        E_kernel_sf = self(
-            bvals, SPHERE_CARTESIAN, deltas, Deltas,
-            mu=np.r_[0., 0.], lambda_par=lambda_par_, diameter=diameter_
-        )
+        simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(
+            bvalue, SPHERE_CARTESIAN, delta=delta, Delta=Delta)
+        E_kernel_sf = self(simple_acq_scheme_rh, mu=np.r_[0., 0.])
         sh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         rh = kernel_sh_to_rh(sh, rh_order)
         return rh
@@ -1442,7 +1415,7 @@ class E4Zeppelin(MicrostrukturModel):
                                       lambda_perp * np.dot(n, R3) ** 2))
         return E_zeppelin
 
-    def rotational_harmonics_representation(self, bval, rh_order=14, **kwargs):
+    def rotational_harmonics_representation(self, bvalue, rh_order=14):
         r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernelfor spherical
         convolution.
@@ -1460,13 +1433,9 @@ class E4Zeppelin(MicrostrukturModel):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
-        lambda_par = kwargs.get('lambda_par', self.lambda_par)
-        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
-
-        E_kernel_sf = self(
-            np.tile(bval, len(SPHERE_CARTESIAN)), SPHERE_CARTESIAN,
-            mu=np.r_[0., 0.], lambda_par=lambda_par, lambda_perp=lambda_perp
-        )
+        simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(
+            bvalue, SPHERE_CARTESIAN)
+        E_kernel_sf = self(simple_acq_scheme_rh, mu=np.r_[0., 0.])
         sh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         rh = kernel_sh_to_rh(sh, rh_order)
         return rh
@@ -1567,8 +1536,8 @@ class E5RestrictedZeppelin(MicrostrukturModel):
             E_zeppelin[i] = np.exp(-bval_ * np.dot(n_, np.dot(n_, D)))
         return E_zeppelin
 
-    def rotational_harmonics_representation(self, bval, delta=None, Delta=None,
-                                            rh_order=14, **kwargs):
+    def rotational_harmonics_representation(
+            self, bvalue, delta=None, Delta=None, rh_order=14):
         r""" The model in rotational harmonics, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernelfor spherical
         convolution.
@@ -1590,21 +1559,10 @@ class E5RestrictedZeppelin(MicrostrukturModel):
         rh : array,
             rotational harmonics of the model aligned with z-axis.
         """
-        lambda_par = kwargs.get('lambda_par', self.lambda_par)
-        lambda_inf = kwargs.get('lambda_inf', self.lambda_inf)
-        A = kwargs.get('A', self.A)
-
-        E_zeppelin_sf = self(
-            bval, SPHERE_CARTESIAN,
-            mu=np.r_[0., 0.], lambda_par=lambda_par, lambda_perp=lambda_inf,
-            A=A, Delta=Delta, delta=delta
-        )
-
-        sh_mat = real_sym_sh_mrtrix(
-            rh_order, SPHERE_SPHERICAL[:, 1], SPHERE_SPHERICAL[:, 2]
-        )[0]
-        sh_mat_inv = np.linalg.pinv(sh_mat)
-        sh = np.dot(sh_mat_inv, E_zeppelin_sf)
+        simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(
+            bvalue, SPHERE_CARTESIAN, delta=delta, Delta=Delta)
+        E_kernel_sf = self(simple_acq_scheme_rh, mu=np.r_[0., 0.])
+        sh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         rh = kernel_sh_to_rh(sh, rh_order)
         return rh
 
