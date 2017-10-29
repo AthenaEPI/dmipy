@@ -10,7 +10,12 @@ from dipy.data import get_sphere
 from microstruktur.signal_models.spherical_mean import (
     estimate_spherical_mean_shell
 )
+from microstruktur.acquisition_scheme.acquisition_scheme import (
+    acquisition_scheme_from_bvalues)
 sphere = get_sphere().subdivide()
+
+delta = 0.01
+Delta = 0.03
 
 
 def test_orienting_stick():
@@ -21,39 +26,42 @@ def test_orienting_stick():
     random_bval = np.r_[np.random.rand() * 1e9]
     random_lambda_par = np.random.rand() * 3e-9
 
+    scheme = acquisition_scheme_from_bvalues(
+        random_bval, np.atleast_2d(n), delta, Delta)
     # initialize model
     stick = three_dimensional_models.I1Stick(mu=random_n_mu_vector,
                                              lambda_par=random_lambda_par)
 
     # test if parallel direction attenuation as a Gaussian
-    E_stick = stick(bvals=random_bval, n=n)
+    E_stick = stick(scheme)
     E_check = np.exp(-random_bval * (random_lambda_par))
     assert_almost_equal(E_stick, E_check)
 
     # test if perpendicular direction does not attenuate
     n_perp = perpendicular_vector(n)
-    E_stick_perp = stick(bvals=random_bval, n=n_perp)
+    scheme = acquisition_scheme_from_bvalues(
+        random_bval, np.atleast_2d(n_perp), delta, Delta)
+    E_stick_perp = stick(scheme)
     assert_almost_equal(E_stick_perp, 1.)
 
 
 def test_watson_dispersed_stick_kappa0(
     lambda_par=1.7e-9, bvalue=1e9, mu=[0, 0], kappa=0
 ):
+    # testing uniformly dispersed bingham stick.
+    n = sphere.vertices
+    bvals = np.tile(bvalue, len(n))
+    scheme = acquisition_scheme_from_bvalues(bvals, n, delta, Delta)
+
     # for comparison we do spherical mean of stick.
     sm_stick = three_dimensional_models.I1StickSphericalMean(
         lambda_par=lambda_par
     )
-    E_sm_stick = sm_stick(np.r_[bvalue])
-
-    # testing uniformly dispersed watson stick.
-    n = sphere.vertices
-    shell_indices = np.ones(len(n))
-    bvals = np.tile(bvalue, len(n))
+    E_sm_stick = sm_stick(scheme)
 
     watson_stick = SD3I1WatsonDispersedStick(mu=mu, kappa=kappa,
                                              lambda_par=lambda_par)
-    E_watson_stick = watson_stick(bvals=bvals, n=n,
-                                  shell_indices=shell_indices)
+    E_watson_stick = watson_stick(scheme)
     E_unique_watson_stick = np.unique(E_watson_stick)
     # All values are the same:
     assert_equal(len(E_unique_watson_stick), 1)
@@ -64,21 +72,20 @@ def test_watson_dispersed_stick_kappa0(
 def test_watson_dispersed_stick_kappa_positive(
     lambda_par=1.7e-9, bvalue=1e9, mu=[0, 0], kappa=10
 ):
+    # testing uniformly dispersed bingham stick.
+    n = sphere.vertices
+    bvals = np.tile(bvalue, len(n))
+    scheme = acquisition_scheme_from_bvalues(bvals, n, delta, Delta)
+
     # for comparison we do spherical mean of stick.
     sm_stick = three_dimensional_models.I1StickSphericalMean(
         lambda_par=lambda_par
     )
-    E_sm_stick = sm_stick(np.r_[bvalue])
-
-    # now testing concentrated watson stick with positive kappa.
-    n = sphere.vertices
-    shell_indices = np.ones(len(n))
-    bvals = np.tile(bvalue, len(n))
+    E_sm_stick = sm_stick(scheme)
 
     watson_stick = SD3I1WatsonDispersedStick(mu=mu, kappa=kappa,
                                              lambda_par=lambda_par)
-    E_watson_stick = watson_stick(bvals=bvals, n=n,
-                                  shell_indices=shell_indices)
+    E_watson_stick = watson_stick(scheme)
     E_unique_watson_stick = np.unique(E_watson_stick)
     E_sm_watson_stick = estimate_spherical_mean_shell(E_watson_stick, n)
     # Different values for different orientations:
@@ -90,22 +97,21 @@ def test_watson_dispersed_stick_kappa_positive(
 def test_bingham_dispersed_stick_kappa0(
     lambda_par=1.7e-9, bvalue=1e9, mu=[0, 0], kappa=0, beta=0, psi=0
 ):
+    # testing uniformly dispersed bingham stick.
+    n = sphere.vertices
+    bvals = np.tile(bvalue, len(n))
+    scheme = acquisition_scheme_from_bvalues(bvals, n, delta, Delta)
+
     # for comparison we do spherical mean of stick.
     sm_stick = three_dimensional_models.I1StickSphericalMean(
         lambda_par=lambda_par
     )
-    E_sm_stick = sm_stick(np.r_[bvalue])
-
-    # testing uniformly dispersed bingham stick.
-    n = sphere.vertices
-    shell_indices = np.ones(len(n))
-    bvals = np.tile(bvalue, len(n))
+    E_sm_stick = sm_stick(scheme)
 
     bingham_stick = SD2I1BinghamDispersedStick(
         mu=mu, kappa=kappa, beta=beta, psi=psi, lambda_par=lambda_par
     )
-    E_bingham_stick = bingham_stick(bvals=bvals, n=n,
-                                    shell_indices=shell_indices)
+    E_bingham_stick = bingham_stick(scheme)
     E_unique_bingham_stick = np.unique(E_bingham_stick)
     # All values are the same:
     assert_equal(len(E_unique_bingham_stick), 1)
@@ -116,22 +122,21 @@ def test_bingham_dispersed_stick_kappa0(
 def test_bingham_dispersed_stick_kappa_positive(
         lambda_par=1.7e-9, bvalue=1e9, mu=[0, 0], kappa=10, beta=0, psi=0
 ):
+    # testing uniformly dispersed bingham stick.
+    n = sphere.vertices
+    bvals = np.tile(bvalue, len(n))
+    scheme = acquisition_scheme_from_bvalues(bvals, n, delta, Delta)
+
     # for comparison we do spherical mean of stick.
     sm_stick = three_dimensional_models.I1StickSphericalMean(
         lambda_par=lambda_par
     )
-    E_sm_stick = sm_stick(np.r_[bvalue])
-
-    # testing uniformly dispersed bingham stick.
-    n = sphere.vertices
-    shell_indices = np.ones(len(n))
-    bvals = np.tile(bvalue, len(n))
+    E_sm_stick = sm_stick(scheme)
 
     bingham_stick = SD2I1BinghamDispersedStick(
         mu=mu, kappa=kappa, beta=beta, psi=psi, lambda_par=lambda_par
     )
-    E_bingham_stick = bingham_stick(bvals=bvals, n=n,
-                                    shell_indices=shell_indices)
+    E_bingham_stick = bingham_stick(scheme)
     E_sm_bingham_stick = estimate_spherical_mean_shell(E_bingham_stick, n)
     E_unique_bingham_stick = np.unique(E_bingham_stick)
     # Different values for different orientations:

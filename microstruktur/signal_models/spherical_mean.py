@@ -3,7 +3,7 @@ from dipy.reconst.shm import real_sym_sh_mrtrix
 from microstruktur.signal_models import utils
 
 
-def estimate_spherical_mean_multi_shell(E_attenuation, bvecs, b_shell_indices,
+def estimate_spherical_mean_multi_shell(E_attenuation, acquisition_scheme,
                                         sh_order=6):
     r""" Estimates the spherical mean per shell of multi-shell acquisition.
     Uses spherical harmonics to do the estimation.
@@ -26,14 +26,17 @@ def estimate_spherical_mean_multi_shell(E_attenuation, bvecs, b_shell_indices,
         example, if there are three shells in the acquisition then the array
         is of length 3.
     """
-    E_mean = np.zeros(b_shell_indices.max())
-    for b_shell_index in np.arange(1, b_shell_indices.max() + 1):  # per shell
-        shell_mask = b_shell_indices == b_shell_index
-        bvecs_shell = bvecs[shell_mask]
+    shell_indices = acquisition_scheme.shell_indices
+    gradient_directions = acquisition_scheme.gradient_directions
+    unique_dwi_indices = acquisition_scheme.unique_dwi_indices
+
+    E_mean = np.ones(len(acquisition_scheme.shell_bvalues))
+    for b_shell_index in unique_dwi_indices:  # per shell
+        shell_mask = shell_indices == b_shell_index
+        bvecs_shell = gradient_directions[shell_mask]
         E_shell = E_attenuation[shell_mask]
-        E_mean[b_shell_index - 1] = estimate_spherical_mean_shell(E_shell,
-                                                                  bvecs_shell,
-                                                                  sh_order)
+        E_mean[b_shell_index] = estimate_spherical_mean_shell(
+            E_shell, bvecs_shell, sh_order)
     return E_mean
 
 

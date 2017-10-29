@@ -79,6 +79,7 @@ class SD2I1BinghamDispersedStick(MicrostrukturModel):
             signal attenuation
         '''
         shell_indices = acquisition_scheme.shell_indices
+        unique_dwi_indices = acquisition_scheme.unique_dwi_indices
 
         sh_order = WATSON_SH_ORDER
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
@@ -93,7 +94,7 @@ class SD2I1BinghamDispersedStick(MicrostrukturModel):
         stick = three_dimensional_models.I1Stick(mu=mu, lambda_par=lambda_par)
 
         E = np.ones(acquisition_scheme.number_of_measurements)
-        for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
+        for shell_index in unique_dwi_indices:  # per shell
             shell_mask = shell_indices == shell_index
             sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
             # rotational harmonics of stick
@@ -192,6 +193,7 @@ class SD2I2BinghamDispersedSodermanCylinder(MicrostrukturModel):
         """
         sh_order = WATSON_SH_ORDER
         shell_indices = acquisition_scheme.shell_indices
+        unique_dwi_indices = acquisition_scheme.unique_dwi_indices
 
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
@@ -208,7 +210,7 @@ class SD2I2BinghamDispersedSodermanCylinder(MicrostrukturModel):
         )
 
         E = np.ones(acquisition_scheme.number_of_measurements)
-        for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
+        for shell_index in unique_dwi_indices:  # per shell
             shell_mask = shell_indices == shell_index
             sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
             # rotational harmonics of stick
@@ -310,6 +312,7 @@ class SD2I3BinghamDispersedCallaghanCylinder(MicrostrukturModel):
         """
         sh_order = WATSON_SH_ORDER
         shell_indices = acquisition_scheme.shell_indices
+        unique_dwi_indices = acquisition_scheme.unique_dwi_indices
 
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
@@ -326,7 +329,7 @@ class SD2I3BinghamDispersedCallaghanCylinder(MicrostrukturModel):
         )
 
         E = np.ones(acquisition_scheme.number_of_measurements)
-        for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
+        for shell_index in unique_dwi_indices:  # per shell
             shell_mask = shell_indices == shell_index
             sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
             # rotational harmonics of stick
@@ -427,6 +430,7 @@ class SD2I4BinghamDispersedGaussianPhaseCylinder(MicrostrukturModel):
         """
         sh_order = WATSON_SH_ORDER
         shell_indices = acquisition_scheme.shell_indices
+        unique_dwi_indices = acquisition_scheme.unique_dwi_indices
 
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
@@ -443,7 +447,7 @@ class SD2I4BinghamDispersedGaussianPhaseCylinder(MicrostrukturModel):
         )
 
         E = np.ones(acquisition_scheme.number_of_measurements)
-        for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
+        for shell_index in unique_dwi_indices:  # per shell
             shell_mask = shell_indices == shell_index
             sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
             # rotational harmonics of stick
@@ -516,17 +520,18 @@ class SD3I1WatsonDispersedStick(MicrostrukturModel):
         '''
         sh_order = WATSON_SH_ORDER
         shell_indices = acquisition_scheme.shell_indices
+        unique_dwi_indices = acquisition_scheme.unique_dwi_indices
+
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
         kappa = kwargs.get('kappa', self.kappa)
-        shell_indices = kwargs.get('shell_indices')
 
         watson = three_dimensional_models.SD3Watson(mu=mu, kappa=kappa)
         sh_watson = watson.spherical_harmonics_representation()
         stick = three_dimensional_models.I1Stick(mu=mu, lambda_par=lambda_par)
 
         E = np.ones(acquisition_scheme.number_of_measurements)
-        for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
+        for shell_index in unique_dwi_indices:  # per shell
             shell_mask = shell_indices == shell_index
             sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
             # rotational harmonics of stick
@@ -612,6 +617,7 @@ class SD3I2WatsonDispersedSodermanCylinder(MicrostrukturModel):
         """
         sh_order = WATSON_SH_ORDER
         shell_indices = acquisition_scheme.shell_indices
+        unique_dwi_indices = acquisition_scheme.unique_dwi_indices
 
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
@@ -627,7 +633,7 @@ class SD3I2WatsonDispersedSodermanCylinder(MicrostrukturModel):
         )
 
         E = np.ones(acquisition_scheme.number_of_measurements)
-        for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
+        for shell_index in unique_dwi_indices:  # per shell
             shell_mask = shell_indices == shell_index
             sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
             # rotational harmonics of stick
@@ -716,6 +722,7 @@ class SD3I3WatsonDispersedCallaghanCylinder(MicrostrukturModel):
         """
         sh_order = WATSON_SH_ORDER
         shell_indices = acquisition_scheme.shell_indices
+        unique_dwi_indices = acquisition_scheme.unique_dwi_indices
 
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
@@ -731,7 +738,7 @@ class SD3I3WatsonDispersedCallaghanCylinder(MicrostrukturModel):
         )
 
         E = np.ones(acquisition_scheme.number_of_measurements)
-        for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
+        for shell_index in unique_dwi_indices:  # per shell
             shell_mask = shell_indices == shell_index
             sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
             # rotational harmonics of stick
@@ -819,6 +826,7 @@ class SD3I4WatsonDispersedGaussianPhaseCylinder(MicrostrukturModel):
         """
         sh_order = WATSON_SH_ORDER
         shell_indices = acquisition_scheme.shell_indices
+        unique_dwi_indices = acquisition_scheme.unique_dwi_indices
 
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
@@ -834,7 +842,7 @@ class SD3I4WatsonDispersedGaussianPhaseCylinder(MicrostrukturModel):
         )
 
         E = np.ones(acquisition_scheme.number_of_measurements)
-        for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
+        for shell_index in unique_dwi_indices:  # per shell
             shell_mask = shell_indices == shell_index
             sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
             # rotational harmonics of stick
@@ -927,6 +935,7 @@ class SD2E4BinghamDispersedZeppelin(MicrostrukturModel):
         '''
         sh_order = WATSON_SH_ORDER
         shell_indices = acquisition_scheme.shell_indices
+        unique_dwi_indices = acquisition_scheme.unique_dwi_indices
 
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
@@ -943,7 +952,7 @@ class SD2E4BinghamDispersedZeppelin(MicrostrukturModel):
         )
 
         E = np.ones(acquisition_scheme.number_of_measurements)
-        for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
+        for shell_index in unique_dwi_indices:  # per shell
             shell_mask = shell_indices == shell_index
             sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
             # rotational harmonics of zeppelin
@@ -1020,6 +1029,7 @@ class SD3E4WatsonDispersedZeppelin(MicrostrukturModel):
         '''
         sh_order = WATSON_SH_ORDER
         shell_indices = acquisition_scheme.shell_indices
+        unique_dwi_indices = acquisition_scheme.unique_dwi_indices
 
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
@@ -1033,7 +1043,7 @@ class SD3E4WatsonDispersedZeppelin(MicrostrukturModel):
                                                        lambda_perp=lambda_perp)
 
         E = np.ones(acquisition_scheme.number_of_measurements)
-        for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
+        for shell_index in unique_dwi_indices:  # per shell
             shell_mask = shell_indices == shell_index
             sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
             # rotational harmonics of zeppelin

@@ -7,6 +7,8 @@ from microstruktur.signal_models.utils import (
 from numpy.testing import (
     assert_equal, assert_array_almost_equal, assert_array_equal)
 import numpy as np
+from microstruktur.acquisition_scheme.acquisition_scheme import (
+    acquisition_scheme_from_bvalues)
 
 
 bvals = np.loadtxt(
@@ -18,6 +20,10 @@ gradient_directions = np.loadtxt(
     join(three_dimensional_models.GRADIENT_TABLES_PATH,
          'bvecs_hcp_wu_minn.txt')
 )
+delta = 0.01
+Delta = 0.03
+scheme = acquisition_scheme_from_bvalues(
+    bvals, gradient_directions, delta, Delta)
 
 
 def test_simple_stick_optimization():
@@ -26,14 +32,14 @@ def test_simple_stick_optimization():
     gt_lambda_par = (np.random.rand() + 1.) * 1e-9
     gt_parameter_vector = stick.parameters_to_parameter_vector(
         lambda_par=gt_lambda_par, mu=gt_mu)
-    
-    E = stick.simulate_signal(bvals, gradient_directions, gt_parameter_vector)
+
+    E = stick.simulate_signal(scheme, gt_parameter_vector)
 
     x0 = stick.parameters_to_parameter_vector(
         lambda_par=(np.random.rand() + 1.) * 1e-9,
         mu=np.random.rand(2)
     )
-    res = stick.fit(E, bvals, gradient_directions, x0)
+    res = stick.fit(E, scheme, x0)
     assert_array_almost_equal(np.r_[gt_lambda_par, gt_mu], res, 4)
 
 
@@ -60,7 +66,7 @@ def test_simple_ball_and_stick_optimization():
     )
 
     E = ball_and_stick.simulate_signal(
-        bvals, gradient_directions, gt_parameter_vector)
+        scheme, gt_parameter_vector)
 
     x0 = ball_and_stick.parameters_to_parameter_vector(
         I1Stick_1_lambda_par=(np.random.rand() + 1.) * 1e-9,
@@ -68,7 +74,7 @@ def test_simple_ball_and_stick_optimization():
         I1Stick_1_mu=np.random.rand(2),
         partial_volume_0=np.random.rand()
     )
-    res = ball_and_stick.fit(E, bvals, gradient_directions, x0)
+    res = ball_and_stick.fit(E, scheme, x0)
     assert_array_almost_equal(gt_parameter_vector, res, 3)
 
 
@@ -85,12 +91,12 @@ def test_multi_dimensional_x0():
     gt_lambda_iso = gt_lambda_par / 2.
     gt_partial_volume = 0.3
     gt_mu_array = np.empty((10, 10, 2))
-    
+
     # I'm putting the orientation of the stick all over the sphere.
     for i, mu1 in enumerate(np.linspace(0, np.pi, 10)):
         for j, mu2 in enumerate(np.linspace(-np.pi, np.pi, 10)):
             gt_mu_array[i, j] = np.r_[mu1, mu2]
-    
+
     gt_parameter_vector = (
         ball_and_stick.parameters_to_parameter_vector(
             I1Stick_1_lambda_par=gt_lambda_par,
@@ -98,19 +104,20 @@ def test_multi_dimensional_x0():
             I1Stick_1_mu=gt_mu_array,
             partial_volume_0=gt_partial_volume)
     )
-    
+
     E_array = ball_and_stick.simulate_signal(
-        bvals, gradient_directions,gt_parameter_vector)
-    
+        scheme, gt_parameter_vector)
+
     # I'm giving a voxel-dependent initial condition with gt_mu_array
-    res = ball_and_stick.fit(E_array, bvals, gradient_directions,
-                            gt_parameter_vector)
+    res = ball_and_stick.fit(E_array, scheme,
+                             gt_parameter_vector)
     # optimization should stop immediately as I'm giving the ground truth.
     assert_equal(np.all(np.ravel(res - gt_parameter_vector) == 0.), True)
     # and the parameter vector dictionaries of the results and x0 should also
     # be the same.
     res_parameters = ball_and_stick.parameter_vector_to_parameters(res)
-    x0_parameters = ball_and_stick.parameter_vector_to_parameters(gt_parameter_vector)
+    x0_parameters = ball_and_stick.parameter_vector_to_parameters(
+        gt_parameter_vector)
     for key in res_parameters.keys():
         assert_array_equal(x0_parameters[key], res_parameters[key])
 
@@ -168,7 +175,7 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
     )
 
     E = stick_and_tortuous_zeppelin.simulate_signal(
-        bvals, gradient_directions, gt_parameter_vector)
+        scheme, gt_parameter_vector)
 
     # now we make the stick and zeppelin spherical mean model and check if the
     # same lambda_par and volume fraction result as the 3D generated data.
@@ -202,12 +209,7 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
         partial_volume_0=0.55
     )
 
-    shell_indices, _ = define_shell_indices(
-        bvals, ((0, 10e6), (995e6, 1005e6), (1995e6, 2005e6), (2995e6, 3005e6))
-    )
-
-    res_sm = stick_and_tortuous_zeppelin_sm.fit(
-        E, bvals, gradient_directions, x0, shell_indices=shell_indices)
+    res_sm = stick_and_tortuous_zeppelin_sm.fit(E, scheme, x0)
 
     assert_array_almost_equal(
         np.r_[gt_lambda_par, gt_partial_volume], res_sm, 2)

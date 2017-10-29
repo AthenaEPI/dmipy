@@ -5,10 +5,19 @@ from microstruktur.signal_models.spherical_convolution import (kernel_sh_to_rh,
 from dipy.reconst.shm import sf_to_sh, sh_to_sf
 from dipy.data import get_sphere
 import numpy as np
+from microstruktur.acquisition_scheme.acquisition_scheme import (
+    acquisition_scheme_from_bvalues)
+
+delta = 0.01
+Delta = 0.03
 
 
 def test_spherical_convolution_watson_sh(sh_order=4):
     sphere = get_sphere('symmetric724')
+
+    n = sphere.vertices
+    bval = np.tile(1e9, len(n))
+    scheme = acquisition_scheme_from_bvalues(bval, n, delta, Delta)
     indices_sphere_orientations = np.arange(sphere.vertices.shape[0])
     np.random.shuffle(indices_sphere_orientations)
     mu_index = indices_sphere_orientations[0]
@@ -19,10 +28,9 @@ def test_spherical_convolution_watson_sh(sh_order=4):
     f_sf = watson(n=sphere.vertices)
     f_sh = sf_to_sh(f_sf, sphere, sh_order)
 
-    bval = 1e9
-    lambda_par = 2
+    lambda_par = 2e-9
     stick = three_dimensional_models.I1Stick(mu=[0, 0], lambda_par=lambda_par)
-    k_sf = stick(bvals=bval, n=sphere.vertices)
+    k_sf = stick(scheme)
     k_sh = sf_to_sh(k_sf, sphere, sh_order)
     k_rh = kernel_sh_to_rh(k_sh, sh_order)
 

@@ -237,8 +237,6 @@ class MicrostrukturModel:
             The fitted parameters of the microstructure model.
         """
         x0 = model_initial_condition_array
-        n = acquisition_scheme.gradient_directions
-        shell_indices = acquisition_scheme.shell_indices
         data_at_least_2d = np.atleast_2d(data)
         x0_at_least_2d = np.atleast_2d(x0)
         if x0.ndim == 1 and data.ndim > 1:
@@ -265,8 +263,8 @@ class MicrostrukturModel:
         for idx, (voxel_data, voxel_x0) in enumerate(zip(data_2d, x0_2d)):
             if self.spherical_mean:
                 voxel_data_spherical_mean = (
-                    estimate_spherical_mean_multi_shell(voxel_data, n,
-                                                        shell_indices))
+                    estimate_spherical_mean_multi_shell(voxel_data,
+                                                        acquisition_scheme))
                 res_ = minimize(self.objective_function, voxel_x0,
                                 (voxel_data_spherical_mean,
                                  acquisition_scheme),
@@ -830,7 +828,6 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
         n = acquisition_scheme.gradient_directions
         q = acquisition_scheme.qvalues
         tau = acquisition_scheme.tau
-        dwi_mask = not acquisition_scheme.b0_mask
 
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
@@ -845,8 +842,10 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
         E_parallel = np.exp(-bvals * lambda_par_ * magnitude_parallel ** 2)
         E_perpendicular = np.ones_like(q)
         q_perp = q * magnitude_perpendicular
-        E_perpendicular[dwi_mask] = self.perpendicular_attenuation(
-            q_perp[dwi_mask], tau[dwi_mask], diameter
+
+        q_nonzero = q_perp > 0
+        E_perpendicular[q_nonzero] = self.perpendicular_attenuation(
+            q_perp[q_nonzero], tau[q_nonzero], diameter
         )
         return E_parallel * E_perpendicular
 
@@ -982,7 +981,6 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
         g = acquisition_scheme.gradient_strengths
         delta = acquisition_scheme.delta
         Delta = acquisition_scheme.Delta
-        dwi_mask = not acquisition_scheme.b0_mask
 
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
@@ -1007,9 +1005,10 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
             -1, deltas.shape[1]
         )
 
+        g_nonzero = g_perp > 0
         # for every unique combination get the perpendicular attenuation
         for delta_, Delta_ in deltas_unique:
-            mask = np.all([dwi_mask, delta == delta_, Delta == Delta_],
+            mask = np.all([g_nonzero, delta == delta_, Delta == Delta_],
                           axis=0)
             E_perpendicular[mask] = self.perpendicular_attenuation(
                 g_perp[mask], delta_, Delta_, diameter
@@ -1091,6 +1090,7 @@ class I1StickSphericalMean(MicrostrukturModel):
             spherical mean of the Stick model.
         """
         bvals = acquisition_scheme.shell_bvalues
+        bvals_ = bvals[~acquisition_scheme.shell_b0_mask]
 
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
 
@@ -1099,7 +1099,7 @@ class I1StickSphericalMean(MicrostrukturModel):
         bvals_ = bvals[bval_indices_above0]
         E_mean_ = ((np.sqrt(np.pi) * erf(np.sqrt(bvals_ * lambda_par))) /
                    (2 * np.sqrt(bvals_ * lambda_par)))
-        E_mean[bval_indices_above0] = E_mean_
+        E_mean[~acquisition_scheme.shell_b0_mask] = E_mean_
         return E_mean
 
     def derivative(self, bvals, **kwargs):
@@ -1156,12 +1156,16 @@ class E4ZeppelinSphericalMean(MicrostrukturModel):
             spherical mean of the Zeppelin model.
         """
         bvals = acquisition_scheme.shell_bvalues
+        bvals_ = bvals[~acquisition_scheme.shell_b0_mask]
+
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
 
-        exp_bl = np.exp(-bvals * lambda_perp)
-        sqrt_bl = np.sqrt(bvals * (lambda_par - lambda_perp))
-        E_mean = exp_bl * np.sqrt(np.pi) * erf(sqrt_bl) / (2 * sqrt_bl)
+        E_mean = np.ones_like(bvals)
+        exp_bl = np.exp(-bvals_ * lambda_perp)
+        sqrt_bl = np.sqrt(bvals_ * (lambda_par - lambda_perp))
+        E_mean_ = exp_bl * np.sqrt(np.pi) * erf(sqrt_bl) / (2 * sqrt_bl)
+        E_mean[~acquisition_scheme.shell_b0_mask] = E_mean_
         return E_mean
 
     def derivative(self, bvals, n, **kwargs):

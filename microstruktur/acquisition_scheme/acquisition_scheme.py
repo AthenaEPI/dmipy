@@ -12,30 +12,52 @@ sh_order = 14
 class AcquisitionScheme:
 
     def __init__(self, bvalues, gradient_directions, qvalues,
-                 gradient_strengths, delta, Delta):
+                 gradient_strengths, delta, Delta,
+                 min_b_shell_distance, b0_threshold):
         check_scheme_from_bvalues(bvalues, gradient_directions, delta, Delta)
+        self.min_b_shell_distance = min_b_shell_distance
+        self.b0_threshold = b0_threshold
         self.bvalues = bvalues
+        self.b0_mask = self.bvalues <= b0_threshold
+        self.number_of_measurements = len(self.bvalues)
         self.gradient_directions = gradient_directions
         self.qvalues = qvalues
         self.gradient_strengths = gradient_strengths
         self.delta = delta
         self.Delta = Delta
         self.tau = Delta - delta / 3.
-        self.shell_indices, self.shell_bvalues = (
-            calculate_shell_bvalues_and_indices(bvalues))
-        first_indices = [
-            np.argmax(self.shell_indices == ind)
-            for ind in np.arange(self.shell_indices.max() + 1)]
-        self.shell_delta = self.delta[first_indices]
-        self.shell_Delta = self.Delta[first_indices]
-        self.number_of_measurements = len(self.bvalues)
-        self.b0_mask = self.shell_indices == 0
+        if self.number_of_measurements > 1:
+            self.shell_indices, self.shell_bvalues = (
+                calculate_shell_bvalues_and_indices(
+                    bvalues, min_b_shell_distance)
+            )
+            self.shell_b0_mask = self.shell_bvalues <= b0_threshold
+            first_indices = [
+                np.argmax(self.shell_indices == ind)
+                for ind in np.arange(self.shell_indices.max() + 1)]
+            self.shell_qvalues = self.qvalues[first_indices]
+            self.shell_gradient_strengths = (
+                self.gradient_strengths[first_indices])
+            self.shell_delta = self.delta[first_indices]
+            self.shell_Delta = self.Delta[first_indices]
+        else:
+            self.shell_bvalues = self.bvalues
+            self.shell_indices = np.r_[int(0)]
+            if self.shell_bvalues > b0_threshold:
+                self.shell_b0_mask = np.r_[False]
+            else:
+                self.shell_b0_mask = np.r_[True]
+            self.shell_qvalues = self.qvalues
+            self.shell_gradient_strengths = self.gradient_strengths
+            self.shell_delta = self.delta
+            self.shell_Delta = self.Delta
+
         self.number_of_b0s = np.sum(self.b0_mask)
 
+        self.unique_dwi_indices = np.unique(self.shell_indices[~self.b0_mask])
         self.shell_sh_matrices = {}
-        for shell_index in np.arange(1, self.shell_indices.max() + 1):
+        for shell_index in self.unique_dwi_indices:
             shell_mask = self.shell_indices == shell_index
-            self.shell_bvalues[shell_index] = np.mean(bvalues[shell_mask])
             bvecs_shell = self.gradient_directions[shell_mask]
             _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
             self.shell_sh_matrices[shell_index] = real_sym_sh_mrtrix(
@@ -44,45 +66,53 @@ class AcquisitionScheme:
 
 class SimpleAcquisitionSchemeRH:
 
-    def __init__(self, bvalue, gradient_directions, qvalue=None,
-                 delta=None, Delta=None, tau=None):
-        self.bvalues = np.tile(bvalue, len(gradient_directions))
-        if qvalue is not None:
-            self.qvalues = np.tile(qvalue, len(gradient_directions))
-        if delta is not None and Delta is not None:
-            self.delta = np.tile(delta, len(gradient_directions))
-            self.Delta = np.tile(Delta, len(gradient_directions))
-        if tau is not None:
-            self.tau = np.tile(tau, len(gradient_directions))
+    def __init__(self, bvalue, gradient_directions, delta=None, Delta=None):
+        Ndata = len(gradient_directions)
+        self.bvalues = np.tile(bvalue, Ndata)
         self.gradient_directions = gradient_directions
+        self.b0_mask = np.tile(False, Ndata)
+        if delta is not None and Delta is not None:
+            self.delta = np.tile(delta, Ndata)
+            self.Delta = np.tile(Delta, Ndata)
+            self.tau = self.Delta - self.delta / 3.0
+            self.qvalues = np.tile(q_from_b(bvalue, delta, Delta), Ndata)
+            self.gradient_strengths = (
+                np.tile(g_from_b(bvalue, delta, Delta), Ndata)
+            )
 
 
 def acquisition_scheme_from_bvalues(
-        bvalues, gradient_directions, delta, Delta):
+        bvalues, gradient_directions, delta, Delta,
+        min_b_shell_distance=50e6, b0_threshold=0.):
     delta_, Delta_ = unify_length_reference_delta_Delta(bvalues, delta, Delta)
     qvalues = q_from_b(bvalues, delta_, Delta_)
     gradient_strengths = g_from_b(bvalues, delta_, Delta_)
     return AcquisitionScheme(bvalues, gradient_directions, qvalues,
-                             gradient_strengths, delta_, Delta_)
+                             gradient_strengths, delta_, Delta_,
+                             min_b_shell_distance, b0_threshold)
 
 
 def acquisition_scheme_from_qvalues(
-        qvalues, gradient_directions, delta, Delta):
+        qvalues, gradient_directions, delta, Delta,
+        min_b_shell_distance=50e6, b0_threshold=0.):
     delta_, Delta_ = unify_length_reference_delta_Delta(qvalues, delta, Delta)
     bvalues = b_from_q(qvalues, delta, Delta)
     gradient_strengths = g_from_q(qvalues, delta)
     return AcquisitionScheme(bvalues, gradient_directions, qvalues,
-                             gradient_strengths, delta_, Delta_)
+                             gradient_strengths, delta_, Delta_,
+                             min_b_shell_distance, b0_threshold)
 
 
 def acquisition_scheme_from_gradient_strengths(
-        gradient_strengths, gradient_directions, delta, Delta):
+        gradient_strengths, gradient_directions, delta, Delta,
+        min_b_shell_distance=50e6, b0_threshold=0.):
     delta_, Delta_ = unify_length_reference_delta_Delta(gradient_strengths,
                                                         delta, Delta)
     bvalues = b_from_g(gradient_strengths, delta, Delta)
     qvalues = q_from_g(gradient_strengths, delta)
     return AcquisitionScheme(bvalues, gradient_directions, qvalues,
-                             gradient_strengths, delta_, Delta_)
+                             gradient_strengths, delta_, Delta_,
+                             min_b_shell_distance, b0_threshold)
 
 
 def unify_length_reference_delta_Delta(reference_array, delta, Delta):
