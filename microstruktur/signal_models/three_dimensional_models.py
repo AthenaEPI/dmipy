@@ -11,17 +11,16 @@ from itertools import chain
 import numpy as np
 from scipy.special import erf
 from scipy import stats
-from scipy import integrate
 from scipy import special
 from scipy.optimize import minimize
 from dipy.reconst.shm import real_sym_sh_mrtrix
 
 from . import utils
-from .free_diffusion import free_diffusion_attenuation
 from ..signal_models.gradient_conversions import g_from_b, q_from_b
 from . import CONSTANTS
 from ..signal_models.spherical_convolution import kernel_sh_to_rh
 from .spherical_mean import estimate_spherical_mean_multi_shell
+from ..acquisition_scheme.acquisition_scheme import SimpleAcquisitionSchemeRH
 
 SPHERICAL_INTEGRATOR = utils.SphericalIntegrator()
 GRADIENT_TABLES_PATH = pkg_resources.resource_filename(
@@ -32,7 +31,7 @@ SPHERE_CARTESIAN = np.loadtxt(
 )
 SPHERE_SPHERICAL = utils.cart2sphere(SPHERE_CARTESIAN)
 inverse_rh_matrix_kernel = {
-    rh_order : np.linalg.pinv(real_sym_sh_mrtrix(
+    rh_order: np.linalg.pinv(real_sym_sh_mrtrix(
         rh_order, SPHERE_SPHERICAL[:, 1], SPHERE_SPHERICAL[:, 2]
     )[0]) for rh_order in np.arange(0, 15, 2)
 }
@@ -124,25 +123,17 @@ class MicrostrukturModel:
             parameter_vector = np.concatenate(parameter_vector, axis=-1)
         return parameter_vector
 
-    def objective_function(
-        self, parameter_vector,
-        bvals=None, n=None, attenuation=None,
-        shell_indices=None, delta=None, Delta=None
-    ):
+    def objective_function(self, parameter_vector, data, acquisition_scheme):
         scaling = np.hstack([scale for parameter, scale in
                              self.parameter_scales.items()])
         parameter_vector = parameter_vector * scaling
         parameters = {}
-        parameters['shell_indices'] = shell_indices
-        parameters['delta'] = delta
-        parameters['Delta'] = Delta
         parameters.update(
             self.parameter_vector_to_parameters(parameter_vector)
         )
-
-        E_model = self(bvals, n, **parameters)
-        E_diff = E_model - attenuation
-        objective = np.sum(E_diff ** 2) / len(attenuation)
+        E_model = self(acquisition_scheme, **parameters)
+        E_diff = E_model - data
+        objective = np.sum(E_diff ** 2) / len(data)
 
         # todo analytic jacobian... 2(objective)D model(parameter)/D parameter
         return objective
@@ -159,8 +150,7 @@ class MicrostrukturModel:
                     bounds.append((range_[0][i], range_[1][i]))
         return bounds
 
-    def simulate_signal(self, bvals, n, x0, shell_indices=None,
-                        delta=None, Delta=None):
+    def simulate_signal(self, acquisition_scheme, model_parameters_array):
         """ Function to simulate diffusion data using the defined
         microstructure model and acquisition parameters.
 
@@ -194,26 +184,24 @@ class MicrostrukturModel:
             array the same size as x0.
             The simulated signal of the microstructure model.
         """
-        utils.check_bvals_n_shell_indices_delta_Delta(
-            bvals, n, shell_indices, delta, Delta)
+        Ndata = acquisition_scheme.number_of_measurements
+        x0 = model_parameters_array
 
         x0_at_least_2d = np.atleast_2d(x0)
         x0_2d = x0_at_least_2d.reshape(-1, x0_at_least_2d.shape[-1])
-        E_2d = np.empty(np.r_[x0_2d.shape[:-1], len(bvals)])
+        E_2d = np.empty(np.r_[x0_2d.shape[:-1], Ndata])
         for i, x0_ in enumerate(x0_2d):
             parameters = self.parameter_vector_to_parameters(x0_)
-            E_2d[i] = self(bvals, n, shell_indices=shell_indices,
-                           delta=delta, Delta=Delta, **parameters)
+            E_2d[i] = self(acquisition_scheme, **parameters)
         E_simulated = E_2d.reshape(
-            np.r_[x0_at_least_2d.shape[:-1], len(bvals)])
+            np.r_[x0_at_least_2d.shape[:-1], Ndata])
 
         if x0.ndim == 1:
             return np.squeeze(E_simulated)
         else:
             return E_simulated
 
-    def fit(self, data, bvals, n, x0,
-            shell_indices=None, delta=None, Delta=None):
+    def fit(self, data, acquisition_scheme, model_initial_condition_array):
         """ The data fitting function of a multi-compartment model.
 
         Parameters
@@ -249,10 +237,9 @@ class MicrostrukturModel:
             array the same size as the data.
             The fitted parameters of the microstructure model.
         """
-
-        utils.check_bvals_n_shell_indices_delta_Delta(
-            bvals, n, shell_indices, delta, Delta)
-
+        x0 = model_initial_condition_array
+        n = acquisition_scheme.gradient_directions
+        shell_indices = acquisition_scheme.shell_indices
         data_at_least_2d = np.atleast_2d(data)
         x0_at_least_2d = np.atleast_2d(x0)
         if x0.ndim == 1 and data.ndim > 1:
@@ -281,18 +268,13 @@ class MicrostrukturModel:
                 voxel_data_spherical_mean = (
                     estimate_spherical_mean_multi_shell(voxel_data, n,
                                                         shell_indices))
-                shell_bvals = (
-                    np.r_[[np.mean(bvals[shell_indices == j])
-                           for j in np.unique(shell_indices)[1:]]]
-                )
                 res_ = minimize(self.objective_function, voxel_x0,
-                                (shell_bvals, n, voxel_data_spherical_mean,
-                                 shell_indices, delta, Delta),
+                                (voxel_data_spherical_mean,
+                                 acquisition_scheme),
                                 bounds=self.bounds_for_optimization)
             else:
                 res_ = minimize(self.objective_function, voxel_x0,
-                                (bvals, n, voxel_data,
-                                 shell_indices, delta, Delta),
+                                (voxel_data, acquisition_scheme),
                                 bounds=self.bounds_for_optimization)
             fitted_parameters[idx] = res_.x
         fitted_parameters *= scaling
@@ -474,7 +456,7 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
                 parameters[parameter_name] = parameter_function()
         return parameters
 
-    def __call__(self, bvals, n, **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         values = 0
         kwargs = self.add_linked_parameters_to_parameters(
             kwargs
@@ -510,7 +492,7 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
 
             values = (
                 values +
-                current_partial_volume * model(bvals, n,
+                current_partial_volume * model(acquisition_scheme,
                                                **parameters)
             )
         return values
@@ -551,7 +533,7 @@ class I1Stick(MicrostrukturModel):
         self.mu = mu
         self.lambda_par = lambda_par
 
-    def __call__(self, bvals, n, **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         r'''
         Parameters
         ----------
@@ -565,6 +547,8 @@ class I1Stick(MicrostrukturModel):
         attenuation : float or array, shape(N),
             signal attenuation
         '''
+        bvals = acquisition_scheme.bvalues
+        n = acquisition_scheme.gradient_directions
 
         lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
@@ -572,7 +556,7 @@ class I1Stick(MicrostrukturModel):
         E_stick = np.exp(-bvals * lambda_par_ * np.dot(n, mu) ** 2)
         return E_stick
 
-    def rotational_harmonics_representation(self, bval, rh_order=14, **kwargs):
+    def rotational_harmonics_representation(self, bval, rh_order=14):
         r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernelfor spherical
         convolution.
@@ -590,12 +574,9 @@ class I1Stick(MicrostrukturModel):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
-        lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
-
-        E_kernel_sf = self(
-            np.r_[bval], SPHERE_CARTESIAN,
-            mu=np.r_[0., 0.], lambda_par=lambda_par_
-        )
+        simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(bval,
+                                                         SPHERE_CARTESIAN)
+        E_kernel_sf = self(simple_acq_scheme_rh, mu=np.r_[0., 0.])
         sh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         rh = kernel_sh_to_rh(sh, rh_order)
         return rh
@@ -659,7 +640,7 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
              (2 * np.pi * q * radius) ** 2)
         return E
 
-    def __call__(self, bvals, n, delta=None, Delta=None, **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         r'''
         Parameters
         ----------
@@ -677,10 +658,10 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
         attenuation : float or array, shape(N),
             signal attenuation
         '''
-        if (
-            delta is None or Delta is None
-        ):
-            raise ValueError('This class needs non-None delta and Delta')
+        bvals = acquisition_scheme.bvalues
+        n = acquisition_scheme.gradient_directions
+        q = acquisition_scheme.qvalues
+
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
@@ -692,9 +673,6 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
             axis=0
         )
         E_parallel = np.exp(-bvals * lambda_par_ * magnitude_parallel ** 2)
-        q = q_from_b(
-            bvals, delta, Delta
-        )
         E_perpendicular = np.ones_like(q)
         q_perp = q * magnitude_perpendicular
         q_nonzero = q_perp > 0  # only q>0 attenuate
@@ -726,10 +704,6 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
-        if (
-            delta is None or Delta is None
-        ):
-            raise ValueError('This class needs non-None delta and Delta')
         diameter_ = kwargs.get('diameter', self.diameter)
         lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
         bvals = np.tile(bval, SPHERE_CARTESIAN.shape[0])
@@ -841,7 +815,7 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
                 res += update
         return res
 
-    def __call__(self, bvals, n, delta=None, Delta=None, **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         r'''
         Parameters
         ----------
@@ -859,10 +833,12 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
         attenuation : float or array, shape(N),
             signal attenuation
         '''
-        if (
-            delta is None or Delta is None
-        ):
-            raise ValueError('This class needs non-None delta and Delta')
+        bvals = acquisition_scheme.bvalues
+        n = acquisition_scheme.gradient_directions
+        q = acquisition_scheme.qvalues
+        tau = acquisition_scheme.tau
+        dwi_mask = not acquisition_scheme.b0_mask
+
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
@@ -874,15 +850,10 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
             axis=0
         )
         E_parallel = np.exp(-bvals * lambda_par_ * magnitude_parallel ** 2)
-        q = q_from_b(
-            bvals, delta, Delta
-        )
-        tau = Delta - delta / 3.
         E_perpendicular = np.ones_like(q)
         q_perp = q * magnitude_perpendicular
-        q_nonzero = q_perp > 0  # only q>0 attenuate
-        E_perpendicular[q_nonzero] = self.perpendicular_attenuation(
-            q_perp[q_nonzero], tau[q_nonzero], diameter
+        E_perpendicular[dwi_mask] = self.perpendicular_attenuation(
+            q_perp[dwi_mask], tau[dwi_mask], diameter
         )
         return E_parallel * E_perpendicular
 
@@ -1005,7 +976,7 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
 
         return E
 
-    def __call__(self, bvals, n, delta=None, Delta=None, **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         r'''
         Parameters
         ----------
@@ -1023,10 +994,13 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
         attenuation : float or array, shape(N),
             signal attenuation
         '''
-        if (
-            delta is None or Delta is None
-        ):
-            raise ValueError('This class needs non-None delta and Delta')
+        bvals = acquisition_scheme.bvalues
+        n = acquisition_scheme.gradient_directions
+        g = acquisition_scheme.gradient_strengths
+        delta = acquisition_scheme.delta
+        Delta = acquisition_scheme.Delta
+        dwi_mask = not acquisition_scheme.b0_mask
+
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
@@ -1038,13 +1012,8 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
             axis=0
         )
         E_parallel = np.exp(-bvals * lambda_par_ * magnitude_parallel ** 2)
-        g = g_from_b(
-            bvals, delta, Delta,
-            gyromagnetic_ratio=self.gyromagnetic_ratio
-        )
         E_perpendicular = np.ones_like(g)
         g_perp = g * magnitude_perpendicular
-        g_nonzero = g_perp > 0  # only q>0 attenuate
 
         # select unique delta, Delta combinations
         deltas = np.c_[delta, Delta]
@@ -1057,7 +1026,7 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
 
         # for every unique combination get the perpendicular attenuation
         for delta_, Delta_ in deltas_unique:
-            mask = np.all([g_nonzero, delta == delta_, Delta == Delta_],
+            mask = np.all([dwi_mask, delta == delta_, Delta == Delta_],
                           axis=0)
             E_perpendicular[mask] = self.perpendicular_attenuation(
                 g_perp[mask], delta_, Delta_, diameter
@@ -1136,7 +1105,7 @@ class I1StickSphericalMean(MicrostrukturModel):
     def __init__(self, mu=None, lambda_par=None):
         self.lambda_par = lambda_par
 
-    def __call__(self, bvals, n=None, **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         """
         Parameters
         ----------
@@ -1148,7 +1117,10 @@ class I1StickSphericalMean(MicrostrukturModel):
         E_mean : float,
             spherical mean of the Stick model.
         """
+        bvals = acquisition_scheme.shell_bvalues
+
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
+
         E_mean = np.ones_like(bvals)
         bval_indices_above0 = bvals > 0
         bvals_ = bvals[bval_indices_above0]
@@ -1198,7 +1170,7 @@ class E4ZeppelinSphericalMean(MicrostrukturModel):
         self.lambda_par = lambda_par
         self.lambda_perp = lambda_perp
 
-    def __call__(self, bvals, n=None, **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         """
         Parameters
         ----------
@@ -1210,6 +1182,7 @@ class E4ZeppelinSphericalMean(MicrostrukturModel):
         E_mean : float,
             spherical mean of the Zeppelin model.
         """
+        bvals = acquisition_scheme.shell_bvalues
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
 
@@ -1276,7 +1249,7 @@ class E5RestrictedZeppelinSphericalMean(MicrostrukturModel):
         self.lambda_inf = lambda_inf
         self.A = A
 
-    def __call__(self, bvals, n=None, delta=None, Delta=None, **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         """
         Parameters
         ----------
@@ -1292,6 +1265,9 @@ class E5RestrictedZeppelinSphericalMean(MicrostrukturModel):
         E_mean : float,
             spherical mean of the Zeppelin model.
         """
+        bvals = acquisition_scheme.shell_bvalues
+        delta = acquisition_scheme.shell_delta
+        Delta = acquisition_scheme.shell_Delta
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         lambda_inf = kwargs.get('lambda_inf', self.lambda_inf)
         A = kwargs.get('A', self.A)
@@ -1329,7 +1305,7 @@ class E2Dot(MicrostrukturModel):
     def __init__(self, dummy=None):
         self.dummy = dummy
 
-    def __call__(self, bvals, n=None, **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         r'''
         Parameters
         ----------
@@ -1344,7 +1320,7 @@ class E2Dot(MicrostrukturModel):
             signal attenuation
         '''
 
-        E_dot = np.ones(bvals.shape[0])
+        E_dot = np.ones(acquisition_scheme.number_of_measurements)
         return E_dot
 
 
@@ -1375,7 +1351,7 @@ class E3Ball(MicrostrukturModel):
     def __init__(self, lambda_iso=None):
         self.lambda_iso = lambda_iso
 
-    def __call__(self, bvals, n=None, **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         r'''
         Parameters
         ----------
@@ -1387,7 +1363,7 @@ class E3Ball(MicrostrukturModel):
         attenuation : float or array, shape(N),
             signal attenuation
         '''
-
+        bvals = acquisition_scheme.bvalues
         lambda_iso = kwargs.get('lambda_iso', self.lambda_iso)
         E_ball = np.exp(-bvals * lambda_iso)
         return E_ball
@@ -1437,7 +1413,7 @@ class E4Zeppelin(MicrostrukturModel):
         self.lambda_par = lambda_par
         self.lambda_perp = lambda_perp
 
-    def __call__(self, bvals, n, **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         r'''
         Parameters
         ----------
@@ -1451,7 +1427,8 @@ class E4Zeppelin(MicrostrukturModel):
         attenuation : float or array, shape(N),
             signal attenuation
         '''
-
+        bvals = acquisition_scheme.bvalues
+        n = acquisition_scheme.gradient_directions
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
         mu = kwargs.get('mu', self.mu)
@@ -1542,7 +1519,7 @@ class E5RestrictedZeppelin(MicrostrukturModel):
         self.lambda_inf = lambda_inf
         self.A = A
 
-    def __call__(self, bvals, n, delta=None, Delta=None, **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         r'''
         Parameters
         ----------
@@ -1560,6 +1537,10 @@ class E5RestrictedZeppelin(MicrostrukturModel):
         attenuation : float or array, shape(N),
             signal attenuation
         '''
+        bvals = acquisition_scheme.bvalues
+        n = acquisition_scheme.gradient_directions
+        delta = acquisition_scheme.delta
+        Delta = acquisition_scheme.Delta
 
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         lambda_inf = kwargs.get('lambda_inf', self.lambda_inf)

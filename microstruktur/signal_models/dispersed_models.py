@@ -66,7 +66,7 @@ class SD2I1BinghamDispersedStick(MicrostrukturModel):
         self.kappa = kappa
         self.beta = beta
 
-    def __call__(self, bvals, n, shell_indices=None, **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         r'''
         Parameters
         ----------
@@ -80,36 +80,32 @@ class SD2I1BinghamDispersedStick(MicrostrukturModel):
         attenuation : float or array, shape(N),
             signal attenuation
         '''
+        shell_indices = acquisition_scheme.shell_indices
+
         sh_order = WATSON_SH_ORDER
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
         psi = kwargs.get('psi', self.psi)
         kappa = kwargs.get('kappa', self.kappa)
         beta = kwargs.get('beta', self.beta)
-        if shell_indices is None:
-            msg = "argument shell_indices is needed"
-            raise ValueError(msg)
 
         bingham = three_dimensional_models.SD2Bingham(mu=mu, psi=psi,
                                                       kappa=kappa, beta=beta)
-        sh_bingham = bingham.spherical_harmonics_representation()
+        sh_bingham = bingham.spherical_harmonics_representation(sh_order)
         stick = three_dimensional_models.I1Stick(mu=mu, lambda_par=lambda_par)
 
-        E = np.ones_like(bvals)
+        E = np.ones(acquisition_scheme.number_of_measurements)
         for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell
-            bval_mask = shell_indices == shell_index
-            bvecs_shell = n[bval_mask]  # what bvecs in that shell
-            bval_mean = bvals[bval_mask].mean()
-            _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
-            sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
-
+            shell_mask = shell_indices == shell_index
+            sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
+            shell_bval = acquisition_scheme.shell_bvalues[shell_index]
             # rotational harmonics of stick
             rh_stick = stick.rotational_harmonics_representation(
-                bval=bval_mean)
+                bval=shell_bval, rh_order=sh_order)
             # convolving micro-environment with bingham distribution
             E_dispersed_sh = sh_convolution(sh_bingham, rh_stick, sh_order)
             # recover signal values from bingham-convolved spherical harmonics
-            E[bval_mask] = np.dot(sh_mat, E_dispersed_sh)
+            E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
         return E
 
 
