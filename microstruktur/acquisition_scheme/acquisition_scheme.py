@@ -1,10 +1,10 @@
 import numpy as np
 from microstruktur.signal_models.gradient_conversions import (
-    g_from_b, q_from_b, b_from_q, g_from_q, b_from_g, q_from_g
-)
+    g_from_b, q_from_b, b_from_q, g_from_q, b_from_g, q_from_g)
 from microstruktur.signal_models import utils
 from dipy.reconst.shm import real_sym_sh_mrtrix
 from scipy.cluster.hierarchy import fcluster, linkage
+from warnings import warn
 
 sh_order = 14
 
@@ -62,6 +62,27 @@ class AcquisitionScheme:
             _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
             self.shell_sh_matrices[shell_index] = real_sym_sh_mrtrix(
                 sh_order, theta_, phi_)[0]
+        if sum(self.b0_mask) == 0:
+            msg = "No b0 measurements were detected. Check if the b0_threshold"
+            msg += " option is high enough, or if there is a mistake in the "
+            msg += "acquisition design."
+            warn(msg)
+
+    def print_acquisition_info(self):
+        print "Acquisition scheme summary\n"
+        print "total number of measurements: {}".format(
+            self.number_of_measurements)
+        print "number of b0 measurements: {}".format(self.number_of_b0s)
+        print "number of DWI shells: {}\n".format(np.sum(~self.shell_b0_mask))
+        upper_line = "shell_index |# of DWIs |bvalue [s/mm^2] "
+        upper_line += "|gradient strength [mT/m] |delta [ms] |Delta[ms]"
+        print upper_line
+        for ind in np.arange(max(self.shell_indices) + 1):
+            print "{: <12}|{: <10}|{: <16}|{: <25}|{: <11}|{: <5}".format(
+                str(ind), sum(self.shell_indices == ind),
+                int(self.shell_bvalues[ind] / 1e6),
+                int(1e3 * self.shell_gradient_strengths[ind]),
+                self.shell_delta[ind] * 1e3, self.shell_Delta[ind] * 1e3)
 
 
 class SimpleAcquisitionSchemeRH:
@@ -83,7 +104,7 @@ class SimpleAcquisitionSchemeRH:
 
 def acquisition_scheme_from_bvalues(
         bvalues, gradient_directions, delta, Delta,
-        min_b_shell_distance=50e6, b0_threshold=0.):
+        min_b_shell_distance=50e6, b0_threshold=10e6):
     delta_, Delta_ = unify_length_reference_delta_Delta(bvalues, delta, Delta)
     qvalues = q_from_b(bvalues, delta_, Delta_)
     gradient_strengths = g_from_b(bvalues, delta_, Delta_)
@@ -94,7 +115,7 @@ def acquisition_scheme_from_bvalues(
 
 def acquisition_scheme_from_qvalues(
         qvalues, gradient_directions, delta, Delta,
-        min_b_shell_distance=50e6, b0_threshold=0.):
+        min_b_shell_distance=50e6, b0_threshold=10e6):
     delta_, Delta_ = unify_length_reference_delta_Delta(qvalues, delta, Delta)
     bvalues = b_from_q(qvalues, delta, Delta)
     gradient_strengths = g_from_q(qvalues, delta)
@@ -105,7 +126,7 @@ def acquisition_scheme_from_qvalues(
 
 def acquisition_scheme_from_gradient_strengths(
         gradient_strengths, gradient_directions, delta, Delta,
-        min_b_shell_distance=50e6, b0_threshold=0.):
+        min_b_shell_distance=50e6, b0_threshold=10e6):
     delta_, Delta_ = unify_length_reference_delta_Delta(gradient_strengths,
                                                         delta, Delta)
     bvalues = b_from_g(gradient_strengths, delta, Delta)
