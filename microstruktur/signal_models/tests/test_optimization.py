@@ -2,7 +2,7 @@ from os.path import join
 from microstruktur.signal_models import (
     three_dimensional_models)
 from microstruktur.signal_models.utils import (
-    T1_tortuosity, parameter_equality, define_shell_indices
+    T1_tortuosity, parameter_equality
 )
 from numpy.testing import (
     assert_equal, assert_array_almost_equal, assert_array_equal)
