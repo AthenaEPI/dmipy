@@ -311,7 +311,7 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
 
     def __init__(
         self, models, partial_volumes=None,
-        parameter_links=[], optimise_partial_volumes=False
+        parameter_links=[], optimise_partial_volumes=True
     ):
         self.models = models
         self.partial_volumes = partial_volumes
