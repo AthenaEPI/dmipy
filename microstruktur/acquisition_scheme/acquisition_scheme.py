@@ -205,7 +205,7 @@ def acquisition_scheme_from_gradient_strengths(
         gradient_strengths, gradient_directions, delta, Delta,
         min_b_shell_distance=50e6, b0_threshold=10e6):
     r"""
-    Creates an acquisition scheme object from gradient strengths, gradient 
+    Creates an acquisition scheme object from gradient strengths, gradient
     directions pulse duration $\delta$ and pulse separation time $\Delta$.
 
     Parameters
@@ -303,6 +303,12 @@ def calculate_shell_bvalues_and_indices(bvalues, max_distance=50e6):
 def check_scheme_from_bvalues(
         bvalues, gradient_directions, delta, Delta):
     "function to check the validity of the input parameters."
+    if bvalues.ndim > 1:
+        msg = "bvalues must be a one-dimensional array. "
+        msg += "Currently its dimensions is {}.".format(
+            bvalues.ndim
+        )
+        raise ValueError(msg)
     if len(bvalues) != len(gradient_directions):
         msg = "bvalues and gradient_directions must have the same length. "
         msg += "Currently their lengths are {} and {}.".format(
@@ -325,12 +331,6 @@ def check_scheme_from_bvalues(
         msg = "delta and Delta must be zero or positive. "
         msg += "Currently their minimum values are {} and {}.".format(
             np.min(delta), np.min(Delta)
-        )
-        raise ValueError(msg)
-    if bvalues.ndim > 1:
-        msg = "bvalues must be a one-dimensional array. "
-        msg += "Currently its dimensions is {}.".format(
-            bvalues.ndim
         )
         raise ValueError(msg)
     if gradient_directions.ndim != 2 or gradient_directions.shape[1] != 3:
