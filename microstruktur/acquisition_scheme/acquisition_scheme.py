@@ -18,7 +18,6 @@ class AcquisitionScheme:
     def __init__(self, bvalues, gradient_directions, qvalues,
                  gradient_strengths, delta, Delta,
                  min_b_shell_distance, b0_threshold):
-        check_scheme_from_bvalues(bvalues, gradient_directions, delta, Delta)
         self.min_b_shell_distance = min_b_shell_distance
         self.b0_threshold = b0_threshold
         self.bvalues = bvalues
@@ -153,6 +152,7 @@ def acquisition_scheme_from_bvalues(
         microstructure model.
     """
     delta_, Delta_ = unify_length_reference_delta_Delta(bvalues, delta, Delta)
+    check_acquisition_scheme(bvalues, gradient_directions, delta_, Delta_)
     qvalues = q_from_b(bvalues, delta_, Delta_)
     gradient_strengths = g_from_b(bvalues, delta_, Delta_)
     return AcquisitionScheme(bvalues, gradient_directions, qvalues,
@@ -194,6 +194,7 @@ def acquisition_scheme_from_qvalues(
         microstructure model.
     """
     delta_, Delta_ = unify_length_reference_delta_Delta(qvalues, delta, Delta)
+    check_acquisition_scheme(qvalues, gradient_directions, delta_, Delta_)
     bvalues = b_from_q(qvalues, delta, Delta)
     gradient_strengths = g_from_q(qvalues, delta)
     return AcquisitionScheme(bvalues, gradient_directions, qvalues,
@@ -236,6 +237,8 @@ def acquisition_scheme_from_gradient_strengths(
     """
     delta_, Delta_ = unify_length_reference_delta_Delta(gradient_strengths,
                                                         delta, Delta)
+    check_acquisition_scheme(gradient_strengths, gradient_directions,
+                             delta_, Delta_)
     bvalues = b_from_g(gradient_strengths, delta, Delta)
     qvalues = q_from_g(gradient_strengths, delta)
     return AcquisitionScheme(bvalues, gradient_directions, qvalues,
@@ -300,25 +303,25 @@ def calculate_shell_bvalues_and_indices(bvalues, max_distance=50e6):
     return shell_indices, shell_bvalues
 
 
-def check_scheme_from_bvalues(
-        bvalues, gradient_directions, delta, Delta):
+def check_acquisition_scheme(
+        bqg_values, gradient_directions, delta, Delta):
     "function to check the validity of the input parameters."
-    if bvalues.ndim > 1:
-        msg = "bvalues must be a one-dimensional array. "
+    if bqg_values.ndim > 1:
+        msg = "b/q/G input must be a one-dimensional array. "
         msg += "Currently its dimensions is {}.".format(
-            bvalues.ndim
+            bqg_values.ndim
         )
         raise ValueError(msg)
-    if len(bvalues) != len(gradient_directions):
-        msg = "bvalues and gradient_directions must have the same length. "
+    if len(bqg_values) != len(gradient_directions):
+        msg = "b/q/G input and gradient_directions must have the same length. "
         msg += "Currently their lengths are {} and {}.".format(
-            len(bvalues), len(gradient_directions)
+            len(bqg_values), len(gradient_directions)
         )
         raise ValueError(msg)
-    if len(bvalues) != len(delta) or len(bvalues) != len(Delta):
-        msg = "bvalues, delta and Delta must have the same length. "
+    if len(bqg_values) != len(delta) or len(bqg_values) != len(Delta):
+        msg = "b/q/G input, delta and Delta must have the same length. "
         msg += "Currently their lengths are {}, {} and {}.".format(
-            len(bvalues), len(delta), len(Delta)
+            len(bqg_values), len(delta), len(Delta)
         )
         raise ValueError(msg)
     if delta.ndim > 1 or Delta.ndim > 1:
@@ -334,12 +337,13 @@ def check_scheme_from_bvalues(
         )
         raise ValueError(msg)
     if gradient_directions.ndim != 2 or gradient_directions.shape[1] != 3:
-        msg = "b-vectors n must be two dimensional array of shape [N, 3]. "
-        msg += "Currently its shape is {}.".format(gradient_directions.shape)
+        msg = "gradient_directions n must be two dimensional array of shape "
+        msg += "[N, 3]. Currently its shape is {}.".format(
+            gradient_directions.shape)
         raise ValueError(msg)
-    if np.min(bvalues) < 0.:
-        msg = "bvalues must be zero or positive. "
-        msg += "Minimum value found is {}.".format(bvalues.min())
+    if np.min(bqg_values) < 0.:
+        msg = "b/q/G input must be zero or positive. "
+        msg += "Minimum value found is {}.".format(bqg_values.min())
         raise ValueError(msg)
     if not np.all(
             abs(np.linalg.norm(gradient_directions, axis=1) - 1.) < 0.001):
