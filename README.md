@@ -1,6 +1,6 @@
 # microstruktur Toolbox
 
-This microstructure toolbox unifies most state-of-the-art Microstructure Imaging approaches dMRI using a "Building Block" philosophy. In this philosophy, any combination of biophysical models can be combined into a Microstructure Model, and can both be used to simulate dMRI data for any acquisition scheme, and be fitted to any dataset to estimate relevant model parameters.
+This microstructure toolbox unifies state-of-the-art dMRI Microstructure Imaging approaches using a "Building Block" philosophy. In this philosophy, any combination of biophysical models can be combined into a Microstructure Model, and can both be used to simulate dMRI data for any acquisition scheme, and be fitted to any dataset to estimate relevant model parameters.
 
 ## Installation
 - clone repository
