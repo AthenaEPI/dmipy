@@ -506,7 +506,7 @@ class I1Stick(MicrostrukturModel):
         theta is inclination of polar angle of main angle mu [0, pi].
         phi is polar angle of main angle mu [-pi, pi].
     lambda_par : float,
-        parallel diffusivity in 10^9 m^2/s.
+        parallel diffusivity in m^2/s.
 
     References
     ----------
@@ -534,10 +534,9 @@ class I1Stick(MicrostrukturModel):
         r'''
         Parameters
         ----------
-        bvals : float or array, shape(N),
-            b-values in s/m^2.
-        n : array, shape(N x 3),
-            b-vectors in cartesian coordinates.
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
 
         Returns
         -------
@@ -580,8 +579,8 @@ class I1Stick(MicrostrukturModel):
 
 
 class I2CylinderSodermanApproximation(MicrostrukturModel):
-    r""" Calculates the perpendicular diffusion signal E(q) in a cylinder of
-    radius R using the Soderman model [1]_. Assumes that the pulse length
+    r""" The Soderman model [1]_ - a cylinder with finite radius - for
+    intra-axonal diffusion. Assumes that the pulse length
     is infinitely short and the diffusion time is infinitely long.
 
     Parameters
@@ -591,9 +590,9 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
         theta is inclination of polar angle of main angle mu [0, pi].
         phi is polar angle of main angle mu [-pi, pi].
     lambda_par : float,
-        parallel diffusivity in 10^9 m^2/s.
+        parallel diffusivity in m^2/s.
     diameter : float,
-        axon (cylinder) diameter.
+        axon (cylinder) diameter in meters.
 
     Returns
     -------
@@ -641,14 +640,9 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
         r'''
         Parameters
         ----------
-        bvals : float or array, shape(N),
-            b-values in s/m^2.
-        n : array, shape(N x 3),
-            b-vectors in cartesian coordinates.
-        delta: float or array, shape (N),
-            delta parameter in seconds.
-        Delta: float or array, shape (N),
-            Delta parameter in seconds.
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
 
         Returns
         -------
@@ -689,9 +683,9 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
         bval : float,
             b-value in s/m^2.
         delta: float,
-            delta parameter in seconds.
+            pulse duration in seconds.
         Delta: float,
-            Delta parameter in seconds.
+            pulse separation in seconds.
         sh_order : int,
             maximum spherical harmonics order to be used in the approximation.
             set to 14 to conform with order used for watson distribution.
@@ -710,7 +704,7 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
 
 
 class I3CylinderCallaghanApproximation(MicrostrukturModel):
-    r""" The cylinder model [1] - a cylinder with given radius - for
+    r""" The Callaghan model [1]_ - a cylinder with finite radius - for
     intra-axonal diffusion. The perpendicular diffusion is modelled
     after Callaghan's solution for the disk.
 
@@ -721,17 +715,17 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
         theta is inclination of polar angle of main angle mu [0, pi].
         phi is polar angle of main angle mu [-pi, pi].
     lambda_par : float,
-        parallel diffusivity in 10^9 m^2/s.
+        parallel diffusivity in m^2/s.
     diameter : float,
         cylinder (axon) diameter in meters.
 
 
     References
     ----------
-    .. [1] Van Gelderen et al.
-           "Evaluation of Restricted Diffusion
-           in Cylinders. Phosphocreatine in Rabbit Leg Muscle"
-           Journal of Magnetic Resonance Series B (1994)
+    .. [1]_ Callaghan, Paul T. "Pulsed-gradient spin-echo NMR for planar,
+            cylindrical, and spherical pores under conditions of wall
+            relaxation." Journal of magnetic resonance, Series A 113.1 (1995):
+            53-59.
     """
 
     _parameter_ranges = {
@@ -810,14 +804,9 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
         r'''
         Parameters
         ----------
-        bvals : float or array, shape(N),
-            b-values in s/m^2.
-        n : array, shape(N x 3),
-            b-vectors in cartesian coordinates.
-        delta: array, shape (N),
-            delta parameter in seconds.
-        Delta: array, shape (N),
-            Delta parameter in seconds.
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
 
         Returns
         -------
@@ -881,7 +870,7 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
 
 
 class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
-    r""" The cylinder model [1] - a cylinder with given radius - for
+    r""" The Gaussian phase model [1]_ - a cylinder with finite radius - for
     intra-axonal diffusion. The perpendicular diffusion is modelled
     after Van Gelderen's solution for the disk.
 
@@ -899,10 +888,9 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
 
     References
     ----------
-    .. [1] Van Gelderen et al.
-           "Evaluation of Restricted Diffusion
-           in Cylinders. Phosphocreatine in Rabbit Leg Muscle"
-           Journal of Magnetic Resonance Series B (1994)
+    .. [1]_ Van Gelderen et al. "Evaluation of Restricted Diffusion in
+            Cylinders. Phosphocreatine in Rabbit Leg Muscle"
+            Journal of Magnetic Resonance Series B (1994)
     """
 
     _parameter_ranges = {
@@ -962,14 +950,9 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
         r'''
         Parameters
         ----------
-        bvals : array, shape(N),
-            b-values in s/m^2.
-        n : array, shape(N x 3),
-            b-vectors in cartesian coordinates.
-        delta : array, shape (N),
-            delta parameter in seconds.
-        Delta : array, shape (N),
-            Delta parameter in seconds.
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
 
         Returns
         -------
@@ -1081,8 +1064,9 @@ class I1StickSphericalMean(MicrostrukturModel):
         """
         Parameters
         ----------
-        bvals : float or array, shape(number of shells)
-            b-value in s/m^2.
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
 
         Returns
         -------
@@ -1147,8 +1131,9 @@ class E4ZeppelinSphericalMean(MicrostrukturModel):
         """
         Parameters
         ----------
-        bvals : float or array, shape(number of shells)
-            b-value in s/m^2.
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
 
         Returns
         -------
@@ -1230,12 +1215,9 @@ class E5RestrictedZeppelinSphericalMean(MicrostrukturModel):
         """
         Parameters
         ----------
-        bvals : float or array, shape(number of shells)
-            b-value in s/m^2.
-        delta: float or array, shape(number of shells)
-            delta parameter in seconds.
-        Delta: float or array, shape(number of shells)
-            Delta parameter in seconds.
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
 
         Returns
         -------
@@ -1286,10 +1268,9 @@ class E2Dot(MicrostrukturModel):
         r'''
         Parameters
         ----------
-        bvals : float or array, shape(N),
-            b-values in s/m^2.
-        n : array, shape(N x 3),
-            b-vectors in cartesian coordinates.
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
 
         Returns
         -------
@@ -1332,8 +1313,9 @@ class E3Ball(MicrostrukturModel):
         r'''
         Parameters
         ----------
-        bvals : float or array, shape(N),
-            b-values in s/m^2.
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
 
         Returns
         -------
@@ -1394,10 +1376,9 @@ class E4Zeppelin(MicrostrukturModel):
         r'''
         Parameters
         ----------
-        bvals : float or array, shape(N),
-            b-values in s/m^2.
-        n : array, shape(N x 3),
-            b-vectors in cartesian coordinates.
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
 
         Returns
         -------
@@ -1496,14 +1477,9 @@ class E5RestrictedZeppelin(MicrostrukturModel):
         r'''
         Parameters
         ----------
-        bvals : array, shape(N),
-            b-values in s/m^2.
-        n : array, shape(N x 3),
-            b-vectors in cartesian coordinates.
-        delta : array, shape (N),
-            pulse duration in s.
-        Delta : array, shape (N),
-            pulse separation in s.
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
 
         Returns
         -------

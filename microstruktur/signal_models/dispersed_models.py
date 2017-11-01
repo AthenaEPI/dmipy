@@ -68,10 +68,9 @@ class SD2I1BinghamDispersedStick(MicrostrukturModel):
         r'''
         Parameters
         ----------
-        bvals : float or array, shape(N),
-            b-values in s/m^2.
-        n : array, shape(N x 3),
-            b-vectors in cartesian coordinates.
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
 
         Returns
         -------
@@ -173,18 +172,9 @@ class SD2I2BinghamDispersedSodermanCylinder(MicrostrukturModel):
         r"""
         Parameters
         ----------
-        bvals : array, shape(N),
-            b-values in s/m^2.
-        n : array, shape(N x 3),
-            b-vectors in cartesian coordinates.
-        delta : array, shape(N),
-            pulse duration in seconds.
-        Delta : array, shape(N),
-            pulse separation in seconds
-        shell_indices : array, shape(N),
-            array with integers reflecting to which acquisition shell a
-            measurement belongs. zero for b0 measurements, 1 for the first
-            shell, 2 for the second, etc.
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
 
         Returns
         -------
@@ -292,18 +282,9 @@ class SD2I3BinghamDispersedCallaghanCylinder(MicrostrukturModel):
         r"""
         Parameters
         ----------
-        bvals : array, shape(N),
-            b-values in s/m^2.
-        n : array, shape(N x 3),
-            b-vectors in cartesian coordinates.
-        delta : array, shape(N),
-            pulse duration in seconds.
-        Delta : array, shape(N),
-            pulse separation in seconds
-        shell_indices : array, shape(N),
-            array with integers reflecting to which acquisition shell a
-            measurement belongs. zero for b0 measurements, 1 for the first
-            shell, 2 for the second, etc.
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
 
         Returns
         -------
@@ -410,18 +391,9 @@ class SD2I4BinghamDispersedGaussianPhaseCylinder(MicrostrukturModel):
         r"""
         Parameters
         ----------
-        bvals : array, shape(N),
-            b-values in s/m^2.
-        n : array, shape(N x 3),
-            b-vectors in cartesian coordinates.
-        delta : array, shape(N),
-            pulse duration in seconds.
-        Delta : array, shape(N),
-            pulse separation in seconds
-        shell_indices : array, shape(N),
-            array with integers reflecting to which acquisition shell a
-            measurement belongs. zero for b0 measurements, 1 for the first
-            shell, 2 for the second, etc.
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
 
         Returns
         -------
@@ -508,10 +480,9 @@ class SD3I1WatsonDispersedStick(MicrostrukturModel):
         r'''
         Parameters
         ----------
-        bvals : float or array, shape(N),
-            b-values in s/mm^2.
-        n : array, shape(N x 3),
-            b-vectors in cartesian coordinates.
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
 
         Returns
         -------
@@ -597,18 +568,9 @@ class SD3I2WatsonDispersedSodermanCylinder(MicrostrukturModel):
         r"""
         Parameters
         ----------
-        bvals : array, shape(N),
-            b-values in s/m^2.
-        n : array, shape(N x 3),
-            b-vectors in cartesian coordinates.
-        delta : array, shape(N),
-            pulse duration in seconds.
-        Delta : array, shape(N),
-            pulse separation in seconds
-        shell_indices : array, shape(N),
-            array with integers reflecting to which acquisition shell a
-            measurement belongs. zero for b0 measurements, 1 for the first
-            shell, 2 for the second, etc.
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
 
         Returns
         -------
@@ -702,18 +664,9 @@ class SD3I3WatsonDispersedCallaghanCylinder(MicrostrukturModel):
         r"""
         Parameters
         ----------
-        bvals : array, shape(N),
-            b-values in s/m^2.
-        n : array, shape(N x 3),
-            b-vectors in cartesian coordinates.
-        delta : array, shape(N),
-            pulse duration in seconds.
-        Delta : array, shape(N),
-            pulse separation in seconds
-        shell_indices : array, shape(N),
-            array with integers reflecting to which acquisition shell a
-            measurement belongs. zero for b0 measurements, 1 for the first
-            shell, 2 for the second, etc.
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
 
         Returns
         -------
@@ -806,18 +759,9 @@ class SD3I4WatsonDispersedGaussianPhaseCylinder(MicrostrukturModel):
         r"""
         Parameters
         ----------
-        bvals : array, shape(N),
-            b-values in s/m^2.
-        n : array, shape(N x 3),
-            b-vectors in cartesian coordinates.
-        delta : array, shape(N),
-            pulse duration in seconds.
-        Delta : array, shape(N),
-            pulse separation in seconds
-        shell_indices : array, shape(N),
-            array with integers reflecting to which acquisition shell a
-            measurement belongs. zero for b0 measurements, 1 for the first
-            shell, 2 for the second, etc.
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
 
         Returns
         -------
@@ -919,14 +863,9 @@ class SD2E4BinghamDispersedZeppelin(MicrostrukturModel):
         r'''
         Parameters
         ----------
-        bvals : float or array, shape(N),
-            b-values in s/m^2.
-        n : array, shape(N x 3),
-            b-vectors in cartesian coordinates.
-        shell_indices : array, shape(N),
-            array with integers reflecting to which acquisition shell a
-            measurement belongs. zero for b0 measurements, 1 for the first
-            shell, 2 for the second, etc.
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
 
         Returns
         -------
@@ -1013,14 +952,9 @@ class SD3E4WatsonDispersedZeppelin(MicrostrukturModel):
         r'''
         Parameters
         ----------
-        bvals : float or array, shape(N),
-            b-values in s/mm^2.
-        n : array, shape(N x 3),
-            b-vectors in cartesian coordinates.
-        shell_indices : array, shape(N),
-            array with integers reflecting to which acquisition shell a
-            measurement belongs. zero for b0 measurements, 1 for the first
-            shell, 2 for the second, etc.
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
 
         Returns
         -------
@@ -1107,14 +1041,9 @@ class DD1I2GammaDistributedSodermanCylinder(MicrostrukturModel):
         r"""
         Parameters
         ----------
-        bvals : array, shape(N),
-            b-values in s/m^2.
-        n : array, shape(N x 3),
-            b-vectors in cartesian coordinates.
-        delta : array, shape(N),
-            pulse duration in seconds.
-        Delta : array, shape(N),
-            pulse separation in seconds
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
 
         Returns
         -------
@@ -1206,14 +1135,9 @@ class DD1I3GammaDistributedCallaghanCylinder(MicrostrukturModel):
         r"""
         Parameters
         ----------
-        bvals : array, shape(N),
-            b-values in s/m^2.
-        n : array, shape(N x 3),
-            b-vectors in cartesian coordinates.
-        delta : array, shape(N),
-            pulse duration in seconds.
-        Delta : array, shape(N),
-            pulse separation in seconds
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
 
         Returns
         -------
@@ -1304,14 +1228,9 @@ class DD1I4GammaDistributedGaussianPhaseCylinder(MicrostrukturModel):
         r"""
         Parameters
         ----------
-        bvals : array, shape(N),
-            b-values in s/m^2.
-        n : array, shape(N x 3),
-            b-vectors in cartesian coordinates.
-        delta : array, shape(N),
-            pulse duration in seconds.
-        Delta : array, shape(N),
-            pulse separation in seconds
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
 
         Returns
         -------
