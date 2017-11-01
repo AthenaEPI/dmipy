@@ -155,12 +155,9 @@ class MicrostrukturModel:
 
                 Parameters
         ----------
-        bvals : 1D array of size (N_data)
-            The corresponding b-values of the DWI measurements in [s/m^2].
-            For example, a DTI measurement at b-value 1000 s/mm^2 must be given
-            as 1e9 s/m^2.
-        n : 2D array of size (N_data, 3)
-            The corresponding gradient orientations as unit vectors.
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
         x0 : 1D array of size (N_parameters) or N-dimensional array the same
             size as the data.
             The model parameters of the microstructure model.
@@ -168,14 +165,6 @@ class MicrostrukturModel:
             every fitted voxel. If a higher-dimenensional array the same size
             as the data is given, then every voxel can possibly be given a
             different initial condition.
-        shell_indices : 1D integer array of size (N_data)
-            array of integers indicating to which acquisition shell each
-            measurement belongs. This array can be conveniently generated using
-            utils.define_shell_indices.
-        delta : 1D array of size (N_data)
-            The pulse duration for every DWI measurement in seconds.
-        Delta : 1D array of size (N_data)
-            The pulse separation for every DWI measurement in seconds.
 
         Returns
         -------
@@ -208,12 +197,9 @@ class MicrostrukturModel:
         data : N-dimensional array of size (N_x, N_y, ..., N_data),
             The measured DWI signal attenuation array of either a single voxel
             or an N-dimensional dataset.
-        bvals : 1D array of size (N_data)
-            The corresponding b-values of the DWI measurements in [s/m^2].
-            For example, a DTI measurement at b-value 1000 s/mm^2 must be given
-            as 1e9 s/m^2.
-        n : 2D array of size (N_data, 3)
-            The corresponding gradient orientations as unit vectors.
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
         x0 : 1D array of size (N_parameters) or N-dimensional array the same
             size as the data.
             The initial condition for the scipy minimize function.
@@ -221,14 +207,6 @@ class MicrostrukturModel:
             every fitted voxel. If a higher-dimenensional array the same size
             as the data is given, then every voxel can possibly be given a
             different initial condition.
-        shell_indices : 1D integer array of size (N_data)
-            array of integers indicating to which acquisition shell each
-            measurement belongs. This array can be conveniently generated using
-            utils.define_shell_indices.
-        delta : 1D array of size (N_data)
-            The pulse duration for every DWI measurement in seconds.
-        Delta : 1D array of size (N_data)
-            The pulse separation for every DWI measurement in seconds.
 
         Returns
         -------
