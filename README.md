@@ -7,7 +7,7 @@ This toolbox unifies state-of-the-art diffusion MRI Microstructure Imaging using
 - clone repository
 - python setup.py install
 
-## Getting Started (Done)
+## How to Get Started (Done)
 -  [Basic usage tutorial](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_basic_usage.ipynb).
 
 ## Explanations and Illustrations of Biophysical Models in the Toolbox (under construction)
