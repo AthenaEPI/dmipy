@@ -32,10 +32,28 @@ class AcquisitionScheme:
         self.tau = Delta - delta / 3.
         # if there are more then 1 measurement
         if self.number_of_measurements > 1:
-            self.shell_indices, self.shell_bvalues = (
-                calculate_shell_bvalues_and_indices(
-                    bvalues, min_b_shell_distance)
-            )
+            # we check if there are multiple unique delta-Delta combinations
+            deltas = np.c_[self.delta, self.Delta]
+            unique_deltas = np.unique(deltas, axis=0)
+            self.shell_indices = np.zeros(len(bvalues), dtype=int)
+            self.shell_bvalues = []
+            max_index = 0
+            # for every unique combination we separate shells based on bvalue
+            # reason for separation is that different combinations of
+            # delta and Delta can result in the same b-value, which could
+            # result in wrong classification of DWIs to unique shells.
+            for unique_deltas_ in unique_deltas:
+                delta_mask = np.all(deltas == unique_deltas_, axis=1)
+                masked_bvals = bvalues[delta_mask]
+                shell_indices_, shell_bvalues_ = (
+                    calculate_shell_bvalues_and_indices(
+                        masked_bvals, min_b_shell_distance)
+                )
+                self.shell_indices[delta_mask] = shell_indices_ + max_index
+                self.shell_bvalues.append(shell_bvalues_)
+                max_index = max(self.shell_indices + 1)
+            self.shell_bvalues = np.array(self.shell_bvalues).ravel()
+
             self.shell_b0_mask = self.shell_bvalues <= b0_threshold
             first_indices = [
                 np.argmax(self.shell_indices == ind)

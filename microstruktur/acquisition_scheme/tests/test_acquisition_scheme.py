@@ -139,3 +139,16 @@ def test_estimate_shell_indices():
         calculate_shell_bvalues_and_indices(
             bvalues, max_distance=max_distance))
     assert_array_equal(shell_indices, bvalues)
+
+
+def test_shell_indices_with_vayring_diffusion_times(Nsamples=10):
+    # tests whether measurements with the same bvalue but different diffusion
+    # time are correctly classified in different shells
+    bvalues = np.tile(1e9, Nsamples)
+    delta = 0.01
+    Delta = np.hstack([np.tile(0.01, len(bvalues) / 2),
+                       np.tile(0.03, len(bvalues) / 2)])
+    gradient_directions = np.tile(np.r_[1., 0., 0.], (Nsamples, 1))
+    scheme = acquisition_scheme_from_bvalues(
+        bvalues, gradient_directions, delta, Delta)
+    assert_equal(len(np.unique(scheme.shell_indices)), 2)
