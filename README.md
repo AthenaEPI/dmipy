@@ -1,4 +1,4 @@
-# Diffusion Microstructure Toolbox (DMT)
+# Universal Diffusion Microstructure Toolbox (UDMT)
 other possible names... Microstructure Imaging in Python (Mipy)...
 
 This toolbox unifies state-of-the-art diffusion MRI Microstructure Imaging using a "Building Block" philosophy. In this philosophy, any combination of biophysical models can be combined into a Microstructure Model, and can be used to both simulate and fit data for any PGSE-based dMRI acquisition, including single shell, multi-shell and qtau-dMRI acquisition schemes.
