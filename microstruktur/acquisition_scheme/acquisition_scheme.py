@@ -10,6 +10,10 @@ sh_order = 14
 
 
 class AcquisitionScheme:
+    """
+    Class that calculates and contains all information needed to simulate and
+    fit data using microstructure models.
+    """
 
     def __init__(self, bvalues, gradient_directions, qvalues,
                  gradient_strengths, delta, Delta,
@@ -19,6 +23,7 @@ class AcquisitionScheme:
         self.b0_threshold = b0_threshold
         self.bvalues = bvalues
         self.b0_mask = self.bvalues <= b0_threshold
+        self.number_of_b0s = np.sum(self.b0_mask)
         self.number_of_measurements = len(self.bvalues)
         self.gradient_directions = gradient_directions
         self.qvalues = qvalues
@@ -26,6 +31,7 @@ class AcquisitionScheme:
         self.delta = delta
         self.Delta = Delta
         self.tau = Delta - delta / 3.
+        # if there are more then 1 measurement
         if self.number_of_measurements > 1:
             self.shell_indices, self.shell_bvalues = (
                 calculate_shell_bvalues_and_indices(
@@ -40,6 +46,7 @@ class AcquisitionScheme:
                 self.gradient_strengths[first_indices])
             self.shell_delta = self.delta[first_indices]
             self.shell_Delta = self.Delta[first_indices]
+        # if for some reason only one measurement is given (for testing)
         else:
             self.shell_bvalues = self.bvalues
             self.shell_indices = np.r_[int(0)]
@@ -52,8 +59,8 @@ class AcquisitionScheme:
             self.shell_delta = self.delta
             self.shell_Delta = self.Delta
 
-        self.number_of_b0s = np.sum(self.b0_mask)
-
+        # calculates observation matrices to convert spherical harmonic
+        # coefficients to the positions on the sphere for every shell
         self.unique_dwi_indices = np.unique(self.shell_indices[~self.b0_mask])
         self.shell_sh_matrices = {}
         for shell_index in self.unique_dwi_indices:
@@ -62,6 +69,7 @@ class AcquisitionScheme:
             _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
             self.shell_sh_matrices[shell_index] = real_sym_sh_mrtrix(
                 sh_order, theta_, phi_)[0]
+        # warning in case there are no b0 measurements
         if sum(self.b0_mask) == 0:
             msg = "No b0 measurements were detected. Check if the b0_threshold"
             msg += " option is high enough, or if there is a mistake in the "
@@ -69,6 +77,11 @@ class AcquisitionScheme:
             warn(msg)
 
     def print_acquisition_info(self):
+        """
+        prints a small summary of the acquisition scheme. Is useful to check if
+        the function correctly separated the shells and if the input parameters
+        were given in the right scale.
+        """
         print "Acquisition scheme summary\n"
         print "total number of measurements: {}".format(
             self.number_of_measurements)
@@ -86,6 +99,10 @@ class AcquisitionScheme:
 
 
 class SimpleAcquisitionSchemeRH:
+    """
+    This is a very simple class that is only used internally to create the
+    rotational harmonics to be used in spherical convolution.
+    """
 
     def __init__(self, bvalue, gradient_directions, delta=None, Delta=None):
         Ndata = len(gradient_directions)
@@ -105,6 +122,36 @@ class SimpleAcquisitionSchemeRH:
 def acquisition_scheme_from_bvalues(
         bvalues, gradient_directions, delta, Delta,
         min_b_shell_distance=50e6, b0_threshold=10e6):
+    r"""
+    Creates an acquisition scheme object from bvalues, gradient directions,
+    pulse duration $\delta$ and pulse separation time $\Delta$.
+
+    Parameters
+    ----------
+    bvalues: 1D numpy array of shape (Ndata)
+        bvalues of the acquisition in s/m^2.
+        e.g., a bvalue of 1000 s/mm^2 must be entered as 1000 * 1e6 s/m^2
+    gradient_directions: 2D numpy array of shape (Ndata, 3)
+        gradient directions array of cartesian unit vectors.
+    delta: float or 1D numpy array of shape (Ndata)
+        if float, pulse duration of every measurements in seconds.
+        if array, potentially varying pulse duration per measurement.
+    Delta: float or 1D numpy array of shape (Ndata)
+        if float, pulse separation time of every measurements in seconds.
+        if array, potentially varying pulse separation time per measurement.
+    min_b_shell_distance : float
+        minimum bvalue distance between different shells. This parameter is
+        used to separate measurements into different shells, which is necessary
+        for any model using spherical convolution or spherical mean.
+    b0_threshold : float
+        bvalue threshold for a measurement to be considered a b0 measurement.
+
+    Returns
+    -------
+    AcquisitionScheme: acquisition scheme object
+        contains all information of the acquisition scheme to be used in any
+        microstructure model.
+    """
     delta_, Delta_ = unify_length_reference_delta_Delta(bvalues, delta, Delta)
     qvalues = q_from_b(bvalues, delta_, Delta_)
     gradient_strengths = g_from_b(bvalues, delta_, Delta_)
@@ -116,6 +163,36 @@ def acquisition_scheme_from_bvalues(
 def acquisition_scheme_from_qvalues(
         qvalues, gradient_directions, delta, Delta,
         min_b_shell_distance=50e6, b0_threshold=10e6):
+    r"""
+    Creates an acquisition scheme object from qvalues, gradient directions,
+    pulse duration $\delta$ and pulse separation time $\Delta$.
+
+    Parameters
+    ----------
+    qvalues: 1D numpy array of shape (Ndata)
+        diffusion sensitization of the acquisition in 1/m.
+        e.g. a qvalue of 10 1/mm must be entered as 10 * 1e3 1/m
+    gradient_directions: 2D numpy array of shape (Ndata, 3)
+        gradient directions array of cartesian unit vectors.
+    delta: float or 1D numpy array of shape (Ndata)
+        if float, pulse duration of every measurements in seconds.
+        if array, potentially varying pulse duration per measurement.
+    Delta: float or 1D numpy array of shape (Ndata)
+        if float, pulse separation time of every measurements in seconds.
+        if array, potentially varying pulse separation time per measurement.
+    min_b_shell_distance : float
+        minimum bvalue distance between different shells. This parameter is
+        used to separate measurements into different shells, which is necessary
+        for any model using spherical convolution or spherical mean.
+    b0_threshold : float
+        bvalue threshold for a measurement to be considered a b0 measurement.
+
+    Returns
+    -------
+    AcquisitionScheme: acquisition scheme object
+        contains all information of the acquisition scheme to be used in any
+        microstructure model.
+    """
     delta_, Delta_ = unify_length_reference_delta_Delta(qvalues, delta, Delta)
     bvalues = b_from_q(qvalues, delta, Delta)
     gradient_strengths = g_from_q(qvalues, delta)
@@ -127,6 +204,36 @@ def acquisition_scheme_from_qvalues(
 def acquisition_scheme_from_gradient_strengths(
         gradient_strengths, gradient_directions, delta, Delta,
         min_b_shell_distance=50e6, b0_threshold=10e6):
+    r"""
+    Creates an acquisition scheme object from gradient strengths, gradient 
+    directions pulse duration $\delta$ and pulse separation time $\Delta$.
+
+    Parameters
+    ----------
+    gradient_strengths: 1D numpy array of shape (Ndata)
+        gradient strength of the acquisition in T/m.
+        e.g., a gradient strength of 300 mT/m must be entered as 300 / 1e3 T/m
+    gradient_directions: 2D numpy array of shape (Ndata, 3)
+        gradient directions array of cartesian unit vectors.
+    delta: float or 1D numpy array of shape (Ndata)
+        if float, pulse duration of every measurements in seconds.
+        if array, potentially varying pulse duration per measurement.
+    Delta: float or 1D numpy array of shape (Ndata)
+        if float, pulse separation time of every measurements in seconds.
+        if array, potentially varying pulse separation time per measurement.
+    min_b_shell_distance : float
+        minimum bvalue distance between different shells. This parameter is
+        used to separate measurements into different shells, which is necessary
+        for any model using spherical convolution or spherical mean.
+    b0_threshold : float
+        bvalue threshold for a measurement to be considered a b0 measurement.
+
+    Returns
+    -------
+    AcquisitionScheme: acquisition scheme object
+        contains all information of the acquisition scheme to be used in any
+        microstructure model.
+    """
     delta_, Delta_ = unify_length_reference_delta_Delta(gradient_strengths,
                                                         delta, Delta)
     bvalues = b_from_g(gradient_strengths, delta, Delta)
@@ -137,6 +244,10 @@ def acquisition_scheme_from_gradient_strengths(
 
 
 def unify_length_reference_delta_Delta(reference_array, delta, Delta):
+    """
+    If either delta or Delta are given as float, makes them an array the same
+    size as the reference array.
+    """
     if isinstance(delta, float):
         delta_ = np.tile(delta, len(reference_array))
     else:
@@ -149,6 +260,33 @@ def unify_length_reference_delta_Delta(reference_array, delta, Delta):
 
 
 def calculate_shell_bvalues_and_indices(bvalues, max_distance=50e6):
+    """
+    Calculates which measurements belong to different acquisition shells.
+    It uses scipy's linkage clustering algorithm, which uses the max_distance
+    input as a limit of including measurements in the same cluster.
+
+    For example, if bvalues were [1, 2, 3, 4, 5] and max_distance was 1, then
+    all bvalues would belong to the same cluster.
+    However, if bvalues were [1, 2, 4, 5] max max_distance was 1, then this
+    would result in 2 clusters.
+
+    Parameters
+    ----------
+    bvalues: 1D numpy array of shape (Ndata)
+        bvalues of the acquisition in s/m^2.
+    max_distance: float
+        maximum b-value distance for a measurement to be included in the same
+        shell.
+
+    Returns
+    -------
+    shell_indices: 1D numpy array of shape (Ndata)
+        array of integers, starting from 0, representing to which shell a
+        measurement belongs. The number itself has no meaning other than just
+        being different for different shells.
+    shell_bvalues: 1D numpy array of shape (Nshells)
+        array of the mean bvalues for every acquisition shell.
+    """
     linkage_matrix = linkage(np.c_[bvalues])
     clusters = fcluster(linkage_matrix, max_distance, criterion='distance')
     shell_indices = np.empty_like(bvalues, dtype=int)
@@ -164,6 +302,7 @@ def calculate_shell_bvalues_and_indices(bvalues, max_distance=50e6):
 
 def check_scheme_from_bvalues(
         bvalues, gradient_directions, delta, Delta):
+    "function to check the validity of the input parameters."
     if len(bvalues) != len(gradient_directions):
         msg = "bvalues and gradient_directions must have the same length. "
         msg += "Currently their lengths are {} and {}.".format(
