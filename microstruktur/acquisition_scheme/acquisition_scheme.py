@@ -4,13 +4,14 @@ from microstruktur.signal_models.gradient_conversions import (
 from microstruktur.signal_models import utils
 from dipy.reconst.shm import real_sym_sh_mrtrix
 from scipy.cluster.hierarchy import fcluster, linkage
-from dipy.core.gradients import gradient_table
+from dipy.core.gradients import gradient_table, GradientTable
+import matplotlib.pyplot as plt
 from warnings import warn
 
 sh_order = 14
 
 
-class AcquisitionScheme:
+class MipyAcquisitionScheme:
     """
     Class that calculates and contains all information needed to simulate and
     fit data using microstructure models.
@@ -94,6 +95,7 @@ class AcquisitionScheme:
             msg += "acquisition design."
             warn(msg)
 
+    @property
     def print_acquisition_info(self):
         """
         prints a small summary of the acquisition scheme. Is useful to check if
@@ -115,8 +117,74 @@ class AcquisitionScheme:
                 int(1e3 * self.shell_gradient_strengths[ind]),
                 self.shell_delta[ind] * 1e3, self.shell_Delta[ind] * 1e3)
 
+    def visualise_acquisition_G_Delta_rainbow(
+            self,
+            Delta_start=None, Delta_end=None, G_start=None, G_end=None,
+            bval_isolines=np.r_[0, 250, 1000, 2500, 5000, 7500, 10000, 14000],
+            alpha_shading=0.6
+    ):
+        """This function visualizes a q-tau acquisition scheme as a function of
+        gradient strength and pulse separation (big_delta). It represents every
+        measurements at its G and big_delta position regardless of b-vector,
+        with a background of b-value isolines for reference. It assumes there
+        is only one unique pulse length (small_delta) in the acquisition
+        scheme.
 
-class SimpleAcquisitionSchemeRH:
+        Parameters
+        ----------
+        Delta_start : float,
+            optional minimum big_delta that is plotted in seconds
+        Delta_end : float,
+            optional maximum big_delta that is plotted in seconds
+        G_start : float,
+            optional minimum gradient strength that is plotted in T/m
+        G_end : float,
+            optional maximum gradient strength taht is plotted in T/m
+        bval_isolines : array,
+            optional array of bvalue isolines that are plotted in background
+            given in s/mm^2
+        alpha_shading : float between [0-1]
+            optional shading of the bvalue colors in the background
+        """
+        Delta = self.Delta  # in seconds
+        delta = self.delta  # in seconds
+        G = self.gradient_strengths  # in SI units T/m
+
+        if len(np.unique(delta)) > 1:
+            msg = "This acquisition has multiple small_delta values. "
+            msg += "This visualization assumes there is only one small_delta."
+            raise ValueError(msg)
+
+        if Delta_start is None:
+            Delta_start = 0.005
+        if Delta_end is None:
+            Delta_end = Delta.max() + 0.004
+        if G_start is None:
+            G_start = 0.
+        if G_end is None:
+            G_end = G.max() + .05
+
+        Delta_ = np.linspace(Delta_start, Delta_end, 50)
+        G_ = np.linspace(G_start, G_end, 50)
+        Delta_grid, G_grid = np.meshgrid(Delta_, G_)
+        bvals_ = b_from_g(G_grid.ravel(), delta[0], Delta_grid.ravel()) / 1e6
+        bvals_ = bvals_.reshape(G_grid.shape)
+
+        plt.contourf(Delta_, G_, bvals_,
+                     levels=bval_isolines,
+                     cmap='rainbow', alpha=alpha_shading)
+        cb = plt.colorbar(spacing="proportional")
+        cb.ax.tick_params(labelsize=16)
+        plt.scatter(Delta, G, c='k', s=25)
+
+        plt.xlim(Delta_start, Delta_end)
+        plt.ylim(G_start, G_end)
+        cb.set_label('b-value ($s$/$mm^2$)', fontsize=18)
+        plt.xlabel('Pulse Separation $\Delta$ [sec]', fontsize=18)
+        plt.ylabel('Gradient Strength [T/m]', fontsize=18)
+
+
+class SimpleMipyAcquisitionSchemeRH:
     """
     This is a very simple class that is only used internally to create the
     rotational harmonics to be used in spherical convolution.
@@ -166,7 +234,7 @@ def acquisition_scheme_from_bvalues(
 
     Returns
     -------
-    AcquisitionScheme: acquisition scheme object
+    MipyAcquisitionScheme: acquisition scheme object
         contains all information of the acquisition scheme to be used in any
         microstructure model.
     """
@@ -174,9 +242,9 @@ def acquisition_scheme_from_bvalues(
     check_acquisition_scheme(bvalues, gradient_directions, delta_, Delta_)
     qvalues = q_from_b(bvalues, delta_, Delta_)
     gradient_strengths = g_from_b(bvalues, delta_, Delta_)
-    return AcquisitionScheme(bvalues, gradient_directions, qvalues,
-                             gradient_strengths, delta_, Delta_,
-                             min_b_shell_distance, b0_threshold)
+    return MipyAcquisitionScheme(bvalues, gradient_directions, qvalues,
+                                 gradient_strengths, delta_, Delta_,
+                                 min_b_shell_distance, b0_threshold)
 
 
 def acquisition_scheme_from_qvalues(
@@ -208,7 +276,7 @@ def acquisition_scheme_from_qvalues(
 
     Returns
     -------
-    AcquisitionScheme: acquisition scheme object
+    MipyAcquisitionScheme: acquisition scheme object
         contains all information of the acquisition scheme to be used in any
         microstructure model.
     """
@@ -216,9 +284,9 @@ def acquisition_scheme_from_qvalues(
     check_acquisition_scheme(qvalues, gradient_directions, delta_, Delta_)
     bvalues = b_from_q(qvalues, delta, Delta)
     gradient_strengths = g_from_q(qvalues, delta)
-    return AcquisitionScheme(bvalues, gradient_directions, qvalues,
-                             gradient_strengths, delta_, Delta_,
-                             min_b_shell_distance, b0_threshold)
+    return MipyAcquisitionScheme(bvalues, gradient_directions, qvalues,
+                                 gradient_strengths, delta_, Delta_,
+                                 min_b_shell_distance, b0_threshold)
 
 
 def acquisition_scheme_from_gradient_strengths(
@@ -250,7 +318,7 @@ def acquisition_scheme_from_gradient_strengths(
 
     Returns
     -------
-    AcquisitionScheme: acquisition scheme object
+    MipyAcquisitionScheme: acquisition scheme object
         contains all information of the acquisition scheme to be used in any
         microstructure model.
     """
@@ -260,9 +328,9 @@ def acquisition_scheme_from_gradient_strengths(
                              delta_, Delta_)
     bvalues = b_from_g(gradient_strengths, delta, Delta)
     qvalues = q_from_g(gradient_strengths, delta)
-    return AcquisitionScheme(bvalues, gradient_directions, qvalues,
-                             gradient_strengths, delta_, Delta_,
-                             min_b_shell_distance, b0_threshold)
+    return MipyAcquisitionScheme(bvalues, gradient_directions, qvalues,
+                                 gradient_strengths, delta_, Delta_,
+                                 min_b_shell_distance, b0_threshold)
 
 
 def unify_length_reference_delta_Delta(reference_array, delta, Delta):
@@ -372,6 +440,9 @@ def check_acquisition_scheme(
 
 def gtab_dipy2mipy(dipy_gradient_table):
     "Converts a dipy gradient_table to a mipy acquisition_scheme."
+    if not isinstance(dipy_gradient_table, GradientTable):
+        msg = "Input must be a dipy GradientTable object. "
+        raise ValueError(msg)
     bvals = dipy_gradient_table.bvals * 1e6
     bvecs = dipy_gradient_table.bvecs
     delta = dipy_gradient_table.small_delta
@@ -383,6 +454,9 @@ def gtab_dipy2mipy(dipy_gradient_table):
 
 def gtab_mipy2dipy(mipy_gradient_table):
     "Converts a mipy acquisition scheme to a dipy gradient_table."
+    if not isinstance(mipy_gradient_table, MipyAcquisitionScheme):
+        msg = "Input must be a MipyAcquisitionScheme object. "
+        raise ValueError(msg)
     bvals = mipy_gradient_table.bvalues / 1e6
     bvecs = mipy_gradient_table.gradient_directions
     delta = mipy_gradient_table.delta
