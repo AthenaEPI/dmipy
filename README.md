@@ -1,8 +1,10 @@
 # Microstructure Imaging in Python
 
-Mipy unifies state-of-the-art diffusion MRI Microstructure Imaging using a "Building Block" philosophy. In this philosophy, any combination of biophysical models can be combined into a Microstructure Model, and can be used to both simulate and fit data for any PGSE-based dMRI acquisition, including single shell, multi-shell and qtau-dMRI acquisition schemes.
+The Mipy software package facilitates state-of-the-art diffusion MRI Microstructure Imaging using a "Building Block" philosophy. In this philosophy, any combination of biophysical models, typically representing intra- and/or extra-axonal tissue compartments, can be easy combined into a multi-compartment Microstructure Model in just a few lines of code. The created model can be used to both simulate and fit data for any PGSE-based dMRI acquisition, including single shell, multi-shell and qtau-dMRI acquisition schemes.
 
-For Dipy users: Mipy is completely compatible and complementary to Dipy. Dipy gradient tables can be converted to Mipy acquisition schemes in one line, after which data sets can be fitted the same as before. 
+What sets Mipy apart from other packages is the complete freedom it gives the user to design and use a microstructure model. Mipy allows the user to do Microstructure Imaging research at the highest level, while the package automatically takes care of all the coding architecture that is needed to fit a designed model to a data set.
+
+For Dipy users: Mipy is completely compatible and complementary to Dipy. Dipy gradient tables can be converted to Mipy acquisition schemes simpy using gtab_dipy2mipy(dipy_gradient_table), after which data sets can be fitted similarly as you were used to before. 
 
 ## Installation
 - clone repository
@@ -13,8 +15,15 @@ For Dipy users: Mipy is completely compatible and complementary to Dipy. Dipy gr
 - scipy
 - dipy
 
-## How to Get Started (Done)
--  [Basic usage tutorial](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_basic_usage.ipynb)
+## Getting Started:
+To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
+- Setting up an acquisition scheme
+- Simulating and fitting data using a simple Stick model
+- Combining biophysical models into a Microstructure model
+- Imposing parameter links when combining biophysical models
+- Using varying initial parameter settings when fitting larger data sets.
+- Fitting real data with a custom model
+- [Basic usage tutorial](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_basic_usage.ipynb)
 
 ## Explanations and Illustrations of Biophysical Models in the Toolbox (under construction)
 - [Intra-axonal Cylinder models](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_intra_axonal_cylinder_models.ipynb)
