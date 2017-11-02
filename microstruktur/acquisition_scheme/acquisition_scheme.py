@@ -4,6 +4,7 @@ from microstruktur.signal_models.gradient_conversions import (
 from microstruktur.signal_models import utils
 from dipy.reconst.shm import real_sym_sh_mrtrix
 from scipy.cluster.hierarchy import fcluster, linkage
+from dipy.core.gradients import gradient_table
 from warnings import warn
 
 sh_order = 14
@@ -367,3 +368,25 @@ def check_acquisition_scheme(
             abs(np.linalg.norm(gradient_directions, axis=1) - 1.) < 0.001):
         msg = "gradient orientations n are not unit vectors. "
         raise ValueError(msg)
+
+
+def gtab_dipy2mipy(dipy_gradient_table):
+    "Converts a dipy gradient_table to a mipy acquisition_scheme."
+    bvals = dipy_gradient_table.bvals * 1e6
+    bvecs = dipy_gradient_table.bvecs
+    delta = dipy_gradient_table.small_delta
+    Delta = dipy_gradient_table.big_delta
+    gtab_mipy = acquisition_scheme_from_bvalues(
+        bvalues=bvals, gradient_directions=bvecs, delta=delta, Delta=Delta)
+    return gtab_mipy
+
+
+def gtab_mipy2dipy(mipy_gradient_table):
+    "Converts a mipy acquisition scheme to a dipy gradient_table."
+    bvals = mipy_gradient_table.bvalues / 1e6
+    bvecs = mipy_gradient_table.gradient_directions
+    delta = mipy_gradient_table.delta
+    Delta = mipy_gradient_table.Delta
+    gtab_dipy = gradient_table(
+        bvals=bvals, bvecs=bvecs, small_delta=delta, big_delta=Delta)
+    return gtab_dipy

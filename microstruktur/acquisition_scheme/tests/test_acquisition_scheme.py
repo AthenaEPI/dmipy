@@ -3,7 +3,9 @@ from microstruktur.acquisition_scheme.acquisition_scheme import (
     acquisition_scheme_from_bvalues,
     acquisition_scheme_from_qvalues,
     acquisition_scheme_from_gradient_strengths,
-    calculate_shell_bvalues_and_indices)
+    calculate_shell_bvalues_and_indices,
+    gtab_dipy2mipy, gtab_mipy2dipy)
+from dipy.core.gradients import gradient_table
 from numpy.testing import (
     assert_raises, assert_equal, assert_array_equal)
 
@@ -152,3 +154,32 @@ def test_shell_indices_with_vayring_diffusion_times(Nsamples=10):
     scheme = acquisition_scheme_from_bvalues(
         bvalues, gradient_directions, delta, Delta)
     assert_equal(len(np.unique(scheme.shell_indices)), 2)
+
+
+def test_dipy2mipy_acquisition_converter(Nsamples=10):
+    bvals = np.tile(1e3, Nsamples)
+    bvecs = np.tile(np.r_[1., 0., 0.], (Nsamples, 1))
+    big_delta = 0.03
+    small_delta = 0.01
+    gtab_dipy = gradient_table(
+        bvals=bvals, bvecs=bvecs, small_delta=small_delta, big_delta=big_delta)
+    gtab_mipy = gtab_dipy2mipy(gtab_dipy)
+    assert_array_equal(gtab_mipy.bvalues / 1e6, gtab_dipy.bvals)
+    assert_array_equal(gtab_mipy.gradient_directions, gtab_dipy.bvecs)
+    assert_equal(np.unique(gtab_mipy.Delta), gtab_dipy.big_delta)
+    assert_equal(np.unique(gtab_mipy.delta), gtab_dipy.small_delta)
+
+
+def test_mipy2dipy_acquisition_converter(Nsamples=10):
+    bvals = np.tile(1e9, Nsamples)
+    bvecs = np.tile(np.r_[1., 0., 0.], (Nsamples, 1))
+    big_delta = 0.03
+    small_delta = 0.01
+    gtab_mipy = acquisition_scheme_from_bvalues(
+        bvalues=bvals, gradient_directions=bvecs,
+        delta=small_delta, Delta=big_delta)
+    gtab_dipy = gtab_mipy2dipy(gtab_mipy)
+    assert_array_equal(gtab_mipy.bvalues / 1e6, gtab_dipy.bvals)
+    assert_array_equal(gtab_mipy.gradient_directions, gtab_dipy.bvecs)
+    assert_equal(gtab_mipy.Delta, gtab_dipy.big_delta)
+    assert_equal(gtab_mipy.delta, gtab_dipy.small_delta)
