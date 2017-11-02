@@ -7,6 +7,11 @@ This toolbox unifies state-of-the-art diffusion MRI Microstructure Imaging using
 - clone repository
 - python setup.py install
 
+## Dependencies
+- numpy >= 1.13
+- scipy
+- dipy (for spherical harmonics still)
+
 ## How to Get Started (Done)
 -  [Basic usage tutorial](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_basic_usage.ipynb).
 
