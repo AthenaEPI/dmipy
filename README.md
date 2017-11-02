@@ -17,13 +17,12 @@ For Dipy users: Mipy is completely compatible and complementary to Dipy. Dipy gr
 
 ## Getting Started:
 To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
-- Setting up an acquisition scheme
-- Simulating and fitting data using a simple Stick model
-- Combining biophysical models into a Microstructure model
-- Imposing parameter links when combining biophysical models
-- Using varying initial parameter settings when fitting larger data sets.
-- Fitting real data with a custom model
-- [Basic usage tutorial](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_basic_usage.ipynb)
+- [Setting up an acquisition scheme](https://github.com/AthenaEPI/microstruktur/blob/master/examples/tutorial_setting_up_acquisition_scheme.ipynb)
+- [Simulating and fitting data using a simple Stick model](https://github.com/AthenaEPI/microstruktur/blob/master/examples/tutorial_simulating_and_fitting_using_a_simple_model.ipynb)
+- [Combining biophysical models into a Microstructure model](https://github.com/AthenaEPI/microstruktur/blob/master/examples/tutorial_combining_biophysical_models_into_microstructure_model.ipynb)
+- [Imposing parameter links when combining biophysical models](https://github.com/AthenaEPI/microstruktur/blob/master/examples/tutorial_imposing_parameter_links.ipynb)
+- [Using varying initial parameter settings when fitting larger data sets](https://github.com/AthenaEPI/microstruktur/blob/master/examples/tutorial_varying_intial_parameter_settings_for_larger_data_sets.ipynb)
+- Fitting real data with a custom model...
 
 ## Explanations and Illustrations of Biophysical Models in the Toolbox (under construction)
 - [Intra-axonal Cylinder models](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_intra_axonal_cylinder_models.ipynb)
