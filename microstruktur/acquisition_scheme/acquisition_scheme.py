@@ -184,7 +184,7 @@ class MipyAcquisitionScheme:
         plt.ylabel('Gradient Strength [T/m]', fontsize=18)
 
 
-class SimpleMipyAcquisitionSchemeRH:
+class SimpleAcquisitionSchemeRH:
     """
     This is a very simple class that is only used internally to create the
     rotational harmonics to be used in spherical convolution.
