@@ -28,6 +28,7 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - [Intra-axonal Cylinder models](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_intra_axonal_cylinder_models.ipynb)
 - [Extra-axonal Gaussian models](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_extra_axonal_gaussian_models.ipynb)
 - [Axon dispersion models](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_watson_bingham.ipynb)
+- [Spherical Mean Models](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_spherical_mean_models.ipynb)
 
 ## Examples of how to implement Microstructure Models in Literature (not updated)
 - [Ball and Stick [Behrens et al. 2003]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_ball_and_stick.ipynb)
