@@ -1,7 +1,8 @@
-# Universal Diffusion Microstructure Toolbox (UDMT)
-other possible names... Microstructure Imaging in Python (Mipy)...
+# Microstructure Imaging in Python
 
-This toolbox unifies state-of-the-art diffusion MRI Microstructure Imaging using a "Building Block" philosophy. In this philosophy, any combination of biophysical models can be combined into a Microstructure Model, and can be used to both simulate and fit data for any PGSE-based dMRI acquisition, including single shell, multi-shell and qtau-dMRI acquisition schemes.
+Mipy unifies state-of-the-art diffusion MRI Microstructure Imaging using a "Building Block" philosophy. In this philosophy, any combination of biophysical models can be combined into a Microstructure Model, and can be used to both simulate and fit data for any PGSE-based dMRI acquisition, including single shell, multi-shell and qtau-dMRI acquisition schemes.
+
+For Dipy users: Mipy is completely compatible and complementary to Dipy. Dipy gradient tables can be converted to Mipy acquisition schemes in one line, after which data sets can be fitted the same as before. 
 
 ## Installation
 - clone repository
@@ -10,10 +11,10 @@ This toolbox unifies state-of-the-art diffusion MRI Microstructure Imaging using
 ## Dependencies
 - numpy >= 1.13
 - scipy
-- dipy (for spherical harmonics still)
+- dipy
 
 ## How to Get Started (Done)
--  [Basic usage tutorial](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_basic_usage.ipynb).
+-  [Basic usage tutorial](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_basic_usage.ipynb)
 
 ## Explanations and Illustrations of Biophysical Models in the Toolbox (under construction)
 - [Intra-axonal Cylinder models](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_intra_axonal_cylinder_models.ipynb)
