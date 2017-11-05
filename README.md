@@ -24,7 +24,7 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - [Using varying initial parameter settings when fitting larger data sets](https://github.com/AthenaEPI/microstruktur/blob/master/examples/tutorial_varying_intial_parameter_settings_for_larger_data_sets.ipynb)
 - Fitting real data with a custom model...
 
-## Explanations and Illustrations of Biophysical Models in the Toolbox (under construction)
+## Explanations and Illustrations of Biophysical Models in the Toolbox
 - [Intra-axonal Cylinder models](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_intra_axonal_cylinder_models.ipynb)
 - [Extra-axonal Gaussian models](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_extra_axonal_gaussian_models.ipynb)
 - [Axon dispersion models](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_watson_bingham.ipynb)
@@ -40,7 +40,7 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - AxCaliber with restricted extra-axonal diffusion [Burcaw et al. 2015]
 - ActiveAx [Alexander et al. 2010]
 
-## Idea Box (not update)
+## Idea Box (not updated)
 ### Estimating extra-axonal restriction using spherical mean of restricted zeppelin
 The idea is to modify the multi-compartment spherical mean technique to have a rotation-, dispersion-, and crossing-invariant method of estimating extra-axonal restriction. The technique modifies the spherical mean of the zeppelin (E4) to use the spherical mean of the restricted zeppelin (E5). If acquisition shells with multiple b-values, big delta and small delta are acquired, then the perpendicular diffusivity can be disentangled from the extra-axonal restriction parameter using the spherical mean framework. Proof of working [here](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_extra-axonal_restriction_estimation_using_spherical_mean.ipynb). The basis article manuscript with the relevant equations is [here](https://www.overleaf.com/9889990sjksnvyktkqc).
 ### Using a cascade style estimation framework to obtain robust measures (no degeneracy) in estimated microstructure parameters.
