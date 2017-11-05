@@ -118,8 +118,9 @@ class MicrostrukturModel:
                 value = np.atleast_1d(parameters[parameter])
                 if card == 1 and np.all(value.shape == np.r_[1]):
                     parameter_vector.append(
-                        np.tile(value[0], np.r_[parameter_shapes[0], 1])
-                    )
+                        np.tile(value[0], np.r_[parameter_shapes[0], 1]))
+                elif card == 1 and not np.all(value.shape == np.r_[1]):
+                    parameter_vector.append(value[..., None])
                 elif card == 2 and np.all(value.shape == np.r_[2]):
                     parameter_vector.append(
                         np.tile(value, np.r_[parameter_shapes[0], 1])
@@ -1796,6 +1797,38 @@ class SD2Bingham(MicrostrukturModel):
         Below we use the fitted spline parameters in
         log_bingham_normalization_splinefit to interpolate the normalization
         for the distribution.
+
+        code to generate the interpolation:
+
+        from dipy.data import get_sphere, HemiSphere
+        from microstruktur.signal_models.spherical_mean import (
+            estimate_spherical_mean_shell)
+        import numpy as np
+        sphere = get_sphere()
+        n = HemiSphere(sphere.x, sphere.y, sphere.z).subdivide().vertices
+        R = np.eye(3)
+        norm_size = 5
+        numerator = np.zeros(n.shape[0])
+        norm_grid = np.ones((norm_size, norm_size))
+        kappa_beta_range = np.linspace(0, 32, norm_size)
+        for i in np.arange(norm_size):
+            for j in np.arange(i + 1):
+                Bdiag = np.diag(np.r_[kappa_beta_range[i],
+                                kappa_beta_range[j],
+                                0])
+                B = R.dot(Bdiag).dot(R.T)
+                for k, n_ in enumerate(n):
+                    numerator[k] = np.exp(n_.dot(B).dot(n_))
+                norm_grid[i, j] = norm_grid[j, i] = (
+                    estimate_spherical_mean_shell(
+                        numerator, n, sh_order=12))
+        log_norm_grid = np.log(norm_grid)
+        kappa_grid, beta_grid = np.meshgrid(kappa_beta_range, kappa_beta_range)
+        from scipy import interpolate
+        tck = interpolate.bisplrep(kappa_grid.ravel(),
+                                   beta_grid.ravel(),
+                                   log_norm_grid.ravel(), s=0)
+        np.savez("bingham_normalization_splinefit.npz", tck)
 
         Parameters
         ----------
