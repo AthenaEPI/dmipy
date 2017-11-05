@@ -20,10 +20,14 @@ from . import CONSTANTS
 from ..signal_models.spherical_convolution import kernel_sh_to_rh
 from .spherical_mean import estimate_spherical_mean_multi_shell
 from ..acquisition_scheme.acquisition_scheme import SimpleAcquisitionSchemeRH
+from scipy.interpolate import bisplev
 
 SPHERICAL_INTEGRATOR = utils.SphericalIntegrator()
 GRADIENT_TABLES_PATH = pkg_resources.resource_filename(
     'microstruktur', 'data/gradient_tables'
+)
+SIGNAL_MODELS_PATH = pkg_resources.resource_filename(
+    'microstruktur', 'signal_models'
 )
 SPHERE_CARTESIAN = np.loadtxt(
     join(GRADIENT_TABLES_PATH, 'sphere_with_cap.txt')
@@ -34,6 +38,9 @@ inverse_rh_matrix_kernel = {
         rh_order, SPHERE_SPHERICAL[:, 1], SPHERE_SPHERICAL[:, 2]
     )[0]) for rh_order in np.arange(0, 15, 2)
 }
+log_bingham_normalization_splinefit = np.load(
+    join(SIGNAL_MODELS_PATH,
+         "bingham_normalization_splinefit.npz"))['arr_0']
 WATSON_SH_ORDER = 14
 DIFFUSIVITY_SCALING = 1e-9
 DIAMETER_SCALING = 1e-6
@@ -189,6 +196,22 @@ class MicrostrukturModel:
         else:
             return E_simulated
 
+    def fod(self, vertices, model_parameters_array):
+        x0 = model_parameters_array
+        x0_at_least_2d = np.atleast_2d(x0)
+        x0_2d = x0_at_least_2d.reshape(-1, x0_at_least_2d.shape[-1])
+        fods_2d = np.empty(np.r_[x0_2d.shape[:-1], len(vertices)])
+        for i, x0_ in enumerate(x0_2d):
+            parameters = self.parameter_vector_to_parameters(x0_)
+            fods_2d[i] = self(vertices, quantity="FOD", **parameters)
+        fods = fods_2d.reshape(
+            np.r_[x0_at_least_2d.shape[:-1], len(vertices)])
+
+        if x0.ndim == 1:
+            return np.squeeze(fods)
+        else:
+            return fods
+
     def fit(self, data, acquisition_scheme, model_initial_condition_array):
         """ The data fitting function of a multi-compartment model.
 
@@ -258,6 +281,26 @@ class MicrostrukturModel:
             return np.squeeze(fitted_parameters.reshape(x0_at_least_2d.shape))
         else:
             return fitted_parameters.reshape(x0_at_least_2d.shape)
+
+    def fit_brute(self, data, acquisition_scheme, ranges):
+        # precompute the data simulations for the given ranges
+        # for every voxel estimate the SSD
+        # select and return the parmeter combination for the lowest value.
+        return None
+
+    def fit_mix(self, data, acquisition_scheme):
+        """
+        differential_evolution
+        cvxpy
+        least squares
+
+        References
+        ----------
+        .. [1] Farooq, Hamza, et al. "Microstructure Imaging of Crossing (MIX)
+               White Matter Fibers from diffusion MRI." Scientific reports 6
+               (2016).
+        """
+        return None
 
 
 class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
@@ -431,7 +474,8 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
                 parameters[parameter_name] = parameter_function()
         return parameters
 
-    def __call__(self, acquisition_scheme, **kwargs):
+    def __call__(self, acquisition_scheme_or_vertices,
+                 quantity="signal", **kwargs):
         values = 0
         kwargs = self.add_linked_parameters_to_parameters(
             kwargs
@@ -457,19 +501,24 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
                 parameters[parameter] = kwargs.get(
                     parameter_name, self.parameter_defaults.get(parameter_name)
                 )
-            parameters['shell_indices'] = kwargs.get('shell_indices', None)
-            parameters['delta'] = kwargs.get('delta', None)
-            parameters['Delta'] = kwargs.get('Delta', None)
             current_partial_volume = accumulated_partial_volume
             if partial_volume is not None:
                 current_partial_volume *= partial_volume
                 accumulated_partial_volume *= (1 - partial_volume)
 
-            values = (
-                values +
-                current_partial_volume * model(acquisition_scheme,
-                                               **parameters)
-            )
+            if quantity == "signal":
+                values = (
+                    values +
+                    current_partial_volume * model(
+                        acquisition_scheme_or_vertices, **parameters)
+                )
+            elif quantity == "FOD":
+                if callable(model.fod):
+                    values = (
+                        values +
+                        current_partial_volume * model.fod(
+                            acquisition_scheme_or_vertices, **parameters)
+                    )
         return values
 
 
@@ -1693,7 +1742,9 @@ class SD2Bingham(MicrostrukturModel):
 
         # the denomator to normalize still needs to become a matrix argument B,
         # but function doesn't take it.
-        denominator = 4 * np.pi * special.hyp1f1(0.5, 1.5, kappa)
+        # spherical_mean = estimate_spherical_mean_shell(numerator, n,
+        #  sh_order=14)
+        denominator = 4 * np.pi * self._get_normalization(kappa, beta)
         Bn = numerator / denominator
         return Bn
 
@@ -1730,10 +1781,40 @@ class SD2Bingham(MicrostrukturModel):
         sh_mat = real_sym_sh_mrtrix(sh_order, theta_rotated, phi_rotated)[0]
         sh_mat_inv = np.linalg.pinv(sh_mat)
         bingham_sh = np.dot(sh_mat_inv, bingham_sf)
-        # normalization with spherical mean as there is still the
-        # normalization bug
-        bingham_sh /= (bingham_sh[0] * (2 * np.sqrt(np.pi)))
         return bingham_sh
+
+    def _get_normalization(self, kappa, beta):
+        """
+        The hyperconfluent function with matrix input is not available in
+        python, so to normalize we estimated the bingham sphere function
+        for kappa, beta in [0, 32] and estimated a 50x50 grid of its spherical
+        means.
+
+        Since the spherical mean of the bingham is similar to an exponential,
+        we took its natural logarithm and fitted it to a 2D spline function.
+
+        Below we use the fitted spline parameters in
+        log_bingham_normalization_splinefit to interpolate the normalization
+        for the distribution.
+
+        Parameters
+        ----------
+        kappa : float,
+            first concentration parameter of the Bingham distribution.
+            defined as kappa = kappa1 - kappa3.
+        beta : float,
+            second concentration parameter of the Bingham distribution.
+            defined as beta = kappa2 - kappa3. Bingham becomes Watson when
+            beta=0.
+
+        Returns
+        -------
+        bingham_normalization: float
+            spherical mean / normalization of the bingham distribution
+        """
+        log_norm = bisplev(kappa, beta, log_bingham_normalization_splinefit)
+        bingham_normalization = np.exp(log_norm)
+        return bingham_normalization
 
 
 class DD1GammaDistribution(MicrostrukturModel):
