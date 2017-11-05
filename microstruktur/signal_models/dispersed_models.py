@@ -106,6 +106,30 @@ class SD2I1BinghamDispersedStick(MicrostrukturModel):
             E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
         return E
 
+    def fod(self, vertices, **kwargs):
+        """
+        Estimates Fiber Orientation Density (FOD) of the model.
+
+        Parameters
+        ----------
+        vertices: array of shape (N, 3)
+            cartesian unit vectors at which to evaluate the fiber orientation
+            density (FOD).
+
+        Returns
+        -------
+        bingham_density: array of shape (N,)
+            probability density of distribution for model parameters
+        """
+        mu = kwargs.get('mu', self.mu)
+        psi = kwargs.get('psi', self.psi)
+        kappa = kwargs.get('kappa', self.kappa)
+        beta = kwargs.get('beta', self.beta)
+        bingham = three_dimensional_models.SD2Bingham(
+            mu=mu, psi=psi, kappa=kappa, beta=beta)
+        bingham_density = bingham(vertices)
+        return bingham_density
+
 
 class SD2I2BinghamDispersedSodermanCylinder(MicrostrukturModel):
     r""" The Bingham-Dispersed [1] Soderman cylinder model [2] - assuming
@@ -214,6 +238,30 @@ class SD2I2BinghamDispersedSodermanCylinder(MicrostrukturModel):
             # recover signal values from bingham-convolved spherical harmonics
             E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
         return E
+
+    def fod(self, vertices, **kwargs):
+        """
+        Estimates Fiber Orientation Density (FOD) of the model.
+
+        Parameters
+        ----------
+        vertices: array of shape (N, 3)
+            cartesian unit vectors at which to evaluate the fiber orientation
+            density (FOD).
+
+        Returns
+        -------
+        bingham_density: array of shape (N,)
+            probability density of distribution for model parameters
+        """
+        mu = kwargs.get('mu', self.mu)
+        psi = kwargs.get('psi', self.psi)
+        kappa = kwargs.get('kappa', self.kappa)
+        beta = kwargs.get('beta', self.beta)
+        bingham = three_dimensional_models.SD2Bingham(
+            mu=mu, psi=psi, kappa=kappa, beta=beta)
+        bingham_density = bingham(vertices)
+        return bingham_density
 
 
 class SD2I3BinghamDispersedCallaghanCylinder(MicrostrukturModel):
@@ -325,6 +373,30 @@ class SD2I3BinghamDispersedCallaghanCylinder(MicrostrukturModel):
             E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
         return E
 
+    def fod(self, vertices, **kwargs):
+        """
+        Estimates Fiber Orientation Density (FOD) of the model.
+
+        Parameters
+        ----------
+        vertices: array of shape (N, 3)
+            cartesian unit vectors at which to evaluate the fiber orientation
+            density (FOD).
+
+        Returns
+        -------
+        bingham_density: array of shape (N,)
+            probability density of distribution for model parameters
+        """
+        mu = kwargs.get('mu', self.mu)
+        psi = kwargs.get('psi', self.psi)
+        kappa = kwargs.get('kappa', self.kappa)
+        beta = kwargs.get('beta', self.beta)
+        bingham = three_dimensional_models.SD2Bingham(
+            mu=mu, psi=psi, kappa=kappa, beta=beta)
+        bingham_density = bingham(vertices)
+        return bingham_density
+
 
 class SD2I4BinghamDispersedGaussianPhaseCylinder(MicrostrukturModel):
     r""" The Bingham-Dispersed [1] van gelderen cylinder model [2] - assuming
@@ -434,6 +506,30 @@ class SD2I4BinghamDispersedGaussianPhaseCylinder(MicrostrukturModel):
             E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
         return E
 
+    def fod(self, vertices, **kwargs):
+        """
+        Estimates Fiber Orientation Density (FOD) of the model.
+
+        Parameters
+        ----------
+        vertices: array of shape (N, 3)
+            cartesian unit vectors at which to evaluate the fiber orientation
+            density (FOD).
+
+        Returns
+        -------
+        bingham_density: array of shape (N,)
+            probability density of distribution for model parameters
+        """
+        mu = kwargs.get('mu', self.mu)
+        psi = kwargs.get('psi', self.psi)
+        kappa = kwargs.get('kappa', self.kappa)
+        beta = kwargs.get('beta', self.beta)
+        bingham = three_dimensional_models.SD2Bingham(
+            mu=mu, psi=psi, kappa=kappa, beta=beta)
+        bingham_density = bingham(vertices)
+        return bingham_density
+
 
 class SD3I1WatsonDispersedStick(MicrostrukturModel):
     r""" The Watson-Dispersed [1] Stick model [2] - a cylinder with zero radius
@@ -514,6 +610,28 @@ class SD3I1WatsonDispersedStick(MicrostrukturModel):
             # recover signal values from watson-convolved spherical harmonics
             E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
         return E
+
+    def fod(self, vertices, **kwargs):
+        """
+        Estimates Fiber Orientation Density (FOD) of the model.
+
+        Parameters
+        ----------
+        vertices: array of shape (N, 3)
+            cartesian unit vectors at which to evaluate the fiber orientation
+            density (FOD).
+
+        Returns
+        -------
+        bingham_density: array of shape (N,)
+            probability density of distribution for model parameters
+        """
+        mu = kwargs.get('mu', self.mu)
+        kappa = kwargs.get('kappa', self.kappa)
+        watson = three_dimensional_models.SD3Watson(
+            mu=mu, kappa=kappa)
+        watson_density = watson(vertices)
+        return watson_density
 
 
 class SD3I2WatsonDispersedSodermanCylinder(MicrostrukturModel):
@@ -609,6 +727,28 @@ class SD3I2WatsonDispersedSodermanCylinder(MicrostrukturModel):
             # recover signal values from watson-convolved spherical harmonics
             E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
         return E
+
+    def fod(self, vertices, **kwargs):
+        """
+        Estimates Fiber Orientation Density (FOD) of the model.
+
+        Parameters
+        ----------
+        vertices: array of shape (N, 3)
+            cartesian unit vectors at which to evaluate the fiber orientation
+            density (FOD).
+
+        Returns
+        -------
+        bingham_density: array of shape (N,)
+            probability density of distribution for model parameters
+        """
+        mu = kwargs.get('mu', self.mu)
+        kappa = kwargs.get('kappa', self.kappa)
+        watson = three_dimensional_models.SD3Watson(
+            mu=mu, kappa=kappa)
+        watson_density = watson(vertices)
+        return watson_density
 
 
 class SD3I3WatsonDispersedCallaghanCylinder(MicrostrukturModel):
@@ -706,6 +846,28 @@ class SD3I3WatsonDispersedCallaghanCylinder(MicrostrukturModel):
             E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
         return E
 
+    def fod(self, vertices, **kwargs):
+        """
+        Estimates Fiber Orientation Density (FOD) of the model.
+
+        Parameters
+        ----------
+        vertices: array of shape (N, 3)
+            cartesian unit vectors at which to evaluate the fiber orientation
+            density (FOD).
+
+        Returns
+        -------
+        bingham_density: array of shape (N,)
+            probability density of distribution for model parameters
+        """
+        mu = kwargs.get('mu', self.mu)
+        kappa = kwargs.get('kappa', self.kappa)
+        watson = three_dimensional_models.SD3Watson(
+            mu=mu, kappa=kappa)
+        watson_density = watson(vertices)
+        return watson_density
+
 
 class SD3I4WatsonDispersedGaussianPhaseCylinder(MicrostrukturModel):
     r""" The Watson-Dispersed [1] Van Gelderen cylinder model [2] - assuming
@@ -800,6 +962,28 @@ class SD3I4WatsonDispersedGaussianPhaseCylinder(MicrostrukturModel):
             # recover signal values from watson-convolved spherical harmonics
             E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
         return E
+
+    def fod(self, vertices, **kwargs):
+        """
+        Estimates Fiber Orientation Density (FOD) of the model.
+
+        Parameters
+        ----------
+        vertices: array of shape (N, 3)
+            cartesian unit vectors at which to evaluate the fiber orientation
+            density (FOD).
+
+        Returns
+        -------
+        bingham_density: array of shape (N,)
+            probability density of distribution for model parameters
+        """
+        mu = kwargs.get('mu', self.mu)
+        kappa = kwargs.get('kappa', self.kappa)
+        watson = three_dimensional_models.SD3Watson(
+            mu=mu, kappa=kappa)
+        watson_density = watson(vertices)
+        return watson_density
 
 
 class SD2E4BinghamDispersedZeppelin(MicrostrukturModel):
@@ -903,6 +1087,30 @@ class SD2E4BinghamDispersedZeppelin(MicrostrukturModel):
             E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
         return E
 
+    def fod(self, vertices, **kwargs):
+        """
+        Estimates Fiber Orientation Density (FOD) of the model.
+
+        Parameters
+        ----------
+        vertices: array of shape (N, 3)
+            cartesian unit vectors at which to evaluate the fiber orientation
+            density (FOD).
+
+        Returns
+        -------
+        bingham_density: array of shape (N,)
+            probability density of distribution for model parameters
+        """
+        mu = kwargs.get('mu', self.mu)
+        psi = kwargs.get('psi', self.psi)
+        kappa = kwargs.get('kappa', self.kappa)
+        beta = kwargs.get('beta', self.beta)
+        bingham = three_dimensional_models.SD2Bingham(
+            mu=mu, psi=psi, kappa=kappa, beta=beta)
+        bingham_density = bingham(vertices)
+        return bingham_density
+
 
 class SD3E4WatsonDispersedZeppelin(MicrostrukturModel):
     r""" The Watson-Dispersed Zeppelin model [1] - a cylinder with zero radius-
@@ -988,6 +1196,28 @@ class SD3E4WatsonDispersedZeppelin(MicrostrukturModel):
             # recover signal values from watson-convolved spherical harmonics
             E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
         return E
+
+    def fod(self, vertices, **kwargs):
+        """
+        Estimates Fiber Orientation Density (FOD) of the model.
+
+        Parameters
+        ----------
+        vertices: array of shape (N, 3)
+            cartesian unit vectors at which to evaluate the fiber orientation
+            density (FOD).
+
+        Returns
+        -------
+        bingham_density: array of shape (N,)
+            probability density of distribution for model parameters
+        """
+        mu = kwargs.get('mu', self.mu)
+        kappa = kwargs.get('kappa', self.kappa)
+        watson = three_dimensional_models.SD3Watson(
+            mu=mu, kappa=kappa)
+        watson_density = watson(vertices)
+        return watson_density
 
 
 class DD1I2GammaDistributedSodermanCylinder(MicrostrukturModel):

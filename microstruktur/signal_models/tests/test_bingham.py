@@ -92,4 +92,4 @@ def test_bingham_equal_to_watson(beta_=0):
     watson = three_dimensional_models.SD3Watson(mu=mu_, kappa=kappa_)
     Bn = bingham(n=n_cart)
     Wn = watson(n=n_cart)
-    assert_almost_equal(Bn, Wn)
+    assert_almost_equal(Bn, Wn, 4)
