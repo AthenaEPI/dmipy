@@ -21,6 +21,8 @@ from ..signal_models.spherical_convolution import kernel_sh_to_rh
 from .spherical_mean import estimate_spherical_mean_multi_shell
 from ..acquisition_scheme.acquisition_scheme import SimpleAcquisitionSchemeRH
 from scipy.interpolate import bisplev
+from scipy.optimize import differential_evolution
+import cvxpy
 
 SPHERICAL_INTEGRATOR = utils.SphericalIntegrator()
 GRADIENT_TABLES_PATH = pkg_resources.resource_filename(
@@ -128,21 +130,6 @@ class MicrostrukturModel:
                     parameter_vector.append(parameters[parameter])
             parameter_vector = np.concatenate(parameter_vector, axis=-1)
         return parameter_vector
-
-    def objective_function(self, parameter_vector, data, acquisition_scheme):
-        scaling = np.hstack([scale for parameter, scale in
-                             self.parameter_scales.items()])
-        parameter_vector = parameter_vector * scaling
-        parameters = {}
-        parameters.update(
-            self.parameter_vector_to_parameters(parameter_vector)
-        )
-        E_model = self(acquisition_scheme, **parameters)
-        E_diff = E_model - data
-        objective = np.sum(E_diff ** 2) / len(data)
-
-        # todo analytic jacobian... 2(objective)D model(parameter)/D parameter
-        return objective
 
     @property
     def bounds_for_optimization(self):
@@ -282,13 +269,26 @@ class MicrostrukturModel:
         else:
             return fitted_parameters.reshape(x0_at_least_2d.shape)
 
+    def objective_function(self, parameter_vector, data, acquisition_scheme):
+        scaling = np.hstack([scale for parameter, scale in
+                             self.parameter_scales.items()])
+        parameter_vector = parameter_vector * scaling
+        parameters = {}
+        parameters.update(
+            self.parameter_vector_to_parameters(parameter_vector)
+        )
+        E_model = self(acquisition_scheme, **parameters)
+        E_diff = E_model - data
+        objective = np.sum(E_diff ** 2) / len(data)
+        return objective
+
     def fit_brute(self, data, acquisition_scheme, ranges):
         # precompute the data simulations for the given ranges
         # for every voxel estimate the SSD
         # select and return the parmeter combination for the lowest value.
         return None
 
-    def fit_mix(self, data, acquisition_scheme):
+    def fit_mix(self, data, acquisition_scheme, maxiter=1000):
         """
         differential_evolution
         cvxpy
@@ -300,8 +300,43 @@ class MicrostrukturModel:
                White Matter Fibers from diffusion MRI." Scientific reports 6
                (2016).
         """
+        res_one = differential_evolution(self.objective_function, self.bounds,
+                                         maxiter=self.maxiter,
+                                         args=(data, acquisition_scheme))
+        x = res_one.x
+        phi = self(acquisition_scheme,
+                   quantity="stochastic cost function", **parameters)
+        x_fe = _cvx_fit_linear_parameters(self, data, phi)
+        # and now putting x_fe and x together again in parameters...
         return None
 
+    def stochastic_objective_function(self, parameter_vector,
+                                      data, acquisition_scheme):
+        scaling = np.hstack([scale for parameter, scale in
+                             self.parameter_scales.items()])
+        parameter_vector = parameter_vector * scaling
+        parameters = {}
+        parameters.update(
+            self.parameter_vector_to_parameters(parameter_vector)
+        )
+
+        phi_x = self(acquisition_scheme,
+                     quantity="stochastic cost function", **parameters)
+
+        phi_mp = np.dot(np.linalg.pinv(phi_x.T, phi_x), phi_x.T)
+        f = np.dot(phi_mp, data)
+        yhat = np.dot(phi_x, f)
+        return np.dot((data - yhat).T, data - yhat)
+
+    def _cvx_fit_linear_parameters(self, data, phi):
+        fe = cvxpy.Variable(phi.shape[1])
+        constraints = [cvxpy.sum_entries(fe) == 1,
+                       fe >= 0.011,
+                       fe <= 0.89]
+        obj = cvxpy.Minimize(cvxpy.sum_squares(phi * fe - data))
+        prob = cvxpy.Problem(obj, constraints)
+        prob.solve()
+        return np.array(fe.value)
 
 class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
     r'''
@@ -476,7 +511,15 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
 
     def __call__(self, acquisition_scheme_or_vertices,
                  quantity="signal", **kwargs):
-        values = 0
+        if quantity == "signal" or quantity == "FOD":
+            values = 0
+        elif quantity == "stochastic cost function":
+            values = np.zeros((
+                len(models),
+                acquisition_scheme_or_vertices.number_of_measurements
+            ))
+            counter = 0
+
         kwargs = self.add_linked_parameters_to_parameters(
             kwargs
         )
@@ -519,6 +562,10 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
                         current_partial_volume * model.fod(
                             acquisition_scheme_or_vertices, **parameters)
                     )
+            if quantity == "stochastic cost function":
+                values[counter] = model(acquisition_scheme_or_vertices,
+                                        **parameters)
+                counter += 1
         return values
 
 
