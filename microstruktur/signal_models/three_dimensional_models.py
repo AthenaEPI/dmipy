@@ -300,13 +300,16 @@ class MicrostrukturModel:
                White Matter Fibers from diffusion MRI." Scientific reports 6
                (2016).
         """
-        res_one = differential_evolution(self.objective_function, self.bounds,
-                                         maxiter=self.maxiter,
+        bounds = ((0, 3), (0, 3), (0, np.pi), (-np.pi, np.pi), (0, 1))
+        res_one = differential_evolution(self.objective_function,
+                                         bounds,
+                                         maxiter=maxiter,
                                          args=(data, acquisition_scheme))
-        x = res_one.x
-        phi = self(acquisition_scheme,
-                   quantity="stochastic cost function", **parameters)
-        x_fe = _cvx_fit_linear_parameters(self, data, phi)
+        bla
+        # x = res_one.x
+        # phi = self(acquisition_scheme,
+        #            quantity="stochastic cost function", **parameters)
+        # x_fe = _cvx_fit_linear_parameters(self, data, phi)
         # and now putting x_fe and x together again in parameters...
         return None
 
@@ -323,10 +326,11 @@ class MicrostrukturModel:
         phi_x = self(acquisition_scheme,
                      quantity="stochastic cost function", **parameters)
 
-        phi_mp = np.dot(np.linalg.pinv(phi_x.T, phi_x), phi_x.T)
+        phi_mp = np.dot(np.linalg.pinv(np.dot(phi_x.T, phi_x)), phi_x.T)
         f = np.dot(phi_mp, data)
         yhat = np.dot(phi_x, f)
-        return np.dot((data - yhat).T, data - yhat)
+        cost = np.dot(data - yhat, data - yhat)
+        return cost
 
     def _cvx_fit_linear_parameters(self, data, phi):
         fe = cvxpy.Variable(phi.shape[1])
@@ -514,9 +518,9 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
         if quantity == "signal" or quantity == "FOD":
             values = 0
         elif quantity == "stochastic cost function":
-            values = np.zeros((
-                len(models),
-                acquisition_scheme_or_vertices.number_of_measurements
+            values = np.empty((
+                acquisition_scheme_or_vertices.number_of_measurements,
+                len(self.models)
             ))
             counter = 0
 
@@ -563,8 +567,8 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
                             acquisition_scheme_or_vertices, **parameters)
                     )
             if quantity == "stochastic cost function":
-                values[counter] = model(acquisition_scheme_or_vertices,
-                                        **parameters)
+                values[:, counter] = model(acquisition_scheme_or_vertices,
+                                           **parameters)
                 counter += 1
         return values
 
