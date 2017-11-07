@@ -543,6 +543,7 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
             self.model_names, self.models,
             chain(partial_volumes, (None,))
         ):
+            print model_name
             parameters = {}
             for parameter in model.parameter_ranges:
                 parameter_name = self._inverted_parameter_map[
@@ -553,7 +554,7 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
                 )
             current_partial_volume = accumulated_partial_volume
             if partial_volume is not None:
-                current_partial_volume *= partial_volume
+                current_partial_volume = current_partial_volume * partial_volume
                 accumulated_partial_volume *= (1 - partial_volume)
 
             if quantity == "signal":
