@@ -288,7 +288,7 @@ class MicrostrukturModel:
         # select and return the parmeter combination for the lowest value.
         return None
 
-    def fit_mix(self, data, acquisition_scheme, maxiter=1000):
+    def fit_mix(self, data, acquisition_scheme, maxiter=90):
         """
         differential_evolution
         cvxpy
@@ -300,16 +300,19 @@ class MicrostrukturModel:
                White Matter Fibers from diffusion MRI." Scientific reports 6
                (2016).
         """
-        bounds = ((0, 3), (0, 3), (0, np.pi), (-np.pi, np.pi), (0, 1))
+        scaling = np.hstack([scale for parameter, scale in
+                             self.parameter_scales.items()])
+
         res_one = differential_evolution(self.objective_function,
-                                         bounds,
+                                         self.bounds_for_optimization,
                                          maxiter=maxiter,
                                          args=(data, acquisition_scheme))
-        bla
-        # x = res_one.x
-        # phi = self(acquisition_scheme,
-        #            quantity="stochastic cost function", **parameters)
-        # x_fe = _cvx_fit_linear_parameters(self, data, phi)
+
+        parameters = self.parameter_vector_to_parameters(
+            res_one.x * scaling)
+        phi = self(acquisition_scheme,
+                   quantity="stochastic cost function", **parameters)
+        x_fe = self._cvx_fit_linear_parameters(self, data, phi)
         # and now putting x_fe and x together again in parameters...
         return None
 
@@ -340,7 +343,7 @@ class MicrostrukturModel:
         obj = cvxpy.Minimize(cvxpy.sum_squares(phi * fe - data))
         prob = cvxpy.Problem(obj, constraints)
         prob.solve()
-        return np.array(fe.value)
+        return np.array(fe.value).squeeze()
 
 class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
     r'''
@@ -566,7 +569,7 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
                         current_partial_volume * model.fod(
                             acquisition_scheme_or_vertices, **parameters)
                     )
-            if quantity == "stochastic cost function":
+            elif quantity == "stochastic cost function":
                 values[:, counter] = model(acquisition_scheme_or_vertices,
                                            **parameters)
                 counter += 1
@@ -596,7 +599,7 @@ class I1Stick(MicrostrukturModel):
 
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'lambda_par': (0, np.inf)
+        'lambda_par': (0, 3)
     }
     _parameter_scales = {
         'mu': np.r_[1., 1.],
@@ -686,7 +689,7 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
 
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'lambda_par': (0, np.inf),
+        'lambda_par': (0, 3),
         'diameter': (1e-10, 50e-6)
     }
     _parameter_scales = {
@@ -808,7 +811,7 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
 
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'lambda_par': (0, np.inf),
+        'lambda_par': (0, 3),
         'diameter': (1e-10, 50e-6)
     }
     _parameter_scales = {
@@ -973,7 +976,7 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
 
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'lambda_par': (0, np.inf),
+        'lambda_par': (0, 3),
         'diameter': (1e-10, 50e-6)
     }
     _parameter_scales = {
@@ -1128,7 +1131,7 @@ class I1StickSphericalMean(MicrostrukturModel):
     """
 
     _parameter_ranges = {
-        'lambda_par': (0, np.inf)
+        'lambda_par': (0, 3)
     }
     _parameter_scales = {
         'lambda_par': DIFFUSIVITY_SCALING,
@@ -1192,8 +1195,8 @@ class E4ZeppelinSphericalMean(MicrostrukturModel):
         """
 
     _parameter_ranges = {
-        'lambda_par': (0, np.inf),
-        'lambda_perp': (0, np.inf)
+        'lambda_par': (0, 3),
+        'lambda_perp': (0, 3)
     }
     _parameter_scales = {
         'lambda_par': DIFFUSIVITY_SCALING,
@@ -1273,9 +1276,9 @@ class E5RestrictedZeppelinSphericalMean(MicrostrukturModel):
         """
 
     _parameter_ranges = {
-        'lambda_par': (0, np.inf),
-        'lambda_inf': (0, np.inf),
-        'A': (0, np.inf)
+        'lambda_par': (0, 3),
+        'lambda_inf': (0, 3),
+        'A': (0, 10)
     }
     _parameter_scales = {
         'lambda_par': DIFFUSIVITY_SCALING,
@@ -1377,7 +1380,7 @@ class E3Ball(MicrostrukturModel):
     """
 
     _parameter_ranges = {
-        'lambda_iso': (0, np.inf)
+        'lambda_iso': (0, 3)
     }
     _parameter_scales = {
         'lambda_iso': DIFFUSIVITY_SCALING
@@ -1435,8 +1438,8 @@ class E4Zeppelin(MicrostrukturModel):
 
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'lambda_par': (0, np.inf),
-        'lambda_perp': (0, np.inf)
+        'lambda_par': (0, 3),
+        'lambda_perp': (0, 3)
     }
     _parameter_scales = {
         'mu': np.r_[1., 1.],
@@ -1533,9 +1536,9 @@ class E5RestrictedZeppelin(MicrostrukturModel):
 
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'lambda_par': (0, np.inf),
-        'lambda_inf': (0, np.inf),
-        'A': (0, np.inf)
+        'lambda_par': (0, 3),
+        'lambda_inf': (0, 3),
+        'A': (0, 10)
     }
     _parameter_scales = {
         'mu': np.r_[1., 1.],
@@ -1649,7 +1652,7 @@ class SD3Watson(MicrostrukturModel):
 
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'kappa': (0, np.inf),
+        'kappa': (0, 64),
     }
     _parameter_scales = {
         'mu': np.r_[1., 1.],
@@ -1746,8 +1749,8 @@ class SD2Bingham(MicrostrukturModel):
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
         'psi': (0, np.pi),
-        'kappa': (0, np.inf),
-        'beta': (0, np.inf)  # beta<=kappa in fact
+        'kappa': (0, 64),
+        'beta': (0, 64)  # beta<=kappa in fact
     }
     _parameter_scales = {
         'mu': np.r_[1., 1.],
