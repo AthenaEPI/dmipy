@@ -543,7 +543,6 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
             self.model_names, self.models,
             chain(partial_volumes, (None,))
         ):
-            print model_name
             parameters = {}
             for parameter in model.parameter_ranges:
                 parameter_name = self._inverted_parameter_map[
