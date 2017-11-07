@@ -40,7 +40,7 @@ def test_simple_stick_optimization():
         mu=np.random.rand(2)
     )
     res = stick.fit(E, scheme, x0)
-    assert_array_almost_equal(np.r_[gt_lambda_par, gt_mu], res, 4)
+    assert_array_almost_equal(np.r_[gt_lambda_par, gt_mu], res, 3)
 
 
 def test_simple_ball_and_stick_optimization():
@@ -213,3 +213,37 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
 
     assert_array_almost_equal(
         np.r_[gt_lambda_par, gt_partial_volume], res_sm, 2)
+
+
+def test_fractions_add_up_to_one():
+    dot = three_dimensional_models.E2Dot()
+    dots = three_dimensional_models.PartialVolumeCombinedMicrostrukturModel(
+        models=[dot, dot, dot, dot, dot])
+    parameter_vector = dots.parameters_to_parameter_vector(
+        partial_volume_0=np.random.rand(),
+        partial_volume_1=np.random.rand(),
+        partial_volume_2=np.random.rand(),
+        partial_volume_3=np.random.rand())
+    E = dots.simulate_signal(scheme, parameter_vector)
+    assert_array_almost_equal(E, np.ones(len(E)))
+
+
+def test_MIX_fitting():
+    ball = three_dimensional_models.E3Ball()
+    zeppelin = three_dimensional_models.E4Zeppelin()
+    ball_and_zeppelin = (
+        three_dimensional_models.PartialVolumeCombinedMicrostrukturModel(
+            models=[ball, zeppelin]))
+
+    parameter_vector = ball_and_zeppelin.parameters_to_parameter_vector(
+        E3Ball_1_lambda_iso=2.7e-9,
+        partial_volume_0=.2,
+        E4Zeppelin_1_lambda_perp=.5e-9,
+        E4Zeppelin_1_mu=(np.pi / 2., np.pi / 2.),
+        E4Zeppelin_1_lambda_par=1.7e-9
+    )
+
+    E = ball_and_zeppelin.simulate_signal(
+        scheme, parameter_vector)
+    fit = ball_and_zeppelin.fit_mix(np.array([E]), scheme)
+    assert_array_almost_equal(abs(fit[0]), parameter_vector, 2)

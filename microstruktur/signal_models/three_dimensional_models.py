@@ -288,7 +288,7 @@ class MicrostrukturModel:
         # select and return the parmeter combination for the lowest value.
         return None
 
-    def fit_mix(self, data, acquisition_scheme, maxiter=90):
+    def fit_mix(self, data, acquisition_scheme, maxiter=150):
         """
         differential_evolution
         cvxpy
@@ -297,24 +297,51 @@ class MicrostrukturModel:
         References
         ----------
         .. [1] Farooq, Hamza, et al. "Microstructure Imaging of Crossing (MIX)
-               White Matter Fibers from diffusion MRI." Scientific reports 6
+               White Matter Fibers from diffusion MRI." Nature Scientific reports 6
                (2016).
         """
         scaling = np.hstack([scale for parameter, scale in
                              self.parameter_scales.items()])
 
-        res_one = differential_evolution(self.objective_function,
-                                         self.bounds_for_optimization,
-                                         maxiter=maxiter,
-                                         args=(data, acquisition_scheme))
+        data_at_least_2d = np.atleast_2d(data)
+        data_2d = data_at_least_2d.reshape(-1, data_at_least_2d.shape[-1])
+        number_of_variables = len(self.bounds_for_optimization)
+        fitted_parameters = np.empty(
+            np.r_[data_2d.shape[:-1], number_of_variables], dtype=float)
+        for idx, voxel_data in enumerate(data_2d):
+            # step 1: Variable separation using genetic algorithm
+            res_one = differential_evolution(self.objective_function,
+                                             self.bounds_for_optimization,
+                                             maxiter=maxiter,
+                                             args=(data, acquisition_scheme))
+            res_one_x = res_one.x
+            print res_one_x
+            parameters = self.parameter_vector_to_parameters(
+                res_one_x * scaling)
 
-        parameters = self.parameter_vector_to_parameters(
-            res_one.x * scaling)
-        phi = self(acquisition_scheme,
-                   quantity="stochastic cost function", **parameters)
-        x_fe = self._cvx_fit_linear_parameters(self, data, phi)
-        # and now putting x_fe and x together again in parameters...
-        return None
+            # step 2: Estimating linear variables using cvx
+            phi = self(acquisition_scheme,
+                       quantity="stochastic cost function", **parameters)
+            x_fe = self._cvx_fit_linear_parameters(voxel_data, phi)
+
+            # step 3: refine using gradient method / convert nested fractions
+            x_fe_nested = np.ones(len(x_fe) - 1)
+            x_fe_nested[0] = x_fe[0]
+            for i in np.arange(1, len(x_fe_nested)):
+                x_fe_nested[i] = x_fe[i] / x_fe[i - 1]
+
+            res_one_x[-len(x_fe_nested):] = x_fe_nested
+
+            res_final = minimize(self.objective_function, res_one_x,
+                                 (voxel_data, acquisition_scheme),
+                                 bounds=self.bounds_for_optimization)
+            fitted_parameters[idx] = res_final.x * scaling
+
+        if data.ndim == 1:
+            return np.squeeze(fitted_parameters)
+        else:
+            return fitted_parameters.reshape(np.r_[data.shape[:-1],
+                                                   number_of_variables])
 
     def stochastic_objective_function(self, parameter_vector,
                                       data, acquisition_scheme):
@@ -344,6 +371,7 @@ class MicrostrukturModel:
         prob = cvxpy.Problem(obj, constraints)
         prob.solve()
         return np.array(fe.value).squeeze()
+
 
 class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
     r'''
@@ -599,7 +627,7 @@ class I1Stick(MicrostrukturModel):
 
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'lambda_par': (0, 3)
+        'lambda_par': (.1, 3)
     }
     _parameter_scales = {
         'mu': np.r_[1., 1.],
@@ -689,7 +717,7 @@ class I2CylinderSodermanApproximation(MicrostrukturModel):
 
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'lambda_par': (0, 3),
+        'lambda_par': (.1, 3),
         'diameter': (1e-10, 50e-6)
     }
     _parameter_scales = {
@@ -811,7 +839,7 @@ class I3CylinderCallaghanApproximation(MicrostrukturModel):
 
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'lambda_par': (0, 3),
+        'lambda_par': (.1, 3),
         'diameter': (1e-10, 50e-6)
     }
     _parameter_scales = {
@@ -976,7 +1004,7 @@ class I4CylinderGaussianPhaseApproximation(MicrostrukturModel):
 
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'lambda_par': (0, 3),
+        'lambda_par': (.1, 3),
         'diameter': (1e-10, 50e-6)
     }
     _parameter_scales = {
@@ -1131,7 +1159,7 @@ class I1StickSphericalMean(MicrostrukturModel):
     """
 
     _parameter_ranges = {
-        'lambda_par': (0, 3)
+        'lambda_par': (.1, 3)
     }
     _parameter_scales = {
         'lambda_par': DIFFUSIVITY_SCALING,
@@ -1195,8 +1223,8 @@ class E4ZeppelinSphericalMean(MicrostrukturModel):
         """
 
     _parameter_ranges = {
-        'lambda_par': (0, 3),
-        'lambda_perp': (0, 3)
+        'lambda_par': (.1, 3),
+        'lambda_perp': (.1, 3)
     }
     _parameter_scales = {
         'lambda_par': DIFFUSIVITY_SCALING,
@@ -1276,8 +1304,8 @@ class E5RestrictedZeppelinSphericalMean(MicrostrukturModel):
         """
 
     _parameter_ranges = {
-        'lambda_par': (0, 3),
-        'lambda_inf': (0, 3),
+        'lambda_par': (.1, 3),
+        'lambda_inf': (.1, 3),
         'A': (0, 10)
     }
     _parameter_scales = {
@@ -1380,7 +1408,7 @@ class E3Ball(MicrostrukturModel):
     """
 
     _parameter_ranges = {
-        'lambda_iso': (0, 3)
+        'lambda_iso': (.1, 3)
     }
     _parameter_scales = {
         'lambda_iso': DIFFUSIVITY_SCALING
@@ -1438,8 +1466,8 @@ class E4Zeppelin(MicrostrukturModel):
 
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'lambda_par': (0, 3),
-        'lambda_perp': (0, 3)
+        'lambda_par': (.1, 3),
+        'lambda_perp': (.1, 3)
     }
     _parameter_scales = {
         'mu': np.r_[1., 1.],
@@ -1536,8 +1564,8 @@ class E5RestrictedZeppelin(MicrostrukturModel):
 
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'lambda_par': (0, 3),
-        'lambda_inf': (0, 3),
+        'lambda_par': (.1, 3),
+        'lambda_inf': (.1, 3),
         'A': (0, 10)
     }
     _parameter_scales = {

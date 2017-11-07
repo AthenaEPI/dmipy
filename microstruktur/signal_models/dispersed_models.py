@@ -557,7 +557,7 @@ class SD3I1WatsonDispersedStick(MicrostrukturModel):
 
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'lambda_par': (0, np.inf),
+        'lambda_par': (.1, 3),
         'kappa': (0, 16)
     }
     _parameter_scales = {
@@ -664,7 +664,7 @@ class SD3I2WatsonDispersedSodermanCylinder(MicrostrukturModel):
 
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'lambda_par': (0, np.inf),
+        'lambda_par': (.1, 3),
         'kappa': (0, 16),
         'diameter': (1e-10, 50e-6),
     }
@@ -782,7 +782,7 @@ class SD3I3WatsonDispersedCallaghanCylinder(MicrostrukturModel):
 
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'lambda_par': (0, np.inf),
+        'lambda_par': (.1, 3),
         'kappa': (0, 16),
         'diameter': (1e-10, 50e-6),
     }
@@ -899,7 +899,7 @@ class SD3I4WatsonDispersedGaussianPhaseCylinder(MicrostrukturModel):
 
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'lambda_par': (0, np.inf),
+        'lambda_par': (.1, 3),
         'kappa': (0, 16),
         'diameter': (1e-10, 50e-6),
     }
@@ -1139,8 +1139,8 @@ class SD3E4WatsonDispersedZeppelin(MicrostrukturModel):
 
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'lambda_par': (0, np.inf),
-        'lambda_perp': (0, np.inf),
+        'lambda_par': (.1, 3),
+        'lambda_perp': (.1, 3),
         'kappa': (0, 16)
     }
     _parameter_scales = {
@@ -1247,7 +1247,7 @@ class DD1I2GammaDistributedSodermanCylinder(MicrostrukturModel):
 
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'lambda_par': (0, np.inf),
+        'lambda_par': (.1, 3),
         'alpha': (1e-10, np.inf),
         'beta': (1e-10, np.inf),
     }
@@ -1341,7 +1341,7 @@ class DD1I3GammaDistributedCallaghanCylinder(MicrostrukturModel):
 
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'lambda_par': (0, np.inf),
+        'lambda_par': (.1, 3),
         'alpha': (1e-10, np.inf),
         'beta': (1e-10, np.inf),
     }
@@ -1434,7 +1434,7 @@ class DD1I4GammaDistributedGaussianPhaseCylinder(MicrostrukturModel):
 
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'lambda_par': (0, np.inf),
+        'lambda_par': (.1, 3),
         'alpha': (1e-10, np.inf),
         'beta': (1e-10, np.inf),
     }
