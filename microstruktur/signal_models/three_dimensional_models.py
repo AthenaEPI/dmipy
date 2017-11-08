@@ -373,6 +373,50 @@ class MicrostrukturModel:
         prob.solve()
         return np.array(fe.value).squeeze()
 
+    def R2_coefficient_of_determination(
+            self, parameter_vector, data, acquisition_scheme):
+        "Calculates the R-squared of the model fit."
+        parameters = self.parameter_vector_to_parameters(
+            parameter_vector)
+        y_hat = self(acquisition_scheme, **parameters)
+        y_bar = np.mean(data)
+        SStot = np.sum((data - y_bar) ** 2)
+        SSres = np.sum((data - y_hat) ** 2)
+        R2 = 1 - SSres / SStot
+        return R2
+
+    # def log_likelihood(
+    #         self, parameter_vector, data, acquisition_scheme):
+    #     "Calculates the log-likelihood of the model fit."
+    #     parameters = self.parameter_vector_to_parameters(
+    #         parameter_vector)
+    #     y_hat = self(acquisition_scheme, **parameters)
+    #     N = len(data)
+    #     SSres = np.sum((data - y_hat) ** 2)
+    #     s2 = SSres / N
+    #     ln_L = (N * np.log(1. / np.sqrt(2 * np.pi * s2)) -
+    #             SSres / (2 * s2))
+    #     return ln_L
+
+    # def AIK_akaike_information_criterion(
+    #         self, parameter_vector, data, acquisition_scheme):
+    #     "Calculates the Akaike Information Criterion."
+    #     ln_L = self.log_likelihood(
+    #         parameter_vector, data, acquisition_scheme)
+    #     k = len(parameter_vector)
+    #     AIK = 2 * k - 2 * ln_L
+    #     return AIK
+
+    # def BIC_bayesian_information_criterion(
+    #         self, parameter_vector, data, acquisition_scheme):
+    #     "Calculates the Bayesian Information Criterion."
+    #     ln_L = self.log_likelihood(
+    #         parameter_vector, data, acquisition_scheme)
+    #     k = len(parameter_vector)
+    #     ln_N = np.log(len(data))
+    #     BIC = k * ln_N - 2 * ln_L
+    #     return BIC
+
 
 class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
     r'''
