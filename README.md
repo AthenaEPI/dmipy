@@ -6,6 +6,8 @@ What sets Mipy apart from other packages is the complete freedom it gives the us
 
 For Dipy users: Mipy is completely compatible and complementary to Dipy. Dipy gradient tables can be converted to Mipy acquisition schemes simpy using gtab_dipy2mipy(dipy_gradient_table), after which data sets can be fitted similarly as you were used to before. 
 
+Mipy is now equiped with MIX optimization, giving global minimum for models with many compartments. See [2016 Nature paper](https://escholarship.org/uc/item/9mr5b7ww).
+
 ## Installation
 - clone repository
 - python setup.py install
