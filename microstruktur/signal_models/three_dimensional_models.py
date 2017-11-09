@@ -458,6 +458,7 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
         self._prepare_partial_volumes()
         self._prepare_parameter_links()
         self._verify_model_input_requirements()
+        self._check_for_double_model_class_instances()
 
     def _prepare_parameters(self):
         self.model_names = []
@@ -561,6 +562,15 @@ class PartialVolumeCombinedMicrostrukturModel(MicrostrukturModel):
             msg = "Current model selection is {}".format(self.models)
             raise ValueError(msg)
         self.spherical_mean = np.all(models_spherical_mean)
+
+    def _check_for_double_model_class_instances(self):
+        if len(self.models) != len(np.unique(self.models)):
+            msg = "Each model in the multi-compartment model must be "
+            msg += "instantiated separately. For example, to make a model "
+            msg += "with two sticks, the models must be given as "
+            msg += "models = [stick1, stick2], not as "
+            msg += "models = [stick1, stick1]."
+            raise ValueError(msg)
 
     def add_linked_parameters_to_parameters(self, parameters):
         if len(self.parameter_links) == 0:
