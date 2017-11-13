@@ -195,7 +195,7 @@ def T1_tortuosity(f_intra, lambda_par):
     f_intra : float,
         intra-axonal volume fraction [0, 1].
     lambda_par : float,
-        parallel diffusivity in mm^2/s.
+        parallel diffusivity.
 
     Returns
     -------

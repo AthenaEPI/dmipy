@@ -1,11 +1,12 @@
 from numpy.testing import assert_almost_equal, assert_equal
-from microstruktur.signal_models import three_dimensional_models, utils
-from microstruktur.signal_models.spherical_convolution import (kernel_sh_to_rh,
-                                                               sh_convolution)
+from microstruktur.signal_models import cylinder_models, distributions
+from microstruktur.utils.spherical_convolution import (kernel_sh_to_rh,
+                                                       sh_convolution)
+from microstruktur.utils import utils
 from dipy.reconst.shm import sf_to_sh, sh_to_sf
 from dipy.data import get_sphere
 import numpy as np
-from microstruktur.acquisition_scheme.acquisition_scheme import (
+from microstruktur.core.acquisition_scheme import (
     acquisition_scheme_from_bvalues)
 
 delta = 0.01
@@ -24,12 +25,12 @@ def test_spherical_convolution_watson_sh(sh_order=4):
     mu_watson = sphere.vertices[mu_index]
     mu_watson_sphere = utils.cart2sphere(mu_watson)[1:]
 
-    watson = three_dimensional_models.SD3Watson(mu=mu_watson_sphere, kappa=10.)
+    watson = distributions.SD1Watson(mu=mu_watson_sphere, kappa=10.)
     f_sf = watson(n=sphere.vertices)
     f_sh = sf_to_sh(f_sf, sphere, sh_order)
 
     lambda_par = 2e-9
-    stick = three_dimensional_models.I1Stick(mu=[0, 0], lambda_par=lambda_par)
+    stick = cylinder_models.C1Stick(mu=[0, 0], lambda_par=lambda_par)
     k_sf = stick(scheme)
     k_sh = sf_to_sh(k_sf, sphere, sh_order)
     k_rh = kernel_sh_to_rh(k_sh, sh_order)

@@ -1,8 +1,7 @@
-from microstruktur.signal_models import (
-    three_dimensional_models)
+from microstruktur.signal_models import gaussian_models
 from numpy.testing import assert_array_equal, assert_equal
 import numpy as np
-from microstruktur.acquisition_scheme.acquisition_scheme import (
+from microstruktur.core.acquisition_scheme import (
     acquisition_scheme_from_bvalues)
 
 bvals = np.random.rand(10) * 1e9
@@ -14,13 +13,13 @@ scheme = acquisition_scheme_from_bvalues(bvals, bvecs, delta, Delta)
 
 
 def test_dot():
-    dot = three_dimensional_models.E2Dot()
+    dot = gaussian_models.G2Dot()
     E_dot = dot(scheme)
     assert_equal(np.all(E_dot == 1.), True)
 
 
 def test_ball(lambda_iso=1.7e-9):
-    ball = three_dimensional_models.E3Ball(lambda_iso=lambda_iso)
+    ball = gaussian_models.G3Ball(lambda_iso=lambda_iso)
     E_ball = ball(scheme)
     E = np.exp(-bvals * lambda_iso)
     assert_array_equal(E, E_ball)

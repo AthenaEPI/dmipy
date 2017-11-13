@@ -2,11 +2,10 @@ from numpy.testing import (
     assert_almost_equal, assert_equal, assert_array_almost_equal)
 import numpy as np
 from scipy import stats
-from microstruktur.signal_models import three_dimensional_models
+from microstruktur.signal_models import cylinder_models, distributions
 from microstruktur.signal_models import dispersed_models
-from microstruktur.signal_models.gradient_conversions import b_from_q
 from dipy.data import get_sphere
-from microstruktur.acquisition_scheme.acquisition_scheme import (
+from microstruktur.core.acquisition_scheme import (
     acquisition_scheme_from_qvalues,
     acquisition_scheme_from_bvalues)
 sphere = get_sphere().subdivide()
@@ -25,7 +24,7 @@ def test_RTAP_to_diameter_soderman(samples=10000):
     scheme = acquisition_scheme_from_qvalues(
         qvals_perp, n_perp, delta, Delta)
 
-    soderman = three_dimensional_models.I2CylinderSodermanApproximation(
+    soderman = cylinder_models.C2CylinderSodermanApproximation(
         mu=mu, lambda_par=lambda_par, diameter=diameter)
 
     E_soderman = soderman(scheme)
@@ -51,7 +50,7 @@ def test_watson_dispersed_soderman_kappa0(
     scheme = acquisition_scheme_from_bvalues(
         bvals, n, delta, Delta)
 
-    watson_soderman = dispersed_models.SD3I2WatsonDispersedSodermanCylinder(
+    watson_soderman = dispersed_models.SD1C2WatsonDispersedSodermanCylinder(
         mu=mu, kappa=kappa, lambda_par=lambda_par, diameter=diameter)
     E_watson_soderman = watson_soderman(scheme)
     E_unique_watson_soderman = np.unique(E_watson_soderman)
@@ -71,7 +70,7 @@ def test_bingham_dispersed_soderman_kappa0(
     scheme = acquisition_scheme_from_bvalues(
         bvals, n, delta, Delta)
 
-    bingham_soderman = dispersed_models.SD2I2BinghamDispersedSodermanCylinder(
+    bingham_soderman = dispersed_models.SD2C2BinghamDispersedSodermanCylinder(
         mu=mu, kappa=kappa, beta=beta, psi=psi, lambda_par=lambda_par,
         diameter=diameter
     )
@@ -94,11 +93,11 @@ def test_gamma_distributed_soderman(alpha=.1, beta=1e-5,
     scheme = acquisition_scheme_from_qvalues(
         qvals_perp, n_perp, delta, Delta)
 
-    DD1 = three_dimensional_models.DD1GammaDistribution(alpha=alpha, beta=beta)
-    soderman = three_dimensional_models.I2CylinderSodermanApproximation(
+    DD1 = distributions.DD1GammaDistribution(alpha=alpha, beta=beta)
+    soderman = cylinder_models.C2CylinderSodermanApproximation(
         mu=mu, lambda_par=lambda_par
     )
-    DD1I2 = dispersed_models.DD1I2GammaDistributedSodermanCylinder(
+    DD1I2 = dispersed_models.DD1C2GammaDistributedSodermanCylinder(
         mu=mu, lambda_par=lambda_par, alpha=.1, beta=1e-5)
 
     gamma_dist = stats.gamma(alpha, scale=beta)

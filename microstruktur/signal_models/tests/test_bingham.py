@@ -1,11 +1,11 @@
 from numpy.testing import assert_almost_equal, assert_equal
-from microstruktur.signal_models import utils
+from microstruktur.utils import utils
 import numpy as np
-from microstruktur.signal_models.utils import (
+from microstruktur.utils.utils import (
     rotation_matrix_100_to_theta_phi, rotation_matrix_around_100,
     rotation_matrix_100_to_theta_phi_psi
 )
-from microstruktur.signal_models import three_dimensional_models
+from microstruktur.signal_models import distributions
 
 
 def test_rotation_100_to_theta_phi():
@@ -87,9 +87,9 @@ def test_bingham_equal_to_watson(beta_=0):
     n_cart = utils.sphere2cart(np.r_[1., mu_])
     psi_ = np.random.rand() * np.pi
     kappa_ = np.random.rand()
-    bingham = three_dimensional_models.SD2Bingham(mu=mu_, psi=psi_,
-                                                  kappa=kappa_, beta=beta_)
-    watson = three_dimensional_models.SD3Watson(mu=mu_, kappa=kappa_)
+    bingham = distributions.SD2Bingham(mu=mu_, psi=psi_,
+                                       kappa=kappa_, beta=beta_)
+    watson = distributions.SD1Watson(mu=mu_, kappa=kappa_)
     Bn = bingham(n=n_cart)
     Wn = watson(n=n_cart)
     assert_almost_equal(Bn, Wn, 4)

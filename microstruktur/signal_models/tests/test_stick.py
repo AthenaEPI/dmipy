@@ -1,16 +1,17 @@
 from numpy.testing import assert_almost_equal, assert_equal
 import numpy as np
-from microstruktur.signal_models import three_dimensional_models, utils
-from microstruktur.signal_models.utils import perpendicular_vector
+from microstruktur.utils import utils
+from microstruktur.signal_models import cylinder_models, spherical_mean_models
+from microstruktur.utils.utils import perpendicular_vector
 from microstruktur.signal_models.dispersed_models import (
-    SD2I1BinghamDispersedStick,
-    SD3I1WatsonDispersedStick
+    SD2C1BinghamDispersedStick,
+    SD1C1WatsonDispersedStick
 )
 from dipy.data import get_sphere
 from microstruktur.signal_models.spherical_mean import (
     estimate_spherical_mean_shell
 )
-from microstruktur.acquisition_scheme.acquisition_scheme import (
+from microstruktur.core.acquisition_scheme import (
     acquisition_scheme_from_bvalues)
 sphere = get_sphere().subdivide()
 
@@ -29,8 +30,8 @@ def test_orienting_stick():
     scheme = acquisition_scheme_from_bvalues(
         random_bval, np.atleast_2d(n), delta, Delta)
     # initialize model
-    stick = three_dimensional_models.I1Stick(mu=random_n_mu_vector,
-                                             lambda_par=random_lambda_par)
+    stick = cylinder_models.C1Stick(mu=random_n_mu_vector,
+                                    lambda_par=random_lambda_par)
 
     # test if parallel direction attenuation as a Gaussian
     E_stick = stick(scheme)
@@ -54,12 +55,12 @@ def test_watson_dispersed_stick_kappa0(
     scheme = acquisition_scheme_from_bvalues(bvals, n, delta, Delta)
 
     # for comparison we do spherical mean of stick.
-    sm_stick = three_dimensional_models.I1StickSphericalMean(
+    sm_stick = spherical_mean_models.C1StickSphericalMean(
         lambda_par=lambda_par
     )
     E_sm_stick = sm_stick(scheme)
 
-    watson_stick = SD3I1WatsonDispersedStick(mu=mu, kappa=kappa,
+    watson_stick = SD1C1WatsonDispersedStick(mu=mu, kappa=kappa,
                                              lambda_par=lambda_par)
     E_watson_stick = watson_stick(scheme)
     E_unique_watson_stick = np.unique(E_watson_stick)
@@ -78,12 +79,12 @@ def test_watson_dispersed_stick_kappa_positive(
     scheme = acquisition_scheme_from_bvalues(bvals, n, delta, Delta)
 
     # for comparison we do spherical mean of stick.
-    sm_stick = three_dimensional_models.I1StickSphericalMean(
+    sm_stick = spherical_mean_models.C1StickSphericalMean(
         lambda_par=lambda_par
     )
     E_sm_stick = sm_stick(scheme)
 
-    watson_stick = SD3I1WatsonDispersedStick(mu=mu, kappa=kappa,
+    watson_stick = SD1C1WatsonDispersedStick(mu=mu, kappa=kappa,
                                              lambda_par=lambda_par)
     E_watson_stick = watson_stick(scheme)
     E_unique_watson_stick = np.unique(E_watson_stick)
@@ -103,12 +104,12 @@ def test_bingham_dispersed_stick_kappa0(
     scheme = acquisition_scheme_from_bvalues(bvals, n, delta, Delta)
 
     # for comparison we do spherical mean of stick.
-    sm_stick = three_dimensional_models.I1StickSphericalMean(
+    sm_stick = spherical_mean_models.C1StickSphericalMean(
         lambda_par=lambda_par
     )
     E_sm_stick = sm_stick(scheme)
 
-    bingham_stick = SD2I1BinghamDispersedStick(
+    bingham_stick = SD2C1BinghamDispersedStick(
         mu=mu, kappa=kappa, beta=beta, psi=psi, lambda_par=lambda_par
     )
     E_bingham_stick = bingham_stick(scheme)
@@ -128,12 +129,12 @@ def test_bingham_dispersed_stick_kappa_positive(
     scheme = acquisition_scheme_from_bvalues(bvals, n, delta, Delta)
 
     # for comparison we do spherical mean of stick.
-    sm_stick = three_dimensional_models.I1StickSphericalMean(
+    sm_stick = spherical_mean_models.C1StickSphericalMean(
         lambda_par=lambda_par
     )
     E_sm_stick = sm_stick(scheme)
 
-    bingham_stick = SD2I1BinghamDispersedStick(
+    bingham_stick = SD2C1BinghamDispersedStick(
         mu=mu, kappa=kappa, beta=beta, psi=psi, lambda_par=lambda_par
     )
     E_bingham_stick = bingham_stick(scheme)

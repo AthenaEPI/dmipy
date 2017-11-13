@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from . import three_dimensional_models
-from microstruktur.signal_models.spherical_convolution import sh_convolution
+from . import gaussian_models, cylinder_models, distributions
+from microstruktur.utils.spherical_convolution import sh_convolution
 from scipy import stats
-MicrostrukturModel = three_dimensional_models.MicrostrukturModel
+from microstruktur.core import modeling_framework
+MicrostructureModel = modeling_framework.MicrostructureModel
 WATSON_SH_ORDER = 14
 DIFFUSIVITY_SCALING = 1e-9
 DIAMETER_SCALING = 1e-6
@@ -11,7 +12,7 @@ BETA_SCALING = 1e-6
 A_SCALING = 1e-12
 
 
-class SD2I1BinghamDispersedStick(MicrostrukturModel):
+class SD2C1BinghamDispersedStick(MicrostructureModel):
     r""" The Bingham-Dispersed [1] Stick model [2] - a cylinder with zero
     radius - for intra-axonal diffusion. Allows for anisotropic dispersion.
 
@@ -87,10 +88,10 @@ class SD2I1BinghamDispersedStick(MicrostrukturModel):
         kappa = kwargs.get('kappa', self.kappa)
         beta = kwargs.get('beta', self.beta)
 
-        bingham = three_dimensional_models.SD2Bingham(mu=mu, psi=psi,
-                                                      kappa=kappa, beta=beta)
+        bingham = distributions.SD2Bingham(mu=mu, psi=psi,
+                                           kappa=kappa, beta=beta)
         sh_bingham = bingham.spherical_harmonics_representation(sh_order)
-        stick = three_dimensional_models.I1Stick(mu=mu, lambda_par=lambda_par)
+        stick = cylinder_models.C1Stick(mu=mu, lambda_par=lambda_par)
 
         E = np.ones(acquisition_scheme.number_of_measurements)
         for shell_index in unique_dwi_indices:  # per shell
@@ -125,13 +126,13 @@ class SD2I1BinghamDispersedStick(MicrostrukturModel):
         psi = kwargs.get('psi', self.psi)
         kappa = kwargs.get('kappa', self.kappa)
         beta = kwargs.get('beta', self.beta)
-        bingham = three_dimensional_models.SD2Bingham(
+        bingham = distributions.SD2Bingham(
             mu=mu, psi=psi, kappa=kappa, beta=beta)
         bingham_density = bingham(vertices)
         return bingham_density
 
 
-class SD2I2BinghamDispersedSodermanCylinder(MicrostrukturModel):
+class SD2C2BinghamDispersedSodermanCylinder(MicrostructureModel):
     r""" The Bingham-Dispersed [1] Soderman cylinder model [2] - assuming
     limits of pulse separation towards infinity and pulse duration towards zero
     - for intra-axonal diffusion. Allows for anisotropic dispersion.
@@ -216,10 +217,10 @@ class SD2I2BinghamDispersedSodermanCylinder(MicrostrukturModel):
         kappa = kwargs.get('kappa', self.kappa)
         beta = kwargs.get('beta', self.beta)
 
-        bingham = three_dimensional_models.SD2Bingham(mu=mu, psi=psi,
-                                                      kappa=kappa, beta=beta)
+        bingham = distributions.SD2Bingham(mu=mu, psi=psi,
+                                           kappa=kappa, beta=beta)
         sh_bingham = bingham.spherical_harmonics_representation()
-        soderman = three_dimensional_models.I2CylinderSodermanApproximation(
+        soderman = cylinder_models.C2CylinderSodermanApproximation(
             mu=mu, lambda_par=lambda_par, diameter=diameter
         )
 
@@ -258,13 +259,13 @@ class SD2I2BinghamDispersedSodermanCylinder(MicrostrukturModel):
         psi = kwargs.get('psi', self.psi)
         kappa = kwargs.get('kappa', self.kappa)
         beta = kwargs.get('beta', self.beta)
-        bingham = three_dimensional_models.SD2Bingham(
+        bingham = distributions.SD2Bingham(
             mu=mu, psi=psi, kappa=kappa, beta=beta)
         bingham_density = bingham(vertices)
         return bingham_density
 
 
-class SD2I3BinghamDispersedCallaghanCylinder(MicrostrukturModel):
+class SD2C3BinghamDispersedCallaghanCylinder(MicrostructureModel):
     r""" The Bingham-Dispersed [1] Callaghan cylinder model [2] - assuming
     finite pulse separation and limit of pulse duration towards zero - for
     intra-axonal diffusion. Allows for anisotropic dispersion.
@@ -350,10 +351,10 @@ class SD2I3BinghamDispersedCallaghanCylinder(MicrostrukturModel):
         kappa = kwargs.get('kappa', self.kappa)
         beta = kwargs.get('beta', self.beta)
 
-        bingham = three_dimensional_models.SD2Bingham(mu=mu, psi=psi,
-                                                      kappa=kappa, beta=beta)
+        bingham = distributions.SD2Bingham(mu=mu, psi=psi,
+                                           kappa=kappa, beta=beta)
         sh_bingham = bingham.spherical_harmonics_representation()
-        callaghan = three_dimensional_models.I3CylinderCallaghanApproximation(
+        callaghan = cylinder_models.C3CylinderCallaghanApproximation(
             mu=mu, lambda_par=lambda_par, diameter=diameter
         )
 
@@ -392,13 +393,13 @@ class SD2I3BinghamDispersedCallaghanCylinder(MicrostrukturModel):
         psi = kwargs.get('psi', self.psi)
         kappa = kwargs.get('kappa', self.kappa)
         beta = kwargs.get('beta', self.beta)
-        bingham = three_dimensional_models.SD2Bingham(
+        bingham = distributions.SD2Bingham(
             mu=mu, psi=psi, kappa=kappa, beta=beta)
         bingham_density = bingham(vertices)
         return bingham_density
 
 
-class SD2I4BinghamDispersedGaussianPhaseCylinder(MicrostrukturModel):
+class SD2C4BinghamDispersedGaussianPhaseCylinder(MicrostructureModel):
     r""" The Bingham-Dispersed [1] van gelderen cylinder model [2] - assuming
     finite pulse separation and pulse duration - for intra-axonal diffusion.
 
@@ -483,10 +484,10 @@ class SD2I4BinghamDispersedGaussianPhaseCylinder(MicrostrukturModel):
         kappa = kwargs.get('kappa', self.kappa)
         beta = kwargs.get('beta', self.beta)
 
-        bingham = three_dimensional_models.SD2Bingham(mu=mu, psi=psi,
-                                                      kappa=kappa, beta=beta)
+        bingham = distributions.SD2Bingham(mu=mu, psi=psi,
+                                           kappa=kappa, beta=beta)
         sh_bingham = bingham.spherical_harmonics_representation()
-        vg = three_dimensional_models.I4CylinderGaussianPhaseApproximation(
+        vg = cylinder_models.C4CylinderGaussianPhaseApproximation(
             mu=mu, lambda_par=lambda_par, diameter=diameter
         )
 
@@ -525,13 +526,13 @@ class SD2I4BinghamDispersedGaussianPhaseCylinder(MicrostrukturModel):
         psi = kwargs.get('psi', self.psi)
         kappa = kwargs.get('kappa', self.kappa)
         beta = kwargs.get('beta', self.beta)
-        bingham = three_dimensional_models.SD2Bingham(
+        bingham = distributions.SD2Bingham(
             mu=mu, psi=psi, kappa=kappa, beta=beta)
         bingham_density = bingham(vertices)
         return bingham_density
 
 
-class SD3I1WatsonDispersedStick(MicrostrukturModel):
+class SD1C1WatsonDispersedStick(MicrostructureModel):
     r""" The Watson-Dispersed [1] Stick model [2] - a cylinder with zero radius
     - for intra-axonal diffusion.
 
@@ -593,9 +594,9 @@ class SD3I1WatsonDispersedStick(MicrostrukturModel):
         mu = kwargs.get('mu', self.mu)
         kappa = kwargs.get('kappa', self.kappa)
 
-        watson = three_dimensional_models.SD3Watson(mu=mu, kappa=kappa)
+        watson = distributions.SD1Watson(mu=mu, kappa=kappa)
         sh_watson = watson.spherical_harmonics_representation()
-        stick = three_dimensional_models.I1Stick(mu=mu, lambda_par=lambda_par)
+        stick = cylinder_models.C1Stick(mu=mu, lambda_par=lambda_par)
 
         E = np.ones(acquisition_scheme.number_of_measurements)
         for shell_index in unique_dwi_indices:  # per shell
@@ -628,13 +629,13 @@ class SD3I1WatsonDispersedStick(MicrostrukturModel):
         """
         mu = kwargs.get('mu', self.mu)
         kappa = kwargs.get('kappa', self.kappa)
-        watson = three_dimensional_models.SD3Watson(
+        watson = distributions.SD1Watson(
             mu=mu, kappa=kappa)
         watson_density = watson(vertices)
         return watson_density
 
 
-class SD3I2WatsonDispersedSodermanCylinder(MicrostrukturModel):
+class SD1C2WatsonDispersedSodermanCylinder(MicrostructureModel):
     r""" The Watson-Dispersed [1] Soderman cylinder model [2] - assuming limits
     of pulse separation towards infinity and pulse duration towards zero - for
     intra-axonal diffusion.
@@ -704,11 +705,11 @@ class SD3I2WatsonDispersedSodermanCylinder(MicrostrukturModel):
         mu = kwargs.get('mu', self.mu)
         kappa = kwargs.get('kappa', self.kappa)
 
-        watson = three_dimensional_models.SD3Watson(mu=mu, kappa=kappa)
+        watson = distributions.SD1Watson(mu=mu, kappa=kappa)
         sh_watson = watson.spherical_harmonics_representation(
             sh_order=sh_order
         )
-        soderman = three_dimensional_models.I2CylinderSodermanApproximation(
+        soderman = cylinder_models.C2CylinderSodermanApproximation(
             mu=mu, lambda_par=lambda_par, diameter=diameter
         )
 
@@ -745,13 +746,13 @@ class SD3I2WatsonDispersedSodermanCylinder(MicrostrukturModel):
         """
         mu = kwargs.get('mu', self.mu)
         kappa = kwargs.get('kappa', self.kappa)
-        watson = three_dimensional_models.SD3Watson(
+        watson = distributions.SD1Watson(
             mu=mu, kappa=kappa)
         watson_density = watson(vertices)
         return watson_density
 
 
-class SD3I3WatsonDispersedCallaghanCylinder(MicrostrukturModel):
+class SD1C3WatsonDispersedCallaghanCylinder(MicrostructureModel):
     r""" The Watson-Dispersed [1] Callaghan cylinder model [2] - assuming
     finite pulse separation and the limit of pulse duration towards zero - for
     intra-axonal diffusion.
@@ -822,11 +823,11 @@ class SD3I3WatsonDispersedCallaghanCylinder(MicrostrukturModel):
         mu = kwargs.get('mu', self.mu)
         kappa = kwargs.get('kappa', self.kappa)
 
-        watson = three_dimensional_models.SD3Watson(mu=mu, kappa=kappa)
+        watson = distributions.SD1Watson(mu=mu, kappa=kappa)
         sh_watson = watson.spherical_harmonics_representation(
             sh_order=sh_order
         )
-        callaghan = three_dimensional_models.I3CylinderCallaghanApproximation(
+        callaghan = cylinder_models.C3CylinderCallaghanApproximation(
             mu=mu, lambda_par=lambda_par, diameter=diameter
         )
 
@@ -863,13 +864,13 @@ class SD3I3WatsonDispersedCallaghanCylinder(MicrostrukturModel):
         """
         mu = kwargs.get('mu', self.mu)
         kappa = kwargs.get('kappa', self.kappa)
-        watson = three_dimensional_models.SD3Watson(
+        watson = distributions.SD1Watson(
             mu=mu, kappa=kappa)
         watson_density = watson(vertices)
         return watson_density
 
 
-class SD3I4WatsonDispersedGaussianPhaseCylinder(MicrostrukturModel):
+class SD1C4WatsonDispersedGaussianPhaseCylinder(MicrostructureModel):
     r""" The Watson-Dispersed [1] Van Gelderen cylinder model [2] - assuming
     finite pulse separation and pulse duration - for intra-axonal diffusion.
 
@@ -939,11 +940,11 @@ class SD3I4WatsonDispersedGaussianPhaseCylinder(MicrostrukturModel):
         mu = kwargs.get('mu', self.mu)
         kappa = kwargs.get('kappa', self.kappa)
 
-        watson = three_dimensional_models.SD3Watson(mu=mu, kappa=kappa)
+        watson = distributions.SD1Watson(mu=mu, kappa=kappa)
         sh_watson = watson.spherical_harmonics_representation(
             sh_order=sh_order
         )
-        vg = three_dimensional_models.I4CylinderGaussianPhaseApproximation(
+        vg = cylinder_models.C4CylinderGaussianPhaseApproximation(
             mu=mu, lambda_par=lambda_par, diameter=diameter
         )
 
@@ -980,13 +981,13 @@ class SD3I4WatsonDispersedGaussianPhaseCylinder(MicrostrukturModel):
         """
         mu = kwargs.get('mu', self.mu)
         kappa = kwargs.get('kappa', self.kappa)
-        watson = three_dimensional_models.SD3Watson(
+        watson = distributions.SD1Watson(
             mu=mu, kappa=kappa)
         watson_density = watson(vertices)
         return watson_density
 
 
-class SD2E4BinghamDispersedZeppelin(MicrostrukturModel):
+class SD2G4BinghamDispersedZeppelin(MicrostructureModel):
     r""" The Bingham-Dispersed [1] Zeppelin model [2] - for typically
     extra-axonal diffusion.
 
@@ -1067,10 +1068,10 @@ class SD2E4BinghamDispersedZeppelin(MicrostrukturModel):
         beta = kwargs.get('beta', self.beta)
         psi = kwargs.get('psi', self.psi)
 
-        bingham = three_dimensional_models.SD2Bingham(mu=mu, kappa=kappa,
-                                                      beta=beta, psi=psi)
+        bingham = distributions.SD2Bingham(mu=mu, kappa=kappa,
+                                           beta=beta, psi=psi)
         sh_bingham = bingham.spherical_harmonics_representation()
-        zeppelin = three_dimensional_models.E4Zeppelin(
+        zeppelin = gaussian_models.G4Zeppelin(
             mu=mu, lambda_par=lambda_par, lambda_perp=lambda_perp
         )
 
@@ -1106,13 +1107,13 @@ class SD2E4BinghamDispersedZeppelin(MicrostrukturModel):
         psi = kwargs.get('psi', self.psi)
         kappa = kwargs.get('kappa', self.kappa)
         beta = kwargs.get('beta', self.beta)
-        bingham = three_dimensional_models.SD2Bingham(
+        bingham = distributions.SD2Bingham(
             mu=mu, psi=psi, kappa=kappa, beta=beta)
         bingham_density = bingham(vertices)
         return bingham_density
 
 
-class SD3E4WatsonDispersedZeppelin(MicrostrukturModel):
+class SD1G4WatsonDispersedZeppelin(MicrostructureModel):
     r""" The Watson-Dispersed Zeppelin model [1] - a cylinder with zero radius-
     for intra-axonal diffusion.
 
@@ -1178,11 +1179,11 @@ class SD3E4WatsonDispersedZeppelin(MicrostrukturModel):
         mu = kwargs.get('mu', self.mu)
         kappa = kwargs.get('kappa', self.kappa)
 
-        watson = three_dimensional_models.SD3Watson(mu=mu, kappa=kappa)
+        watson = distributions.SD1Watson(mu=mu, kappa=kappa)
         sh_watson = watson.spherical_harmonics_representation()
-        zeppelin = three_dimensional_models.E4Zeppelin(mu=mu,
-                                                       lambda_par=lambda_par,
-                                                       lambda_perp=lambda_perp)
+        zeppelin = gaussian_models.G4Zeppelin(mu=mu,
+                                              lambda_par=lambda_par,
+                                              lambda_perp=lambda_perp)
 
         E = np.ones(acquisition_scheme.number_of_measurements)
         for shell_index in unique_dwi_indices:  # per shell
@@ -1214,13 +1215,13 @@ class SD3E4WatsonDispersedZeppelin(MicrostrukturModel):
         """
         mu = kwargs.get('mu', self.mu)
         kappa = kwargs.get('kappa', self.kappa)
-        watson = three_dimensional_models.SD3Watson(
+        watson = distributions.SD1Watson(
             mu=mu, kappa=kappa)
         watson_density = watson(vertices)
         return watson_density
 
 
-class DD1I2GammaDistributedSodermanCylinder(MicrostrukturModel):
+class DD1C2GammaDistributedSodermanCylinder(MicrostructureModel):
     r""" The Gamma-Distributed Soderman cylinder model [1] - assuming
     limits of pulse separation towards infinity and pulse duration towards zero
     - for intra-axonal diffusion.
@@ -1296,7 +1297,7 @@ class DD1I2GammaDistributedSodermanCylinder(MicrostrukturModel):
             np.trapz(x=radii, y=radii_pdf_area)
         )
 
-        soderman = three_dimensional_models.I2CylinderSodermanApproximation(
+        soderman = cylinder_models.C2CylinderSodermanApproximation(
             mu=mu, lambda_par=lambda_par
         )
 
@@ -1313,7 +1314,7 @@ class DD1I2GammaDistributedSodermanCylinder(MicrostrukturModel):
         return E
 
 
-class DD1I3GammaDistributedCallaghanCylinder(MicrostrukturModel):
+class DD1C3GammaDistributedCallaghanCylinder(MicrostructureModel):
     r""" Gamma-distributed Callaghan cylinder model [1] - assuming
     finite pulse separation and the limit of pulse duration towards zero - for
     intra-axonal diffusion.
@@ -1390,7 +1391,7 @@ class DD1I3GammaDistributedCallaghanCylinder(MicrostrukturModel):
             np.trapz(x=radii, y=radii_pdf_area)
         )
 
-        callaghan = three_dimensional_models.I3CylinderCallaghanApproximation(
+        callaghan = cylinder_models.C3CylinderCallaghanApproximation(
             mu=mu, lambda_par=lambda_par
         )
 
@@ -1407,7 +1408,7 @@ class DD1I3GammaDistributedCallaghanCylinder(MicrostrukturModel):
         return E
 
 
-class DD1I4GammaDistributedGaussianPhaseCylinder(MicrostrukturModel):
+class DD1C4GammaDistributedGaussianPhaseCylinder(MicrostructureModel):
     r""" The Watson-Dispersed Van Gelderen cylinder model [1] - assuming
     finite pulse separation and pulse duration - for intra-axonal diffusion.
 
@@ -1483,7 +1484,7 @@ class DD1I4GammaDistributedGaussianPhaseCylinder(MicrostrukturModel):
             np.trapz(x=radii, y=radii_pdf_area)
         )
 
-        vg = three_dimensional_models.I4CylinderGaussianPhaseApproximation(
+        vg = cylinder_models.C4CylinderGaussianPhaseApproximation(
             mu=mu, lambda_par=lambda_par
         )
 

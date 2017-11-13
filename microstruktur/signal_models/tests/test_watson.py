@@ -1,6 +1,7 @@
 from numpy.testing import assert_almost_equal, assert_equal
 import numpy as np
-from microstruktur.signal_models import three_dimensional_models, utils
+from microstruktur.signal_models import distributions
+from microstruktur.utils import utils
 from dipy.data import get_sphere
 
 
@@ -11,7 +12,7 @@ def test_watson_integral_unity():
     random_n = np.random.rand(3)
     random_n /= np.linalg.norm(random_n)
     random_mu = np.random.rand(2)
-    watson = three_dimensional_models.SD3Watson(mu=random_mu, kappa=kappa)
+    watson = distributions.SD1Watson(mu=random_mu, kappa=kappa)
     Wn = watson(n=random_n)  # in random direction
     spherical_integral = Wn * 4 * np.pi  # for isotropic distribution
     assert_equal(spherical_integral, 1.)
@@ -36,7 +37,7 @@ def test_watson_orienting():
     mu_cart = n[mu_index]
     mu_sphere = utils.cart2sphere(mu_cart)[1:]
     kappa = np.random.rand() + 0.1  # just to be sure kappa>0
-    watson = three_dimensional_models.SD3Watson(mu=mu_sphere, kappa=kappa)
+    watson = distributions.SD1Watson(mu=mu_sphere, kappa=kappa)
     Wn_vector = watson(n=n)
     assert_almost_equal(Wn_vector[mu_index], max(Wn_vector))
 
@@ -52,7 +53,7 @@ def test_watson_kappa():
     random_mu_cart = utils.sphere2cart(np.r_[1., random_mu])
     kappa1 = np.random.rand()
     kappa2 = kappa1 + np.random.rand() + 0.1
-    watson = three_dimensional_models.SD3Watson(mu=random_mu)
+    watson = distributions.SD1Watson(mu=random_mu)
     Wn1 = watson(n=random_mu_cart, kappa=kappa1)
     Wn2 = watson(n=random_mu_cart, kappa=kappa2)
     assert_equal(Wn2 > Wn1, True)

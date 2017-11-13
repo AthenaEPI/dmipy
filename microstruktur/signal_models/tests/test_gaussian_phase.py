@@ -1,9 +1,9 @@
 from numpy.testing import (assert_equal, assert_array_almost_equal)
 import numpy as np
 from scipy import stats
-from microstruktur.signal_models import three_dimensional_models
+from microstruktur.signal_models import cylinder_models, distributions
 from microstruktur.signal_models import dispersed_models
-from microstruktur.acquisition_scheme.acquisition_scheme import (
+from microstruktur.core.acquisition_scheme import (
     acquisition_scheme_from_bvalues,
     acquisition_scheme_from_qvalues)
 from dipy.data import get_sphere
@@ -27,7 +27,7 @@ def test_gaussian_phase_profile_narrow_pulse_not_restricted(samples=100):
     scheme = acquisition_scheme_from_qvalues(qvals_perp, n_perp, delta, Delta)
 
     vangelderen = (
-        three_dimensional_models.I4CylinderGaussianPhaseApproximation(
+        cylinder_models.C4CylinderGaussianPhaseApproximation(
             mu=mu, lambda_par=lambda_par, diameter=diameter)
     )
     E_vangelderen = vangelderen(scheme)
@@ -55,7 +55,7 @@ def test_watson_dispersed_gaussian_phase_kappa0(
     scheme = acquisition_scheme_from_bvalues(bvals, n, delta, Delta)
 
     watson_gaussian_phase = (
-        dispersed_models.SD3I4WatsonDispersedGaussianPhaseCylinder(
+        dispersed_models.SD1C4WatsonDispersedGaussianPhaseCylinder(
             mu=mu, kappa=kappa, lambda_par=lambda_par, diameter=diameter)
     )
     E_watson_gaussian_phase = watson_gaussian_phase(scheme)
@@ -76,7 +76,7 @@ def test_bingham_dispersed_gaussian_phase_kappa0(
     scheme = acquisition_scheme_from_bvalues(bvals, n, delta, Delta)
 
     bingham_gaussian_phase = (
-        dispersed_models.SD2I4BinghamDispersedGaussianPhaseCylinder(
+        dispersed_models.SD2C4BinghamDispersedGaussianPhaseCylinder(
             mu=mu, kappa=kappa, beta=beta, psi=psi, lambda_par=lambda_par,
             diameter=diameter)
     )
@@ -98,12 +98,12 @@ def test_gamma_distributed_vangelderen(alpha=.1, beta=1e-5,
     n_perp = np.tile(np.r_[1., 0., 0.], (samples, 1))
     scheme = acquisition_scheme_from_qvalues(qvals_perp, n_perp, delta, Delta)
 
-    DD1 = three_dimensional_models.DD1GammaDistribution(alpha=alpha, beta=beta)
+    DD1 = distributions.DD1GammaDistribution(alpha=alpha, beta=beta)
     vangelderen = (
-        three_dimensional_models.I4CylinderGaussianPhaseApproximation(
+        cylinder_models.C4CylinderGaussianPhaseApproximation(
             mu=mu, lambda_par=lambda_par)
     )
-    DD1I2 = dispersed_models.DD1I4GammaDistributedGaussianPhaseCylinder(
+    DD1I2 = dispersed_models.DD1C4GammaDistributedGaussianPhaseCylinder(
         mu=mu, lambda_par=lambda_par, alpha=.1, beta=1e-5)
 
     gamma_dist = stats.gamma(alpha, scale=beta)

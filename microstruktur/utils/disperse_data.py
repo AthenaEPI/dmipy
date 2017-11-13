@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from dipy.reconst.shm import real_sym_sh_mrtrix
 import numpy as np
-from . import three_dimensional_models, spherical_convolution, utils
+from . import three_dimensional_models, spherical_convolution, utils, distributions
 BINGHAM_SH_ORDER = 14
 
 
@@ -49,7 +49,7 @@ def disperse_data(E, bvecs, shell_indices, mu, psi, kappa, beta):
         207-223.
     """
     sh_order = BINGHAM_SH_ORDER
-    bingham = three_dimensional_models.SD2Bingham(mu, psi, kappa, beta)
+    bingham = distributions.SD2Bingham(mu, psi, kappa, beta)
     sh_bingham = bingham.spherical_harmonics_representation(sh_order=sh_order)
     E_dispersed = np.ones_like(E)
     for shell_index in np.arange(1, shell_indices.max() + 1):  # per shell

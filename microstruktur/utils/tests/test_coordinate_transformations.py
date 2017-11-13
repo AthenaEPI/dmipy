@@ -1,6 +1,6 @@
 from numpy.testing import assert_almost_equal
 import numpy as np
-from microstruktur.signal_models import utils
+from microstruktur.utils import utils
 
 
 def test_coordinate_transformation():

@@ -1,16 +1,17 @@
 from numpy.testing import assert_almost_equal, assert_equal
 import numpy as np
-from microstruktur.signal_models import three_dimensional_models, utils
-from microstruktur.signal_models.utils import perpendicular_vector
+from microstruktur.utils import utils
+from microstruktur.signal_models import spherical_mean_models, gaussian_models
+from microstruktur.utils.utils import perpendicular_vector
 from microstruktur.signal_models.dispersed_models import (
-    SD2E4BinghamDispersedZeppelin,
-    SD3E4WatsonDispersedZeppelin
+    SD2G4BinghamDispersedZeppelin,
+    SD1G4WatsonDispersedZeppelin
 )
 from microstruktur.signal_models.spherical_mean import (
     estimate_spherical_mean_shell
 )
 from dipy.data import get_sphere
-from microstruktur.acquisition_scheme.acquisition_scheme import (
+from microstruktur.core.acquisition_scheme import (
     acquisition_scheme_from_bvalues)
 sphere = get_sphere().subdivide()
 
@@ -28,7 +29,7 @@ def test_orienting_zeppelin():
     random_lambda_par = np.random.rand() * 3 * 1e-9
     random_lambda_perp = random_lambda_par / 2.
 
-    zeppelin = three_dimensional_models.E4Zeppelin(
+    zeppelin = gaussian_models.G4Zeppelin(
         mu=random_mu, lambda_par=random_lambda_par,
         lambda_perp=random_lambda_perp)
     E_zep_par = zeppelin(scheme)
@@ -53,12 +54,12 @@ def test_watson_dispersed_zeppelin_kappa0(
     scheme = acquisition_scheme_from_bvalues(bvals, n, delta, Delta)
 
     # for comparison we do spherical mean of zeppelin.
-    sm_zeppelin = three_dimensional_models.E4ZeppelinSphericalMean(
+    sm_zeppelin = spherical_mean_models.G4ZeppelinSphericalMean(
         lambda_par=lambda_par, lambda_perp=lambda_perp
     )
     E_sm_zeppelin = sm_zeppelin(scheme)
 
-    watson_zeppelin = SD3E4WatsonDispersedZeppelin(
+    watson_zeppelin = SD1G4WatsonDispersedZeppelin(
         mu=mu, kappa=kappa, lambda_par=lambda_par, lambda_perp=lambda_perp)
     E_watson_zeppelin = watson_zeppelin(scheme)
     E_unique_watson_zeppelin = np.unique(E_watson_zeppelin)
@@ -77,12 +78,12 @@ def test_watson_dispersed_zeppelin_kappa_positive(
     scheme = acquisition_scheme_from_bvalues(bvals, n, delta, Delta)
 
     # for comparison we do spherical mean of zeppelin.
-    sm_zeppelin = three_dimensional_models.E4ZeppelinSphericalMean(
+    sm_zeppelin = spherical_mean_models.G4ZeppelinSphericalMean(
         lambda_par=lambda_par, lambda_perp=lambda_perp
     )
     E_sm_zeppelin = sm_zeppelin(scheme)
 
-    watson_zeppelin = SD3E4WatsonDispersedZeppelin(
+    watson_zeppelin = SD1G4WatsonDispersedZeppelin(
         mu=mu, kappa=kappa, lambda_par=lambda_par, lambda_perp=lambda_perp
     )
     E_watson_zeppelin = watson_zeppelin(scheme)
@@ -104,12 +105,12 @@ def test_bingham_dispersed_zeppelin_kappa0(
     scheme = acquisition_scheme_from_bvalues(bvals, n, delta, Delta)
 
     # for comparison we do spherical mean of zeppelin.
-    sm_zeppelin = three_dimensional_models.E4ZeppelinSphericalMean(
+    sm_zeppelin = spherical_mean_models.G4ZeppelinSphericalMean(
         lambda_par=lambda_par, lambda_perp=lambda_perp
     )
     E_sm_zeppelin = sm_zeppelin(scheme)
 
-    bingham_zeppelin = SD2E4BinghamDispersedZeppelin(
+    bingham_zeppelin = SD2G4BinghamDispersedZeppelin(
         mu=mu, kappa=kappa, beta=beta, psi=psi, lambda_par=lambda_par,
         lambda_perp=lambda_perp
     )
@@ -126,7 +127,7 @@ def test_bingham_dispersed_zeppelin_kappa_positive(
     beta=0, psi=0
 ):
     # for comparison we do spherical mean of zeppelin.
-    sm_zeppelin = three_dimensional_models.E4ZeppelinSphericalMean(
+    sm_zeppelin = spherical_mean_models.G4ZeppelinSphericalMean(
         lambda_par=lambda_par, lambda_perp=lambda_perp
     )
     # testing uniformly dispersed bingham zeppelin.
@@ -135,7 +136,7 @@ def test_bingham_dispersed_zeppelin_kappa_positive(
     scheme = acquisition_scheme_from_bvalues(bvals, n, delta, Delta)
     E_sm_zeppelin = sm_zeppelin(scheme)
 
-    bingham_zeppelin = SD2E4BinghamDispersedZeppelin(
+    bingham_zeppelin = SD2G4BinghamDispersedZeppelin(
         mu=mu, kappa=kappa, beta=beta, psi=psi, lambda_par=lambda_par,
         lambda_perp=lambda_perp
     )

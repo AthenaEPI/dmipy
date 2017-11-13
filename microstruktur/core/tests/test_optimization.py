@@ -1,23 +1,24 @@
 from os.path import join
 from microstruktur.signal_models import (
-    three_dimensional_models)
-from microstruktur.signal_models.utils import (
+    cylinder_models, gaussian_models, spherical_mean_models)
+from microstruktur.utils.utils import (
     T1_tortuosity, parameter_equality
 )
+from microstruktur.core import modeling_framework
 from numpy.testing import (
     assert_equal, assert_array_almost_equal, assert_array_equal)
 import numpy as np
-from microstruktur.acquisition_scheme.acquisition_scheme import (
+from microstruktur.core.acquisition_scheme import (
     acquisition_scheme_from_bvalues)
 
 
 bvals = np.loadtxt(
-    join(three_dimensional_models.GRADIENT_TABLES_PATH,
+    join(modeling_framework.GRADIENT_TABLES_PATH,
          'bvals_hcp_wu_minn.txt')
 )
 bvals *= 1e6
 gradient_directions = np.loadtxt(
-    join(three_dimensional_models.GRADIENT_TABLES_PATH,
+    join(modeling_framework.GRADIENT_TABLES_PATH,
          'bvecs_hcp_wu_minn.txt')
 )
 delta = 0.01
@@ -27,7 +28,7 @@ scheme = acquisition_scheme_from_bvalues(
 
 
 def test_simple_stick_optimization():
-    stick = three_dimensional_models.I1Stick()
+    stick = cylinder_models.C1Stick()
     gt_mu = np.random.rand(2)
     gt_lambda_par = (np.random.rand() + 1.) * 1e-9
     gt_parameter_vector = stick.parameters_to_parameter_vector(
@@ -44,11 +45,11 @@ def test_simple_stick_optimization():
 
 
 def test_simple_ball_and_stick_optimization():
-    stick = three_dimensional_models.I1Stick()
-    ball = three_dimensional_models.E3Ball()
+    stick = cylinder_models.C1Stick()
+    ball = gaussian_models.G3Ball()
 
     ball_and_stick = (
-        three_dimensional_models.PartialVolumeCombinedMicrostrukturModel(
+        modeling_framework.MultiCompartmentMicrostructureModel(
             models=[ball, stick],
             parameter_links=[],
             optimise_partial_volumes=True)
@@ -59,9 +60,9 @@ def test_simple_ball_and_stick_optimization():
     gt_partial_volume = 0.3
 
     gt_parameter_vector = ball_and_stick.parameters_to_parameter_vector(
-        I1Stick_1_lambda_par=gt_lambda_par,
-        E3Ball_1_lambda_iso=gt_lambda_iso,
-        I1Stick_1_mu=gt_mu,
+        C1Stick_1_lambda_par=gt_lambda_par,
+        G3Ball_1_lambda_iso=gt_lambda_iso,
+        C1Stick_1_mu=gt_mu,
         partial_volume_0=gt_partial_volume
     )
 
@@ -69,9 +70,9 @@ def test_simple_ball_and_stick_optimization():
         scheme, gt_parameter_vector)
 
     x0 = ball_and_stick.parameters_to_parameter_vector(
-        I1Stick_1_lambda_par=(np.random.rand() + 1.) * 1e-9,
-        E3Ball_1_lambda_iso=gt_lambda_par / 2.,
-        I1Stick_1_mu=np.random.rand(2),
+        C1Stick_1_lambda_par=(np.random.rand() + 1.) * 1e-9,
+        G3Ball_1_lambda_iso=gt_lambda_par / 2.,
+        C1Stick_1_mu=np.random.rand(2),
         partial_volume_0=np.random.rand()
     )
     res = ball_and_stick.fit(E, scheme, x0)
@@ -79,10 +80,10 @@ def test_simple_ball_and_stick_optimization():
 
 
 def test_multi_dimensional_x0():
-    stick = three_dimensional_models.I1Stick()
-    ball = three_dimensional_models.E3Ball()
+    stick = cylinder_models.C1Stick()
+    ball = gaussian_models.G3Ball()
     ball_and_stick = (
-        three_dimensional_models.PartialVolumeCombinedMicrostrukturModel(
+        modeling_framework.MultiCompartmentMicrostructureModel(
             models=[ball, stick],
             parameter_links=[],
             optimise_partial_volumes=True)
@@ -99,9 +100,9 @@ def test_multi_dimensional_x0():
 
     gt_parameter_vector = (
         ball_and_stick.parameters_to_parameter_vector(
-            I1Stick_1_lambda_par=gt_lambda_par,
-            E3Ball_1_lambda_iso=gt_lambda_iso,
-            I1Stick_1_mu=gt_mu_array,
+            C1Stick_1_lambda_par=gt_lambda_par,
+            G3Ball_1_lambda_iso=gt_lambda_iso,
+            C1Stick_1_mu=gt_mu_array,
             partial_volume_0=gt_partial_volume)
     )
 
@@ -135,8 +136,8 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
     gt_lambda_par = (np.random.rand() + 1.) * 1e-9
     gt_partial_volume = 0.3
 
-    stick = three_dimensional_models.I1Stick()
-    zeppelin = three_dimensional_models.E4Zeppelin()
+    stick = cylinder_models.C1Stick()
+    zeppelin = gaussian_models.G4Zeppelin()
 
     parameter_links_stick_and_tortuous_zeppelin = [
         (  # tortuosity assumption
@@ -161,7 +162,7 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
     ]
 
     stick_and_tortuous_zeppelin = (
-        three_dimensional_models.PartialVolumeCombinedMicrostrukturModel(
+        modeling_framework.MultiCompartmentMicrostructureModel(
             models=[stick, zeppelin],
             parameter_links=parameter_links_stick_and_tortuous_zeppelin,
             optimise_partial_volumes=True)
@@ -169,8 +170,8 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
 
     gt_parameter_vector = (
         stick_and_tortuous_zeppelin.parameters_to_parameter_vector(
-            I1Stick_1_lambda_par=gt_lambda_par,
-            I1Stick_1_mu=gt_mu,
+            C1Stick_1_lambda_par=gt_lambda_par,
+            C1Stick_1_mu=gt_mu,
             partial_volume_0=gt_partial_volume)
     )
 
@@ -179,8 +180,8 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
 
     # now we make the stick and zeppelin spherical mean model and check if the
     # same lambda_par and volume fraction result as the 3D generated data.
-    stick_sm = three_dimensional_models.I1StickSphericalMean()
-    zeppelin_sm = three_dimensional_models.E4ZeppelinSphericalMean()
+    stick_sm = spherical_mean_models.C1StickSphericalMean()
+    zeppelin_sm = spherical_mean_models.G4ZeppelinSphericalMean()
 
     parameter_links_stick_and_tortuous_zeppelin_smt = [
         (  # tortuosity assumption
@@ -199,13 +200,13 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
     ]
 
     stick_and_tortuous_zeppelin_sm = (
-        three_dimensional_models.PartialVolumeCombinedMicrostrukturModel(
+        modeling_framework.MultiCompartmentMicrostructureModel(
             models=[stick_sm, zeppelin_sm],
             parameter_links=parameter_links_stick_and_tortuous_zeppelin_smt,
             optimise_partial_volumes=True)
     )
     x0 = stick_and_tortuous_zeppelin_sm.parameters_to_parameter_vector(
-        I1StickSphericalMean_1_lambda_par=.6 * 1e-9,
+        C1StickSphericalMean_1_lambda_par=.6 * 1e-9,
         partial_volume_0=0.55
     )
 
@@ -216,9 +217,13 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
 
 
 def test_fractions_add_up_to_one():
-    dot = three_dimensional_models.E2Dot()
-    dots = three_dimensional_models.PartialVolumeCombinedMicrostrukturModel(
-        models=[dot, dot, dot, dot, dot])
+    dot1 = gaussian_models.G2Dot()
+    dot2 = gaussian_models.G2Dot()
+    dot3 = gaussian_models.G2Dot()
+    dot4 = gaussian_models.G2Dot()
+    dot5 = gaussian_models.G2Dot()
+    dots = modeling_framework.MultiCompartmentMicrostructureModel(
+        models=[dot1, dot2, dot3, dot4, dot5])
     parameter_vector = dots.parameters_to_parameter_vector(
         partial_volume_0=np.random.rand(),
         partial_volume_1=np.random.rand(),
@@ -229,18 +234,18 @@ def test_fractions_add_up_to_one():
 
 
 def test_MIX_fitting():
-    ball = three_dimensional_models.E3Ball()
-    zeppelin = three_dimensional_models.E4Zeppelin()
+    ball = gaussian_models.G3Ball()
+    zeppelin = gaussian_models.G4Zeppelin()
     ball_and_zeppelin = (
-        three_dimensional_models.PartialVolumeCombinedMicrostrukturModel(
+        modeling_framework.MultiCompartmentMicrostructureModel(
             models=[ball, zeppelin]))
 
     parameter_vector = ball_and_zeppelin.parameters_to_parameter_vector(
-        E3Ball_1_lambda_iso=2.7e-9,
+        G3Ball_1_lambda_iso=2.7e-9,
         partial_volume_0=.2,
-        E4Zeppelin_1_lambda_perp=.5e-9,
-        E4Zeppelin_1_mu=(np.pi / 2., np.pi / 2.),
-        E4Zeppelin_1_lambda_par=1.7e-9
+        G4Zeppelin_1_lambda_perp=.5e-9,
+        G4Zeppelin_1_mu=(np.pi / 2., np.pi / 2.),
+        G4Zeppelin_1_lambda_par=1.7e-9
     )
 
     E = ball_and_zeppelin.simulate_signal(

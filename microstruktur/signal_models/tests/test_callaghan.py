@@ -4,10 +4,10 @@ from numpy.testing import (
     assert_array_almost_equal)
 import numpy as np
 from scipy import stats
-from microstruktur.signal_models import three_dimensional_models
+from microstruktur.signal_models import cylinder_models, distributions
 from microstruktur.signal_models import dispersed_models
 from dipy.data import get_sphere
-from microstruktur.acquisition_scheme.acquisition_scheme import (
+from microstruktur.core.acquisition_scheme import (
     acquisition_scheme_from_qvalues,
     acquisition_scheme_from_bvalues)
 sphere = get_sphere().subdivide()
@@ -25,7 +25,7 @@ def test_RTAP_to_diameter_callaghan(samples=10000):
     n_perp = np.tile(np.r_[1., 0., 0.], (samples, 1))
     scheme = acquisition_scheme_from_qvalues(qvals_perp, n_perp, delta, Delta)
 
-    callaghan = three_dimensional_models.I3CylinderCallaghanApproximation(
+    callaghan = cylinder_models.C3CylinderCallaghanApproximation(
         mu=mu, lambda_par=lambda_par, diameter=diameter)
 
     E_callaghan = callaghan(scheme)
@@ -54,7 +54,7 @@ def test_callaghan_profile_narrow_pulse_not_restricted(samples=100):
 
     # needed to increase the number of roots and functions to approximate
     # the gaussian function.
-    callaghan = three_dimensional_models.I3CylinderCallaghanApproximation(
+    callaghan = cylinder_models.C3CylinderCallaghanApproximation(
         number_of_roots=20, number_of_functions=50,
         mu=mu, lambda_par=lambda_par, diameter=diameter,
         diffusion_perpendicular=diffusion_perpendicular)
@@ -77,9 +77,9 @@ def test_soderman_equivalent_to_callaghan_with_one_root_and_function(
     n_perp = np.tile(np.r_[1., 0., 0.], (samples, 1))
     scheme = acquisition_scheme_from_qvalues(qvals_perp, n_perp, delta, Delta)
 
-    soderman = three_dimensional_models.I2CylinderSodermanApproximation(
+    soderman = cylinder_models.C2CylinderSodermanApproximation(
         mu=mu, lambda_par=lambda_par, diameter=diameter)
-    callaghan = three_dimensional_models.I3CylinderCallaghanApproximation(
+    callaghan = cylinder_models.C3CylinderCallaghanApproximation(
         number_of_roots=1, number_of_functions=1,
         mu=mu, lambda_par=lambda_par, diameter=diameter,
         diffusion_perpendicular=diffusion_perpendicular)
@@ -100,7 +100,7 @@ def test_watson_dispersed_callaghan_kappa0(
     Delta = np.tile(3e-2, len(bvals))
     scheme = acquisition_scheme_from_bvalues(bvals, n, delta, Delta)
 
-    watson_callaghan = dispersed_models.SD3I3WatsonDispersedCallaghanCylinder(
+    watson_callaghan = dispersed_models.SD1C3WatsonDispersedCallaghanCylinder(
         mu=mu, kappa=kappa, lambda_par=lambda_par, diameter=diameter)
     E_watson_callaghan = watson_callaghan(scheme)
     E_unique_watson_callaghan = np.unique(E_watson_callaghan)
@@ -120,7 +120,7 @@ def test_bingham_dispersed_callaghan_kappa0(
     scheme = acquisition_scheme_from_bvalues(bvals, n, delta, Delta)
 
     bingham_callaghan = (
-        dispersed_models.SD2I3BinghamDispersedCallaghanCylinder(
+        dispersed_models.SD2C3BinghamDispersedCallaghanCylinder(
             mu=mu, kappa=kappa, beta=beta, psi=psi, lambda_par=lambda_par,
             diameter=diameter)
     )
@@ -142,11 +142,11 @@ def test_gamma_distributed_callaghan(alpha=.1, beta=1e-5,
     n_perp = np.tile(np.r_[1., 0., 0.], (samples, 1))
     scheme = acquisition_scheme_from_qvalues(qvals_perp, n_perp, delta, Delta)
 
-    DD1 = three_dimensional_models.DD1GammaDistribution(alpha=alpha, beta=beta)
-    callaghan = three_dimensional_models.I3CylinderCallaghanApproximation(
+    DD1 = distributions.DD1GammaDistribution(alpha=alpha, beta=beta)
+    callaghan = cylinder_models.C3CylinderCallaghanApproximation(
         mu=mu, lambda_par=lambda_par
     )
-    DD1I2 = dispersed_models.DD1I3GammaDistributedCallaghanCylinder(
+    DD1I2 = dispersed_models.DD1C3GammaDistributedCallaghanCylinder(
         mu=mu, lambda_par=lambda_par, alpha=.1, beta=1e-5)
 
     gamma_dist = stats.gamma(alpha, scale=beta)
