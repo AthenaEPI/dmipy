@@ -289,7 +289,6 @@ class MicrostructureModel:
                                              maxiter=maxiter,
                                              args=(data, acquisition_scheme))
             res_one_x = res_one.x
-            print res_one_x
             parameters = self.parameter_vector_to_parameters(
                 res_one_x * scaling)
 
