@@ -284,7 +284,7 @@ class MicrostructureModel:
             np.r_[data_2d.shape[:-1], number_of_variables], dtype=float)
         for idx, voxel_data in enumerate(data_2d):
             # step 1: Variable separation using genetic algorithm
-            res_one = differential_evolution(self.objective_function,
+            res_one = differential_evolution(self.stochastic_objective_function,
                                              self.bounds_for_optimization,
                                              maxiter=maxiter,
                                              args=(data, acquisition_scheme))
