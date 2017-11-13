@@ -24,6 +24,7 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - [Combining biophysical models into a Microstructure model](https://github.com/AthenaEPI/microstruktur/blob/master/examples/tutorial_combining_biophysical_models_into_microstructure_model.ipynb)
 - [Imposing parameter links when combining biophysical models](https://github.com/AthenaEPI/microstruktur/blob/master/examples/tutorial_imposing_parameter_links.ipynb)
 - [Using varying initial parameter settings when fitting larger data sets](https://github.com/AthenaEPI/microstruktur/blob/master/examples/tutorial_varying_intial_parameter_settings_for_larger_data_sets.ipynb)
+- [Visualization Fiber Orientation Distributions (FODs) of dispersped models](https://github.com/AthenaEPI/microstruktur/blob/master/examples/tutorial_visualizing_fods_from_dispersed_models.ipynb)
 - Fitting real data with a custom model...
 
 ## Explanations and Illustrations of Biophysical Models in the Toolbox
