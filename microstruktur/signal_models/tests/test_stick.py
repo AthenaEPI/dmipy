@@ -8,7 +8,7 @@ from microstruktur.signal_models.dispersed_models import (
     SD1C1WatsonDispersedStick
 )
 from dipy.data import get_sphere
-from microstruktur.signal_models.spherical_mean import (
+from microstruktur.utils.spherical_mean import (
     estimate_spherical_mean_shell
 )
 from microstruktur.core.acquisition_scheme import (
