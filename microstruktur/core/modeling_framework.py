@@ -282,7 +282,7 @@ class MicrostructureModel:
             res_one = differential_evolution(self.stochastic_objective_function,
                                              self.bounds_for_optimization,
                                              maxiter=maxiter,
-                                             args=(data, acquisition_scheme))
+                                             args=(voxel_data, acquisition_scheme))
             res_one_x = res_one.x
             parameters = self.parameter_vector_to_parameters(
                 res_one_x * self.scales_for_optimization)
@@ -323,7 +323,7 @@ class MicrostructureModel:
                      quantity="stochastic cost function", **parameters)
 
         phi_mp = np.dot(np.linalg.pinv(np.dot(phi_x.T, phi_x)), phi_x.T)
-        f = np.dot(phi_mp, data.T)
+        f = np.dot(phi_mp, data)
         yhat = np.dot(phi_x, f)
         cost = np.dot(data - yhat, data - yhat).squeeze()
         return cost
