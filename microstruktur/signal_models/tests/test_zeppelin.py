@@ -7,7 +7,7 @@ from microstruktur.signal_models.dispersed_models import (
     SD2G4BinghamDispersedZeppelin,
     SD1G4WatsonDispersedZeppelin
 )
-from microstruktur.signal_models.spherical_mean import (
+from microstruktur.utils.spherical_mean import (
     estimate_spherical_mean_shell
 )
 from dipy.data import get_sphere
