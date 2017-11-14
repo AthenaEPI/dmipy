@@ -117,6 +117,11 @@ class MicrostructureModel:
                     bounds.append((range_[0][i], range_[1][i]))
         return bounds
 
+    @property
+    def scales_for_optimization(self):
+        return np.hstack([scale for parameter, scale in
+                          self.parameter_scales.items()])
+
     def simulate_signal(self, acquisition_scheme, model_parameters_array):
         """ Function to simulate diffusion data using the defined
         microstructure model and acquisition parameters.
@@ -218,25 +223,20 @@ class MicrostructureModel:
         data_2d = data_at_least_2d.reshape(-1, data_at_least_2d.shape[-1])
         x0_2d = x0_at_least_2d.reshape(-1, x0_at_least_2d.shape[-1])
         fitted_parameters = np.empty(x0_2d.shape, dtype=float)
+        x0_2d = x0_2d / self.scales_for_optimization
 
-        scaling = np.hstack([scale for parameter, scale in
-                             self.parameter_scales.items()])
-        x0_2d = x0_2d / scaling
-        for idx, (voxel_data, voxel_x0) in enumerate(zip(data_2d, x0_2d)):
-            if self.spherical_mean:
-                voxel_data_spherical_mean = (
-                    estimate_spherical_mean_multi_shell(voxel_data,
-                                                        acquisition_scheme))
-                res_ = minimize(self.objective_function, voxel_x0,
-                                (voxel_data_spherical_mean,
-                                 acquisition_scheme),
-                                bounds=self.bounds_for_optimization)
-            else:
-                res_ = minimize(self.objective_function, voxel_x0,
-                                (voxel_data, acquisition_scheme),
-                                bounds=self.bounds_for_optimization)
+        if self.spherical_mean:
+            data_to_fit = [estimate_spherical_mean_multi_shell(
+                voxel_data, acquisition_scheme) for voxel_data in data_2d]
+        else:
+            data_to_fit = data_2d
+
+        for idx, (voxel_data, voxel_x0) in enumerate(zip(data_to_fit, x0_2d)):
+            res_ = minimize(self.objective_function, voxel_x0,
+                            (voxel_data, acquisition_scheme),
+                            bounds=self.bounds_for_optimization)
             fitted_parameters[idx] = res_.x
-        fitted_parameters *= scaling
+        fitted_parameters *= self.scales_for_optimization
 
         if data.ndim == 1:
             return np.squeeze(fitted_parameters.reshape(x0_at_least_2d.shape))
@@ -244,9 +244,7 @@ class MicrostructureModel:
             return fitted_parameters.reshape(x0_at_least_2d.shape)
 
     def objective_function(self, parameter_vector, data, acquisition_scheme):
-        scaling = np.hstack([scale for parameter, scale in
-                             self.parameter_scales.items()])
-        parameter_vector = parameter_vector * scaling
+        parameter_vector = parameter_vector * self.scales_for_optimization
         parameters = {}
         parameters.update(
             self.parameter_vector_to_parameters(parameter_vector)
@@ -274,9 +272,6 @@ class MicrostructureModel:
                White Matter Fibers from diffusion MRI." Nature Scientific reports 6
                (2016).
         """
-        scaling = np.hstack([scale for parameter, scale in
-                             self.parameter_scales.items()])
-
         data_at_least_2d = np.atleast_2d(data)
         data_2d = data_at_least_2d.reshape(-1, data_at_least_2d.shape[-1])
         number_of_variables = len(self.bounds_for_optimization)
@@ -290,7 +285,7 @@ class MicrostructureModel:
                                              args=(data, acquisition_scheme))
             res_one_x = res_one.x
             parameters = self.parameter_vector_to_parameters(
-                res_one_x * scaling)
+                res_one_x * self.scales_for_optimization)
 
             # step 2: Estimating linear variables using cvx
             phi = self(acquisition_scheme,
@@ -308,7 +303,7 @@ class MicrostructureModel:
             res_final = minimize(self.objective_function, res_one_x,
                                  (voxel_data, acquisition_scheme),
                                  bounds=self.bounds_for_optimization)
-            fitted_parameters[idx] = res_final.x * scaling
+            fitted_parameters[idx] = res_final.x * self.scales_for_optimization
 
         if data.ndim == 1:
             return np.squeeze(fitted_parameters)
@@ -318,9 +313,7 @@ class MicrostructureModel:
 
     def stochastic_objective_function(self, parameter_vector,
                                       data, acquisition_scheme):
-        scaling = np.hstack([scale for parameter, scale in
-                             self.parameter_scales.items()])
-        parameter_vector = parameter_vector * scaling
+        parameter_vector = parameter_vector * self.scales_for_optimization
         parameters = {}
         parameters.update(
             self.parameter_vector_to_parameters(parameter_vector)
@@ -330,9 +323,9 @@ class MicrostructureModel:
                      quantity="stochastic cost function", **parameters)
 
         phi_mp = np.dot(np.linalg.pinv(np.dot(phi_x.T, phi_x)), phi_x.T)
-        f = np.dot(phi_mp, data)
+        f = np.dot(phi_mp, data.T)
         yhat = np.dot(phi_x, f)
-        cost = np.dot(data - yhat, data - yhat)
+        cost = np.dot(data - yhat, data - yhat).squeeze()
         return cost
 
     def _cvx_fit_linear_parameters(self, data, phi):
