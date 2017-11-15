@@ -117,6 +117,16 @@ class MicrostructureModel:
                     bounds.append((range_[0][i], range_[1][i]))
         return bounds
 
+    def fix_bounds_for_optimization(self, parameters_x0, fixed_parameters):
+        if fixed_parameters is None:
+            return self.bounds_for_optimization
+        fixed_bounds = list(self.bounds_for_optimization)
+        for i, fixed_parameter in enumerate(fixed_parameters):
+            if fixed_parameter:
+                fixed_value = parameters_x0[i]
+                fixed_bounds[i] = (fixed_value, fixed_value)
+        return fixed_bounds
+
     @property
     def scales_for_optimization(self):
         return np.hstack([scale for parameter, scale in
@@ -178,7 +188,7 @@ class MicrostructureModel:
         else:
             return fods
 
-    def fit(self, data, acquisition_scheme, model_initial_condition_array):
+    def fit(self, data, acquisition_scheme, parameters_x0, fixed_parameters=None):
         """ The data fitting function of a multi-compartment model.
 
         Parameters
@@ -203,7 +213,7 @@ class MicrostructureModel:
             array the same size as the data.
             The fitted parameters of the microstructure model.
         """
-        x0 = model_initial_condition_array
+        x0 = parameters_x0
         data_at_least_2d = np.atleast_2d(data)
         x0_at_least_2d = np.atleast_2d(x0)
         if x0.ndim == 1 and data.ndim > 1:
@@ -232,9 +242,11 @@ class MicrostructureModel:
             data_to_fit = data_2d
 
         for idx, (voxel_data, voxel_x0) in enumerate(zip(data_to_fit, x0_2d)):
+            bounds_for_optimization = self.fix_bounds_for_optimization(
+                voxel_x0, fixed_parameters)
             res_ = minimize(self.objective_function, voxel_x0,
                             (voxel_data, acquisition_scheme),
-                            bounds=self.bounds_for_optimization)
+                            bounds=bounds_for_optimization)
             fitted_parameters[idx] = res_.x
         fitted_parameters *= self.scales_for_optimization
 
@@ -260,7 +272,8 @@ class MicrostructureModel:
         # select and return the parmeter combination for the lowest value.
         return None
 
-    def fit_mix(self, data, acquisition_scheme, maxiter=150):
+    def fit_mix(self, data, acquisition_scheme,
+                parameters_x0=None, fixed_parameters=None, maxiter=150):
         """
         differential_evolution
         cvxpy
@@ -272,15 +285,40 @@ class MicrostructureModel:
                White Matter Fibers from diffusion MRI." Nature Scientific reports 6
                (2016).
         """
-        data_at_least_2d = np.atleast_2d(data)
-        data_2d = data_at_least_2d.reshape(-1, data_at_least_2d.shape[-1])
-        number_of_variables = len(self.bounds_for_optimization)
-        fitted_parameters = np.empty(
-            np.r_[data_2d.shape[:-1], number_of_variables], dtype=float)
-        for idx, voxel_data in enumerate(data_2d):
+        if (parameters_x0 is not None) and (fixed_parameters is not None):
+            x0 = parameters_x0
+            data_at_least_2d = np.atleast_2d(data)
+            x0_at_least_2d = np.atleast_2d(x0)
+            if x0.ndim == 1 and data.ndim > 1:
+                # the same x0 will be used for every voxel in N-dimensional data.
+                x0_at_least_2d = np.tile(x0, np.r_[data.shape[:-1], 1])
+                data_at_least_2d = data
+            if not np.all(
+                x0_at_least_2d.shape[:-1] == data_at_least_2d.shape[:-1]
+            ):
+                # if x0 and data are both N-dimensional but have different shapes.
+                msg = "data and x0 both N-dimensional but have different shapes. "
+                msg += "Current shapes are {} and {}.".format(
+                    data_at_least_2d.shape[:-1],
+                    x0_at_least_2d.shape[:-1])
+                raise ValueError(msg)
+            data_2d = data_at_least_2d.reshape(-1, data_at_least_2d.shape[-1])
+            x0_2d = x0_at_least_2d.reshape(-1, x0_at_least_2d.shape[-1])
+        else:
+            data_at_least_2d = np.atleast_2d(data)
+            data_2d = data_at_least_2d.reshape(-1, data_at_least_2d.shape[-1])
+            number_of_variables = len(self.bounds_for_optimization)
+            fitted_parameters = np.empty(
+                np.r_[data_2d.shape[:-1], number_of_variables], dtype=float)
+            x0_2d = np.tile(None, data_2d.shape[:-1])
+
+        for idx, (voxel_data, voxel_x0) in enumerate(zip(data_2d, x0_2d)):
+            bounds_for_optimization = self.fix_bounds_for_optimization(
+                voxel_x0, fixed_parameters)
             # step 1: Variable separation using genetic algorithm
+
             res_one = differential_evolution(self.stochastic_objective_function,
-                                             self.bounds_for_optimization,
+                                             bounds_for_optimization,
                                              maxiter=maxiter,
                                              args=(voxel_data, acquisition_scheme))
             res_one_x = res_one.x
@@ -302,7 +340,7 @@ class MicrostructureModel:
 
             res_final = minimize(self.objective_function, res_one_x,
                                  (voxel_data, acquisition_scheme),
-                                 bounds=self.bounds_for_optimization)
+                                 bounds=bounds_for_optimization)
             fitted_parameters[idx] = res_final.x * self.scales_for_optimization
 
         if data.ndim == 1:
