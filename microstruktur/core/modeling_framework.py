@@ -213,25 +213,7 @@ class MicrostructureModel:
             array the same size as the data.
             The fitted parameters of the microstructure model.
         """
-        x0 = parameters_x0
-        data_at_least_2d = np.atleast_2d(data)
-        x0_at_least_2d = np.atleast_2d(x0)
-        if x0.ndim == 1 and data.ndim > 1:
-            # the same x0 will be used for every voxel in N-dimensional data.
-            x0_at_least_2d = np.tile(x0, np.r_[data.shape[:-1], 1])
-            data_at_least_2d = data
-        if not np.all(
-            x0_at_least_2d.shape[:-1] == data_at_least_2d.shape[:-1]
-        ):
-            # if x0 and data are both N-dimensional but have different shapes.
-            msg = "data and x0 both N-dimensional but have different shapes. "
-            msg += "Current shapes are {} and {}.".format(
-                data_at_least_2d.shape[:-1],
-                x0_at_least_2d.shape[:-1])
-            raise ValueError(msg)
-
-        data_2d = data_at_least_2d.reshape(-1, data_at_least_2d.shape[-1])
-        x0_2d = x0_at_least_2d.reshape(-1, x0_at_least_2d.shape[-1])
+        data_2d, x0_2d = homogenize_data_x0_to_2d(data, parameters_x0)
         fitted_parameters = np.empty(x0_2d.shape, dtype=float)
         x0_2d = x0_2d / self.scales_for_optimization
 
@@ -251,9 +233,10 @@ class MicrostructureModel:
         fitted_parameters *= self.scales_for_optimization
 
         if data.ndim == 1:
-            return np.squeeze(fitted_parameters.reshape(x0_at_least_2d.shape))
+            return np.squeeze(fitted_parameters)
         else:
-            return fitted_parameters.reshape(x0_at_least_2d.shape)
+            return fitted_parameters.reshape(
+                np.r_[data.shape[:-1], len(voxel_x0)])
 
     def objective_function(self, parameter_vector, data, acquisition_scheme):
         parameter_vector = parameter_vector * self.scales_for_optimization
@@ -285,32 +268,10 @@ class MicrostructureModel:
                White Matter Fibers from diffusion MRI." Nature Scientific reports 6
                (2016).
         """
-        if (parameters_x0 is not None) and (fixed_parameters is not None):
-            x0 = parameters_x0
-            data_at_least_2d = np.atleast_2d(data)
-            x0_at_least_2d = np.atleast_2d(x0)
-            if x0.ndim == 1 and data.ndim > 1:
-                # the same x0 will be used for every voxel in N-dimensional data.
-                x0_at_least_2d = np.tile(x0, np.r_[data.shape[:-1], 1])
-                data_at_least_2d = data
-            if not np.all(
-                x0_at_least_2d.shape[:-1] == data_at_least_2d.shape[:-1]
-            ):
-                # if x0 and data are both N-dimensional but have different shapes.
-                msg = "data and x0 both N-dimensional but have different shapes. "
-                msg += "Current shapes are {} and {}.".format(
-                    data_at_least_2d.shape[:-1],
-                    x0_at_least_2d.shape[:-1])
-                raise ValueError(msg)
-            data_2d = data_at_least_2d.reshape(-1, data_at_least_2d.shape[-1])
-            x0_2d = x0_at_least_2d.reshape(-1, x0_at_least_2d.shape[-1])
-        else:
-            data_at_least_2d = np.atleast_2d(data)
-            data_2d = data_at_least_2d.reshape(-1, data_at_least_2d.shape[-1])
-            number_of_variables = len(self.bounds_for_optimization)
-            fitted_parameters = np.empty(
-                np.r_[data_2d.shape[:-1], number_of_variables], dtype=float)
-            x0_2d = np.tile(None, data_2d.shape[:-1])
+        data_2d, x0_2d = homogenize_data_x0_to_2d(data, parameters_x0)
+        number_of_variables = len(self.bounds_for_optimization)
+        fitted_parameters = np.empty((len(data_2d), number_of_variables),
+                                     dtype=float)
 
         for idx, (voxel_data, voxel_x0) in enumerate(zip(data_2d, x0_2d)):
             bounds_for_optimization = self.fix_bounds_for_optimization(
@@ -628,3 +589,26 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
                                            **parameters)
                 counter += 1
         return values
+
+
+def homogenize_data_x0_to_2d(data, x0):
+    data_at_least_2d = np.atleast_2d(data)
+    x0_at_least_2d = np.atleast_2d(x0)
+    if x0 is not None:
+        if x0.ndim == 1 and data.ndim > 1:
+            # the same x0 will be used for every voxel in N-dimensional data.
+            x0_at_least_2d = np.tile(x0, np.r_[data.shape[:-1], 1])
+            data_at_least_2d = data
+    if not np.all(
+        x0_at_least_2d.shape[:-1] == data_at_least_2d.shape[:-1]
+    ):
+        # if x0 and data are both N-dimensional but have different shapes.
+        msg = "data and x0 both N-dimensional but have different shapes. "
+        msg += "Current shapes are {} and {}.".format(
+            data_at_least_2d.shape[:-1],
+            x0_at_least_2d.shape[:-1])
+        raise ValueError(msg)
+
+    data_2d = data_at_least_2d.reshape(-1, data_at_least_2d.shape[-1])
+    x0_2d = x0_at_least_2d.reshape(-1, x0_at_least_2d.shape[-1])
+    return data_2d, x0_2d
