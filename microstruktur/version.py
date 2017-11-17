@@ -72,8 +72,9 @@ MINOR = _version_minor
 MICRO = _version_micro
 VERSION = __version__
 PACKAGE_DATA = {
-    'microstruktur': [pjoin('data', 'gradient_tables', '*')],
-    'microstruktur': [pjoin('data',
-                            'bingham_normalization_splinefit.npz')]
+    'microstruktur': [
+	pjoin('data', 'gradient_tables', '*'),
+	pjoin('data','bingham_normalization_splinefit.npz')
+    ]
 }
 REQUIRES = ["numpy", 'dipy']
