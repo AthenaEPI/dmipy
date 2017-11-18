@@ -9,10 +9,17 @@ from itertools import chain
 
 import numpy as np
 from scipy.optimize import minimize
+from time import time
 
 from microstruktur.utils.spherical_mean import estimate_spherical_mean_multi_shell
 from scipy.optimize import differential_evolution
-import cvxpy
+from dipy.utils.optpkg import optional_package
+cvxpy, have_cvxpy, _ = optional_package("cvxpy")
+pathos, have_pathos, _ = optional_package("pathos")
+
+if have_pathos:
+    import pathos.pools as pp
+    from pathos.helpers import cpu_count
 
 GRADIENT_TABLES_PATH = pkg_resources.resource_filename(
     'microstruktur', 'data/gradient_tables'
@@ -188,7 +195,8 @@ class MicrostructureModel:
         else:
             return fods
 
-    def fit(self, data, acquisition_scheme, parameters_x0, fixed_parameters=None):
+    def fit(self, data, acquisition_scheme, parameters_x0, fixed_parameters=None,
+            use_parallel_processing=False, number_of_processors=None):
         """ The data fitting function of a multi-compartment model.
 
         Parameters
@@ -213,6 +221,13 @@ class MicrostructureModel:
             array the same size as the data.
             The fitted parameters of the microstructure model.
         """
+        if use_parallel_processing and not have_pathos:
+            msg = 'Cannot use multiprocessing without pathos'
+            raise ValueError(msg)
+        elif use_parallel_processing and have_pathos:
+            if number_of_processors is None:
+                number_of_processors = cpu_count()
+
         data_2d, x0_2d = homogenize_data_x0_to_2d(data, parameters_x0)
         fitted_parameters = np.empty(x0_2d.shape, dtype=float)
         x0_2d = x0_2d / self.scales_for_optimization
@@ -223,20 +238,47 @@ class MicrostructureModel:
         else:
             data_to_fit = data_2d
 
-        for idx, (voxel_data, voxel_x0) in enumerate(zip(data_to_fit, x0_2d)):
-            bounds_for_optimization = self.fix_bounds_for_optimization(
-                voxel_x0, fixed_parameters)
-            res_ = minimize(self.objective_function, voxel_x0,
-                            (voxel_data, acquisition_scheme),
-                            bounds=bounds_for_optimization)
-            fitted_parameters[idx] = res_.x
-        fitted_parameters *= self.scales_for_optimization
+        start = time()
+        print ('Starting fitting process')
+        if not use_parallel_processing:
+            fitted_parameters = np.empty(x0_2d.shape, dtype=float)
+            for idx, (voxel_data, voxel_x0) in enumerate(
+                    zip(data_to_fit, x0_2d)):
+                bounds_for_optimization = self.fix_bounds_for_optimization(
+                    voxel_x0, fixed_parameters)
+                res_ = minimize(self.objective_function, voxel_x0,
+                                (voxel_data, acquisition_scheme),
+                                bounds=bounds_for_optimization)
+                fitted_parameters[idx] = res_.x
+            print ('Completed serial fitting process in {} seconds.').format(
+                time() - start)
+        else:
+            pool = pp.ProcessPool(number_of_processors)
+            fitted_parameters = [None] * len(data_2d)
+            for idx, (voxel_data, voxel_x0) in enumerate(
+                    zip(data_to_fit, x0_2d)):
+                bounds_for_optimization = self.fix_bounds_for_optimization(
+                    voxel_x0, fixed_parameters)
+                fitted_parameters[idx] = pool.apipe(self.parallel_minimize,
+                                                    *(self.objective_function, voxel_x0, voxel_data,
+                                                      acquisition_scheme, bounds_for_optimization))
+            print ('Prepared parallel processes in {} seconds.').format(
+                time() - start)
+            start = time()
+            fitted_parameters = np.array([p.get() for p in fitted_parameters])
+            print ('Completed parallel fitting process in {} seconds.').format(
+                time() - start)
 
+        fitted_parameters *= self.scales_for_optimization
         if data.ndim == 1:
             return np.squeeze(fitted_parameters)
         else:
             return fitted_parameters.reshape(
                 np.r_[data.shape[:-1], len(voxel_x0)])
+
+    def parallel_minimize(self, objective_function, x0, data, scheme, bounds):
+        res_ = minimize(objective_function, x0, (data, scheme), bounds=bounds)
+        return res_.x
 
     def objective_function(self, parameter_vector, data, acquisition_scheme):
         parameter_vector = parameter_vector * self.scales_for_optimization
