@@ -8,11 +8,10 @@ from collections import OrderedDict
 from itertools import chain
 
 import numpy as np
-from scipy.optimize import minimize
 from time import time
 
 from microstruktur.utils.spherical_mean import estimate_spherical_mean_multi_shell
-from scipy.optimize import differential_evolution
+from scipy.optimize import differential_evolution, brute, minimize
 from dipy.utils.optpkg import optional_package
 cvxpy, have_cvxpy, _ = optional_package("cvxpy")
 pathos, have_pathos, _ = optional_package("pathos")
@@ -111,6 +110,64 @@ class MicrostructureModel:
                     parameter_vector.append(parameters[parameter])
             parameter_vector = np.concatenate(parameter_vector, axis=-1)
         return parameter_vector
+
+    def parameters_to_parameter_vector2(self, parameters):
+        parameter_vector = []
+        parameter_shapes = []
+        for parameter, card in self.parameter_cardinality.items():
+            value = np.atleast_1d(parameters[parameter])
+            if card == 1 and not np.all(value.shape == np.r_[1]):
+                parameter_shapes.append(value.shape)
+            if card == 2 and not np.all(value.shape == np.r_[2]):
+                parameter_shapes.append(value.shape[:-1])
+
+        if len(np.unique(parameter_shapes)) > 1:
+            msg = "parameter shapes are inconsistent."
+            raise ValueError(msg)
+        elif len(np.unique(parameter_shapes)) == 0:
+            for parameter, card in self.parameter_cardinality.items():
+                parameter_vector.append(parameters[parameter])
+            parameter_vector = np.hstack(parameter_vector)
+        elif len(np.unique(parameter_shapes)) == 1:
+            for parameter, card in self.parameter_cardinality.items():
+                value = np.atleast_1d(parameters[parameter])
+                if card == 1 and np.all(value.shape == np.r_[1]):
+                    parameter_vector.append(
+                        np.tile(value[0], np.r_[parameter_shapes[0], 1]))
+                elif card == 1 and not np.all(value.shape == np.r_[1]):
+                    parameter_vector.append(value[..., None])
+                elif card == 2 and np.all(value.shape == np.r_[2]):
+                    parameter_vector.append(
+                        np.tile(value, np.r_[parameter_shapes[0], 1])
+                    )
+                else:
+                    parameter_vector.append(parameters[parameter])
+            parameter_vector = np.concatenate(parameter_vector, axis=-1)
+        return parameter_vector
+
+    def set_parameter_initial_guess(self, **parameters):
+        set_parameters = {}
+        for parameter, card in self.parameter_cardinality.items():
+            try:
+                set_parameters[parameter] = parameters[parameter]
+                msg = str(parameter) + ' successfully set.'
+                print (msg)
+            except KeyError:
+                set_parameters[parameter] = None
+        self.parameter_initial_guess = (
+            self.parameters_to_parameter_vector2(set_parameters)
+        )
+
+    # def set_parameter_optimize(self, **parameters):
+    #     set_parameters = {}
+    #     for parameter, card in self.parameter_cardinality.items():
+    #         try:
+    #             set_parameters[parameter] = parameters[parameter]
+    #         except KeyError:
+    #             set_parameters[parameter] = None
+    #     self.parameter_inital_guess = (
+    #         self.parameters_to_parameter_vector(set_parameters)
+    #     )
 
     @property
     def bounds_for_optimization(self):
@@ -222,7 +279,7 @@ class MicrostructureModel:
             The fitted parameters of the microstructure model.
         """
         if use_parallel_processing and not have_pathos:
-            msg = 'Cannot use multiprocessing without pathos'
+            msg = 'Cannot use parallel processing without pathos.'
             raise ValueError(msg)
         elif use_parallel_processing and have_pathos:
             if number_of_processors is None:
@@ -276,9 +333,168 @@ class MicrostructureModel:
             return fitted_parameters.reshape(
                 np.r_[data.shape[:-1], len(voxel_x0)])
 
+    def fit2(self, data, mask=None, solver='scipy', Ns=10,
+             use_parallel_processing=False, number_of_processors=None):
+        """ The data fitting function of a multi-compartment model.
+
+        To Change
+        ---------
+        - put acquisition_scheme as input when creating the model.
+        - parameters_x0 and fixed_parameters will be class properties, not inputs
+        - parameters_x0 will be renamed to starting_parameters and will be initialized
+          with None for all parameters.
+        - fixed_parameters will be renamed to optimize_parameters and will initialize
+          with True for all parameters
+
+        Parameters
+        ----------
+        data : N-dimensional array of size (N_x, N_y, ..., N_dwis),
+            The measured DWI signal attenuation array of either a single voxel
+            or an N-dimensional dataset.
+        mask : (N-1)-dimensional integer/boolean array of size (N_x, N_y, ...),
+            Optional mask of voxels to be included in the optimization.
+        solver : string,
+            Selection of optimization algorithm.
+            - 'scipy' to use standard brute-to-fine optimization.
+            - 'mix' to use Microstructure Imaging of Crossing (MIX)
+              optimization.
+            - [future] 'amico' to use Accelerated Microstructure Imaging via
+               Convex Optimization (AMICO).
+        Ns : integer,
+            for brute optimization, decised how many steps are sampled for
+            every parameter.
+        use_parallel_processing : bool,
+            whether or not to use parallel processing using pathos.
+        number_of_processors : integer,
+            number of processors to use for parallel processing. Defaults to
+            the number of processors in the computer according to cpu_count().
+        x0 : 1D array of size (N_parameters) or N-dimensional array the same
+            size as the data.
+            The initial condition for the scipy minimize function.
+            If a 1D array is given, this is the same initial condition for
+            every fitted voxel. If a higher-dimenensional array the same size
+            as the data is given, then every voxel can possibly be given a
+            different initial condition.
+
+        Returns
+        -------
+        fitted_parameters: 1D array of size (N_parameters) or N-dimensional
+            array the same size as the data.
+            The fitted parameters of the microstructure model.
+        """
+        # set mask as voxels with S0>0 in addition to input mask (if given)
+
+        # estimate S0
+        data_ = np.atleast_2d(data)
+        S0 = np.mean(data_[..., self.scheme.b0_mask], axis=-1)
+
+        if mask is None:
+            mask = S0 > 0
+        else:
+            mask = np.all([mask, S0 > 0], axis=0)
+        mask_pos = np.where(mask)
+
+        N_parameters = len(self.bounds_for_optimization)
+        N_voxels = np.sum(mask)
+
+        # make starting parameters and data the same size
+        if self.parameter_initial_guess is None:
+            x0_ = np.tile(None,
+                          np.r_[data_.shape[:-1], N_parameters])
+        else:
+            data_2d, x0_2d = homogenize_data_x0_to_2d(
+                data, self.parameter_initial_guess)
+            x0_2d = x0_2d / self.scales_for_optimization
+
+        if use_parallel_processing and not have_pathos:
+            msg = 'Cannot use parallel processing without pathos.'
+            raise ValueError(msg)
+        elif use_parallel_processing and have_pathos:
+            fitted_parameters_lin = [None] * N_voxels
+            if number_of_processors is None:
+                number_of_processors = cpu_count()
+                pool = pp.ProcessPool(number_of_processors)
+                print ('Using parallel processing with {} workers.').format(
+                    cpu_count())
+        else:
+            fitted_parameters_lin = np.empty(
+                np.r_[N_voxels, N_parameters], dtype=float)
+
+        # if the models are spherical mean based then estimate the
+        # spherical mean of the data.
+        if self.spherical_mean:
+            data_to_fit = [estimate_spherical_mean_multi_shell(
+                voxel_data, self.scheme) for voxel_data in data_]
+        else:
+            data_to_fit = data_
+
+        start = time()
+        print ('Starting fitting process')
+
+        for idx, pos in enumerate(zip(*mask_pos)):
+            voxel_E = data_to_fit[pos] / S0[pos]
+            voxel_x0 = x0_[pos]
+            if use_parallel_processing:
+                fitted_parameters_lin[idx] = pool.apipe(
+                    self.fit_brute2minimize,
+                    *(self.objective_function, voxel_x0, voxel_E, Ns))
+            else:
+                fitted_parameters_lin[idx] = (self.fit_brute2minimize(
+                    self.objective_function, voxel_x0, voxel_E, Ns))
+        if use_parallel_processing:
+            fitted_parameters_lin = np.array(
+                [p.get() for p in fitted_parameters_lin])
+
+        fitting_time = time() - start
+        print ('Fitting complete in {} seconds.').format(fitting_time)
+        print ('Average of {} seconds per voxel.').format(
+            fitting_time / N_voxels)
+
+        fitted_parameters = np.zeros_like(x0_, dtype=float)
+        fitted_parameters[mask_pos] = (
+            fitted_parameters_lin * self.scales_for_optimization)
+
+        if data.ndim == 1:
+            return np.squeeze(fitted_parameters)
+        else:
+            return fitted_parameters.reshape(
+                np.r_[data.shape[:-1], len(voxel_x0)])
+
     def parallel_minimize(self, objective_function, x0, data, scheme, bounds):
         res_ = minimize(objective_function, x0, (data, scheme), bounds=bounds)
         return res_.x
+
+    def fit_brute2minimize(self, objective_function, x0, data, Ns):
+        """
+        If initial x0 is given for a parameter, then the bounds are fixed for
+        brute-force optimization.
+        If initial x0 is given AND parameter_optimize is False for a parameter,
+        then its bounds are also fixed for subsequent gradient-based
+        optimization.
+        """
+        args = (data, self.scheme)
+        bounds_brute = list(self.bounds_for_optimization)
+        bounds_fine = list(bounds_brute)
+        for i, x0_ in enumerate(x0):
+            if x0_ is not None:
+                bounds_brute[i] = np.r_[x0_, x0_]
+            if x0_ is not None and self.parameter_optimize[i] is False:
+                bounds_fine[i] = np.r_[x0_, x0_]
+
+        # parameter grid is generated for brute-force optimization
+        # grid = np.array(np.meshgrid(
+        #     *[np.unique(np.linspace(bnd[0], bnd[1], Ns)) for bnd in bounds_brute])
+        # )
+        # brute-force optimization returns initial guess for all parameters
+        x0_brute = brute(
+            objective_function, ranges=bounds_brute, args=args, Ns=Ns,
+            finish=None)
+
+        # the intial guess is used to find a local minima using gradient-based
+        # optimization.
+        x_final = minimize(objective_function, x0_brute,
+                           args=args, bounds=bounds_fine, method='L-BFGS-B').x
+        return x_final
 
     def objective_function(self, parameter_vector, data, acquisition_scheme):
         parameter_vector = parameter_vector * self.scales_for_optimization
@@ -290,12 +506,6 @@ class MicrostructureModel:
         E_diff = E_model - data
         objective = np.sum(E_diff ** 2) / len(data)
         return objective
-
-    def fit_brute(self, data, acquisition_scheme, ranges):
-        # precompute the data simulations for the given ranges
-        # for every voxel estimate the SSD
-        # select and return the parmeter combination for the lowest value.
-        return None
 
     def fit_mix(self, data, acquisition_scheme,
                 parameters_x0=None, fixed_parameters=None, maxiter=150):
@@ -420,9 +630,10 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
     '''
 
     def __init__(
-        self, models, partial_volumes=None,
+        self, acquisition_scheme, models, partial_volumes=None,
         parameter_links=[], optimise_partial_volumes=True
     ):
+        self.scheme = acquisition_scheme
         self.models = models
         self.partial_volumes = partial_volumes
         self.parameter_links = parameter_links
@@ -433,6 +644,9 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
         self._prepare_parameter_links()
         self._verify_model_input_requirements()
         self._check_for_double_model_class_instances()
+
+        self.parameter_initial_guess = None
+        self.parameter_optimize = None
 
     def _prepare_parameters(self):
         self.model_names = []
@@ -528,6 +742,17 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
             del self.parameter_defaults[parameter_name]
             del self._parameter_cardinality[parameter_name]
             del self._parameter_scales[parameter_name]
+
+    def _prepare_parameters_to_optimize(self):
+        self.parameter_initial_guess = OrderedDict({
+            k: None
+            for k, v in self.parameter_cardinality.items()
+        })
+
+        self.parameter_optimize = OrderedDict({
+            k: True
+            for k, v in self.parameter_cardinality.items()
+        })
 
     def _verify_model_input_requirements(self):
         models_spherical_mean = [model.spherical_mean for model in self.models]
