@@ -10,7 +10,8 @@ from itertools import chain
 import numpy as np
 from time import time
 
-from microstruktur.utils.spherical_mean import estimate_spherical_mean_multi_shell
+from microstruktur.utils.spherical_mean import (
+    estimate_spherical_mean_multi_shell)
 from scipy.optimize import differential_evolution, brute, minimize
 from dipy.utils.optpkg import optional_package
 cvxpy, have_cvxpy, _ = optional_package("cvxpy")
@@ -180,16 +181,6 @@ class MicrostructureModel:
                     params.append(optimize_param)
         return params
 
-    def fix_bounds_for_optimization(self, parameters_x0, fixed_parameters):
-        if fixed_parameters is None:
-            return self.bounds_for_optimization
-        fixed_bounds = list(self.bounds_for_optimization)
-        for i, fixed_parameter in enumerate(fixed_parameters):
-            if fixed_parameter:
-                fixed_value = parameters_x0[i]
-                fixed_bounds[i] = (fixed_value, fixed_value)
-        return fixed_bounds
-
     @property
     def scales_for_optimization(self):
         return np.hstack([scale for parameter, scale in
@@ -251,100 +242,38 @@ class MicrostructureModel:
         else:
             return fods
 
-    def fit(self, data, acquisition_scheme, parameters_x0, fixed_parameters=None,
+    def fit(self, data, parameter_initial_guess=None, mask=None,
+            solver='scipy', Ns=10, maxiter=300,
             use_parallel_processing=False, number_of_processors=None):
-        """ The data fitting function of a multi-compartment model.
+        """ The main data fitting function of a multi-compartment model.
 
-        Parameters
-        ----------
-        data : N-dimensional array of size (N_x, N_y, ..., N_data),
-            The measured DWI signal attenuation array of either a single voxel
-            or an N-dimensional dataset.
-        acquisition_scheme : acquisition scheme object
-            contains all information on acquisition parameters such as bvalues,
-            gradient directions, etc. Created from acquisition_scheme module.
-        x0 : 1D array of size (N_parameters) or N-dimensional array the same
-            size as the data.
-            The initial condition for the scipy minimize function.
-            If a 1D array is given, this is the same initial condition for
-            every fitted voxel. If a higher-dimenensional array the same size
-            as the data is given, then every voxel can possibly be given a
-            different initial condition.
+        Once a microstructure model is formed, this function can fit it to an
+        N-dimensional dMRI data set, and returns for every voxel the fitted
+        model parameters.
 
-        Returns
-        -------
-        fitted_parameters: 1D array of size (N_parameters) or N-dimensional
-            array the same size as the data.
-            The fitted parameters of the microstructure model.
-        """
-        if use_parallel_processing and not have_pathos:
-            msg = 'Cannot use parallel processing without pathos.'
-            raise ValueError(msg)
-        elif use_parallel_processing and have_pathos:
-            if number_of_processors is None:
-                number_of_processors = cpu_count()
+        No initial guess needs to be given to fit a model, but can (and should)
+        be given to speed up the fitting process. The parameter_initial_guess
+        input can be created using parameter_initial_guess_to_parameter_vector.
 
-        data_2d, x0_2d = homogenize_data_x0_to_2d(data, parameters_x0)
-        fitted_parameters = np.empty(x0_2d.shape, dtype=float)
-        x0_2d = x0_2d / self.scales_for_optimization
+        A mask can also be given to exclude voxels from fitting (e.g. voxels
+        that are outside the brain). If no mask is given then all voxels are
+        included.
 
-        if self.spherical_mean:
-            data_to_fit = [estimate_spherical_mean_multi_shell(
-                voxel_data, acquisition_scheme) for voxel_data in data_2d]
-        else:
-            data_to_fit = data_2d
+        An optimization approach can be chosen as either 'scipy' or 'mix'.
+        - Choosing scipy will first use a brute-force optimization to find an
+          initial guess for parameters without one, and will then refine the
+          result using gradient-descent-based optimization.
+        - Choosing mix will use the recent MIX algorithm based on separation of
+          linear and non-linear parameters. MIX first uses a stochastic
+          algorithm to find the non-linear parameters (non-volume fractions),
+          then estimates the volume fractions while fixing the estimates of the
+          non-linear parameters, and then finally refines the solution using
+          a gradient-descent-based algorithm.
 
-        start = time()
-        print ('Starting fitting process')
-        if not use_parallel_processing:
-            fitted_parameters = np.empty(x0_2d.shape, dtype=float)
-            for idx, (voxel_data, voxel_x0) in enumerate(
-                    zip(data_to_fit, x0_2d)):
-                bounds_for_optimization = self.fix_bounds_for_optimization(
-                    voxel_x0, fixed_parameters)
-                res_ = minimize(self.objective_function, voxel_x0,
-                                (voxel_data, acquisition_scheme),
-                                bounds=bounds_for_optimization)
-                fitted_parameters[idx] = res_.x
-            print ('Completed serial fitting process in {} seconds.').format(
-                time() - start)
-        else:
-            pool = pp.ProcessPool(number_of_processors)
-            fitted_parameters = [None] * len(data_2d)
-            for idx, (voxel_data, voxel_x0) in enumerate(
-                    zip(data_to_fit, x0_2d)):
-                bounds_for_optimization = self.fix_bounds_for_optimization(
-                    voxel_x0, fixed_parameters)
-                fitted_parameters[idx] = pool.apipe(self.parallel_minimize,
-                                                    *(self.objective_function, voxel_x0, voxel_data,
-                                                      acquisition_scheme, bounds_for_optimization))
-            print ('Prepared parallel processes in {} seconds.').format(
-                time() - start)
-            start = time()
-            fitted_parameters = np.array([p.get() for p in fitted_parameters])
-            print ('Completed parallel fitting process in {} seconds.').format(
-                time() - start)
-
-        fitted_parameters *= self.scales_for_optimization
-        if data.ndim == 1:
-            return np.squeeze(fitted_parameters)
-        else:
-            return fitted_parameters.reshape(
-                np.r_[data.shape[:-1], len(voxel_x0)])
-
-    def fit2(self, data, parameter_initial_guess=None, mask=None,
-             solver='scipy', Ns=10, maxiter=300,
-             use_parallel_processing=False, number_of_processors=None):
-        """ The data fitting function of a multi-compartment model.
-
-        To Change
-        ---------
-        - put acquisition_scheme as input when creating the model.
-        - parameters_x0 and fixed_parameters will be class properties, not inputs
-        - parameters_x0 will be renamed to starting_parameters and will be initialized
-          with None for all parameters.
-        - fixed_parameters will be renamed to optimize_parameters and will initialize
-          with True for all parameters
+        The fitting process can be readily parallelized using the optional
+        "pathos" package. To use it set use_parallel_processing=True. The
+        algorithm will automatically use all cores in the machine, unless
+        otherwise specified in number_of_processors.
 
         Parameters
         ----------
@@ -382,7 +311,6 @@ class MicrostructureModel:
             array the same size as the data.
             The fitted parameters of the microstructure model.
         """
-        # set mask as voxels with S0>0 in addition to input mask (if given)
 
         # estimate S0
         data_ = np.atleast_2d(data)
@@ -464,12 +392,7 @@ class MicrostructureModel:
         if data.ndim == 1:
             return np.squeeze(fitted_parameters)
         else:
-            return fitted_parameters.reshape(
-                np.r_[data.shape[:-1], N_parameters])
-
-    def parallel_minimize(self, objective_function, x0, data, scheme, bounds):
-        res_ = minimize(objective_function, x0, (data, scheme), bounds=bounds)
-        return res_.x
+            return fitted_parameters
 
     def fit_brute2fine(self, data, x0_vector, Ns):
         """
@@ -490,7 +413,8 @@ class MicrostructureModel:
                           (bounds[i][1] - bounds[i][0]) / float(Ns)))
             if x0_ is not None:
                 bounds_brute.append(slice(x0_, x0_ + 1e-2, None))
-            if x0_ is not None and self.opt_params_for_optimization[i] is False:
+            if (x0_ is not None and
+                    self.opt_params_for_optimization[i] is False):
                 bounds_fine[i] = np.r_[x0_, x0_]
 
         # brute-force optimization returns initial guess for all parameters
@@ -500,7 +424,8 @@ class MicrostructureModel:
         # the intial guess is used to find a local minima using gradient-based
         # optimization.
         x_final = minimize(self.objective_function, x0_brute,
-                           args=fit_args, bounds=bounds_fine, method='L-BFGS-B').x
+                           args=fit_args, bounds=bounds_fine,
+                           method='L-BFGS-B').x
         return x_final
 
     def objective_function(self, parameter_vector, data, acquisition_scheme):
@@ -523,13 +448,14 @@ class MicrostructureModel:
         References
         ----------
         .. [1] Farooq, Hamza, et al. "Microstructure Imaging of Crossing (MIX)
-               White Matter Fibers from diffusion MRI." Nature Scientific reports 6
-               (2016).
+               White Matter Fibers from diffusion MRI." Nature Scientific
+               reports 6 (2016).
         """
 
         bounds = list(self.bounds_for_optimization)
         for i, x0_ in enumerate(x0_vector):
-            if x0_ is not None and self.opt_params_for_optimization[i] is False:
+            if (x0_ is not None and
+                    self.opt_params_for_optimization[i] is False):
                 bounds[i] = np.r_[x0_, x0_]
         # step 1: Variable separation using genetic algorithm
 
