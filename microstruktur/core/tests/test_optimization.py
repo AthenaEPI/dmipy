@@ -31,17 +31,22 @@ def test_simple_stick_optimization():
     stick = cylinder_models.C1Stick()
     gt_mu = np.random.rand(2)
     gt_lambda_par = (np.random.rand() + 1.) * 1e-9
-    gt_parameter_vector = stick.parameters_to_parameter_vector(
-        lambda_par=gt_lambda_par, mu=gt_mu)
 
-    E = stick.simulate_signal(scheme, gt_parameter_vector)
+    stick_model = modeling_framework.MultiCompartmentMicrostructureModel(
+        acquisition_scheme=scheme,
+        models=[stick])
 
-    x0 = stick.parameters_to_parameter_vector(
-        lambda_par=(np.random.rand() + 1.) * 1e-9,
-        mu=np.random.rand(2)
+    gt_parameter_vector = stick_model.parameters_to_parameter_vector(
+        C1Stick_1_lambda_par=gt_lambda_par, C1Stick_1_mu=gt_mu)
+
+    E = stick_model.simulate_signal(scheme, gt_parameter_vector)
+
+    x0 = stick_model.parameters_to_parameter_vector(
+        C1Stick_1_lambda_par=(np.random.rand() + 1.) * 1e-9,
+        C1Stick_1_mu=np.random.rand(2)
     )
-    res = stick.fit(E, scheme, x0)
-    assert_array_almost_equal(np.r_[gt_lambda_par, gt_mu], res, 3)
+    res = stick_model.fit(E, x0)
+    assert_array_almost_equal(gt_parameter_vector, res, 2)
 
 
 def test_simple_ball_and_stick_optimization():
@@ -50,6 +55,7 @@ def test_simple_ball_and_stick_optimization():
 
     ball_and_stick = (
         modeling_framework.MultiCompartmentMicrostructureModel(
+            acquisition_scheme=scheme,
             models=[ball, stick],
             parameter_links=[],
             optimise_partial_volumes=True)
@@ -75,7 +81,7 @@ def test_simple_ball_and_stick_optimization():
         C1Stick_1_mu=np.random.rand(2),
         partial_volume_0=np.random.rand()
     )
-    res = ball_and_stick.fit(E, scheme, x0)
+    res = ball_and_stick.fit(E, x0)
     assert_array_almost_equal(gt_parameter_vector, res, 3)
 
 
@@ -84,6 +90,7 @@ def test_multi_dimensional_x0():
     ball = gaussian_models.G3Ball()
     ball_and_stick = (
         modeling_framework.MultiCompartmentMicrostructureModel(
+            acquisition_scheme=scheme,
             models=[ball, stick],
             parameter_links=[],
             optimise_partial_volumes=True)
@@ -110,7 +117,7 @@ def test_multi_dimensional_x0():
         scheme, gt_parameter_vector)
 
     # I'm giving a voxel-dependent initial condition with gt_mu_array
-    res = ball_and_stick.fit(E_array, scheme,
+    res = ball_and_stick.fit(E_array,
                              gt_parameter_vector)
     # optimization should stop immediately as I'm giving the ground truth.
     assert_equal(np.all(np.ravel(res - gt_parameter_vector) == 0.), True)
@@ -163,6 +170,7 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
 
     stick_and_tortuous_zeppelin = (
         modeling_framework.MultiCompartmentMicrostructureModel(
+            acquisition_scheme=scheme,
             models=[stick, zeppelin],
             parameter_links=parameter_links_stick_and_tortuous_zeppelin,
             optimise_partial_volumes=True)
@@ -201,6 +209,7 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
 
     stick_and_tortuous_zeppelin_sm = (
         modeling_framework.MultiCompartmentMicrostructureModel(
+            acquisition_scheme=scheme,
             models=[stick_sm, zeppelin_sm],
             parameter_links=parameter_links_stick_and_tortuous_zeppelin_smt,
             optimise_partial_volumes=True)
@@ -210,7 +219,7 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
         partial_volume_0=0.55
     )
 
-    res_sm = stick_and_tortuous_zeppelin_sm.fit(E, scheme, x0)
+    res_sm = stick_and_tortuous_zeppelin_sm.fit(E, x0)
 
     assert_array_almost_equal(
         np.r_[gt_lambda_par, gt_partial_volume], res_sm, 2)
@@ -223,6 +232,7 @@ def test_fractions_add_up_to_one():
     dot4 = gaussian_models.G2Dot()
     dot5 = gaussian_models.G2Dot()
     dots = modeling_framework.MultiCompartmentMicrostructureModel(
+        acquisition_scheme=scheme,
         models=[dot1, dot2, dot3, dot4, dot5])
     parameter_vector = dots.parameters_to_parameter_vector(
         partial_volume_0=np.random.rand(),
@@ -238,6 +248,7 @@ def test_MIX_fitting():
     zeppelin = gaussian_models.G4Zeppelin()
     ball_and_zeppelin = (
         modeling_framework.MultiCompartmentMicrostructureModel(
+            acquisition_scheme=scheme,
             models=[ball, zeppelin]))
 
     parameter_vector = ball_and_zeppelin.parameters_to_parameter_vector(
@@ -250,5 +261,5 @@ def test_MIX_fitting():
 
     E = ball_and_zeppelin.simulate_signal(
         scheme, parameter_vector)
-    fit = ball_and_zeppelin.fit_mix(np.array([E]), scheme)
+    fit = ball_and_zeppelin.fit(np.array([E]), solver='mix')
     assert_array_almost_equal(abs(fit[0]), parameter_vector, 2)

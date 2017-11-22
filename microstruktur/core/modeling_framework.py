@@ -353,8 +353,12 @@ class MicrostructureModel:
         # if the models are spherical mean based then estimate the
         # spherical mean of the data.
         if self.spherical_mean:
-            data_to_fit = [estimate_spherical_mean_multi_shell(
-                voxel_data, self.scheme) for voxel_data in data_]
+            data_to_fit = np.zeros(
+                np.r_[data_.shape[:-1],
+                      self.scheme.unique_dwi_indices.max() + 1])
+            for pos in zip(*mask_pos):
+                data_to_fit[pos] = estimate_spherical_mean_multi_shell(
+                    data_[pos], self.scheme)
         else:
             data_to_fit = data_
 
@@ -781,7 +785,7 @@ def homogenize_x0_to_data(data, x0):
             # the same x0 will be used for every voxel in N-dimensional data.
             x0_as_data = np.tile(x0, np.r_[data.shape[:-1], 1])
         else:
-            x0_as_data = x0
+            x0_as_data = x0.copy()
     if not np.all(
         x0_as_data.shape[:-1] == data.shape[:-1]
     ):
