@@ -22,11 +22,12 @@ def kernel_sh_to_rh(sh_coef, sh_order):
     """
     m, n = sph_harm_ind_list(sh_order)
     rh_coef = np.zeros_like(sh_coef)
-    for i, m_ in enumerate(m):
-        if m_ == 0:
-            rh_coef[i] = sh_coef[i]
-        else:
-            rh_coef[i] = sh_coef[np.all([n == n[i], m == 0], axis=0)]
+    rh_coef[0] = sh_coef[0]
+    counter = 1
+    for n_ in xrange(2, sh_order + 1, 2):
+        coef_in_order = 2 * n_ + 1
+        rh_coef[counter: counter + coef_in_order] = sh_coef[counter + n_]
+        counter += coef_in_order
     return rh_coef
 
 
