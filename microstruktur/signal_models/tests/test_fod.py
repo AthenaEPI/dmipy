@@ -2,11 +2,29 @@ from microstruktur.signal_models import dispersed_models
 from microstruktur.core.modeling_framework import (
     MultiCompartmentMicrostructureModel)
 from dipy.data import get_sphere
+from os.path import join
+from microstruktur.core import modeling_framework
 from microstruktur.utils.spherical_mean import (
     estimate_spherical_mean_shell)
 import numpy as np
 from numpy.testing import assert_almost_equal
+from microstruktur.core.acquisition_scheme import (
+    acquisition_scheme_from_bvalues)
 sphere = get_sphere()
+
+bvals = np.loadtxt(
+    join(modeling_framework.GRADIENT_TABLES_PATH,
+         'bvals_hcp_wu_minn.txt')
+)
+bvals *= 1e6
+gradient_directions = np.loadtxt(
+    join(modeling_framework.GRADIENT_TABLES_PATH,
+         'bvecs_hcp_wu_minn.txt')
+)
+delta = 0.01
+Delta = 0.03
+scheme = acquisition_scheme_from_bvalues(
+    bvals, gradient_directions, delta, Delta)
 
 
 def test_fod():
@@ -34,7 +52,9 @@ def test_fod():
 
     vertices = sphere.subdivide().vertices
     for (model1, model2) in dispersed_models_:
-        mc_model = MultiCompartmentMicrostructureModel([model1, model2])
+        mc_model = MultiCompartmentMicrostructureModel(
+            acquisition_scheme=scheme,
+            models=[model1, model2])
         mc_params = {}
         for name in mc_model.parameter_cardinality:
             card, scale = (
