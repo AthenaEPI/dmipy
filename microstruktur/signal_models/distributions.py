@@ -94,7 +94,7 @@ class SD1Watson(MicrostructureModel):
         """
         kappa = kwargs.get('kappa', self.kappa)
         mu = kwargs.get('mu', self.mu)
-        mu_cart = utils.sphere2cart(np.r_[1., mu])
+        mu_cart = utils.unitsphere2cart_1d(mu)
         numerator = np.exp(kappa * np.dot(n, mu_cart) ** 2)
         denominator = 4 * np.pi * special.hyp1f1(0.5, 1.5, kappa)
         Wn = numerator / denominator
@@ -117,7 +117,7 @@ class SD1Watson(MicrostructureModel):
         """
         kappa = kwargs.get('kappa', self.kappa)
         mu = kwargs.get('mu', self.mu)
-        x_, y_, z_ = utils.sphere2cart(np.r_[1., mu])
+        x_, y_, z_ = utils.unitsphere2cart_1d(mu)
 
         R = utils.rotation_matrix_001_to_xyz(x_, y_, z_)
         vertices_rotated = np.dot(SPHERE_CARTESIAN, R.T)
@@ -238,7 +238,7 @@ class SD2Bingham(MicrostructureModel):
         mu = kwargs.get('mu', self.mu)
         psi = kwargs.get('psi', self.psi)
 
-        x_, y_, z_ = utils.sphere2cart(np.r_[1., mu])
+        x_, y_, z_ = utils.unitsphere2cart_1d(mu)
 
         R = utils.rotation_matrix_001_to_xyz(x_, y_, z_)
         vertices_rotated = np.dot(SPHERE_CARTESIAN, R.T)
