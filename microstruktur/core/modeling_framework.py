@@ -145,7 +145,7 @@ class MicrostructureModel:
             parameter_vector = np.concatenate(parameter_vector, axis=-1)
         return parameter_vector
 
-    def set_parameter_initial_guess(self, **parameters):
+    def parameter_initial_guess_to_parameter_vector(self, **parameters):
         set_parameters = {}
         for parameter, card in self.parameter_cardinality.items():
             try:
@@ -154,20 +154,7 @@ class MicrostructureModel:
                 print (msg)
             except KeyError:
                 set_parameters[parameter] = None
-        self.parameter_initial_guess = (
-            self.parameters_to_parameter_vector2(set_parameters)
-        )
-
-    # def set_parameter_optimize(self, **parameters):
-    #     set_parameters = {}
-    #     for parameter, card in self.parameter_cardinality.items():
-    #         try:
-    #             set_parameters[parameter] = parameters[parameter]
-    #         except KeyError:
-    #             set_parameters[parameter] = None
-    #     self.parameter_inital_guess = (
-    #         self.parameters_to_parameter_vector(set_parameters)
-    #     )
+        return self.parameters_to_parameter_vector2(set_parameters)
 
     @property
     def bounds_for_optimization(self):
@@ -180,6 +167,18 @@ class MicrostructureModel:
                 for i in range(card):
                     bounds.append((range_[0][i], range_[1][i]))
         return bounds
+
+    @property
+    def opt_params_for_optimization(self):
+        params = []
+        for parameter, card in self.parameter_cardinality.items():
+            optimize_param = self.optimized_parameters[parameter]
+            if card == 1:
+                params.append(optimize_param)
+            else:
+                for i in range(card):
+                    params.append(optimize_param)
+        return params
 
     def fix_bounds_for_optimization(self, parameters_x0, fixed_parameters):
         if fixed_parameters is None:
@@ -333,7 +332,8 @@ class MicrostructureModel:
             return fitted_parameters.reshape(
                 np.r_[data.shape[:-1], len(voxel_x0)])
 
-    def fit2(self, data, mask=None, solver='scipy', Ns=10,
+    def fit2(self, data, parameter_initial_guess=None, mask=None,
+             solver='scipy', Ns=10, maxiter=300,
              use_parallel_processing=False, number_of_processors=None):
         """ The data fitting function of a multi-compartment model.
 
@@ -398,13 +398,15 @@ class MicrostructureModel:
         N_voxels = np.sum(mask)
 
         # make starting parameters and data the same size
-        if self.parameter_initial_guess is None:
+        if parameter_initial_guess is None:
             x0_ = np.tile(None,
                           np.r_[data_.shape[:-1], N_parameters])
         else:
-            data_2d, x0_2d = homogenize_data_x0_to_2d(
-                data, self.parameter_initial_guess)
-            x0_2d = x0_2d / self.scales_for_optimization
+            x0_ = homogenize_x0_to_data(
+                data_, parameter_initial_guess)
+            x0_bool = np.all(
+                x0_ == None, axis=tuple(np.arange(x0_.ndim - 1)))
+            x0_[..., ~x0_bool] /= self.scales_for_optimization[~x0_bool]
 
         if use_parallel_processing and not have_pathos:
             msg = 'Cannot use parallel processing without pathos.'
@@ -433,14 +435,19 @@ class MicrostructureModel:
 
         for idx, pos in enumerate(zip(*mask_pos)):
             voxel_E = data_to_fit[pos] / S0[pos]
-            voxel_x0 = x0_[pos]
+            voxel_x0_vector = x0_[pos]
+
+            if solver == 'scipy':
+                fit_func = self.fit_brute2fine
+                fit_args = (voxel_E, voxel_x0_vector, Ns)
+            elif solver == 'mix':
+                fit_func = self.fit_mix
+                fit_args = (voxel_E, voxel_x0_vector, maxiter)
+
             if use_parallel_processing:
-                fitted_parameters_lin[idx] = pool.apipe(
-                    self.fit_brute2minimize,
-                    *(self.objective_function, voxel_x0, voxel_E, Ns))
+                fitted_parameters_lin[idx] = pool.apipe(fit_func, *fit_args)
             else:
-                fitted_parameters_lin[idx] = (self.fit_brute2minimize(
-                    self.objective_function, voxel_x0, voxel_E, Ns))
+                fitted_parameters_lin[idx] = fit_func(*fit_args)
         if use_parallel_processing:
             fitted_parameters_lin = np.array(
                 [p.get() for p in fitted_parameters_lin])
@@ -458,13 +465,13 @@ class MicrostructureModel:
             return np.squeeze(fitted_parameters)
         else:
             return fitted_parameters.reshape(
-                np.r_[data.shape[:-1], len(voxel_x0)])
+                np.r_[data.shape[:-1], N_parameters])
 
     def parallel_minimize(self, objective_function, x0, data, scheme, bounds):
         res_ = minimize(objective_function, x0, (data, scheme), bounds=bounds)
         return res_.x
 
-    def fit_brute2minimize(self, objective_function, x0, data, Ns):
+    def fit_brute2fine(self, data, x0_vector, Ns):
         """
         If initial x0 is given for a parameter, then the bounds are fixed for
         brute-force optimization.
@@ -472,28 +479,28 @@ class MicrostructureModel:
         then its bounds are also fixed for subsequent gradient-based
         optimization.
         """
-        args = (data, self.scheme)
-        bounds_brute = list(self.bounds_for_optimization)
-        bounds_fine = list(bounds_brute)
-        for i, x0_ in enumerate(x0):
+        fit_args = (data, self.scheme)
+        bounds = self.bounds_for_optimization
+        bounds_brute = []
+        bounds_fine = list(bounds)
+        for i, x0_ in enumerate(x0_vector):
+            if x0_ is None:
+                bounds_brute.append(
+                    slice(bounds[i][0], bounds[i][1],
+                          (bounds[i][1] - bounds[i][0]) / float(Ns)))
             if x0_ is not None:
-                bounds_brute[i] = np.r_[x0_, x0_]
-            if x0_ is not None and self.parameter_optimize[i] is False:
+                bounds_brute.append(slice(x0_, x0_ + 1e-2, None))
+            if x0_ is not None and self.opt_params_for_optimization[i] is False:
                 bounds_fine[i] = np.r_[x0_, x0_]
 
-        # parameter grid is generated for brute-force optimization
-        # grid = np.array(np.meshgrid(
-        #     *[np.unique(np.linspace(bnd[0], bnd[1], Ns)) for bnd in bounds_brute])
-        # )
         # brute-force optimization returns initial guess for all parameters
         x0_brute = brute(
-            objective_function, ranges=bounds_brute, args=args, Ns=Ns,
+            self.objective_function, ranges=bounds_brute, args=fit_args,
             finish=None)
-
         # the intial guess is used to find a local minima using gradient-based
         # optimization.
-        x_final = minimize(objective_function, x0_brute,
-                           args=args, bounds=bounds_fine, method='L-BFGS-B').x
+        x_final = minimize(self.objective_function, x0_brute,
+                           args=fit_args, bounds=bounds_fine, method='L-BFGS-B').x
         return x_final
 
     def objective_function(self, parameter_vector, data, acquisition_scheme):
@@ -507,8 +514,7 @@ class MicrostructureModel:
         objective = np.sum(E_diff ** 2) / len(data)
         return objective
 
-    def fit_mix(self, data, acquisition_scheme,
-                parameters_x0=None, fixed_parameters=None, maxiter=150):
+    def fit_mix(self, data, x0_vector, maxiter=150):
         """
         differential_evolution
         cvxpy
@@ -520,47 +526,39 @@ class MicrostructureModel:
                White Matter Fibers from diffusion MRI." Nature Scientific reports 6
                (2016).
         """
-        data_2d, x0_2d = homogenize_data_x0_to_2d(data, parameters_x0)
-        number_of_variables = len(self.bounds_for_optimization)
-        fitted_parameters = np.empty((len(data_2d), number_of_variables),
-                                     dtype=float)
 
-        for idx, (voxel_data, voxel_x0) in enumerate(zip(data_2d, x0_2d)):
-            bounds_for_optimization = self.fix_bounds_for_optimization(
-                voxel_x0, fixed_parameters)
-            # step 1: Variable separation using genetic algorithm
+        bounds = list(self.bounds_for_optimization)
+        for i, x0_ in enumerate(x0_vector):
+            if x0_ is not None and self.opt_params_for_optimization[i] is False:
+                bounds[i] = np.r_[x0_, x0_]
+        # step 1: Variable separation using genetic algorithm
 
-            res_one = differential_evolution(self.stochastic_objective_function,
-                                             bounds_for_optimization,
-                                             maxiter=maxiter,
-                                             args=(voxel_data, acquisition_scheme))
-            res_one_x = res_one.x
-            parameters = self.parameter_vector_to_parameters(
-                res_one_x * self.scales_for_optimization)
+        res_one = differential_evolution(self.stochastic_objective_function,
+                                         bounds=bounds,
+                                         maxiter=maxiter,
+                                         args=(data, self.scheme))
+        res_one_x = res_one.x
+        parameters = self.parameter_vector_to_parameters(
+            res_one_x * self.scales_for_optimization)
 
-            # step 2: Estimating linear variables using cvx
-            phi = self(acquisition_scheme,
-                       quantity="stochastic cost function", **parameters)
-            x_fe = self._cvx_fit_linear_parameters(voxel_data, phi)
+        # step 2: Estimating linear variables using cvx
+        phi = self(self.scheme,
+                   quantity="stochastic cost function", **parameters)
+        x_fe = self._cvx_fit_linear_parameters(data, phi)
 
-            # step 3: refine using gradient method / convert nested fractions
-            x_fe_nested = np.ones(len(x_fe) - 1)
-            x_fe_nested[0] = x_fe[0]
-            for i in np.arange(1, len(x_fe_nested)):
-                x_fe_nested[i] = x_fe[i] / x_fe[i - 1]
+        # step 3: refine using gradient method / convert nested fractions
+        x_fe_nested = np.ones(len(x_fe) - 1)
+        x_fe_nested[0] = x_fe[0]
+        for i in np.arange(1, len(x_fe_nested)):
+            x_fe_nested[i] = x_fe[i] / x_fe[i - 1]
 
-            res_one_x[-len(x_fe_nested):] = x_fe_nested
+        res_one_x[-len(x_fe_nested):] = x_fe_nested
 
-            res_final = minimize(self.objective_function, res_one_x,
-                                 (voxel_data, acquisition_scheme),
-                                 bounds=bounds_for_optimization)
-            fitted_parameters[idx] = res_final.x * self.scales_for_optimization
-
-        if data.ndim == 1:
-            return np.squeeze(fitted_parameters)
-        else:
-            return fitted_parameters.reshape(np.r_[data.shape[:-1],
-                                                   number_of_variables])
+        res_final = minimize(self.objective_function, res_one_x,
+                             (data, self.scheme),
+                             bounds=bounds)
+        fitted_parameters = res_final.x
+        return fitted_parameters
 
     def stochastic_objective_function(self, parameter_vector,
                                       data, acquisition_scheme):
@@ -644,9 +642,7 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
         self._prepare_parameter_links()
         self._verify_model_input_requirements()
         self._check_for_double_model_class_instances()
-
-        self.parameter_initial_guess = None
-        self.parameter_optimize = None
+        self._prepare_parameters_to_optimize()
 
     def _prepare_parameters(self):
         self.model_names = []
@@ -744,12 +740,7 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
             del self._parameter_scales[parameter_name]
 
     def _prepare_parameters_to_optimize(self):
-        self.parameter_initial_guess = OrderedDict({
-            k: None
-            for k, v in self.parameter_cardinality.items()
-        })
-
-        self.parameter_optimize = OrderedDict({
+        self.optimized_parameters = OrderedDict({
             k: True
             for k, v in self.parameter_cardinality.items()
         })
@@ -858,24 +849,20 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
         return values
 
 
-def homogenize_data_x0_to_2d(data, x0):
-    data_at_least_2d = np.atleast_2d(data)
-    x0_at_least_2d = np.atleast_2d(x0)
+def homogenize_x0_to_data(data, x0):
     if x0 is not None:
-        if x0.ndim == 1 and data.ndim > 1:
+        if x0.ndim == 1:
             # the same x0 will be used for every voxel in N-dimensional data.
-            x0_at_least_2d = np.tile(x0, np.r_[data.shape[:-1], 1])
-            data_at_least_2d = data
+            x0_as_data = np.tile(x0, np.r_[data.shape[:-1], 1])
+        else:
+            x0_as_data = x0
     if not np.all(
-        x0_at_least_2d.shape[:-1] == data_at_least_2d.shape[:-1]
+        x0_as_data.shape[:-1] == data.shape[:-1]
     ):
         # if x0 and data are both N-dimensional but have different shapes.
         msg = "data and x0 both N-dimensional but have different shapes. "
         msg += "Current shapes are {} and {}.".format(
-            data_at_least_2d.shape[:-1],
-            x0_at_least_2d.shape[:-1])
+            data.shape[:-1],
+            x0_as_data.shape[:-1])
         raise ValueError(msg)
-
-    data_2d = data_at_least_2d.reshape(-1, data_at_least_2d.shape[-1])
-    x0_2d = x0_at_least_2d.reshape(-1, x0_at_least_2d.shape[-1])
-    return data_2d, x0_2d
+    return x0_as_data
