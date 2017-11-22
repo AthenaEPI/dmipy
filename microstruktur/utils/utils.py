@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from dipy.data import get_sphere
+from dipy.utils.optpkg import optional_package
 SPHERE = get_sphere('symmetric362')
+numba, have_numba, _ = optional_package("numba")
 
 
 class SphericalIntegrator:
@@ -341,3 +343,30 @@ def sphere2cart(spherical_coordinates):
         msg = "coordinates must be array of size 3 or N x 3."
         raise ValueError(msg)
     return cartesian_coordinates
+
+
+def unitsphere2cart_1d(mu):
+    """Optimized function deicated to convert 1D unit sphere coordinates
+    to cartesian coordinates.
+
+    Parameters
+    ----------
+    mu : array of size (2)
+        unit sphere coordinates, as theta, phi = mu
+
+    Returns
+    -------
+    mu_cart, array of size (3)
+        mu in cartesian coordinates, as x, y, z = mu_cart
+    """
+    theta, phi = mu
+    mu_cart = np.zeros(3)
+    sintheta = np.sin(theta)
+    mu_cart[0] = sintheta * np.cos(phi)
+    mu_cart[1] = sintheta * np.sin(phi)
+    mu_cart[2] = np.cos(theta)
+    return mu_cart
+
+
+if have_numba:
+    unitsphere2cart_1d = numba.njit()(unitsphere2cart_1d)

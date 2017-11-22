@@ -16,6 +16,8 @@ Mipy is now equiped with MIX optimization, giving global minimum for models with
 - numpy >= 1.13
 - scipy
 - dipy
+- pathos (optional for multi-core processing)
+- cvxpy (optional for MIX optimization)
 
 ## Getting Started:
 To get a feeling for how to use Mipy, we provide a few tutorial notebooks:

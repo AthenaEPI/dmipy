@@ -87,7 +87,7 @@ class C1Stick(MicrostructureModel):
 
         lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
-        mu = utils.sphere2cart(np.r_[1, mu])
+        mu = utils.unitsphere2cart_1d(mu)
         E_stick = np.exp(-bvals * lambda_par_ * np.dot(n, mu) ** 2)
         return E_stick
 
@@ -195,7 +195,7 @@ class C2CylinderSodermanApproximation(MicrostructureModel):
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
-        mu = utils.sphere2cart(np.r_[1, mu])
+        mu = utils.unitsphere2cart_1d(mu)
         mu_perpendicular_plane = np.eye(3) - np.outer(mu, mu)
         magnitude_parallel = np.dot(n, mu)
         magnitude_perpendicular = np.linalg.norm(
@@ -360,7 +360,7 @@ class C3CylinderCallaghanApproximation(MicrostructureModel):
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
-        mu = utils.sphere2cart(np.r_[1, mu])
+        mu = utils.unitsphere2cart_1d(mu)
         mu_perpendicular_plane = np.eye(3) - np.outer(mu, mu)
         magnitude_parallel = np.dot(n, mu)
         magnitude_perpendicular = np.linalg.norm(
@@ -507,7 +507,7 @@ class C4CylinderGaussianPhaseApproximation(MicrostructureModel):
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
-        mu = utils.sphere2cart(np.r_[1, mu])
+        mu = utils.unitsphere2cart_1d(mu)
         mu_perpendicular_plane = np.eye(3) - np.outer(mu, mu)
         magnitude_parallel = np.dot(n, mu)
         magnitude_perpendicular = np.linalg.norm(
