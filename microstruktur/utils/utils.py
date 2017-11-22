@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from dipy.data import get_sphere
-from microstruktur.utils.conditional_decorator import (
-    conditional_decorator)
 from dipy.utils.optpkg import optional_package
 SPHERE = get_sphere('symmetric362')
 numba, have_numba, _ = optional_package("numba")

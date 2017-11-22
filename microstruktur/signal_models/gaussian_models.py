@@ -186,7 +186,7 @@ class G4Zeppelin(MicrostructureModel):
         lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
         mu = kwargs.get('mu', self.mu)
 
-        R1 = utils.sphere2cart(np.r_[1, mu])
+        R1 = utils.unitsphere2cart_1d(mu)
         R2 = utils.perpendicular_vector(R1)
         R3 = np.cross(R1, R2)
 
@@ -290,7 +290,7 @@ class G5RestrictedZeppelin(MicrostructureModel):
         lambda_inf = kwargs.get('lambda_inf', self.lambda_inf)
         A = kwargs.get('A', self.A)
         mu = kwargs.get('mu', self.mu)
-        mu = utils.sphere2cart(np.r_[1, mu])
+        mu = utils.unitsphere2cart_1d(mu)
 
         R1 = mu
         R2 = utils.perpendicular_vector(R1)
