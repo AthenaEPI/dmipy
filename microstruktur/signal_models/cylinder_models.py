@@ -113,7 +113,7 @@ class C1Stick(MicrostructureModel):
             bvalue, SPHERE_CARTESIAN)
         E_kernel_sf = self(simple_acq_scheme_rh, mu=np.r_[0., 0.])
         sh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
-        rh = kernel_sh_to_rh(sh, rh_order)
+        rh = kernel_sh_to_rh(sh)
         return rh
 
 
@@ -238,7 +238,7 @@ class C2CylinderSodermanApproximation(MicrostructureModel):
             bvalue, SPHERE_CARTESIAN, delta=delta, Delta=Delta)
         E_kernel_sf = self(simple_acq_scheme_rh, mu=np.r_[0., 0.])
         sh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
-        rh = kernel_sh_to_rh(sh, rh_order)
+        rh = kernel_sh_to_rh(sh)
         return rh
 
 
@@ -404,7 +404,7 @@ class C3CylinderCallaghanApproximation(MicrostructureModel):
             bvalue, SPHERE_CARTESIAN, delta=delta, Delta=Delta)
         E_kernel_sf = self(simple_acq_scheme_rh, mu=np.r_[0., 0.])
         sh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
-        rh = kernel_sh_to_rh(sh, rh_order)
+        rh = kernel_sh_to_rh(sh)
         return rh
 
 
@@ -564,5 +564,5 @@ class C4CylinderGaussianPhaseApproximation(MicrostructureModel):
             bvalue, SPHERE_CARTESIAN, delta=delta, Delta=Delta)
         E_kernel_sf = self(simple_acq_scheme_rh, mu=np.r_[0., 0.])
         sh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
-        rh = kernel_sh_to_rh(sh, rh_order)
+        rh = kernel_sh_to_rh(sh)
         return rh

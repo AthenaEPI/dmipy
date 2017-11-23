@@ -33,7 +33,7 @@ def test_spherical_convolution_watson_sh(sh_order=4):
     stick = cylinder_models.C1Stick(mu=[0, 0], lambda_par=lambda_par)
     k_sf = stick(scheme)
     k_sh = sf_to_sh(k_sf, sphere, sh_order)
-    k_rh = kernel_sh_to_rh(k_sh, sh_order)
+    k_rh = kernel_sh_to_rh(k_sh)
 
     fk_convolved_sh = sh_convolution(f_sh, k_rh, sh_order)
     fk_convolved_sf = sh_to_sf(fk_convolved_sh, sphere, sh_order)
