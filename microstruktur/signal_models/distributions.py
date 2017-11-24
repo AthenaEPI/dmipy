@@ -14,6 +14,8 @@ from dipy.reconst.shm import real_sym_sh_mrtrix
 from microstruktur.utils import utils
 from scipy.interpolate import bisplev
 from microstruktur.core.modeling_framework import MicrostructureModel
+from dipy.utils.optpkg import optional_package
+numba, have_numba, _ = optional_package("numba")
 
 SPHERICAL_INTEGRATOR = utils.SphericalIntegrator()
 GRADIENT_TABLES_PATH = pkg_resources.resource_filename(
@@ -29,11 +31,6 @@ SPHERE_CARTESIAN = np.loadtxt(
     join(GRADIENT_TABLES_PATH, 'sphere_with_cap.txt')
 )
 SPHERE_SPHERICAL = utils.cart2sphere(SPHERE_CARTESIAN)
-inverse_rh_matrix_kernel = {
-    rh_order: np.linalg.pinv(real_sym_sh_mrtrix(
-        rh_order, SPHERE_SPHERICAL[:, 1], SPHERE_SPHERICAL[:, 2]
-    )[0]) for rh_order in np.arange(0, 15, 2)
-}
 log_bingham_normalization_splinefit = np.load(
     join(DATA_PATH,
          "bingham_normalization_splinefit.npz"))['arr_0']
@@ -133,7 +130,7 @@ class SD1Watson(MicrostructureModel):
 
         watson_sf = self(vertices_rotated, mu=mu, kappa=kappa)
         sh_mat = real_sym_sh_mrtrix(sh_order, theta_rotated, phi_rotated)[0]
-        sh_mat_inv = np.linalg.pinv(sh_mat)
+        sh_mat_inv = inverse_matrix(sh_mat)
         watson_sh = np.dot(sh_mat_inv, watson_sf)
         return watson_sh
 
@@ -256,7 +253,7 @@ class SD2Bingham(MicrostructureModel):
                           beta=beta)
 
         sh_mat = real_sym_sh_mrtrix(sh_order, theta_rotated, phi_rotated)[0]
-        sh_mat_inv = np.linalg.pinv(sh_mat)
+        sh_mat_inv = inverse_matrix(sh_mat)
         bingham_sh = np.dot(sh_mat_inv, bingham_sf)
         return bingham_sh
 
@@ -380,3 +377,11 @@ class DD1GammaDistribution(MicrostructureModel):
         gamma_dist = stats.gamma(alpha, scale=beta)
         Pgamma = gamma_dist.pdf(radius)
         return Pgamma
+
+
+def inverse_matrix(matrix):
+    return np.dot(np.linalg.inv(np.dot(matrix.T, matrix)), matrix.T)
+
+
+if have_numba:
+    inverse_matrix = numba.njit()(inverse_matrix)
