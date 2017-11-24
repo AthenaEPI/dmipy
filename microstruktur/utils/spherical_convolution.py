@@ -33,7 +33,7 @@ def kernel_sh_to_rh(sh_coef):
     return rh_coef
 
 
-def sh_convolution(f_distribution_sh, kernel_rh, sh_order):
+def sh_convolution(f_distribution_sh, kernel_rh, sh_order=None):
     """Spherical convolution between a fiber distribution (f) in spherical
     harmonics and a kernel in terms of rotational harmonics (oriented along the
     z-axis).
@@ -52,9 +52,19 @@ def sh_convolution(f_distribution_sh, kernel_rh, sh_order):
         spherical harmonic coefficients of the convolved kernel and
         distribution.
     """
-    m, n = sph_harm_ind_list(sh_order)
-    lambda_ = np.sqrt((4 * np.pi) / (2 * n + 1))
-    f_kernel_convolved = lambda_ * f_distribution_sh * kernel_rh
+    Ncoef_sh = len(f_distribution_sh)
+    Ncoef_rh = len(kernel_rh)
+    Ncoef_rel = np.min((Ncoef_sh, Ncoef_rh))  # relevant coefficients
+    f_kernel_convolved = f_distribution_sh[:Ncoef_rel] * kernel_rh[:Ncoef_rel]
+    counter = 0
+    for n_ in xrange(0, 100, 2):
+        coef_in_order = 2 * n_ + 1
+        f_kernel_convolved[counter: counter + coef_in_order] *= (
+            np.sqrt((4 * np.pi) / (2 * n_ + 1))
+        )
+        counter += coef_in_order
+        if counter == Ncoef_rel:
+            break
     return f_kernel_convolved
 
 

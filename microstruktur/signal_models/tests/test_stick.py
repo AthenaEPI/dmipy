@@ -67,7 +67,7 @@ def test_watson_dispersed_stick_kappa0(
     # All values are the same:
     assert_equal(len(E_unique_watson_stick), 1)
     # and are equal to the spherical mean:
-    assert_almost_equal(E_unique_watson_stick, E_sm_stick)
+    assert_almost_equal(E_unique_watson_stick, E_sm_stick, 3)
 
 
 def test_watson_dispersed_stick_kappa_positive(
@@ -92,7 +92,7 @@ def test_watson_dispersed_stick_kappa_positive(
     # Different values for different orientations:
     assert_equal(len(E_unique_watson_stick) > 1, True)
     # but the spherical mean does not change with dispersion:
-    assert_almost_equal(E_sm_watson_stick, E_sm_stick, 4)
+    assert_almost_equal(E_sm_watson_stick, E_sm_stick, 3)
 
 
 def test_bingham_dispersed_stick_kappa0(
@@ -117,7 +117,7 @@ def test_bingham_dispersed_stick_kappa0(
     # All values are the same:
     assert_equal(len(E_unique_bingham_stick), 1)
     # and are equal to the spherical mean:
-    assert_almost_equal(E_unique_bingham_stick, E_sm_stick)
+    assert_almost_equal(E_unique_bingham_stick, E_sm_stick, 3)
 
 
 def test_bingham_dispersed_stick_kappa_positive(

@@ -38,9 +38,13 @@ log_bingham_normalization_splinefit = np.load(
     join(DATA_PATH,
          "bingham_normalization_splinefit.npz"))['arr_0']
 WATSON_SH_ORDER = 14
-DIFFUSIVITY_SCALING = 1e-9
-DIAMETER_SCALING = 1e-6
-A_SCALING = 1e-12
+
+
+def get_sh_order_from_kappa(kappa):
+    kappas = np.r_[0.32323232, 1.29292929, 2.58585859, 4.36363636,
+                   6.62626263, 9.37373737, np.inf]
+    sh_orders = np.arange(2, 15, 2)
+    return sh_orders[np.argmax(kappas > kappa)]
 
 
 class SD1Watson(MicrostructureModel):
@@ -100,7 +104,7 @@ class SD1Watson(MicrostructureModel):
         Wn = numerator / denominator
         return Wn
 
-    def spherical_harmonics_representation(self, sh_order=14, **kwargs):
+    def spherical_harmonics_representation(self, sh_order=None, **kwargs):
         r""" The Watson spherical distribution model in spherical harmonics [1, 2].
 
         Parameters
@@ -117,6 +121,10 @@ class SD1Watson(MicrostructureModel):
         """
         kappa = kwargs.get('kappa', self.kappa)
         mu = kwargs.get('mu', self.mu)
+
+        if sh_order is None:
+            sh_order = get_sh_order_from_kappa(kappa)
+
         x_, y_, z_ = utils.unitsphere2cart_1d(mu)
 
         R = utils.rotation_matrix_001_to_xyz(x_, y_, z_)

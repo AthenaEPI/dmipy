@@ -11,6 +11,14 @@ from warnings import warn
 sh_order = 14
 
 
+def get_sh_order_from_bval(bval):
+    bvals = np.r_[2.02020202e+08, 7.07070707e+08, 1.21212121e+09,
+                  2.52525253e+09, 3.13131313e+09, 5.35353535e+09,
+                  np.inf]
+    sh_orders = np.arange(2, 15, 2)
+    return sh_orders[np.argmax(bvals > bval)]
+
+
 class MipyAcquisitionScheme:
     """
     Class that calculates and contains all information needed to simulate and
@@ -82,12 +90,15 @@ class MipyAcquisitionScheme:
         # coefficients to the positions on the sphere for every shell
         self.unique_dwi_indices = np.unique(self.shell_indices[~self.b0_mask])
         self.shell_sh_matrices = {}
+        self.shell_sh_orders = np.zeros(len(self.shell_bvalues))
         for shell_index in self.unique_dwi_indices:
             shell_mask = self.shell_indices == shell_index
             bvecs_shell = self.gradient_directions[shell_mask]
             _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
+            self.shell_sh_orders[shell_index] = get_sh_order_from_bval(
+                self.shell_bvalues[shell_index])
             self.shell_sh_matrices[shell_index] = real_sym_sh_mrtrix(
-                sh_order, theta_, phi_)[0]
+                self.shell_sh_orders[shell_index], theta_, phi_)[0]
         # warning in case there are no b0 measurements
         if sum(self.b0_mask) == 0:
             msg = "No b0 measurements were detected. Check if the b0_threshold"

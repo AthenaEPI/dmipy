@@ -66,7 +66,7 @@ def test_watson_dispersed_zeppelin_kappa0(
     # All values are the same:
     assert_equal(len(E_unique_watson_zeppelin), 1)
     # and are equal to the spherical mean:
-    assert_almost_equal(E_unique_watson_zeppelin, E_sm_zeppelin)
+    assert_almost_equal(E_unique_watson_zeppelin, E_sm_zeppelin, 3)
 
 
 def test_watson_dispersed_zeppelin_kappa_positive(
@@ -119,7 +119,7 @@ def test_bingham_dispersed_zeppelin_kappa0(
     # All values are the same:
     assert_equal(len(E_unique_bingham_zeppelin), 1)
     # and are equal to the spherical mean:
-    assert_almost_equal(E_unique_bingham_zeppelin, E_sm_zeppelin)
+    assert_almost_equal(E_unique_bingham_zeppelin, E_sm_zeppelin, 3)
 
 
 def test_bingham_dispersed_zeppelin_kappa_positive(

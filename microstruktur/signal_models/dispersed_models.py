@@ -5,7 +5,6 @@ from microstruktur.utils.spherical_convolution import sh_convolution
 from scipy import stats
 from microstruktur.core import modeling_framework
 MicrostructureModel = modeling_framework.MicrostructureModel
-WATSON_SH_ORDER = 14
 DIFFUSIVITY_SCALING = 1e-9
 DIAMETER_SCALING = 1e-6
 BETA_SCALING = 1e-6
@@ -81,7 +80,6 @@ class SD2C1BinghamDispersedStick(MicrostructureModel):
         shell_indices = acquisition_scheme.shell_indices
         unique_dwi_indices = acquisition_scheme.unique_dwi_indices
 
-        sh_order = WATSON_SH_ORDER
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
         psi = kwargs.get('psi', self.psi)
@@ -90,7 +88,7 @@ class SD2C1BinghamDispersedStick(MicrostructureModel):
 
         bingham = distributions.SD2Bingham(mu=mu, psi=psi,
                                            kappa=kappa, beta=beta)
-        sh_bingham = bingham.spherical_harmonics_representation(sh_order)
+        sh_bingham = bingham.spherical_harmonics_representation()
         stick = cylinder_models.C1Stick(mu=mu, lambda_par=lambda_par)
 
         E = np.ones(acquisition_scheme.number_of_measurements)
@@ -100,9 +98,9 @@ class SD2C1BinghamDispersedStick(MicrostructureModel):
             # rotational harmonics of stick
             rh_stick = stick.rotational_harmonics_representation(
                 bvalue=acquisition_scheme.shell_bvalues[shell_index],
-                rh_order=sh_order)
+                rh_order=acquisition_scheme.shell_sh_orders[shell_index])
             # convolving micro-environment with bingham distribution
-            E_dispersed_sh = sh_convolution(sh_bingham, rh_stick, sh_order)
+            E_dispersed_sh = sh_convolution(sh_bingham, rh_stick)
             # recover signal values from bingham-convolved spherical harmonics
             E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
         return E
@@ -206,7 +204,6 @@ class SD2C2BinghamDispersedSodermanCylinder(MicrostructureModel):
         E : array, shape(N),
             signal attenuation.
         """
-        sh_order = WATSON_SH_ORDER
         shell_indices = acquisition_scheme.shell_indices
         unique_dwi_indices = acquisition_scheme.unique_dwi_indices
 
@@ -233,9 +230,9 @@ class SD2C2BinghamDispersedSodermanCylinder(MicrostructureModel):
                 bvalue=acquisition_scheme.shell_bvalues[shell_index],
                 delta=acquisition_scheme.shell_delta[shell_index],
                 Delta=acquisition_scheme.shell_Delta[shell_index],
-                rh_order=sh_order)
+                rh_order=acquisition_scheme.shell_sh_orders[shell_index])
             # convolving micro-environment with bingham distribution
-            E_dispersed_sh = sh_convolution(sh_bingham, rh_stick, sh_order)
+            E_dispersed_sh = sh_convolution(sh_bingham, rh_stick)
             # recover signal values from bingham-convolved spherical harmonics
             E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
         return E
@@ -340,7 +337,6 @@ class SD2C3BinghamDispersedCallaghanCylinder(MicrostructureModel):
         E : array, shape(N),
             signal attenuation.
         """
-        sh_order = WATSON_SH_ORDER
         shell_indices = acquisition_scheme.shell_indices
         unique_dwi_indices = acquisition_scheme.unique_dwi_indices
 
@@ -367,9 +363,9 @@ class SD2C3BinghamDispersedCallaghanCylinder(MicrostructureModel):
                 bvalue=acquisition_scheme.shell_bvalues[shell_index],
                 delta=acquisition_scheme.shell_delta[shell_index],
                 Delta=acquisition_scheme.shell_Delta[shell_index],
-                rh_order=sh_order)
+                rh_order=acquisition_scheme.shell_sh_orders[shell_index])
             # convolving micro-environment with bingham distribution
-            E_dispersed_sh = sh_convolution(sh_bingham, rh_stick, sh_order)
+            E_dispersed_sh = sh_convolution(sh_bingham, rh_stick)
             # recover signal values from bingham-convolved spherical harmonics
             E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
         return E
@@ -473,7 +469,6 @@ class SD2C4BinghamDispersedGaussianPhaseCylinder(MicrostructureModel):
         E : array, shape(N),
             signal attenuation.
         """
-        sh_order = WATSON_SH_ORDER
         shell_indices = acquisition_scheme.shell_indices
         unique_dwi_indices = acquisition_scheme.unique_dwi_indices
 
@@ -500,9 +495,9 @@ class SD2C4BinghamDispersedGaussianPhaseCylinder(MicrostructureModel):
                 bvalue=acquisition_scheme.shell_bvalues[shell_index],
                 delta=acquisition_scheme.shell_delta[shell_index],
                 Delta=acquisition_scheme.shell_Delta[shell_index],
-                rh_order=sh_order)
+                rh_order=acquisition_scheme.shell_sh_orders[shell_index])
             # convolving micro-environment with bingham distribution
-            E_dispersed_sh = sh_convolution(sh_bingham, rh_stick, sh_order)
+            E_dispersed_sh = sh_convolution(sh_bingham, rh_stick)
             # recover signal values from bingham-convolved spherical harmonics
             E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
         return E
@@ -586,7 +581,6 @@ class SD1C1WatsonDispersedStick(MicrostructureModel):
         attenuation : float or array, shape(N),
             signal attenuation
         '''
-        sh_order = WATSON_SH_ORDER
         shell_indices = acquisition_scheme.shell_indices
         unique_dwi_indices = acquisition_scheme.unique_dwi_indices
 
@@ -605,11 +599,12 @@ class SD1C1WatsonDispersedStick(MicrostructureModel):
             # rotational harmonics of stick
             rh_stick = stick.rotational_harmonics_representation(
                 bvalue=acquisition_scheme.shell_bvalues[shell_index],
-                rh_order=sh_order)
+                rh_order=acquisition_scheme.shell_sh_orders[shell_index])
             # convolving micro-environment with watson distribution
-            E_dispersed_sh = sh_convolution(sh_watson, rh_stick, sh_order)
+            E_dispersed_sh = sh_convolution(sh_watson, rh_stick)
             # recover signal values from watson-convolved spherical harmonics
-            E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
+            E[shell_mask] = np.dot(sh_mat[:, :len(E_dispersed_sh)],
+                                   E_dispersed_sh)
         return E
 
     def fod(self, vertices, **kwargs):
@@ -696,7 +691,6 @@ class SD1C2WatsonDispersedSodermanCylinder(MicrostructureModel):
         E : array, shape(N),
             signal attenuation.
         """
-        sh_order = WATSON_SH_ORDER
         shell_indices = acquisition_scheme.shell_indices
         unique_dwi_indices = acquisition_scheme.unique_dwi_indices
 
@@ -706,9 +700,7 @@ class SD1C2WatsonDispersedSodermanCylinder(MicrostructureModel):
         kappa = kwargs.get('kappa', self.kappa)
 
         watson = distributions.SD1Watson(mu=mu, kappa=kappa)
-        sh_watson = watson.spherical_harmonics_representation(
-            sh_order=sh_order
-        )
+        sh_watson = watson.spherical_harmonics_representation()
         soderman = cylinder_models.C2CylinderSodermanApproximation(
             mu=mu, lambda_par=lambda_par, diameter=diameter
         )
@@ -722,11 +714,12 @@ class SD1C2WatsonDispersedSodermanCylinder(MicrostructureModel):
                 bvalue=acquisition_scheme.shell_bvalues[shell_index],
                 delta=acquisition_scheme.shell_delta[shell_index],
                 Delta=acquisition_scheme.shell_Delta[shell_index],
-                rh_order=sh_order)
+                rh_order=acquisition_scheme.shell_sh_orders[shell_index])
             # convolving micro-environment with watson distribution
-            E_dispersed_sh = sh_convolution(sh_watson, rh_stick, sh_order)
+            E_dispersed_sh = sh_convolution(sh_watson, rh_stick)
             # recover signal values from watson-convolved spherical harmonics
-            E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
+            E[shell_mask] = np.dot(sh_mat[:, :len(E_dispersed_sh)],
+                                   E_dispersed_sh)
         return E
 
     def fod(self, vertices, **kwargs):
@@ -814,7 +807,6 @@ class SD1C3WatsonDispersedCallaghanCylinder(MicrostructureModel):
         E : array, shape(N),
             signal attenuation.
         """
-        sh_order = WATSON_SH_ORDER
         shell_indices = acquisition_scheme.shell_indices
         unique_dwi_indices = acquisition_scheme.unique_dwi_indices
 
@@ -824,9 +816,7 @@ class SD1C3WatsonDispersedCallaghanCylinder(MicrostructureModel):
         kappa = kwargs.get('kappa', self.kappa)
 
         watson = distributions.SD1Watson(mu=mu, kappa=kappa)
-        sh_watson = watson.spherical_harmonics_representation(
-            sh_order=sh_order
-        )
+        sh_watson = watson.spherical_harmonics_representation()
         callaghan = cylinder_models.C3CylinderCallaghanApproximation(
             mu=mu, lambda_par=lambda_par, diameter=diameter
         )
@@ -840,11 +830,12 @@ class SD1C3WatsonDispersedCallaghanCylinder(MicrostructureModel):
                 bvalue=acquisition_scheme.shell_bvalues[shell_index],
                 delta=acquisition_scheme.shell_delta[shell_index],
                 Delta=acquisition_scheme.shell_Delta[shell_index],
-                rh_order=sh_order)
+                rh_order=acquisition_scheme.shell_sh_orders[shell_index])
             # convolving micro-environment with watson distribution
-            E_dispersed_sh = sh_convolution(sh_watson, rh_stick, sh_order)
+            E_dispersed_sh = sh_convolution(sh_watson, rh_stick)
             # recover signal values from watson-convolved spherical harmonics
-            E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
+            E[shell_mask] = np.dot(sh_mat[:, :len(E_dispersed_sh)],
+                                   E_dispersed_sh)
         return E
 
     def fod(self, vertices, **kwargs):
@@ -931,7 +922,6 @@ class SD1C4WatsonDispersedGaussianPhaseCylinder(MicrostructureModel):
         E : array, shape(N),
             signal attenuation
         """
-        sh_order = WATSON_SH_ORDER
         shell_indices = acquisition_scheme.shell_indices
         unique_dwi_indices = acquisition_scheme.unique_dwi_indices
 
@@ -941,9 +931,7 @@ class SD1C4WatsonDispersedGaussianPhaseCylinder(MicrostructureModel):
         kappa = kwargs.get('kappa', self.kappa)
 
         watson = distributions.SD1Watson(mu=mu, kappa=kappa)
-        sh_watson = watson.spherical_harmonics_representation(
-            sh_order=sh_order
-        )
+        sh_watson = watson.spherical_harmonics_representation()
         vg = cylinder_models.C4CylinderGaussianPhaseApproximation(
             mu=mu, lambda_par=lambda_par, diameter=diameter
         )
@@ -957,11 +945,12 @@ class SD1C4WatsonDispersedGaussianPhaseCylinder(MicrostructureModel):
                 bvalue=acquisition_scheme.shell_bvalues[shell_index],
                 delta=acquisition_scheme.shell_delta[shell_index],
                 Delta=acquisition_scheme.shell_Delta[shell_index],
-                rh_order=sh_order)
+                rh_order=acquisition_scheme.shell_sh_orders[shell_index])
             # convolving micro-environment with watson distribution
-            E_dispersed_sh = sh_convolution(sh_watson, rh_stick, sh_order)
+            E_dispersed_sh = sh_convolution(sh_watson, rh_stick)
             # recover signal values from watson-convolved spherical harmonics
-            E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
+            E[shell_mask] = np.dot(sh_mat[:, :len(E_dispersed_sh)],
+                                   E_dispersed_sh)
         return E
 
     def fod(self, vertices, **kwargs):
@@ -1057,7 +1046,6 @@ class SD2G4BinghamDispersedZeppelin(MicrostructureModel):
         attenuation : float or array, shape(N),
             signal attenuation
         '''
-        sh_order = WATSON_SH_ORDER
         shell_indices = acquisition_scheme.shell_indices
         unique_dwi_indices = acquisition_scheme.unique_dwi_indices
 
@@ -1081,11 +1069,13 @@ class SD2G4BinghamDispersedZeppelin(MicrostructureModel):
             sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
             # rotational harmonics of zeppelin
             rh_zeppelin = zeppelin.rotational_harmonics_representation(
-                bvalue=acquisition_scheme.shell_bvalues[shell_index])
+                bvalue=acquisition_scheme.shell_bvalues[shell_index],
+                rh_order=acquisition_scheme.shell_sh_orders[shell_index])
             # convolving micro-environment with bingham distribution
-            E_dispersed_sh = sh_convolution(sh_bingham, rh_zeppelin, sh_order)
+            E_dispersed_sh = sh_convolution(sh_bingham, rh_zeppelin)
             # recover signal values from bingham-convolved spherical harmonics
-            E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
+            E[shell_mask] = np.dot(sh_mat[:, :len(E_dispersed_sh)],
+                                   E_dispersed_sh)
         return E
 
     def fod(self, vertices, **kwargs):
@@ -1170,7 +1160,6 @@ class SD1G4WatsonDispersedZeppelin(MicrostructureModel):
         E : float or array, shape(N),
             signal attenuation
         '''
-        sh_order = WATSON_SH_ORDER
         shell_indices = acquisition_scheme.shell_indices
         unique_dwi_indices = acquisition_scheme.unique_dwi_indices
 
@@ -1191,11 +1180,13 @@ class SD1G4WatsonDispersedZeppelin(MicrostructureModel):
             sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
             # rotational harmonics of zeppelin
             rh_zeppelin = zeppelin.rotational_harmonics_representation(
-                bvalue=acquisition_scheme.shell_bvalues[shell_index])
+                bvalue=acquisition_scheme.shell_bvalues[shell_index],
+                rh_order=acquisition_scheme.shell_sh_orders[shell_index])
             # convolving micro-environment with watson distribution
-            E_dispersed_sh = sh_convolution(sh_watson, rh_zeppelin, sh_order)
+            E_dispersed_sh = sh_convolution(sh_watson, rh_zeppelin)
             # recover signal values from watson-convolved spherical harmonics
-            E[shell_mask] = np.dot(sh_mat, E_dispersed_sh)
+            E[shell_mask] = np.dot(sh_mat[:, :len(E_dispersed_sh)],
+                                   E_dispersed_sh)
         return E
 
     def fod(self, vertices, **kwargs):
