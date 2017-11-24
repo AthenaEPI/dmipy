@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from dipy.reconst.shm import sph_harm_ind_list
 from dipy.utils.optpkg import optional_package
 numba, have_numba, _ = optional_package("numba")
 
@@ -33,7 +32,7 @@ def kernel_sh_to_rh(sh_coef):
     return rh_coef
 
 
-def sh_convolution(f_distribution_sh, kernel_rh, sh_order=None):
+def sh_convolution(f_distribution_sh, kernel_rh):
     """Spherical convolution between a fiber distribution (f) in spherical
     harmonics and a kernel in terms of rotational harmonics (oriented along the
     z-axis).
@@ -54,7 +53,7 @@ def sh_convolution(f_distribution_sh, kernel_rh, sh_order=None):
     """
     Ncoef_sh = len(f_distribution_sh)
     Ncoef_rh = len(kernel_rh)
-    Ncoef_rel = np.min((Ncoef_sh, Ncoef_rh))  # relevant coefficients
+    Ncoef_rel = min((Ncoef_sh, Ncoef_rh))  # relevant coefficients
     f_kernel_convolved = f_distribution_sh[:Ncoef_rel] * kernel_rh[:Ncoef_rel]
     counter = 0
     for n_ in xrange(0, 100, 2):
@@ -70,3 +69,4 @@ def sh_convolution(f_distribution_sh, kernel_rh, sh_order=None):
 
 if have_numba:
     kernel_sh_to_rh = numba.njit()(kernel_sh_to_rh)
+    sh_convolution = numba.njit()(sh_convolution)

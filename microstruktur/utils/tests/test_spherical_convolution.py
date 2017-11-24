@@ -35,7 +35,7 @@ def test_spherical_convolution_watson_sh(sh_order=4):
     k_sh = sf_to_sh(k_sf, sphere, sh_order)
     k_rh = kernel_sh_to_rh(k_sh)
 
-    fk_convolved_sh = sh_convolution(f_sh, k_rh, sh_order)
+    fk_convolved_sh = sh_convolution(f_sh, k_rh)
     fk_convolved_sf = sh_to_sf(fk_convolved_sh, sphere, sh_order)
 
     # assert if spherical mean is the same between kernel and convolved kernel
