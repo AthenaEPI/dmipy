@@ -629,7 +629,7 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
             ]
 
             for i, partial_volume_name in enumerate(self.partial_volume_names):
-                self._parameter_ranges[partial_volume_name] = (0, 1)
+                self._parameter_ranges[partial_volume_name] = (0.01, .99)
                 self._parameter_scales[partial_volume_name] = 1.
                 self.parameter_defaults[partial_volume_name] = (
                     1 / (len(self.models) - i)
