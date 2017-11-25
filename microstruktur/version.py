@@ -11,9 +11,9 @@ _version_extra = 'dev'
 # Construct full version string from these.
 _ver = [_version_major, _version_minor]
 if _version_micro:
-    _ver.append(_version_micro)
+  _ver.append(_version_micro)
 if _version_extra:
-    _ver.append(_version_extra)
+  _ver.append(_version_extra)
 
 __version__ = '.'.join(map(str, _ver))
 
@@ -73,8 +73,9 @@ MICRO = _version_micro
 VERSION = __version__
 PACKAGE_DATA = {
     'microstruktur': [
-	pjoin('data', 'gradient_tables', '*'),
-	pjoin('data','bingham_normalization_splinefit.npz')
+        pjoin('data', 'gradient_tables', '*'),
+        pjoin('data', 'bingham_normalization_splinefit.npz'),
+        pjoin('data', 'wu_minn_hcp_coronal_slice.nii.gz')
     ]
 }
 REQUIRES = ["numpy", 'dipy']
