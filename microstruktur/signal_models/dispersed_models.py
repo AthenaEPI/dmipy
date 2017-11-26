@@ -48,7 +48,7 @@ class SD2C1BinghamDispersedStick(MicrostructureModel):
         'beta': (0, 16)
     }
     _parameter_scales = {
-        'mu': 1.,
+        'mu': np.r_[1., 1.],
         'lambda_par': DIFFUSIVITY_SCALING,
         'psi': 1.,
         'kappa': 1.,
@@ -173,7 +173,7 @@ class SD2C2BinghamDispersedSodermanCylinder(MicrostructureModel):
         'beta': (0, 16)
     }
     _parameter_scales = {
-        'mu': 1.,
+        'mu': np.r_[1., 1.],
         'lambda_par': DIFFUSIVITY_SCALING,
         'diameter': DIAMETER_SCALING,
         'psi': 1.,
@@ -306,7 +306,7 @@ class SD2C3BinghamDispersedCallaghanCylinder(MicrostructureModel):
         'beta': (0, 16)
     }
     _parameter_scales = {
-        'mu': 1.,
+        'mu': np.r_[1., 1.],
         'lambda_par': DIFFUSIVITY_SCALING,
         'diameter': DIAMETER_SCALING,
         'psi': 1.,
@@ -438,7 +438,7 @@ class SD2C4BinghamDispersedGaussianPhaseCylinder(MicrostructureModel):
         'beta': (0, 16)
     }
     _parameter_scales = {
-        'mu': 1.,
+        'mu': np.r_[1., 1.],
         'lambda_par': DIFFUSIVITY_SCALING,
         'diameter': DIAMETER_SCALING,
         'psi': 1.,
@@ -557,7 +557,7 @@ class SD1C1WatsonDispersedStick(MicrostructureModel):
         'kappa': (0, 16)
     }
     _parameter_scales = {
-        'mu': 1.,
+        'mu': np.r_[1., 1.],
         'lambda_par': DIFFUSIVITY_SCALING,
         'kappa': 1.,
     }
@@ -665,7 +665,7 @@ class SD1C2WatsonDispersedSodermanCylinder(MicrostructureModel):
         'diameter': (1e-10, 50e-6),
     }
     _parameter_scales = {
-        'mu': 1.,
+        'mu': np.r_[1., 1.],
         'lambda_par': DIFFUSIVITY_SCALING,
         'kappa': 1.,
         'diameter': DIAMETER_SCALING,
@@ -781,7 +781,7 @@ class SD1C3WatsonDispersedCallaghanCylinder(MicrostructureModel):
         'diameter': (1e-10, 50e-6),
     }
     _parameter_scales = {
-        'mu': 1.,
+        'mu': np.r_[1., 1.],
         'lambda_par': DIFFUSIVITY_SCALING,
         'kappa': 1.,
         'diameter': DIAMETER_SCALING,
@@ -896,7 +896,7 @@ class SD1C4WatsonDispersedGaussianPhaseCylinder(MicrostructureModel):
         'diameter': (1e-10, 50e-6),
     }
     _parameter_scales = {
-        'mu': 1.,
+        'mu': np.r_[1., 1.],
         'lambda_par': DIFFUSIVITY_SCALING,
         'kappa': 1.,
         'diameter': DIAMETER_SCALING,
@@ -1015,7 +1015,7 @@ class SD2G4BinghamDispersedZeppelin(MicrostructureModel):
         'beta': (0, 16)
     }
     _parameter_scales = {
-        'mu': 1.,
+        'mu': np.r_[1., 1.],
         'lambda_par': DIFFUSIVITY_SCALING,
         'lambda_perp': DIFFUSIVITY_SCALING,
         'psi': 1.,
@@ -1135,7 +1135,7 @@ class SD1G4WatsonDispersedZeppelin(MicrostructureModel):
         'kappa': (0, 16)
     }
     _parameter_scales = {
-        'mu': 1.,
+        'mu': np.r_[1., 1.],
         'lambda_par': DIFFUSIVITY_SCALING,
         'lambda_perp': DIFFUSIVITY_SCALING,
         'kappa': 1.,
@@ -1244,7 +1244,7 @@ class DD1C2GammaDistributedSodermanCylinder(MicrostructureModel):
         'beta': (1e-10, np.inf),
     }
     _parameter_scales = {
-        'mu': 1.,
+        'mu': np.r_[1., 1.],
         'lambda_par': DIFFUSIVITY_SCALING,
         'alpha': 1.,
         'beta': BETA_SCALING
@@ -1338,7 +1338,7 @@ class DD1C3GammaDistributedCallaghanCylinder(MicrostructureModel):
         'beta': (1e-10, np.inf),
     }
     _parameter_scales = {
-        'mu': 1.,
+        'mu': np.r_[1., 1.],
         'lambda_par': DIFFUSIVITY_SCALING,
         'alpha': 1.,
         'beta': BETA_SCALING
@@ -1431,7 +1431,7 @@ class DD1C4GammaDistributedGaussianPhaseCylinder(MicrostructureModel):
         'beta': (1e-10, np.inf),
     }
     _parameter_scales = {
-        'mu': 1.,
+        'mu': np.r_[1., 1.],
         'lambda_par': DIFFUSIVITY_SCALING,
         'alpha': 1.,
         'beta': BETA_SCALING
