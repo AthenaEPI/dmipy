@@ -209,11 +209,24 @@ class SimpleAcquisitionSchemeRH:
         if delta is not None and Delta is not None:
             self.delta = np.tile(delta, Ndata)
             self.Delta = np.tile(Delta, Ndata)
-            self.tau = self.Delta - self.delta / 3.0
-            self.qvalues = np.tile(q_from_b(bvalue, delta, Delta), Ndata)
-            self.gradient_strengths = (
-                np.tile(g_from_b(bvalue, delta, Delta), Ndata)
-            )
+        else:
+            self.delta = delta
+            self.Delta = Delta
+
+    @property
+    def qvalues(self):
+        if self.delta is not None and self.Delta is not None:
+            return q_from_b(self.bvalues, self.delta, self.Delta)
+
+    @property
+    def gradient_strengths(self):
+        if self.delta is not None and self.Delta is not None:
+            return g_from_b(self.bvalues, self.delta, self.Delta)
+
+    @property
+    def tau(self):
+        if self.delta is not None and self.Delta is not None:
+            return self.Delta - self.delta / 3.0
 
 
 def acquisition_scheme_from_bvalues(

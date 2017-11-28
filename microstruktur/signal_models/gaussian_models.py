@@ -29,6 +29,7 @@ inverse_rh_matrix_kernel = {
         rh_order, SPHERE_SPHERICAL[:, 1], SPHERE_SPHERICAL[:, 2]
     )) for rh_order in np.arange(0, 15, 2)
 }
+simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(None, SPHERE_CARTESIAN)
 
 WATSON_SH_ORDER = 14
 DIFFUSIVITY_SCALING = 1e-9
@@ -217,8 +218,7 @@ class G4Zeppelin(MicrostructureModel):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
-        simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(
-            bvalue, SPHERE_CARTESIAN)
+        simple_acq_scheme_rh.bvalues = np.tile(bvalue, len(SPHERE_CARTESIAN))
         E_kernel_sf = self(simple_acq_scheme_rh, mu=np.r_[0., 0.])
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
@@ -337,8 +337,10 @@ class G5RestrictedZeppelin(MicrostructureModel):
         rh : array,
             rotational harmonics of the model aligned with z-axis.
         """
-        simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(
-            bvalue, SPHERE_CARTESIAN, delta=delta, Delta=Delta)
+        simple_acq_scheme_rh.bvalues = np.tile(bvalue, len(SPHERE_CARTESIAN))
+        simple_acq_scheme_rh.delta = np.tile(delta, len(SPHERE_CARTESIAN))
+        simple_acq_scheme_rh.Delta = np.tile(Delta, len(SPHERE_CARTESIAN))
+
         E_kernel_sf = self(simple_acq_scheme_rh, mu=np.r_[0., 0.])
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
