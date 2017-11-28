@@ -1,9 +1,8 @@
 from numpy.testing import assert_almost_equal, assert_equal
 from microstruktur.signal_models import cylinder_models, distributions
-from microstruktur.utils.spherical_convolution import (kernel_sh_to_rh,
-                                                       sh_convolution)
+from microstruktur.utils.spherical_convolution import sh_convolution
 from microstruktur.utils import utils
-from dipy.reconst.shm import sf_to_sh, sh_to_sf
+from dipy.reconst.shm import sf_to_sh, sh_to_sf, real_sym_sh_mrtrix
 from dipy.data import get_sphere
 import numpy as np
 from microstruktur.core.acquisition_scheme import (
@@ -32,8 +31,10 @@ def test_spherical_convolution_watson_sh(sh_order=4):
     lambda_par = 2e-9
     stick = cylinder_models.C1Stick(mu=[0, 0], lambda_par=lambda_par)
     k_sf = stick(scheme)
-    k_sh = sf_to_sh(k_sf, sphere, sh_order)
-    k_rh = kernel_sh_to_rh(k_sh)
+    sh_matrix, m, n = real_sym_sh_mrtrix(sh_order, sphere.theta, sphere.phi)
+    sh_matrix_inv = np.linalg.pinv(sh_matrix)
+    k_sh = np.dot(sh_matrix_inv, k_sf)
+    k_rh = k_sh[m == 0]
 
     fk_convolved_sh = sh_convolution(f_sh, k_rh)
     fk_convolved_sf = sh_to_sf(fk_convolved_sh, sphere, sh_order)

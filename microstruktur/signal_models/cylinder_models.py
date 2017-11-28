@@ -4,11 +4,10 @@ from os.path import join
 
 import numpy as np
 from scipy import special
-from dipy.reconst.shm import real_sym_sh_mrtrix
+from microstruktur.utils.spherical_convolution import real_sym_rh_basis
 
 from microstruktur.utils import utils
 from microstruktur.core.constants import CONSTANTS
-from microstruktur.utils.spherical_convolution import kernel_sh_to_rh
 from ..core.acquisition_scheme import SimpleAcquisitionSchemeRH
 from microstruktur.core.modeling_framework import MicrostructureModel
 
@@ -24,9 +23,9 @@ SPHERE_CARTESIAN = np.loadtxt(
 )
 SPHERE_SPHERICAL = utils.cart2sphere(SPHERE_CARTESIAN)
 inverse_rh_matrix_kernel = {
-    rh_order: np.linalg.pinv(real_sym_sh_mrtrix(
+    rh_order: np.linalg.pinv(real_sym_rh_basis(
         rh_order, SPHERE_SPHERICAL[:, 1], SPHERE_SPHERICAL[:, 2]
-    )[0]) for rh_order in np.arange(0, 15, 2)
+    )) for rh_order in np.arange(0, 15, 2)
 }
 WATSON_SH_ORDER = 14
 DIFFUSIVITY_SCALING = 1e-9
@@ -112,8 +111,7 @@ class C1Stick(MicrostructureModel):
         simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(
             bvalue, SPHERE_CARTESIAN)
         E_kernel_sf = self(simple_acq_scheme_rh, mu=np.r_[0., 0.])
-        sh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
-        rh = kernel_sh_to_rh(sh)
+        rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
 
 
@@ -237,8 +235,7 @@ class C2CylinderSodermanApproximation(MicrostructureModel):
         simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(
             bvalue, SPHERE_CARTESIAN, delta=delta, Delta=Delta)
         E_kernel_sf = self(simple_acq_scheme_rh, mu=np.r_[0., 0.])
-        sh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
-        rh = kernel_sh_to_rh(sh)
+        rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
 
 
@@ -403,8 +400,7 @@ class C3CylinderCallaghanApproximation(MicrostructureModel):
         simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(
             bvalue, SPHERE_CARTESIAN, delta=delta, Delta=Delta)
         E_kernel_sf = self(simple_acq_scheme_rh, mu=np.r_[0., 0.])
-        sh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
-        rh = kernel_sh_to_rh(sh)
+        rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
 
 
@@ -563,6 +559,5 @@ class C4CylinderGaussianPhaseApproximation(MicrostructureModel):
         simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(
             bvalue, SPHERE_CARTESIAN, delta=delta, Delta=Delta)
         E_kernel_sf = self(simple_acq_scheme_rh, mu=np.r_[0., 0.])
-        sh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
-        rh = kernel_sh_to_rh(sh)
+        rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
