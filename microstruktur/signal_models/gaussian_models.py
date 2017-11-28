@@ -185,13 +185,18 @@ class G4Zeppelin(MicrostructureModel):
         lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
         mu = kwargs.get('mu', self.mu)
 
-        R1 = utils.unitsphere2cart_1d(mu)
-        R2 = utils.perpendicular_vector(R1)
-        R3 = np.cross(R1, R2)
+        mu = utils.unitsphere2cart_1d(mu)
+        mu_perpendicular_plane = np.eye(3) - np.outer(mu, mu)
+        magnitude_parallel = np.dot(n, mu)
+        magnitude_perpendicular = np.linalg.norm(
+            np.dot(mu_perpendicular_plane, n.T),
+            axis=0
+        )
 
-        E_zeppelin = np.exp(-bvals * (lambda_par * np.dot(n, R1) ** 2 +
-                                      lambda_perp * np.dot(n, R2) ** 2 +
-                                      lambda_perp * np.dot(n, R3) ** 2))
+        E_zeppelin = np.exp(-bvals *
+                            (lambda_par * magnitude_parallel ** 2 +
+                             lambda_perp * magnitude_perpendicular ** 2)
+                            )
         return E_zeppelin
 
     def rotational_harmonics_representation(self, bvalue, rh_order=14):
