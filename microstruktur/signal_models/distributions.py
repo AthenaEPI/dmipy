@@ -38,8 +38,8 @@ WATSON_SH_ORDER = 14
 
 
 def get_sh_order_from_kappa(kappa):
-    kappas = np.r_[0.32323232, 1.29292929, 2.58585859, 4.36363636,
-                   6.62626263, 9.37373737, np.inf]
+    kappas = np.array([0.32323232, 1.29292929, 2.58585859, 4.36363636,
+                       6.62626263, 9.37373737, np.inf])
     sh_orders = np.arange(2, 15, 2)
     return sh_orders[np.argmax(kappas > kappa)]
 
@@ -385,3 +385,4 @@ def inverse_matrix(matrix):
 
 if have_numba:
     inverse_matrix = numba.njit()(inverse_matrix)
+    get_sh_order_from_kappa = numba.njit()(get_sh_order_from_kappa)
