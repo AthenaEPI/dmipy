@@ -15,6 +15,10 @@ from microstruktur.utils import utils
 from scipy.interpolate import bisplev
 from microstruktur.core.modeling_framework import MicrostructureModel
 from dipy.utils.optpkg import optional_package
+from dipy.data import get_sphere, HemiSphere
+sphere = get_sphere('symmetric724')
+hemisphere = HemiSphere(phi=sphere.phi, theta=sphere.theta)
+
 numba, have_numba, _ = optional_package("numba")
 
 SPHERICAL_INTEGRATOR = utils.SphericalIntegrator()
@@ -34,7 +38,12 @@ SPHERE_SPHERICAL = utils.cart2sphere(SPHERE_CARTESIAN)
 log_bingham_normalization_splinefit = np.load(
     join(DATA_PATH,
          "bingham_normalization_splinefit.npz"))['arr_0']
-WATSON_SH_ORDER = 14
+
+inverse_sh_matrix_kernel = {
+    sh_order: np.linalg.pinv(real_sym_sh_mrtrix(
+        sh_order, hemisphere.theta, hemisphere.phi
+    )[0]) for sh_order in np.arange(0, 15, 2)
+}
 
 
 def get_sh_order_from_kappa(kappa):
@@ -122,15 +131,8 @@ class SD1Watson(MicrostructureModel):
         if sh_order is None:
             sh_order = get_sh_order_from_kappa(kappa)
 
-        x_, y_, z_ = utils.unitsphere2cart_1d(mu)
-
-        R = utils.rotation_matrix_001_to_xyz(x_, y_, z_)
-        vertices_rotated = np.dot(SPHERE_CARTESIAN, R.T)
-        _, theta_rotated, phi_rotated = utils.cart2sphere(vertices_rotated).T
-
-        watson_sf = self(vertices_rotated, mu=mu, kappa=kappa)
-        sh_mat = real_sym_sh_mrtrix(sh_order, theta_rotated, phi_rotated)[0]
-        sh_mat_inv = inverse_matrix(sh_mat)
+        watson_sf = self(hemisphere.vertices, mu=mu, kappa=kappa)
+        sh_mat_inv = inverse_sh_matrix_kernel[sh_order]
         watson_sh = np.dot(sh_mat_inv, watson_sf)
         return watson_sh
 
@@ -243,17 +245,10 @@ class SD2Bingham(MicrostructureModel):
         mu = kwargs.get('mu', self.mu)
         psi = kwargs.get('psi', self.psi)
 
-        x_, y_, z_ = utils.unitsphere2cart_1d(mu)
-
-        R = utils.rotation_matrix_001_to_xyz(x_, y_, z_)
-        vertices_rotated = np.dot(SPHERE_CARTESIAN, R.T)
-        _, theta_rotated, phi_rotated = utils.cart2sphere(vertices_rotated).T
-
-        bingham_sf = self(vertices_rotated, mu=mu, psi=psi, kappa=kappa,
+        bingham_sf = self(hemisphere.vertices, mu=mu, psi=psi, kappa=kappa,
                           beta=beta)
 
-        sh_mat = real_sym_sh_mrtrix(sh_order, theta_rotated, phi_rotated)[0]
-        sh_mat_inv = inverse_matrix(sh_mat)
+        sh_mat_inv = inverse_sh_matrix_kernel[sh_order]
         bingham_sh = np.dot(sh_mat_inv, bingham_sf)
         return bingham_sh
 
