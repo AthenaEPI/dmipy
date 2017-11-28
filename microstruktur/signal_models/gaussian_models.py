@@ -3,8 +3,6 @@
 Document Module
 '''
 from __future__ import division
-import pkg_resources
-from os.path import join
 
 import numpy as np
 
@@ -12,26 +10,22 @@ from microstruktur.utils import utils
 from microstruktur.core.acquisition_scheme import SimpleAcquisitionSchemeRH
 from microstruktur.core.modeling_framework import MicrostructureModel
 from microstruktur.utils.spherical_convolution import real_sym_rh_basis
+from microstruktur.utils.utils import sphere2cart
 
-SPHERICAL_INTEGRATOR = utils.SphericalIntegrator()
-GRADIENT_TABLES_PATH = pkg_resources.resource_filename(
-    'microstruktur', 'data/gradient_tables'
-)
-SIGNAL_MODELS_PATH = pkg_resources.resource_filename(
-    'microstruktur', 'signal_models'
-)
-SPHERE_CARTESIAN = np.loadtxt(
-    join(GRADIENT_TABLES_PATH, 'sphere_with_cap.txt')
-)
-SPHERE_SPHERICAL = utils.cart2sphere(SPHERE_CARTESIAN)
+samples = 10
+thetas = np.linspace(0, np.pi / 2, samples)
+r = np.ones(samples)
+phis = np.zeros(samples)
+angles = np.c_[r, thetas, phis]
+angles_cart = sphere2cart(angles)
+
 inverse_rh_matrix_kernel = {
     rh_order: np.linalg.pinv(real_sym_rh_basis(
-        rh_order, SPHERE_SPHERICAL[:, 1], SPHERE_SPHERICAL[:, 2]
+        rh_order, thetas, phis
     )) for rh_order in np.arange(0, 15, 2)
 }
-simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(None, SPHERE_CARTESIAN)
+simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(None, angles_cart)
 
-WATSON_SH_ORDER = 14
 DIFFUSIVITY_SCALING = 1e-9
 A_SCALING = 1e-12
 
@@ -218,7 +212,7 @@ class G4Zeppelin(MicrostructureModel):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
-        simple_acq_scheme_rh.bvalues = np.tile(bvalue, len(SPHERE_CARTESIAN))
+        simple_acq_scheme_rh.bvalues = np.tile(bvalue, samples)
         E_kernel_sf = self(simple_acq_scheme_rh, mu=np.r_[0., 0.])
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
@@ -337,9 +331,9 @@ class G5RestrictedZeppelin(MicrostructureModel):
         rh : array,
             rotational harmonics of the model aligned with z-axis.
         """
-        simple_acq_scheme_rh.bvalues = np.tile(bvalue, len(SPHERE_CARTESIAN))
-        simple_acq_scheme_rh.delta = np.tile(delta, len(SPHERE_CARTESIAN))
-        simple_acq_scheme_rh.Delta = np.tile(Delta, len(SPHERE_CARTESIAN))
+        simple_acq_scheme_rh.bvalues = np.tile(bvalue, samples)
+        simple_acq_scheme_rh.delta = np.tile(delta, samples)
+        simple_acq_scheme_rh.Delta = np.tile(Delta, samples)
 
         E_kernel_sf = self(simple_acq_scheme_rh, mu=np.r_[0., 0.])
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)

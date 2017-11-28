@@ -53,9 +53,8 @@ def test_watson_dispersed_soderman_kappa0(
     watson_soderman = dispersed_models.SD1C2WatsonDispersedSodermanCylinder(
         mu=mu, kappa=kappa, lambda_par=lambda_par, diameter=diameter)
     E_watson_soderman = watson_soderman(scheme)
-    E_unique_watson_soderman = np.unique(E_watson_soderman)
     # All values are the same:
-    assert_equal(len(E_unique_watson_soderman), 1)
+    assert_almost_equal(E_watson_soderman - E_watson_soderman[0], 0)
 
 
 def test_bingham_dispersed_soderman_kappa0(
@@ -75,9 +74,8 @@ def test_bingham_dispersed_soderman_kappa0(
         diameter=diameter
     )
     E_bingham_soderman = bingham_soderman(scheme)
-    E_unique_bingham_soderman = np.unique(E_bingham_soderman)
     # All values are the same:
-    assert_equal(len(E_unique_bingham_soderman), 1)
+    assert_almost_equal(E_bingham_soderman - E_bingham_soderman[0], 0)
 
 
 def test_gamma_distributed_soderman(alpha=.1, beta=1e-5,

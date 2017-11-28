@@ -1,4 +1,5 @@
-from numpy.testing import (assert_equal, assert_array_almost_equal)
+from numpy.testing import (
+    assert_equal, assert_almost_equal, assert_array_almost_equal)
 import numpy as np
 from scipy import stats
 from microstruktur.signal_models import cylinder_models, distributions
@@ -59,9 +60,9 @@ def test_watson_dispersed_gaussian_phase_kappa0(
             mu=mu, kappa=kappa, lambda_par=lambda_par, diameter=diameter)
     )
     E_watson_gaussian_phase = watson_gaussian_phase(scheme)
-    E_unique_watson_gaussian_phase = np.unique(E_watson_gaussian_phase)
     # All values are the same:
-    assert_equal(len(E_unique_watson_gaussian_phase), 1)
+    assert_almost_equal(E_watson_gaussian_phase -
+                        E_watson_gaussian_phase[0], 0)
 
 
 def test_bingham_dispersed_gaussian_phase_kappa0(
@@ -81,9 +82,9 @@ def test_bingham_dispersed_gaussian_phase_kappa0(
             diameter=diameter)
     )
     E_bingham_gaussian_phase = bingham_gaussian_phase(scheme)
-    E_unique_bingham_gaussian_phase = np.unique(E_bingham_gaussian_phase)
     # All values are the same:
-    assert_equal(len(E_unique_bingham_gaussian_phase), 1)
+    assert_almost_equal(E_bingham_gaussian_phase -
+                        E_bingham_gaussian_phase[0], 0)
 
 
 def test_gamma_distributed_vangelderen(alpha=.1, beta=1e-5,
