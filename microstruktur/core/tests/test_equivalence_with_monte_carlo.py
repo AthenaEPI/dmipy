@@ -1,6 +1,6 @@
 from microstruktur.data import saved_data, saved_acquisition_schemes
 from microstruktur.signal_models import (
-    spherical_mean_models, cylinder_models, gaussian_models)
+    spherical_mean_models, cylinder_models, gaussian_models, dispersed_models)
 from microstruktur.utils.utils import parameter_equality, T1_tortuosity
 from microstruktur.core import modeling_framework
 from numpy.testing import assert_equal
@@ -71,4 +71,45 @@ def test_stick_tortuous_zeppelin():
     mean_abs_error = np.mean(
         abs(fitted_params['partial_volume_0'].squeeze(
         ) - camino_parallel.fractions[::20]))
+    assert_equal(mean_abs_error < 0.02, True)
+
+
+def test_watson_dispersed_stick_tortuous_zeppelin():
+    disp_stick = dispersed_models.SD1C1WatsonDispersedStick()
+    disp_zeppelin = dispersed_models.SD1G4WatsonDispersedZeppelin()
+
+    parameter_links = [
+        [disp_zeppelin, 'lambda_perp', T1_tortuosity, [
+            (None, 'partial_volume_0'), (disp_stick, 'lambda_par')]],
+        [disp_zeppelin, 'lambda_par', parameter_equality,
+            [(disp_stick, 'lambda_par')]],
+        [disp_zeppelin, 'mu', parameter_equality, [(disp_stick, 'mu')]],
+        [disp_zeppelin, 'kappa', parameter_equality, [(disp_stick, 'kappa')]]]
+
+    disp_stick_and_zeppelin = (
+        modeling_framework.MultiCompartmentMicrostructureModel(
+            acquisition_scheme=scheme,
+            models=[disp_stick, disp_zeppelin],
+            parameter_links=parameter_links)
+    )
+
+    parameter_guess = (
+        disp_stick_and_zeppelin.parameter_initial_guess_to_parameter_vector(
+            SD1C1WatsonDispersedStick_1_mu=np.r_[0, 0])
+    )
+
+    beta0 = camino_dispersed.beta == 0.
+    diff17 = camino_dispersed.diffusivities == 1.7e-9
+    mask = np.all([beta0, diff17], axis=0)
+    E_watson = camino_dispersed.signal_attenuation[mask]
+    fractions_watson = camino_dispersed.fractions[mask]
+
+    fitted_params = disp_stick_and_zeppelin.parameter_vector_to_parameters(
+        disp_stick_and_zeppelin.fit(
+            E_watson[::20], parameter_initial_guess=parameter_guess, Ns=5)
+    )
+
+    mean_abs_error = np.mean(
+        abs(fitted_params['partial_volume_0'].squeeze(
+        ) - fractions_watson[::20]))
     assert_equal(mean_abs_error < 0.02, True)
