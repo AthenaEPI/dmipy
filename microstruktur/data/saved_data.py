@@ -2,6 +2,8 @@ from os.path import join
 import pkg_resources
 import nibabel as nib
 import numpy as np
+from scipy.stats import pearsonr
+import matplotlib.pyplot as plt
 DATA_PATH = pkg_resources.resource_filename(
     'microstruktur', 'data/'
 )
@@ -82,3 +84,57 @@ def synthetic_camino_data_dispersed():
             self.kappa = kappas
             self.beta = betas
     return DispersedCaminoData()
+
+
+def visualize_correlation_camino_and_estimated_fractions(
+        estim_fractions_parallel, estim_fractions_dispersed):
+
+    data_parallel = synthetic_camino_data_parallel()
+    data_dispersed = synthetic_camino_data_dispersed()
+
+    mask_par_17 = data_parallel.diffusivities == 1.7e-9
+    mask_disp_17 = data_dispersed.diffusivities == 1.7e-9
+
+    fractions_par_17 = data_parallel.fractions[mask_par_17]
+    fractions_disp_17 = data_dispersed.fractions[mask_disp_17]
+
+    estim_fractions_par_17 = estim_fractions_parallel[mask_par_17]
+    estim_fractions_disp_17 = estim_fractions_dispersed[mask_disp_17]
+
+    pr = pearsonr(estim_fractions_par_17, fractions_par_17)
+    pr_dispersed = pearsonr(estim_fractions_disp_17, fractions_disp_17)
+    pr_multidif = pearsonr(estim_fractions_parallel, data_parallel.fractions)
+    pr_multidif_dispersed = pearsonr(
+        estim_fractions_dispersed, data_dispersed.fractions)
+
+    f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(
+        2, 2, sharex='col', sharey='row')
+    ax1.scatter(fractions_par_17, estim_fractions_par_17)
+    ax2.scatter(data_parallel.fractions, estim_fractions_parallel)
+    ax3.scatter(fractions_disp_17, estim_fractions_disp_17)
+    ax4.scatter(data_dispersed.fractions, estim_fractions_dispersed)
+
+    ax1.text(.216, .817, 'pearsonR= ' +
+             str(np.round(pr[0], 3)), fontsize=10, bbox=dict(facecolor='white', alpha=1))
+    ax2.text(.216, .817, 'pearsonR= ' +
+             str(np.round(pr_multidif[0], 3)), fontsize=10, bbox=dict(facecolor='white', alpha=1))
+    ax3.text(.216, .817, 'pearsonR= ' +
+             str(np.round(pr_dispersed[0], 3)), fontsize=10, bbox=dict(facecolor='white', alpha=1))
+    ax4.text(.216, .817, 'pearsonR= ' + str(np.round(
+        pr_multidif_dispersed[0], 3)), fontsize=10, bbox=dict(facecolor='white', alpha=1))
+
+    ax1.set_title('Static Diffusivity')
+    ax3.set_xlabel('Ground Truth')
+    ax2.set_title('Varying Diffusivity')
+    ax1.set_ylabel('Estimated intra-vf')
+    ax4.set_xlabel('Ground Truth')
+    ax3.set_ylabel('Estimated intra-vf')
+
+    ax1.plot([0, 1], [0, 1], ls='--', c='k', lw=3)
+    ax2.plot([0, 1], [0, 1], ls='--', c='k', lw=3)
+    ax3.plot([0, 1], [0, 1], ls='--', c='k', lw=3)
+    ax4.plot([0, 1], [0, 1], ls='--', c='k', lw=3)
+    ax1.set_ylim(0.2, .9)
+    ax1.set_xlim(0.2, .8)
+    ax4.set_ylim(0.2, .9)
+    ax4.set_xlim(0.2, .8)
