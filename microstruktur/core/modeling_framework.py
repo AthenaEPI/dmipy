@@ -117,19 +117,21 @@ class MicrostructureModel:
         parameter_shapes = []
         for parameter, card in self.parameter_cardinality.items():
             value = np.atleast_1d(parameters[parameter])
-            if card == 1 and not np.all(value.shape == np.r_[1]):
-                parameter_shapes.append(value.shape)
-            if card == 2 and not np.all(value.shape == np.r_[2]):
-                parameter_shapes.append(value.shape[:-1])
+            if not np.all(value == None):
+                if card == 1 and not np.all(value.shape == np.r_[1]):
+                    parameter_shapes.append(value.shape)
+                if card == 2 and not np.all(value.shape == np.r_[2]):
+                    parameter_shapes.append(value.shape[:-1])
 
-        if len(np.unique(parameter_shapes)) > 1:
-            msg = "parameter shapes are inconsistent."
-            raise ValueError(msg)
-        elif len(np.unique(parameter_shapes)) == 0:
+        if len(parameter_shapes) > 1:
+            if len(np.unique(parameter_shapes)) > 1:
+                msg = "parameter shapes are inconsistent."
+                raise ValueError(msg)
+        elif len(parameter_shapes) == 0:
             for parameter, card in self.parameter_cardinality.items():
                 parameter_vector.append(parameters[parameter])
             parameter_vector = np.hstack(parameter_vector)
-        elif len(np.unique(parameter_shapes)) == 1:
+        elif len(parameter_shapes) == 1:
             for parameter, card in self.parameter_cardinality.items():
                 value = np.atleast_1d(parameters[parameter])
                 if card == 1 and np.all(value.shape == np.r_[1]):
@@ -154,7 +156,7 @@ class MicrostructureModel:
                 msg = str(parameter) + ' successfully set.'
                 print (msg)
             except KeyError:
-                set_parameters[parameter] = None
+                set_parameters[parameter] = np.tile(None, card)
         return self.parameters_to_parameter_vector2(set_parameters)
 
     @property
