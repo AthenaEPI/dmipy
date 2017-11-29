@@ -113,3 +113,48 @@ def test_watson_dispersed_stick_tortuous_zeppelin():
         abs(fitted_params['partial_volume_0'].squeeze(
         ) - fractions_watson[::20]))
     assert_equal(mean_abs_error < 0.02, True)
+
+
+def test_bingham_dispersed_stick_tortuous_zeppelin():
+    disp_stick = dispersed_models.SD2C1BinghamDispersedStick()
+    disp_zeppelin = dispersed_models.SD2G4BinghamDispersedZeppelin()
+
+    parameter_links = [
+        [disp_zeppelin, 'lambda_perp', T1_tortuosity, [
+            (None, 'partial_volume_0'), (disp_stick, 'lambda_par')]],
+        [disp_zeppelin, 'lambda_par', parameter_equality,
+            [(disp_stick, 'lambda_par')]],
+        [disp_zeppelin, 'mu', parameter_equality, [(disp_stick, 'mu')]],
+        [disp_zeppelin, 'kappa', parameter_equality, [(disp_stick, 'kappa')]],
+        [disp_zeppelin, 'beta', parameter_equality, [(disp_stick, 'beta')]],
+        [disp_zeppelin, 'psi', parameter_equality, [(disp_stick, 'psi')]]]
+
+    disp_stick_and_zeppelin = (
+        modeling_framework.MultiCompartmentMicrostructureModel(
+            acquisition_scheme=scheme,
+            models=[disp_stick, disp_zeppelin],
+            parameter_links=parameter_links)
+    )
+
+    parameter_guess = (
+        disp_stick_and_zeppelin.parameter_initial_guess_to_parameter_vector(
+            SD2C1BinghamDispersedStick_1_mu=np.r_[0, 0],
+            SD2C1BinghamDispersedStick_1_psi=0.,
+            SD2C1BinghamDispersedStick_1_beta=0.)
+    )
+
+    beta0 = camino_dispersed.beta > 0
+    diff17 = camino_dispersed.diffusivities == 1.7e-9
+    mask = np.all([beta0, diff17], axis=0)
+    E_watson = camino_dispersed.signal_attenuation[mask]
+    fractions_watson = camino_dispersed.fractions[mask]
+
+    fitted_params = disp_stick_and_zeppelin.parameter_vector_to_parameters(
+        disp_stick_and_zeppelin.fit(
+            E_watson[::200], parameter_initial_guess=parameter_guess, Ns=5)
+    )
+
+    mean_abs_error = np.mean(
+        abs(fitted_params['partial_volume_0'].squeeze(
+        ) - fractions_watson[::200]))
+    assert_equal(mean_abs_error < 0.02, True)
