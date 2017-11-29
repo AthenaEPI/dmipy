@@ -310,6 +310,30 @@ def cart2sphere(cartesian_coordinates):
     return spherical_coordinates
 
 
+def cart2mu(xyz):
+    """"Function to estimate spherical coordinates from cartesian coordinates
+    according to wikipedia. Conforms with the dipy notation.
+
+    Parameters
+    ----------
+    cartesian_coordinates : array of size (3) or (N x 3),
+        array of cartesian coordinate vectors [x, y, z].
+
+    Returns
+    -------
+    spherical_coordinates : array of size (3) or (N x 3),
+        array of spherical coordinate vectors [r, theta, phi].
+        range of theta [0, pi]. range of phi [-pi, pi].
+    """
+    shape = xyz.shape[:-1]
+    mu = np.zeros(np.r_[shape, 2])
+    r = np.linalg.norm(xyz, axis=-1)
+    mu[..., 0] = np.arccos(xyz[..., 2] / r)  # theta
+    mu[..., 1] = np.arctan2(xyz[..., 1], xyz[..., 0])
+    mu[r == 0] = 0, 0
+    return mu
+
+
 def sphere2cart(spherical_coordinates):
     """"Function to estimate cartesian coordinates from spherical coordinates
     according to wikipedia. Conforms with the dipy notation.
