@@ -68,13 +68,14 @@ def sh_convolution(f_distribution_sh, kernel_rh):
     sh_order_used = min(sh_order_rh, sh_order_sh)
     number_coef_used = int((sh_order_used + 2) * (sh_order_used + 1) // 2)
 
-    f_kernel_convolved = f_distribution_sh[:number_coef_used]
+    f_kernel_convolved = np.zeros(number_coef_used)
 
     counter = 0
     for n_ in xrange(0, sh_order_used + 1, 2):
         coef_in_order = 2 * n_ + 1
-        f_kernel_convolved[counter: counter + coef_in_order] *= (
-            np.sqrt((4 * np.pi) / (2 * n_ + 1)) * kernel_rh[n_ // 2]
+        f_kernel_convolved[counter: counter + coef_in_order] = (
+            f_distribution_sh[counter: counter + coef_in_order] *
+            kernel_rh[n_ // 2] * np.sqrt((4 * np.pi) / (2 * n_ + 1))
         )
         counter += coef_in_order
     return f_kernel_convolved
