@@ -873,12 +873,12 @@ class FittedMultiCompartmentMicrostructureModel:
             data_ = np.zeros(np.r_[data.shape[:-1], Nshells])
             for pos in zip(*np.where(self.mask)):
                 data_[pos] = estimate_spherical_mean_multi_shell(
-                    data[pos], self.model.scheme)
+                    data[pos] / self.S0[pos], self.model.scheme)
         else:
-            data_ = data
+            data_ = data / self.S0[..., None]
 
-        y_hat = self.predict()
-        y_bar = np.mean(y_hat, axis=-1)
+        y_hat = self.predict(S0=1.)
+        y_bar = np.mean(data_, axis=-1)
         SStot = np.sum((data_ - y_bar[..., None]) ** 2, axis=-1)
         SSres = np.sum((data_ - y_hat) ** 2, axis=-1)
         R2 = 1 - SSres / SStot
@@ -892,11 +892,11 @@ class FittedMultiCompartmentMicrostructureModel:
             data_ = np.zeros(np.r_[data.shape[:-1], Nshells])
             for pos in zip(*np.where(self.mask)):
                 data_[pos] = estimate_spherical_mean_multi_shell(
-                    data[pos], self.model.scheme)
+                    data[pos] / self.S0[pos], self.model.scheme)
         else:
-            data_ = data
+            data_ = data / self.S0[..., None]
 
-        y_hat = self.predict()
+        y_hat = self.predict(S0=1.)
         mse = np.mean((data_ - y_hat) ** 2, axis=-1)
         mse[~self.mask] = 0
         return mse

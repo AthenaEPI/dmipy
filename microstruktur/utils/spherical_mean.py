@@ -32,15 +32,16 @@ def estimate_spherical_mean_multi_shell(E_attenuation, acquisition_scheme,
 
     E_mean = np.ones(len(acquisition_scheme.shell_bvalues))
     for b_shell_index in unique_dwi_indices:  # per shell
+        sh_mat = acquisition_scheme.shell_sh_matrices[b_shell_index]
         shell_mask = shell_indices == b_shell_index
         bvecs_shell = gradient_directions[shell_mask]
         E_shell = E_attenuation[shell_mask]
         E_mean[b_shell_index] = estimate_spherical_mean_shell(
-            E_shell, bvecs_shell, sh_order)
+            E_shell, bvecs_shell, sh_order, sh_mat)
     return E_mean
 
 
-def estimate_spherical_mean_shell(E_shell, bvecs_shell, sh_order=6):
+def estimate_spherical_mean_shell(E_shell, bvecs_shell, sh_order=6, sh_mat=None):
     """ Estimates spherical mean of a shell of measurements using
     spherical harmonics.
     The spherical mean is contained only in the Y00 spherical harmonic, as long
@@ -63,8 +64,9 @@ def estimate_spherical_mean_shell(E_shell, bvecs_shell, sh_order=6):
     E_mean : float,
         spherical mean of the signal attenuation.
     """
-    _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
-    sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
+    if sh_mat is None:
+        _, theta_, phi_ = utils.cart2sphere(bvecs_shell).T
+        sh_mat = real_sym_sh_mrtrix(sh_order, theta_, phi_)[0]
     sh_mat_inv = np.linalg.pinv(sh_mat)
     E_sh_coef = np.dot(sh_mat_inv, E_shell)
     # Integral of sphere is 1 / (4 * np.pi)
