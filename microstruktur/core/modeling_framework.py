@@ -228,21 +228,21 @@ class MicrostructureModel:
         else:
             return E_simulated
 
-    def fod(self, vertices, model_parameters_array):
-        x0 = model_parameters_array
-        x0_at_least_2d = np.atleast_2d(x0)
-        x0_2d = x0_at_least_2d.reshape(-1, x0_at_least_2d.shape[-1])
-        fods_2d = np.empty(np.r_[x0_2d.shape[:-1], len(vertices)])
-        for i, x0_ in enumerate(x0_2d):
-            parameters = self.parameter_vector_to_parameters(x0_)
-            fods_2d[i] = self(vertices, quantity="FOD", **parameters)
-        fods = fods_2d.reshape(
-            np.r_[x0_at_least_2d.shape[:-1], len(vertices)])
+    # def fod(self, vertices, model_parameters_array):
+    #     x0 = model_parameters_array
+    #     x0_at_least_2d = np.atleast_2d(x0)
+    #     x0_2d = x0_at_least_2d.reshape(-1, x0_at_least_2d.shape[-1])
+    #     fods_2d = np.empty(np.r_[x0_2d.shape[:-1], len(vertices)])
+    #     for i, x0_ in enumerate(x0_2d):
+    #         parameters = self.parameter_vector_to_parameters(x0_)
+    #         fods_2d[i] = self(vertices, quantity="FOD", **parameters)
+    #     fods = fods_2d.reshape(
+    #         np.r_[x0_at_least_2d.shape[:-1], len(vertices)])
 
-        if x0.ndim == 1:
-            return np.squeeze(fods)
-        else:
-            return fods
+    #     if x0.ndim == 1:
+    #         return np.squeeze(fods)
+    #     else:
+    #         return fods
 
     def fit(self, data, parameter_initial_guess=None, mask=None,
             solver='scipy', Ns=5, maxiter=300,
@@ -399,7 +399,7 @@ class MicrostructureModel:
             fitted_parameters = np.squeeze(fitted_parameters)
 
         return FittedMultiCompartmentMicrostructureModel(
-            self, S0, fitted_parameters)
+            self, S0, mask, fitted_parameters)
 
     def fit_brute2fine(self, data, x0_vector, Ns):
         """
@@ -521,7 +521,7 @@ class MicrostructureModel:
         return np.array(fe.value).squeeze()
 
     def R2_coefficient_of_determination(
-            self, parameter_vector, data, acquisition_scheme):
+            self, parameter_vector, data):
         "Calculates the R-squared of the model fit."
         parameters = self.parameter_vector_to_parameters(
             parameter_vector)
@@ -573,7 +573,7 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
         self._prepare_parameters()
         self._prepare_partial_volumes()
         self._prepare_parameter_links()
-        self._verify_model_input_requirements()
+        self._prepare_model_properties()
         self._check_for_double_model_class_instances()
         self._prepare_parameters_to_optimize()
 
@@ -678,13 +678,27 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
             for k, v in self.parameter_cardinality.items()
         })
 
-    def _verify_model_input_requirements(self):
+    def _prepare_model_properties(self):
         models_spherical_mean = [model.spherical_mean for model in self.models]
         if len(np.unique(models_spherical_mean)) > 1:
             msg = "Cannot mix spherical mean and non-spherical mean models. "
             msg = "Current model selection is {}".format(self.models)
             raise ValueError(msg)
         self.spherical_mean = np.all(models_spherical_mean)
+        self.fod_available = False
+        self.peaks_available = False
+        for model in self.models:
+            try:
+                model.fod
+                self.fod_available = True
+            except AttributeError:
+                pass
+
+            try:
+                model.peaks
+                self.peaks_available = True
+            except AttributeError:
+                pass
 
     def _check_for_double_model_class_instances(self):
         if len(self.models) != len(np.unique(self.models)):
@@ -783,9 +797,10 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
 
 
 class FittedMultiCompartmentMicrostructureModel:
-    def __init__(self, model, S0, fitted_parameters_vector):
+    def __init__(self, model, S0, mask, fitted_parameters_vector):
         self.model = model
         self.S0 = S0
+        self.mask = mask
         self.fitted_parameters_vector = fitted_parameters_vector
 
     @property
@@ -794,19 +809,56 @@ class FittedMultiCompartmentMicrostructureModel:
             self.fitted_parameters_vector)
 
     def fod(self, vertices):
-        x0 = self.fitted_parameters_vector
-        x0_at_least_2d = np.atleast_2d(x0)
-        x0_2d = x0_at_least_2d.reshape(-1, x0_at_least_2d.shape[-1])
-        fods_2d = np.empty(np.r_[x0_2d.shape[:-1], len(vertices)])
-        for i, x0_ in enumerate(x0_2d):
-            parameters = self.model.parameter_vector_to_parameters(x0_)
-            fods_2d[i] = self(vertices, quantity="FOD", **parameters)
-        fods = fods_2d.reshape(
-            np.r_[x0_at_least_2d.shape[:-1], len(vertices)])
+        if not self.model.fod_available:
+            msg = ('FODs not available for current model.')
+            raise ValueError(msg)
+        dataset_shape = self.fitted_parameters_vector.shape[:-1]
+        N_samples = len(vertices)
+        fods = np.zeros(np.r_[dataset_shape, N_samples])
+        mask_pos = np.where(self.mask)
+        for pos in zip(*mask_pos):
+            fods[pos] = self.model(vertices, quantity='FOD')
         return fods
 
-    def peaks(self):
+    def fod_sh(self, sh_order=8):
         pass
+
+    def peaks_spherical(self):
+        if not self.model.peaks_available:
+            msg = ('peaks not available for current model.')
+            raise ValueError(msg)
+        pass
+
+    def peaks_cartesian(self):
+        if not self.model.peaks_available:
+            msg = ('peaks not available for current model.')
+            raise ValueError(msg)
+        pass
+
+    def predict(self, acquisition_scheme=None, S0=None, mask=None):
+        if acquisition_scheme is None:
+            acquisition_scheme = self.model.scheme
+        dataset_shape = self.fitted_parameters_vector.shape[:-1]
+        if S0 is None:
+            S0 = self.S0
+        elif isinstance(S0, float):
+            S0 = np.ones(dataset_shape) * S0
+        if mask is None:
+            mask = self.mask
+
+        if self.model.spherical_mean:
+            N_samples = len(acquisition_scheme.shell_bvalues)
+        else:
+            N_samples = len(acquisition_scheme.bvalues)
+
+        predicted_signal = np.zeros(np.r_[dataset_shape, N_samples])
+        mask_pos = np.where(mask)
+        for pos in zip(*mask_pos):
+            parameters = self.model.parameter_vector_to_parameters(
+                self.fitted_parameters_vector[pos])
+            predicted_signal[pos] = self.model(
+                acquisition_scheme, **parameters) * S0[pos]
+        return predicted_signal
 
 
 def homogenize_x0_to_data(data, x0):
