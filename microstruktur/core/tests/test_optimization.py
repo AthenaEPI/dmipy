@@ -45,7 +45,7 @@ def test_simple_stick_optimization():
         C1Stick_1_lambda_par=(np.random.rand() + 1.) * 1e-9,
         C1Stick_1_mu=np.random.rand(2)
     )
-    res = stick_model.fit(E, x0)
+    res = stick_model.fit(E, x0).fitted_parameters_vector
     assert_array_almost_equal(gt_parameter_vector, res, 2)
 
 
@@ -81,7 +81,7 @@ def test_simple_ball_and_stick_optimization():
         C1Stick_1_mu=np.random.rand(2),
         partial_volume_0=np.random.rand()
     )
-    res = ball_and_stick.fit(E, x0)
+    res = ball_and_stick.fit(E, x0).fitted_parameters_vector
     assert_array_almost_equal(gt_parameter_vector, res, 3)
 
 
@@ -118,7 +118,7 @@ def test_multi_dimensional_x0():
 
     # I'm giving a voxel-dependent initial condition with gt_mu_array
     res = ball_and_stick.fit(E_array,
-                             gt_parameter_vector)
+                             gt_parameter_vector).fitted_parameters_vector
     # optimization should stop immediately as I'm giving the ground truth.
     assert_equal(np.all(np.ravel(res - gt_parameter_vector) == 0.), True)
     # and the parameter vector dictionaries of the results and x0 should also
@@ -219,7 +219,7 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
         partial_volume_0=0.55
     )
 
-    res_sm = stick_and_tortuous_zeppelin_sm.fit(E, x0)
+    res_sm = stick_and_tortuous_zeppelin_sm.fit(E, x0).fitted_parameters_vector
 
     assert_array_almost_equal(
         np.r_[gt_lambda_par, gt_partial_volume], res_sm, 2)
@@ -261,5 +261,6 @@ def test_MIX_fitting():
 
     E = ball_and_zeppelin.simulate_signal(
         scheme, parameter_vector)
-    fit = ball_and_zeppelin.fit(np.array([E]), solver='mix')
+    fit = ball_and_zeppelin.fit(
+        np.array([E]), solver='mix').fitted_parameters_vector
     assert_array_almost_equal(abs(fit[0]), parameter_vector, 2)
