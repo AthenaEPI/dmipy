@@ -12,6 +12,9 @@ from time import time
 
 from microstruktur.utils.spherical_mean import (
     estimate_spherical_mean_multi_shell)
+from dipy.data import get_sphere
+from dipy.reconst.shm import sh_to_sf_matrix
+from microstruktur.utils.utils import unitsphere2cart_Nd
 from scipy.optimize import differential_evolution, brute, minimize
 from dipy.utils.optpkg import optional_package
 cvxpy, have_cvxpy, _ = optional_package("cvxpy")
@@ -520,18 +523,6 @@ class MicrostructureModel:
         prob.solve()
         return np.array(fe.value).squeeze()
 
-    def R2_coefficient_of_determination(
-            self, parameter_vector, data):
-        "Calculates the R-squared of the model fit."
-        parameters = self.parameter_vector_to_parameters(
-            parameter_vector)
-        y_hat = self(acquisition_scheme, **parameters)
-        y_bar = np.mean(data)
-        SStot = np.sum((data - y_bar) ** 2)
-        SSres = np.sum((data - y_hat) ** 2)
-        R2 = 1 - SSres / SStot
-        return R2
-
 
 class MultiCompartmentMicrostructureModel(MicrostructureModel):
     r'''
@@ -686,17 +677,10 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
             raise ValueError(msg)
         self.spherical_mean = np.all(models_spherical_mean)
         self.fod_available = False
-        self.peaks_available = False
         for model in self.models:
             try:
                 model.fod
                 self.fod_available = True
-            except AttributeError:
-                pass
-
-            try:
-                model.peaks
-                self.peaks_available = True
             except AttributeError:
                 pass
 
@@ -817,23 +801,45 @@ class FittedMultiCompartmentMicrostructureModel:
         fods = np.zeros(np.r_[dataset_shape, N_samples])
         mask_pos = np.where(self.mask)
         for pos in zip(*mask_pos):
-            fods[pos] = self.model(vertices, quantity='FOD')
+            parameters = self.model.parameter_vector_to_parameters(
+                self.fitted_parameters_vector[pos])
+            fods[pos] = self.model(vertices, quantity='FOD', **parameters)
         return fods
 
-    def fod_sh(self, sh_order=8):
-        pass
+    def fod_sh(self, sh_order=8, basis_type=None):
+        if not self.model.fod_available:
+            msg = ('FODs not available for current model.')
+            raise ValueError(msg)
+        sphere = get_sphere(name='repulsion724')
+        vertices = sphere.vertices
+        _, inv_sh_matrix = sh_to_sf_matrix(
+            sphere, sh_order, basis_type=basis_type, return_inv=True)
+        fods_sf = self.fod(vertices)
+
+        dataset_shape = self.fitted_parameters_vector.shape[:-1]
+        number_coef_used = int((sh_order + 2) * (sh_order + 1) // 2)
+        fods_sh = np.zeros(np.r_[dataset_shape, number_coef_used])
+        mask_pos = np.where(self.mask)
+        for pos in zip(*mask_pos):
+            fods_sh[pos] = np.dot(inv_sh_matrix.T, fods_sf[pos])
+        return fods_sh
 
     def peaks_spherical(self):
-        if not self.model.peaks_available:
+        mu_params = []
+        for name, card in self.model.parameter_cardinality.items():
+            if name[-2:] == 'mu' and card == 2:
+                mu_params.append(self.fitted_parameters[name])
+        if len(mu_params) == 0:
             msg = ('peaks not available for current model.')
             raise ValueError(msg)
-        pass
+        if len(mu_params) == 1:
+            return mu_params[0]
+        return np.concatenate([mu[..., None] for mu in mu_params], axis=-1)
 
     def peaks_cartesian(self):
-        if not self.model.peaks_available:
-            msg = ('peaks not available for current model.')
-            raise ValueError(msg)
-        pass
+        peaks_spherical = self.peaks_spherical()
+        peaks_cartesian = unitsphere2cart_Nd(peaks_spherical)
+        return peaks_cartesian
 
     def predict(self, acquisition_scheme=None, S0=None, mask=None):
         if acquisition_scheme is None:
@@ -859,6 +865,41 @@ class FittedMultiCompartmentMicrostructureModel:
             predicted_signal[pos] = self.model(
                 acquisition_scheme, **parameters) * S0[pos]
         return predicted_signal
+
+    def R2_coefficient_of_determination(self, data):
+        "Calculates the R-squared of the model fit."
+        if self.model.spherical_mean:
+            Nshells = len(self.model.scheme.shell_bvalues)
+            data_ = np.zeros(np.r_[data.shape[:-1], Nshells])
+            for pos in zip(*np.where(self.mask)):
+                data_[pos] = estimate_spherical_mean_multi_shell(
+                    data[pos], self.model.scheme)
+        else:
+            data_ = data
+
+        y_hat = self.predict()
+        y_bar = np.mean(y_hat, axis=-1)
+        SStot = np.sum((data_ - y_bar[..., None]) ** 2, axis=-1)
+        SSres = np.sum((data_ - y_hat) ** 2, axis=-1)
+        R2 = 1 - SSres / SStot
+        R2[~self.mask] = 0
+        return R2
+
+    def mean_squared_error(self, data):
+        "Calculates the mean squared error of the model fit."
+        if self.model.spherical_mean:
+            Nshells = len(self.model.scheme.shell_bvalues)
+            data_ = np.zeros(np.r_[data.shape[:-1], Nshells])
+            for pos in zip(*np.where(self.mask)):
+                data_[pos] = estimate_spherical_mean_multi_shell(
+                    data[pos], self.model.scheme)
+        else:
+            data_ = data
+
+        y_hat = self.predict()
+        mse = np.mean((data_ - y_hat) ** 2, axis=-1)
+        mse[~self.mask] = 0
+        return mse
 
 
 def homogenize_x0_to_data(data, x0):

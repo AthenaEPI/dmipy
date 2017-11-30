@@ -392,5 +392,29 @@ def unitsphere2cart_1d(mu):
     return mu_cart
 
 
+def unitsphere2cart_Nd(mu):
+    """Optimized function deicated to convert 1D unit sphere coordinates
+    to cartesian coordinates.
+
+    Parameters
+    ----------
+    mu : Nd array of size (..., 2)
+        unit sphere coordinates, as theta, phi = mu
+
+    Returns
+    -------
+    mu_cart, Nd array of size (..., 3)
+        mu in cartesian coordinates, as x, y, z = mu_cart
+    """
+    mu_cart = np.zeros(np.r_[mu.shape[:-1], 3])
+    theta = mu[..., 0]
+    phi = mu[..., 1]
+    sintheta = np.sin(theta)
+    mu_cart[..., 0] = sintheta * np.cos(phi)
+    mu_cart[..., 1] = sintheta * np.sin(phi)
+    mu_cart[..., 2] = np.cos(theta)
+    return mu_cart
+
+
 if have_numba:
     unitsphere2cart_1d = numba.njit()(unitsphere2cart_1d)
