@@ -245,8 +245,8 @@ class MicrostructureModel:
             return fods
 
     def fit(self, data, parameter_initial_guess=None, mask=None,
-            solver='scipy', Ns=10, maxiter=300,
-            use_parallel_processing=False, number_of_processors=None):
+            solver='scipy', Ns=5, maxiter=300,
+            use_parallel_processing=have_pathos, number_of_processors=None):
         """ The main data fitting function of a multi-compartment model.
 
         Once a microstructure model is formed, this function can fit it to an
@@ -396,9 +396,10 @@ class MicrostructureModel:
             fitted_parameters_lin * self.scales_for_optimization)
 
         if data.ndim == 1:
-            return np.squeeze(fitted_parameters)
-        else:
-            return fitted_parameters
+            fitted_parameters = np.squeeze(fitted_parameters)
+
+        return FittedMultiCompartmentMicrostructureModel(
+            self, S0, fitted_parameters)
 
     def fit_brute2fine(self, data, x0_vector, Ns):
         """
@@ -779,6 +780,33 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
                                            **parameters)
                 counter += 1
         return values
+
+
+class FittedMultiCompartmentMicrostructureModel:
+    def __init__(self, model, S0, fitted_parameters_vector):
+        self.model = model
+        self.S0 = S0
+        self.fitted_parameters_vector = fitted_parameters_vector
+
+    @property
+    def fitted_parameters(self):
+        return self.model.parameter_vector_to_parameters(
+            self.fitted_parameters_vector)
+
+    def fod(self, vertices):
+        x0 = self.fitted_parameters_vector
+        x0_at_least_2d = np.atleast_2d(x0)
+        x0_2d = x0_at_least_2d.reshape(-1, x0_at_least_2d.shape[-1])
+        fods_2d = np.empty(np.r_[x0_2d.shape[:-1], len(vertices)])
+        for i, x0_ in enumerate(x0_2d):
+            parameters = self.model.parameter_vector_to_parameters(x0_)
+            fods_2d[i] = self(vertices, quantity="FOD", **parameters)
+        fods = fods_2d.reshape(
+            np.r_[x0_at_least_2d.shape[:-1], len(vertices)])
+        return fods
+
+    def peaks(self):
+        pass
 
 
 def homogenize_x0_to_data(data, x0):
