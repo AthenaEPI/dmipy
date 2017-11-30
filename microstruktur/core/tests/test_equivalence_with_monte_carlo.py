@@ -26,10 +26,10 @@ def test_spherical_mean_stick_tortuous_zeppelin():
         acquisition_scheme=scheme,
         models=[stick_sm, zeppelin_sm], parameter_links=parameter_links)
 
-    fitted_params_par = mc_smt.parameter_vector_to_parameters(
-        mc_smt.fit(camino_parallel.signal_attenuation[::20]))
-    fitted_params_disp = mc_smt.parameter_vector_to_parameters(
-        mc_smt.fit(camino_dispersed.signal_attenuation[::40]))
+    fitted_params_par = (mc_smt.fit(
+        camino_parallel.signal_attenuation[::20]).fitted_parameters)
+    fitted_params_disp = (mc_smt.fit(
+        camino_dispersed.signal_attenuation[::40]).fitted_parameters)
 
     mean_abs_error_par = np.mean(
         abs(fitted_params_par['partial_volume_0'].squeeze(
@@ -63,10 +63,10 @@ def test_stick_tortuous_zeppelin():
         stick_and_zeppelin.parameter_initial_guess_to_parameter_vector(
             C1Stick_1_mu=np.r_[0, 0])
     )
-    fitted_params = stick_and_zeppelin.parameter_vector_to_parameters(
-        stick_and_zeppelin.fit(camino_parallel.signal_attenuation[::20],
-                               parameter_initial_guess=parameter_guess)
-    )
+    fitted_params = (stick_and_zeppelin.fit(
+        camino_parallel.signal_attenuation[::20],
+        parameter_initial_guess=parameter_guess
+    ).fitted_parameters)
 
     mean_abs_error = np.mean(
         abs(fitted_params['partial_volume_0'].squeeze(
@@ -104,9 +104,9 @@ def test_watson_dispersed_stick_tortuous_zeppelin():
     E_watson = camino_dispersed.signal_attenuation[mask]
     fractions_watson = camino_dispersed.fractions[mask]
 
-    fitted_params = disp_stick_and_zeppelin.parameter_vector_to_parameters(
-        disp_stick_and_zeppelin.fit(
-            E_watson[::20], parameter_initial_guess=parameter_guess, Ns=5)
+    fitted_params = (disp_stick_and_zeppelin.fit(
+        E_watson[::20],
+        parameter_initial_guess=parameter_guess).fitted_parameters
     )
 
     mean_abs_error = np.mean(
@@ -149,9 +149,9 @@ def test_bingham_dispersed_stick_tortuous_zeppelin():
     E_watson = camino_dispersed.signal_attenuation[mask]
     fractions_watson = camino_dispersed.fractions[mask]
 
-    fitted_params = disp_stick_and_zeppelin.parameter_vector_to_parameters(
-        disp_stick_and_zeppelin.fit(
-            E_watson[::200], parameter_initial_guess=parameter_guess, Ns=5)
+    fitted_params = (disp_stick_and_zeppelin.fit(
+        E_watson[::200],
+        parameter_initial_guess=parameter_guess).fitted_parameters
     )
 
     mean_abs_error = np.mean(
