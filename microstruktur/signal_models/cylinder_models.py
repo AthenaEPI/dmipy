@@ -8,6 +8,9 @@ from microstruktur.utils import utils
 from microstruktur.core.constants import CONSTANTS
 from ..core.acquisition_scheme import SimpleAcquisitionSchemeRH
 from microstruktur.core.modeling_framework import MicrostructureModel
+from dipy.utils.optpkg import optional_package
+
+numba, have_numba, _ = optional_package("numba")
 
 samples = 10
 thetas = np.linspace(0, np.pi / 2, samples)
@@ -81,7 +84,7 @@ class C1Stick(MicrostructureModel):
         lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
         mu = utils.unitsphere2cart_1d(mu)
-        E_stick = np.exp(-bvals * lambda_par_ * np.dot(n, mu) ** 2)
+        E_stick = attenuation_stick(bvals, lambda_par_, n, mu)
         return E_stick
 
     def rotational_harmonics_representation(self, bvalue, rh_order=14):
@@ -102,8 +105,8 @@ class C1Stick(MicrostructureModel):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
-        simple_acq_scheme_rh.bvalues = np.tile(bvalue, samples)
-        E_kernel_sf = self(simple_acq_scheme_rh, mu=np.r_[0., 0.])
+        simple_acq_scheme_rh.bvalues = np.full(samples, bvalue)
+        E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.])
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
 
@@ -225,10 +228,10 @@ class C2CylinderSodermanApproximation(MicrostructureModel):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
-        simple_acq_scheme_rh.bvalues = np.tile(bvalue, samples)
-        simple_acq_scheme_rh.delta = np.tile(delta, samples)
-        simple_acq_scheme_rh.Delta = np.tile(Delta, samples)
-        E_kernel_sf = self(simple_acq_scheme_rh, mu=np.r_[0., 0.])
+        simple_acq_scheme_rh.bvalues = np.full(samples, bvalue)
+        simple_acq_scheme_rh.delta = np.full(samples, delta)
+        simple_acq_scheme_rh.Delta = np.full(samples, Delta)
+        E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.])
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
 
@@ -391,10 +394,10 @@ class C3CylinderCallaghanApproximation(MicrostructureModel):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
-        simple_acq_scheme_rh.bvalues = np.tile(bvalue, samples)
-        simple_acq_scheme_rh.delta = np.tile(delta, samples)
-        simple_acq_scheme_rh.Delta = np.tile(Delta, samples)
-        E_kernel_sf = self(simple_acq_scheme_rh, mu=np.r_[0., 0.])
+        simple_acq_scheme_rh.bvalues = np.full(samples, bvalue)
+        simple_acq_scheme_rh.delta = np.full(samples, delta)
+        simple_acq_scheme_rh.Delta = np.full(samples, Delta)
+        E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.])
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
 
@@ -551,9 +554,17 @@ class C4CylinderGaussianPhaseApproximation(MicrostructureModel):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
-        simple_acq_scheme_rh.bvalues = np.tile(bvalue, samples)
-        simple_acq_scheme_rh.delta = np.tile(delta, samples)
-        simple_acq_scheme_rh.Delta = np.tile(Delta, samples)
-        E_kernel_sf = self(simple_acq_scheme_rh, mu=np.r_[0., 0.])
+        simple_acq_scheme_rh.bvalues = np.full(samples, bvalue)
+        simple_acq_scheme_rh.delta = np.full(samples, delta)
+        simple_acq_scheme_rh.Delta = np.full(samples, Delta)
+        E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.])
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
+
+
+def attenuation_stick(bvals, lambda_par, n, mu):
+    return np.exp(-bvals * lambda_par * np.dot(n, mu) ** 2)
+
+
+if have_numba:
+    attenuation_stick = numba.njit()(attenuation_stick)

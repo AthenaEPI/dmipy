@@ -212,8 +212,8 @@ class G4Zeppelin(MicrostructureModel):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
-        simple_acq_scheme_rh.bvalues = np.tile(bvalue, samples)
-        E_kernel_sf = self(simple_acq_scheme_rh, mu=np.r_[0., 0.])
+        simple_acq_scheme_rh.bvalues = np.full(samples, bvalue)
+        E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.])
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
 
@@ -331,10 +331,10 @@ class G5RestrictedZeppelin(MicrostructureModel):
         rh : array,
             rotational harmonics of the model aligned with z-axis.
         """
-        simple_acq_scheme_rh.bvalues = np.tile(bvalue, samples)
-        simple_acq_scheme_rh.delta = np.tile(delta, samples)
-        simple_acq_scheme_rh.Delta = np.tile(Delta, samples)
+        simple_acq_scheme_rh.bvalues = np.full(samples, bvalue)
+        simple_acq_scheme_rh.delta = np.full(samples, delta)
+        simple_acq_scheme_rh.Delta = np.full(samples, Delta)
 
-        E_kernel_sf = self(simple_acq_scheme_rh, mu=np.r_[0., 0.])
+        E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.])
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
