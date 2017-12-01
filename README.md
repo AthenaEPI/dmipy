@@ -45,7 +45,7 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - [NODDI-Watson [Zhang et al. 2012]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_noddi_watson.ipynb)
 - NODDI-Bingham [Tariq et al. 2016]
 - Microstructure Imaging of Crossing (MIX) [Farooq et al. 2016]
-- [Multi-Compartment Spherical Mean Technique [Kaden et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_multi_compartment_spherical_mean_technique.html)
+- [Multi-Compartment Spherical Mean Technique [Kaden et al. 2016]](http://htmlpreview.github.io/?https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_multi_compartment_spherical_mean_technique.html)
 - AxCaliber [Assaf et al. 2008]
 - AxCaliber with restricted extra-axonal diffusion [Burcaw et al. 2015]
 - ActiveAx [Alexander et al. 2010]
