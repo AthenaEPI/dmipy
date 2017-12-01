@@ -39,7 +39,7 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - [Axon dispersion models](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_watson_bingham.ipynb)
 - [Spherical Mean Models](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_spherical_mean_models.ipynb)
 
-## Examples of how to implement Microstructure Models in Literature
+## Examples of Mipy implementations of Microstructure Models in Literature
 - [Ball and Stick [Behrens et al. 2003]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_ball_and_stick.ipynb)
 - [Ball and Racket [Sotiropoulos et al. 2012]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_ball_and_racket.ipynb)
 - [NODDI-Watson [Zhang et al. 2012]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_noddi_watson.ipynb)
