@@ -49,3 +49,5 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - AxCaliber [Assaf et al. 2008]
 - AxCaliber with restricted extra-axonal diffusion [Burcaw et al. 2015]
 - ActiveAx [Alexander et al. 2010]
+
+When public, use http://htmlpreview.github.io/ to replace ipynb with html files for better rendering.
