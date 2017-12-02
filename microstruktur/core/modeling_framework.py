@@ -767,12 +767,14 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
                         acquisition_scheme_or_vertices, **parameters)
                 )
             elif quantity == "FOD":
-                if callable(model.fod):
+                try:
                     values = (
                         values +
                         current_partial_volume * model.fod(
                             acquisition_scheme_or_vertices, **parameters)
                     )
+                except AttributeError:
+                    continue
             elif quantity == "stochastic cost function":
                 values[:, counter] = model(acquisition_scheme_or_vertices,
                                            **parameters)
