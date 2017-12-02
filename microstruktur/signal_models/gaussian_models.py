@@ -11,6 +11,9 @@ from microstruktur.core.acquisition_scheme import SimpleAcquisitionSchemeRH
 from microstruktur.core.modeling_framework import MicrostructureModel
 from microstruktur.utils.spherical_convolution import real_sym_rh_basis
 from microstruktur.utils.utils import sphere2cart
+from dipy.utils.optpkg import optional_package
+
+numba, have_numba, _ = optional_package("numba")
 
 samples = 10
 thetas = np.linspace(0, np.pi / 2, samples)
@@ -179,19 +182,9 @@ class G4Zeppelin(MicrostructureModel):
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
         mu = kwargs.get('mu', self.mu)
-
         mu = utils.unitsphere2cart_1d(mu)
-        mu_perpendicular_plane = np.eye(3) - np.outer(mu, mu)
-        magnitude_parallel = np.dot(n, mu)
-        magnitude_perpendicular = np.linalg.norm(
-            np.dot(mu_perpendicular_plane, n.T),
-            axis=0
-        )
-
-        E_zeppelin = np.exp(-bvals *
-                            (lambda_par * magnitude_parallel ** 2 +
-                             lambda_perp * magnitude_perpendicular ** 2)
-                            )
+        E_zeppelin = attenuation_zeppelin(
+            bvals, lambda_par, lambda_perp, n, mu)
         return E_zeppelin
 
     def rotational_harmonics_representation(self, bvalue, rh_order=14):
@@ -338,3 +331,20 @@ class G5RestrictedZeppelin(MicrostructureModel):
         E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.])
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
+
+
+def attenuation_zeppelin(bvals, lambda_par, lambda_perp, n, mu):
+    mu_perpendicular_plane = np.eye(3) - np.outer(mu, mu)
+    magnitude_parallel = np.dot(n, mu)
+    proj = np.dot(mu_perpendicular_plane, n.T)
+    magnitude_perpendicular = np.sqrt(
+        proj[0] ** 2 + proj[1] ** 2 + proj[2] ** 2)
+    E_zeppelin = np.exp(-bvals *
+                        (lambda_par * magnitude_parallel ** 2 +
+                         lambda_perp * magnitude_perpendicular ** 2)
+                        )
+    return E_zeppelin
+
+
+if have_numba:
+    attenuation_zeppelin = numba.njit()(attenuation_zeppelin)
