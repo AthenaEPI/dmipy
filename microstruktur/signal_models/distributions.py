@@ -206,20 +206,11 @@ class SD2Bingham(MicrostructureModel):
         mu = kwargs.get('mu', self.mu)
         psi = kwargs.get('psi', self.psi)
 
-        R = utils.rotation_matrix_100_to_theta_phi_psi(mu[0], mu[1], psi)
-        Bdiag = np.diag(np.r_[kappa, beta, 0])
-        B = R.dot(Bdiag).dot(R.T)
-        if np.ndim(n) == 1:
-            numerator = np.exp(n.dot(B).dot(n))
-        else:
-            numerator = np.zeros(n.shape[0])
-            for i, n_ in enumerate(n):
-                numerator[i] = np.exp(n_.dot(B).dot(n_))
+        mu_cart = utils.unitsphere2cart_1d(mu)
 
-        # the denomator to normalize still needs to become a matrix argument B,
-        # but function doesn't take it.
-        # spherical_mean = estimate_spherical_mean_shell(numerator, n,
-        #  sh_order=14)
+        R = utils.rotation_matrix_100_to_theta_phi_psi(mu[0], mu[1], psi)
+        mu_beta = R.dot(np.r_[0., 1., 0.])
+        numerator = probability_bingham(kappa, beta, mu_cart, mu_beta, n)
         denominator = 4 * np.pi * self._get_normalization(kappa, beta)
         Bn = numerator / denominator
         return Bn
@@ -238,7 +229,7 @@ class SD2Bingham(MicrostructureModel):
         Returns
         -------
         bingham_sh : array,
-            spherical harmonics of Watson probability density.
+            spherical harmonics of Bingham probability density.
         """
         kappa = kwargs.get('kappa', self.kappa)
         beta = kwargs.get('beta', self.beta)
@@ -374,10 +365,11 @@ class DD1GammaDistribution(MicrostructureModel):
         return Pgamma
 
 
-def inverse_matrix(matrix):
-    return np.dot(np.linalg.inv(np.dot(matrix.T, matrix)), matrix.T)
+def probability_bingham(kappa, beta, mu, mu_beta, n):
+    return np.exp(kappa * np.dot(n, mu) **
+                  2 + beta * np.dot(n, mu_beta) ** 2)
 
 
 if have_numba:
-    inverse_matrix = numba.njit()(inverse_matrix)
     get_sh_order_from_kappa = numba.njit()(get_sh_order_from_kappa)
+    probability_bingham = numba.njit()(probability_bingham)
