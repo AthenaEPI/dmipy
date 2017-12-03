@@ -49,7 +49,7 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - AxCaliber with restricted extra-axonal diffusion [Burcaw et al. 2015]
 - ActiveAx [Alexander et al. 2010]
 ### Crossing Bundle Microstructure Models
-- Microstructure Imaging of Crossing (MIX) [Farooq et al. 2016]
+- [Microstructure Imaging of Crossing (MIX) [Farooq et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_mix_microstructure_imaging_in_crossings.ipynb)
 - [Multi-Compartment Spherical Mean Technique [Kaden et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_multi_compartment_spherical_mean_technique.ipynb)
 
 When public, use http://htmlpreview.github.io/ to replace ipynb with html files for better rendering.
