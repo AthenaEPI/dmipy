@@ -18,7 +18,7 @@ def test_spherical_mean_stick_tortuous_zeppelin():
 
     parameter_links = [
         [zeppelin_sm, 'lambda_perp', T1_tortuosity, [
-            (None, 'partial_volume_0'), (stick_sm, 'lambda_par')]],
+            (None, 'partial_volume_0'), (None, 'partial_volume_1'), (stick_sm, 'lambda_par')]],
         [zeppelin_sm, 'lambda_par', parameter_equality,
          [(stick_sm, 'lambda_par')]]]
 
@@ -48,7 +48,7 @@ def test_stick_tortuous_zeppelin():
 
     parameter_links = [
         [zeppelin, 'lambda_perp', T1_tortuosity, [
-            (None, 'partial_volume_0'), (stick, 'lambda_par')]],
+            (None, 'partial_volume_0'), (None, 'partial_volume_1'), (stick, 'lambda_par')]],
         [zeppelin, 'lambda_par', parameter_equality, [(stick, 'lambda_par')]],
         [zeppelin, 'mu', parameter_equality, [(stick, 'mu')]]]
 
@@ -80,7 +80,7 @@ def test_watson_dispersed_stick_tortuous_zeppelin():
 
     parameter_links = [
         [disp_zeppelin, 'lambda_perp', T1_tortuosity, [
-            (None, 'partial_volume_0'), (disp_stick, 'lambda_par')]],
+            (None, 'partial_volume_0'), (None, 'partial_volume_1'), (disp_stick, 'lambda_par')]],
         [disp_zeppelin, 'lambda_par', parameter_equality,
             [(disp_stick, 'lambda_par')]],
         [disp_zeppelin, 'mu', parameter_equality, [(disp_stick, 'mu')]],
@@ -121,7 +121,7 @@ def test_bingham_dispersed_stick_tortuous_zeppelin():
 
     parameter_links = [
         [disp_zeppelin, 'lambda_perp', T1_tortuosity, [
-            (None, 'partial_volume_0'), (disp_stick, 'lambda_par')]],
+            (None, 'partial_volume_0'), (None, 'partial_volume_1'), (disp_stick, 'lambda_par')]],
         [disp_zeppelin, 'lambda_par', parameter_equality,
             [(disp_stick, 'lambda_par')]],
         [disp_zeppelin, 'mu', parameter_equality, [(disp_stick, 'mu')]],

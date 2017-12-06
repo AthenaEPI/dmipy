@@ -37,13 +37,15 @@ def test_simple_stick_optimization():
         models=[stick])
 
     gt_parameter_vector = stick_model.parameters_to_parameter_vector(
-        C1Stick_1_lambda_par=gt_lambda_par, C1Stick_1_mu=gt_mu)
+        C1Stick_1_lambda_par=gt_lambda_par, C1Stick_1_mu=gt_mu,
+        partial_volume_0=1.)
 
     E = stick_model.simulate_signal(scheme, gt_parameter_vector)
 
     x0 = stick_model.parameters_to_parameter_vector(
         C1Stick_1_lambda_par=(np.random.rand() + 1.) * 1e-9,
-        C1Stick_1_mu=np.random.rand(2)
+        C1Stick_1_mu=np.random.rand(2),
+        partial_volume_0=1.
     )
     res = stick_model.fit(E, x0).fitted_parameters_vector
     assert_array_almost_equal(gt_parameter_vector, res, 2)
@@ -69,17 +71,20 @@ def test_simple_ball_and_stick_optimization():
         C1Stick_1_lambda_par=gt_lambda_par,
         G3Ball_1_lambda_iso=gt_lambda_iso,
         C1Stick_1_mu=gt_mu,
-        partial_volume_0=gt_partial_volume
+        partial_volume_0=gt_partial_volume,
+        partial_volume_1=1 - gt_partial_volume
     )
 
     E = ball_and_stick.simulate_signal(
         scheme, gt_parameter_vector)
 
+    vf_rand = np.random.rand()
     x0 = ball_and_stick.parameters_to_parameter_vector(
         C1Stick_1_lambda_par=(np.random.rand() + 1.) * 1e-9,
         G3Ball_1_lambda_iso=gt_lambda_par / 2.,
         C1Stick_1_mu=np.random.rand(2),
-        partial_volume_0=np.random.rand()
+        partial_volume_0=vf_rand,
+        partial_volume_1=1 - vf_rand
     )
     res = ball_and_stick.fit(E, x0).fitted_parameters_vector
     assert_array_almost_equal(gt_parameter_vector, res, 3)
@@ -91,9 +96,7 @@ def test_multi_dimensional_x0():
     ball_and_stick = (
         modeling_framework.MultiCompartmentMicrostructureModel(
             acquisition_scheme=scheme,
-            models=[ball, stick],
-            parameter_links=[],
-            optimise_partial_volumes=True)
+            models=[ball, stick],)
     )
     gt_lambda_par = (np.random.rand() + 1.) * 1e-9
     gt_lambda_iso = gt_lambda_par / 2.
@@ -110,7 +113,8 @@ def test_multi_dimensional_x0():
             C1Stick_1_lambda_par=gt_lambda_par,
             G3Ball_1_lambda_iso=gt_lambda_iso,
             C1Stick_1_mu=gt_mu_array,
-            partial_volume_0=gt_partial_volume)
+            partial_volume_0=gt_partial_volume,
+            partial_volume_1=1 - gt_partial_volume)
     )
 
     E_array = ball_and_stick.simulate_signal(
@@ -151,6 +155,7 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
             zeppelin, 'lambda_perp',
             T1_tortuosity, [
                 (None, 'partial_volume_0'),
+                (None, 'partial_volume_1'),
                 (stick, 'lambda_par')
             ]
         ),
@@ -180,7 +185,8 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
         stick_and_tortuous_zeppelin.parameters_to_parameter_vector(
             C1Stick_1_lambda_par=gt_lambda_par,
             C1Stick_1_mu=gt_mu,
-            partial_volume_0=gt_partial_volume)
+            partial_volume_0=gt_partial_volume,
+            partial_volume_1=1 - gt_partial_volume)
     )
 
     E = stick_and_tortuous_zeppelin.simulate_signal(
@@ -196,6 +202,7 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
             zeppelin_sm, 'lambda_perp',
             T1_tortuosity, [
                 (None, 'partial_volume_0'),
+                (None, 'partial_volume_1'),
                 (stick_sm, 'lambda_par')
             ]
         ),
@@ -216,13 +223,14 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
     )
     x0 = stick_and_tortuous_zeppelin_sm.parameters_to_parameter_vector(
         C1StickSphericalMean_1_lambda_par=.6 * 1e-9,
-        partial_volume_0=0.55
+        partial_volume_0=0.55,
+        partial_volume_1=0.45
     )
 
     res_sm = stick_and_tortuous_zeppelin_sm.fit(E, x0).fitted_parameters_vector
 
     assert_array_almost_equal(
-        np.r_[gt_lambda_par, gt_partial_volume], res_sm, 2)
+        np.r_[gt_lambda_par, gt_partial_volume], res_sm[:-1], 2)
 
 
 def test_fractions_add_up_to_one():
@@ -234,11 +242,14 @@ def test_fractions_add_up_to_one():
     dots = modeling_framework.MultiCompartmentMicrostructureModel(
         acquisition_scheme=scheme,
         models=[dot1, dot2, dot3, dot4, dot5])
+    random_fractions = np.random.rand(5)
+    random_fractions /= random_fractions.sum()
     parameter_vector = dots.parameters_to_parameter_vector(
-        partial_volume_0=np.random.rand(),
-        partial_volume_1=np.random.rand(),
-        partial_volume_2=np.random.rand(),
-        partial_volume_3=np.random.rand())
+        partial_volume_0=random_fractions[0],
+        partial_volume_1=random_fractions[1],
+        partial_volume_2=random_fractions[2],
+        partial_volume_3=random_fractions[3],
+        partial_volume_4=random_fractions[4])
     E = dots.simulate_signal(scheme, parameter_vector)
     assert_array_almost_equal(E, np.ones(len(E)))
 
@@ -254,6 +265,7 @@ def test_MIX_fitting():
     parameter_vector = ball_and_zeppelin.parameters_to_parameter_vector(
         G3Ball_1_lambda_iso=2.7e-9,
         partial_volume_0=.2,
+        partial_volume_1=.8,
         G4Zeppelin_1_lambda_perp=.5e-9,
         G4Zeppelin_1_mu=(np.pi / 2., np.pi / 2.),
         G4Zeppelin_1_lambda_par=1.7e-9
