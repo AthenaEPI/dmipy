@@ -44,7 +44,7 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - [Ball and Stick [Behrens et al. 2003]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_ball_and_stick.ipynb)
 - [Ball and Racket [Sotiropoulos et al. 2012]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_ball_and_racket.ipynb)
 - [NODDI-Watson [Zhang et al. 2012]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_noddi_watson.ipynb)
-- NODDI-Bingham [Tariq et al. 2016]
+- [NODDI-Bingham [Tariq et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_noddi_bingham.ipynb)
 - AxCaliber [Assaf et al. 2008]
 - AxCaliber with restricted extra-axonal diffusion [Burcaw et al. 2015]
 - ActiveAx [Alexander et al. 2010]
