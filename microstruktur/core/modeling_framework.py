@@ -437,7 +437,7 @@ class MicrostructureModel:
                                  args=fit_args, bounds=bounds_fine[:-1],
                                  method='L-BFGS-B').x
 
-        N_fractions = len(self.partial_volume_names)
+        N_fractions = len(self.models)
         if N_fractions > 1:
             nested_fractions = x_fine_nested[-(N_fractions - 1):]
             normalized_fractions = nested_to_normalized_fractions(
@@ -449,7 +449,7 @@ class MicrostructureModel:
         return x_fine
 
     def objective_function(self, parameter_vector, data, acquisition_scheme):
-        N_fractions = len(self.partial_volume_names)
+        N_fractions = len(self.models)
         if N_fractions > 1:
             nested_fractions = parameter_vector[-(N_fractions - 1):]
             normalized_fractions = nested_to_normalized_fractions(
@@ -514,7 +514,7 @@ class MicrostructureModel:
                                  (data, self.scheme),
                                  bounds=bounds[:-1]).x
 
-        N_fractions = len(self.partial_volume_names)
+        N_fractions = len(self.models)
         if N_fractions > 1:
             nested_fractions = x_fine_nested[-(N_fractions - 1):]
             normalized_fractions = nested_to_normalized_fractions(
@@ -645,30 +645,31 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
         self._parameter_cardinality = self.parameter_cardinality
 
     def _prepare_partial_volumes(self):
-        if self.optimise_partial_volumes:
-            self.partial_volume_names = [
-                'partial_volume_{:d}'.format(i)
-                for i in range(len(self.models))
-            ]
-
-            for i, partial_volume_name in enumerate(self.partial_volume_names):
-                self._parameter_ranges[partial_volume_name] = (0.01, .99)
-                self._parameter_scales[partial_volume_name] = 1.
-                self.parameter_defaults[partial_volume_name] = (
-                    1 / (len(self.models) - i)
-                )
-                self._parameter_map[partial_volume_name] = (
-                    None, partial_volume_name
-                )
-                self._inverted_parameter_map[(None, partial_volume_name)] = \
-                    partial_volume_name
-                self._parameter_cardinality[partial_volume_name] = 1
-        else:
-            if self.partial_volumes is None:
-                self.partial_volumes = np.array([
-                    1 / (len(self.models) - i)
+        if len(self.models) > 1:
+            if self.optimise_partial_volumes:
+                self.partial_volume_names = [
+                    'partial_volume_{:d}'.format(i)
                     for i in range(len(self.models))
-                ])
+                ]
+
+                for i, partial_volume_name in enumerate(self.partial_volume_names):
+                    self._parameter_ranges[partial_volume_name] = (0.01, .99)
+                    self._parameter_scales[partial_volume_name] = 1.
+                    self.parameter_defaults[partial_volume_name] = (
+                        1 / (len(self.models) - i)
+                    )
+                    self._parameter_map[partial_volume_name] = (
+                        None, partial_volume_name
+                    )
+                    self._inverted_parameter_map[(None, partial_volume_name)] = \
+                        partial_volume_name
+                    self._parameter_cardinality[partial_volume_name] = 1
+            else:
+                if self.partial_volumes is None:
+                    self.partial_volumes = np.array([
+                        1 / (len(self.models) - i)
+                        for i in range(len(self.models))
+                    ])
 
     def _prepare_parameter_links(self):
         for i, parameter_function in enumerate(self.parameter_links):
@@ -763,13 +764,15 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
         kwargs = self.add_linked_parameters_to_parameters(
             kwargs
         )
-
-        if self.optimise_partial_volumes:
-            partial_volumes = [
-                kwargs[p] for p in self.partial_volume_names
-            ]
+        if len(self.models) > 1:
+            if self.optimise_partial_volumes:
+                partial_volumes = [
+                    kwargs[p] for p in self.partial_volume_names
+                ]
+            else:
+                partial_volumes = self.partial_volumes
         else:
-            partial_volumes = self.partial_volumes
+            partial_volumes = [1.]
 
         for model_name, model, partial_volume in zip(
             self.model_names, self.models, partial_volumes

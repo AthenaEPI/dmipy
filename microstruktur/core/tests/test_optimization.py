@@ -37,15 +37,13 @@ def test_simple_stick_optimization():
         models=[stick])
 
     gt_parameter_vector = stick_model.parameters_to_parameter_vector(
-        C1Stick_1_lambda_par=gt_lambda_par, C1Stick_1_mu=gt_mu,
-        partial_volume_0=1.)
+        C1Stick_1_lambda_par=gt_lambda_par, C1Stick_1_mu=gt_mu)
 
     E = stick_model.simulate_signal(scheme, gt_parameter_vector)
 
     x0 = stick_model.parameters_to_parameter_vector(
         C1Stick_1_lambda_par=(np.random.rand() + 1.) * 1e-9,
-        C1Stick_1_mu=np.random.rand(2),
-        partial_volume_0=1.
+        C1Stick_1_mu=np.random.rand(2)
     )
     res = stick_model.fit(E, x0).fitted_parameters_vector
     assert_array_almost_equal(gt_parameter_vector, res, 2)
