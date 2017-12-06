@@ -429,20 +429,40 @@ class MicrostructureModel:
 
         # brute-force optimization returns initial guess for all parameters
         x0_brute = brute(
-            self.objective_function, ranges=bounds_brute, args=fit_args,
+            self.objective_function, ranges=bounds_brute[:-1], args=fit_args,
             finish=None)
         # the intial guess is used to find a local minima using gradient-based
         # optimization.
-        x_final = minimize(self.objective_function, x0_brute,
-                           args=fit_args, bounds=bounds_fine,
-                           method='L-BFGS-B').x
-        return x_final
+        x_fine_nested = minimize(self.objective_function, x0_brute,
+                                 args=fit_args, bounds=bounds_fine[:-1],
+                                 method='L-BFGS-B').x
+
+        N_fractions = len(self.partial_volume_names)
+        if N_fractions > 1:
+            nested_fractions = x_fine_nested[-(N_fractions - 1):]
+            normalized_fractions = nested_to_normalized_fractions(
+                nested_fractions)
+            x_fine = np.r_[
+                x_fine_nested[:-(N_fractions - 1)], normalized_fractions]
+        else:
+            x_fine = np.r_[x_fine_nested, 1.]
+        return x_fine
 
     def objective_function(self, parameter_vector, data, acquisition_scheme):
-        parameter_vector = parameter_vector * self.scales_for_optimization
+        N_fractions = len(self.partial_volume_names)
+        if N_fractions > 1:
+            nested_fractions = parameter_vector[-(N_fractions - 1):]
+            normalized_fractions = nested_to_normalized_fractions(
+                nested_fractions)
+            parameter_vector_ = np.r_[
+                parameter_vector[:-(N_fractions - 1)], normalized_fractions]
+        else:
+            parameter_vector_ = np.r_[
+                parameter_vector, 1.]
+        parameter_vector_ = parameter_vector_ * self.scales_for_optimization
         parameters = {}
         parameters.update(
-            self.parameter_vector_to_parameters(parameter_vector)
+            self.parameter_vector_to_parameters(parameter_vector_)
         )
         E_model = self(acquisition_scheme, **parameters)
         E_diff = E_model - data
@@ -488,13 +508,22 @@ class MicrostructureModel:
         for i in np.arange(1, len(x_fe_nested)):
             x_fe_nested[i] = x_fe[i] / x_fe[i - 1]
 
-        res_one_x[-len(x_fe_nested):] = x_fe_nested
+        x0_refine = np.r_[res_one_x[:-len(x_fe)], x_fe_nested]
 
-        res_final = minimize(self.objective_function, res_one_x,
-                             (data, self.scheme),
-                             bounds=bounds)
-        fitted_parameters = res_final.x
-        return fitted_parameters
+        x_fine_nested = minimize(self.objective_function, x0_refine,
+                                 (data, self.scheme),
+                                 bounds=bounds[:-1]).x
+
+        N_fractions = len(self.partial_volume_names)
+        if N_fractions > 1:
+            nested_fractions = x_fine_nested[-(N_fractions - 1):]
+            normalized_fractions = nested_to_normalized_fractions(
+                nested_fractions)
+            x_fine = np.r_[
+                x_fine_nested[:-(N_fractions - 1)], normalized_fractions]
+        else:
+            x_fine = np.r_[x_fine_nested, 1.]
+        return x_fine
 
     def stochastic_objective_function(self, parameter_vector,
                                       data, acquisition_scheme):
@@ -619,7 +648,7 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
         if self.optimise_partial_volumes:
             self.partial_volume_names = [
                 'partial_volume_{:d}'.format(i)
-                for i in range(len(self.models) - 1)
+                for i in range(len(self.models))
             ]
 
             for i, partial_volume_name in enumerate(self.partial_volume_names):
@@ -638,7 +667,7 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
             if self.partial_volumes is None:
                 self.partial_volumes = np.array([
                     1 / (len(self.models) - i)
-                    for i in range(len(self.models) - 1)
+                    for i in range(len(self.models))
                 ])
 
     def _prepare_parameter_links(self):
@@ -735,7 +764,6 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
             kwargs
         )
 
-        accumulated_partial_volume = 1
         if self.optimise_partial_volumes:
             partial_volumes = [
                 kwargs[p] for p in self.partial_volume_names
@@ -744,8 +772,7 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
             partial_volumes = self.partial_volumes
 
         for model_name, model, partial_volume in zip(
-            self.model_names, self.models,
-            chain(partial_volumes, (None,))
+            self.model_names, self.models, partial_volumes
         ):
             parameters = {}
             for parameter in model.parameter_ranges:
@@ -755,22 +782,18 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
                 parameters[parameter] = kwargs.get(
                     parameter_name, self.parameter_defaults.get(parameter_name)
                 )
-            current_partial_volume = accumulated_partial_volume
-            if partial_volume is not None:
-                current_partial_volume = current_partial_volume * partial_volume
-                accumulated_partial_volume *= (1 - partial_volume)
 
             if quantity == "signal":
                 values = (
                     values +
-                    current_partial_volume * model(
+                    partial_volume * model(
                         acquisition_scheme_or_vertices, **parameters)
                 )
             elif quantity == "FOD":
                 try:
                     values = (
                         values +
-                        current_partial_volume * model.fod(
+                        partial_volume * model.fod(
                             acquisition_scheme_or_vertices, **parameters)
                     )
                 except AttributeError:
@@ -921,3 +944,14 @@ def homogenize_x0_to_data(data, x0):
             x0_as_data.shape[:-1])
         raise ValueError(msg)
     return x0_as_data
+
+
+def nested_to_normalized_fractions(nested_fractions):
+    N = len(nested_fractions)
+    normalized_fractions = np.zeros(N + 1)
+    remaining_fraction = 1.
+    for i in xrange(N):
+        normalized_fractions[i] = remaining_fraction * nested_fractions[i]
+        remaining_fraction -= normalized_fractions[i]
+    normalized_fractions[-1] = remaining_fraction
+    return normalized_fractions
