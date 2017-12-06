@@ -90,9 +90,14 @@ def rotation_matrix_around_100(psi):
     R : array, shape (3 x 3)
         Rotation matrix.
     """
-    R = np.array([[1, 0, 0],
-                  [0, np.cos(psi), -np.sin(psi)],
-                  [0, np.sin(psi), np.cos(psi)]])
+    cos_psi = np.cos(psi)
+    sin_psi = np.sin(psi)
+    R = np.zeros((3, 3))
+    R[0, 0] = 1.
+    R[1, 1] = cos_psi
+    R[1, 2] = -sin_psi
+    R[2, 1] = sin_psi
+    R[2, 2] = cos_psi
     return R
 
 
@@ -112,8 +117,8 @@ def rotation_matrix_100_to_theta_phi(theta, phi):
     R : array, shape (3 x 3)
         Rotation matrix.
     """
-    x, y, z = sphere2cart(np.r_[1., theta, phi])
-    return rotation_matrix_100_to_xyz(float(x), float(y), float(z))
+    x, y, z = unitsphere2cart_1d([theta, phi])
+    return rotation_matrix_100_to_xyz(x, y, z)
 
 
 def rotation_matrix_100_to_xyz(x, y, z):
@@ -130,8 +135,10 @@ def rotation_matrix_100_to_xyz(x, y, z):
     R : array, shape (3 x 3)
         Rotation matrix.
     """
-    if np.all(np.r_[x, y, z] == np.r_[1., 0., 0.]):
-        return np.eye(3)
+    if x == 1.:
+        if y == 0.:
+            if z == 0.:
+                return np.eye(3)
     y2 = y ** 2
     z2 = z ** 2
     yz = y * z
@@ -189,13 +196,15 @@ def rotation_matrix_100_to_theta_phi_psi(theta, phi, psi):
     return np.dot(R_100_to_theta_phi, R_around_100)
 
 
-def T1_tortuosity(f_intra, lambda_par):
+def T1_tortuosity(vf_intra, vf_extra, lambda_par):
     """Tortuosity model for perpendicular extra-axonal diffusivity [1, 2, 3].
 
     Parameters
     ----------
-    f_intra : float,
+    vf_intra : float,
         intra-axonal volume fraction [0, 1].
+    vf_extra : float,
+        extra-axonal volume fraction [0, 1].
     lambda_par : float,
         parallel diffusivity.
 
@@ -216,7 +225,8 @@ def T1_tortuosity(f_intra, lambda_par):
     .. [3] Szafer et al. "Theoretical model for water diffusion in tissues."
         Magnetic resonance in medicine 33.5 (1995): 697-712.
     """
-    lambda_perp = (1 - f_intra) * lambda_par
+    fraction_intra = vf_intra / (vf_intra + vf_extra)
+    lambda_perp = (1 - fraction_intra) * lambda_par
     return lambda_perp
 
 
@@ -418,3 +428,5 @@ def unitsphere2cart_Nd(mu):
 
 if have_numba:
     unitsphere2cart_1d = numba.njit()(unitsphere2cart_1d)
+    # rotation_matrix_around_100 = numba.njit()(rotation_matrix_around_100)
+    # rotation_matrix_100_to_xyz = numba.njit()(rotation_matrix_100_to_xyz)
