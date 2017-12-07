@@ -51,5 +51,8 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 ### Crossing Bundle Microstructure Models
 - [Microstructure Imaging of Crossing (MIX) [Farooq et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_mix_microstructure_imaging_in_crossings.ipynb)
 - [Multi-Compartment Spherical Mean Technique [Kaden et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_multi_compartment_spherical_mean_technique.ipynb)
+### Other Models
+- Free Water Elimination [Pasternak et al. 2009]
+- VERDICT tumor model [Panagiotaki et al. 2014]
 
 When public, use http://htmlpreview.github.io/ to replace ipynb with html files for better rendering.
