@@ -126,15 +126,14 @@ class MicrostructureModel:
                 if card == 2 and not np.all(value.shape == np.r_[2]):
                     parameter_shapes.append(value.shape[:-1])
 
-        if len(parameter_shapes) > 1:
-            if len(set(parameter_shapes)) > 1:
-                msg = "parameter shapes are inconsistent."
-                raise ValueError(msg)
-        elif len(parameter_shapes) == 0:
+        if len(set(parameter_shapes)) > 1:
+            msg = "parameter shapes are inconsistent."
+            raise ValueError(msg)
+        elif len(set(parameter_shapes)) == 0:
             for parameter, card in self.parameter_cardinality.items():
                 parameter_vector.append(parameters[parameter])
             parameter_vector = np.hstack(parameter_vector)
-        elif len(parameter_shapes) == 1:
+        elif len(set(parameter_shapes)) == 1:
             for parameter, card in self.parameter_cardinality.items():
                 value = np.atleast_1d(parameters[parameter])
                 if card == 1 and np.all(value.shape == np.r_[1]):
