@@ -43,9 +43,9 @@ class SD2C1BinghamDispersedStick(MicrostructureModel):
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
         'lambda_par': (0, 3),
-        'psi': (0, np.pi),
-        'kappa': (0, 16),
-        'beta': (0, 16)
+        'psi': (-np.pi, np.pi),
+        'kappa': (0, 24),
+        'beta': (0, 24)
     }
     _parameter_scales = {
         'mu': np.r_[1., 1.],
@@ -168,9 +168,9 @@ class SD2C2BinghamDispersedSodermanCylinder(MicrostructureModel):
         'mu': ([0, -np.pi], [np.pi, np.pi]),
         'lambda_par': (0, 3),
         'diameter': (1e-10, 50e-6),
-        'psi': (0, np.pi),
-        'kappa': (0, 16),
-        'beta': (0, 16)
+        'psi': (-np.pi, np.pi),
+        'kappa': (0, 24),
+        'beta': (0, 24)
     }
     _parameter_scales = {
         'mu': np.r_[1., 1.],
@@ -301,9 +301,9 @@ class SD2C3BinghamDispersedCallaghanCylinder(MicrostructureModel):
         'mu': ([0, -np.pi], [np.pi, np.pi]),
         'lambda_par': (0, 3),
         'diameter': (1e-10, 50e-6),
-        'psi': (0, np.pi),
-        'kappa': (0, 16),
-        'beta': (0, 16)
+        'psi': (-np.pi, np.pi),
+        'kappa': (0, 24),
+        'beta': (0, 24)
     }
     _parameter_scales = {
         'mu': np.r_[1., 1.],
@@ -433,9 +433,9 @@ class SD2C4BinghamDispersedGaussianPhaseCylinder(MicrostructureModel):
         'mu': ([0, -np.pi], [np.pi, np.pi]),
         'lambda_par': (0, 3),
         'diameter': (1e-10, 50e-6),
-        'psi': (0, np.pi),
-        'kappa': (0, 16),
-        'beta': (0, 16)
+        'psi': (-np.pi, np.pi),
+        'kappa': (0, 24),
+        'beta': (0, 24)
     }
     _parameter_scales = {
         'mu': np.r_[1., 1.],
@@ -661,7 +661,7 @@ class SD1C2WatsonDispersedSodermanCylinder(MicrostructureModel):
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
         'lambda_par': (.1, 3),
-        'kappa': (0, 16),
+        'kappa': (0, 24),
         'diameter': (1e-10, 50e-6),
     }
     _parameter_scales = {
@@ -777,7 +777,7 @@ class SD1C3WatsonDispersedCallaghanCylinder(MicrostructureModel):
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
         'lambda_par': (.1, 3),
-        'kappa': (0, 16),
+        'kappa': (0, 24),
         'diameter': (1e-10, 50e-6),
     }
     _parameter_scales = {
@@ -892,7 +892,7 @@ class SD1C4WatsonDispersedGaussianPhaseCylinder(MicrostructureModel):
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
         'lambda_par': (.1, 3),
-        'kappa': (0, 16),
+        'kappa': (0, 24),
         'diameter': (1e-10, 50e-6),
     }
     _parameter_scales = {
@@ -1010,9 +1010,9 @@ class SD2G4BinghamDispersedZeppelin(MicrostructureModel):
         'mu': ([0, -np.pi], [np.pi, np.pi]),
         'lambda_par': (0, 3),
         'lambda_perp': (0, 3),
-        'psi': (0, np.pi),
-        'kappa': (0, 16),
-        'beta': (0, 16)
+        'psi': (-np.pi, np.pi),
+        'kappa': (0, 24),
+        'beta': (0, 24)
     }
     _parameter_scales = {
         'mu': np.r_[1., 1.],
