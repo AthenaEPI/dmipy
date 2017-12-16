@@ -44,6 +44,7 @@ inverse_sh_matrix_kernel = {
         sh_order, hemisphere.theta, hemisphere.phi
     )[0]) for sh_order in np.arange(0, 15, 2)
 }
+BETA_SCALING = 1e-6
 
 
 def get_sh_order_from_kappa(kappa):
@@ -77,7 +78,7 @@ class SD1Watson(MicrostructureModel):
 
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'kappa': (0, 64),
+        'kappa': (0, 24),
     }
     _parameter_scales = {
         'mu': np.r_[1., 1.],
@@ -171,8 +172,8 @@ class SD2Bingham(MicrostructureModel):
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
         'psi': (0, np.pi),
-        'kappa': (0, 64),
-        'beta': (0, 64)  # beta<=kappa in fact
+        'kappa': (0, 24),
+        'beta': (0, 24)  # beta<=kappa in fact
     }
     _parameter_scales = {
         'mu': np.r_[1., 1.],
@@ -337,7 +338,7 @@ class DD1GammaDistribution(MicrostructureModel):
     }
     _parameter_scales = {
         'alpha': 1.,
-        'beta': 1.,
+        'beta': BETA_SCALING,
     }
     spherical_mean = False
 

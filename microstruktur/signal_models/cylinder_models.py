@@ -87,7 +87,7 @@ class C1Stick(MicrostructureModel):
         E_stick = attenuation_stick(bvals, lambda_par_, n, mu)
         return E_stick
 
-    def rotational_harmonics_representation(self, bvalue, rh_order=14):
+    def rotational_harmonics_representation(self, bvalue, rh_order=14, **kwargs):
         r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernelfor spherical
         convolution.
@@ -105,8 +105,10 @@ class C1Stick(MicrostructureModel):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
         simple_acq_scheme_rh.bvalues = np.full(samples, bvalue)
-        E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.])
+        E_kernel_sf = self(simple_acq_scheme_rh,
+                           mu=[0., 0.], lambda_par=lambda_par)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
 
@@ -206,7 +208,7 @@ class C2CylinderSodermanApproximation(MicrostructureModel):
         return E_parallel * E_perpendicular
 
     def rotational_harmonics_representation(self, bvalue, delta, Delta,
-                                            rh_order=14):
+                                            rh_order=14, **kwargs):
         r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernelfor spherical
         convolution.
@@ -228,10 +230,14 @@ class C2CylinderSodermanApproximation(MicrostructureModel):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
+        diameter = kwargs.get('diameter', self.diameter)
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        mu = kwargs.get('mu', self.mu)
         simple_acq_scheme_rh.bvalues = np.full(samples, bvalue)
         simple_acq_scheme_rh.delta = np.full(samples, delta)
         simple_acq_scheme_rh.Delta = np.full(samples, Delta)
-        E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.])
+        E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.],
+            diameter=diameter, lambda_par=lambda_par)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
 
@@ -372,7 +378,7 @@ class C3CylinderCallaghanApproximation(MicrostructureModel):
         return E_parallel * E_perpendicular
 
     def rotational_harmonics_representation(
-            self, bvalue, delta=None, Delta=None, rh_order=14):
+            self, bvalue, delta=None, Delta=None, rh_order=14, **kwargs):
         r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernelfor spherical
         convolution.
@@ -394,10 +400,13 @@ class C3CylinderCallaghanApproximation(MicrostructureModel):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
+        diameter = kwargs.get('diameter', self.diameter)
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
         simple_acq_scheme_rh.bvalues = np.full(samples, bvalue)
         simple_acq_scheme_rh.delta = np.full(samples, delta)
         simple_acq_scheme_rh.Delta = np.full(samples, Delta)
-        E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.])
+        E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.],
+            diameter=diameter, lambda_par=lambda_par)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
 
@@ -532,7 +541,7 @@ class C4CylinderGaussianPhaseApproximation(MicrostructureModel):
         return E_parallel * E_perpendicular
 
     def rotational_harmonics_representation(
-            self, bvalue, delta=None, Delta=None, rh_order=14):
+            self, bvalue, delta=None, Delta=None, rh_order=14, **kwargs):
         r""" The model in rotational harmonics, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernelfor spherical
         convolution.
@@ -554,10 +563,13 @@ class C4CylinderGaussianPhaseApproximation(MicrostructureModel):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
+        diameter = kwargs.get('diameter', self.diameter)
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
         simple_acq_scheme_rh.bvalues = np.full(samples, bvalue)
         simple_acq_scheme_rh.delta = np.full(samples, delta)
         simple_acq_scheme_rh.Delta = np.full(samples, Delta)
-        E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.])
+        E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.],
+            diameter=diameter, lambda_par=lambda_par)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
 

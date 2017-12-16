@@ -411,6 +411,7 @@ class MicrostructureModel:
         then its bounds are also fixed for subsequent gradient-based
         optimization.
         """
+        N_fractions = len(self.models)
         fit_args = (data, self.scheme)
         bounds = self.bounds_for_optimization
         bounds_brute = []
@@ -426,17 +427,18 @@ class MicrostructureModel:
                     self.opt_params_for_optimization[i] is False):
                 bounds_fine[i] = np.r_[x0_, x0_]
 
+        if N_fractions > 1: # go to nested bounds
+            bounds_brute = bounds_brute[:-1]
+            bounds_fine = bounds_fine[:-1]
         # brute-force optimization returns initial guess for all parameters
         x0_brute = brute(
-            self.objective_function, ranges=bounds_brute[:-1], args=fit_args,
+            self.objective_function, ranges=bounds_brute, args=fit_args,
             finish=None)
         # the intial guess is used to find a local minima using gradient-based
         # optimization.
         x_fine_nested = minimize(self.objective_function, x0_brute,
-                                 args=fit_args, bounds=bounds_fine[:-1],
+                                 args=fit_args, bounds=bounds_fine,
                                  method='L-BFGS-B').x
-
-        N_fractions = len(self.models)
         if N_fractions > 1:
             nested_fractions = x_fine_nested[-(N_fractions - 1):]
             normalized_fractions = nested_to_normalized_fractions(
@@ -444,7 +446,7 @@ class MicrostructureModel:
             x_fine = np.r_[
                 x_fine_nested[:-(N_fractions - 1)], normalized_fractions]
         else:
-            x_fine = np.r_[x_fine_nested, 1.]
+            x_fine = x_fine_nested
         return x_fine
 
     def objective_function(self, parameter_vector, data, acquisition_scheme):
@@ -456,8 +458,7 @@ class MicrostructureModel:
             parameter_vector_ = np.r_[
                 parameter_vector[:-(N_fractions - 1)], normalized_fractions]
         else:
-            parameter_vector_ = np.r_[
-                parameter_vector, 1.]
+            parameter_vector_ = parameter_vector
         parameter_vector_ = parameter_vector_ * self.scales_for_optimization
         parameters = {}
         parameters.update(
@@ -496,22 +497,27 @@ class MicrostructureModel:
         parameters = self.parameter_vector_to_parameters(
             res_one_x * self.scales_for_optimization)
 
-        # step 2: Estimating linear variables using cvx
-        phi = self(self.scheme,
-                   quantity="stochastic cost function", **parameters)
-        x_fe = self._cvx_fit_linear_parameters(data, phi)
+        # step 2: Estimating linear variables using cvx (if there are any)
+        if len(self.models) > 1:
+            phi = self(self.scheme,
+                       quantity="stochastic cost function", **parameters)
+            x_fe = self._cvx_fit_linear_parameters(data, phi)
 
-        # step 3: refine using gradient method / convert nested fractions
-        x_fe_nested = np.ones(len(x_fe) - 1)
-        x_fe_nested[0] = x_fe[0]
-        for i in np.arange(1, len(x_fe_nested)):
-            x_fe_nested[i] = x_fe[i] / x_fe[i - 1]
+            # step 3: refine using gradient method / convert nested fractions
+            x_fe_nested = np.ones(len(x_fe) - 1)
+            x_fe_nested[0] = x_fe[0]
+            for i in np.arange(1, len(x_fe_nested)):
+                x_fe_nested[i] = x_fe[i] / x_fe[i - 1]
 
-        x0_refine = np.r_[res_one_x[:-len(x_fe)], x_fe_nested]
+            x0_refine = np.r_[res_one_x[:-len(x_fe)], x_fe_nested]
+            bounds_ = bounds[:-1]
+        else:
+            x0_refine = res_one_x
+            bounds_ = bounds
 
         x_fine_nested = minimize(self.objective_function, x0_refine,
                                  (data, self.scheme),
-                                 bounds=bounds[:-1]).x
+                                 bounds=bounds_).x
 
         N_fractions = len(self.models)
         if N_fractions > 1:
@@ -521,7 +527,7 @@ class MicrostructureModel:
             x_fine = np.r_[
                 x_fine_nested[:-(N_fractions - 1)], normalized_fractions]
         else:
-            x_fine = np.r_[x_fine_nested, 1.]
+            x_fine = x_fine_nested
         return x_fine
 
     def stochastic_objective_function(self, parameter_vector,
@@ -631,12 +637,12 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
             for k in model.parameter_ranges
         }
 
-        self.parameter_defaults = OrderedDict()
-        for model_name, model in zip(self.model_names, self.models):
-            for parameter in model.parameter_ranges:
-                self.parameter_defaults[model_name + parameter] = getattr(
-                    model, parameter
-                )
+        # self.parameter_defaults = OrderedDict()
+        # for model_name, model in zip(self.model_names, self.models):
+        #     for parameter in model.parameter_ranges:
+        #         self.parameter_defaults[model_name + parameter] = getattr(
+        #             model, parameter
+        #         )
 
         self._inverted_parameter_map = {
             v: k for k, v in self._parameter_map.items()
@@ -654,9 +660,9 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
                 for i, partial_volume_name in enumerate(self.partial_volume_names):
                     self._parameter_ranges[partial_volume_name] = (0.01, .99)
                     self._parameter_scales[partial_volume_name] = 1.
-                    self.parameter_defaults[partial_volume_name] = (
-                        1 / (len(self.models) - i)
-                    )
+                    # self.parameter_defaults[partial_volume_name] = (
+                    #     1 / (len(self.models) - i)
+                    # )
                     self._parameter_map[partial_volume_name] = (
                         None, partial_volume_name
                     )
@@ -688,7 +694,7 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
             ]
 
             del self._parameter_ranges[parameter_name]
-            del self.parameter_defaults[parameter_name]
+            # del self.parameter_defaults[parameter_name]
             del self._parameter_cardinality[parameter_name]
             del self._parameter_scales[parameter_name]
 
@@ -738,8 +744,8 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
                 for argument in arguments:
                     argument_name = self._inverted_parameter_map[argument]
                     argument_values.append(parameters.get(
-                        argument_name,
-                        self.parameter_defaults[argument_name]
+                        argument_name  # ,
+                        # self.parameter_defaults[argument_name]
                     ))
 
                 parameters[parameter_name] = parameter_function(
@@ -782,7 +788,8 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
                     (model, parameter)
                 ]
                 parameters[parameter] = kwargs.get(
-                    parameter_name, self.parameter_defaults.get(parameter_name)
+                    # , self.parameter_defaults.get(parameter_name)
+                    parameter_name
                 )
 
             if quantity == "signal":

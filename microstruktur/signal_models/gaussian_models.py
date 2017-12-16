@@ -187,7 +187,7 @@ class G4Zeppelin(MicrostructureModel):
             bvals, lambda_par, lambda_perp, n, mu)
         return E_zeppelin
 
-    def rotational_harmonics_representation(self, bvalue, rh_order=14):
+    def rotational_harmonics_representation(self, bvalue, rh_order=14, **kwargs):
         r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernelfor spherical
         convolution.
@@ -205,8 +205,11 @@ class G4Zeppelin(MicrostructureModel):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
         simple_acq_scheme_rh.bvalues = np.full(samples, bvalue)
-        E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.])
+        E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.],
+                           lambda_par=lambda_par, lambda_perp=lambda_perp)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
 
@@ -302,7 +305,7 @@ class G5RestrictedZeppelin(MicrostructureModel):
         return E_zeppelin
 
     def rotational_harmonics_representation(
-            self, bvalue, delta=None, Delta=None, rh_order=14):
+            self, bvalue, delta=None, Delta=None, rh_order=14, **kwargs):
         r""" The model in rotational harmonics, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernelfor spherical
         convolution.
@@ -324,11 +327,15 @@ class G5RestrictedZeppelin(MicrostructureModel):
         rh : array,
             rotational harmonics of the model aligned with z-axis.
         """
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        lambda_inf = kwargs.get('lambda_inf', self.lambda_inf)
+        A = kwargs.get('A', self.A)
         simple_acq_scheme_rh.bvalues = np.full(samples, bvalue)
         simple_acq_scheme_rh.delta = np.full(samples, delta)
         simple_acq_scheme_rh.Delta = np.full(samples, Delta)
 
-        E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.])
+        E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.],
+            lambda_par=lambda_par, lambda_inf=lambda_inf, A=A)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
 

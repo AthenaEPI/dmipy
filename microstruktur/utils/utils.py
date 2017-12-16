@@ -230,6 +230,37 @@ def T1_tortuosity(vf_intra, vf_extra, lambda_par):
     return lambda_perp
 
 
+def T1_nested_tortuosity(vf_intra, lambda_par):
+    """Tortuosity model for perpendicular extra-axonal diffusivity [1, 2, 3].
+
+    Parameters
+    ----------
+    vf_intra : float,
+        intra-axonal volume fraction [0, 1].
+    lambda_par : float,
+        parallel diffusivity.
+
+    Returns
+    -------
+    lambda_perp : float,
+        Rotation matrix.
+
+    References
+    -------
+    .. [1] Bruggeman, Von DAG. "Berechnung verschiedener physikalischer
+        Konstanten von heterogenen Substanzen. I. Dielektrizitätskonstanten und
+        Leitfähigkeiten der Mischkörper aus isotropen Substanzen." Annalen der
+        physik 416.7 (1935): 636-664.
+    .. [2] Sen et al. "A self-similar model for sedimentary rocks with
+        application to the dielectric constant of fused glass beads."
+        Geophysics 46.5 (1981): 781-795.
+    .. [3] Szafer et al. "Theoretical model for water diffusion in tissues."
+        Magnetic resonance in medicine 33.5 (1995): 697-712.
+    """
+    lambda_perp = (1 - vf_intra) * lambda_par
+    return lambda_perp
+
+
 def parameter_equality(param):
     "Function to force two model parameters to be equal in the optimization"
     return param
@@ -342,6 +373,20 @@ def cart2mu(xyz):
     mu[..., 1] = np.arctan2(xyz[..., 1], xyz[..., 0])
     mu[r == 0] = 0, 0
     return mu
+
+
+def R2mu_psi(R):
+    mu = cart2mu(R[..., :, 0])
+    mu_flat = mu.reshape([-1, 2])
+    R_flat = R.reshape([-1, 3, 3])
+    psi_flat = np.zeros(len(mu_flat))
+    for i in xrange(len(mu_flat)):
+        R_theta_phi = rotation_matrix_100_to_theta_phi(
+            mu_flat[i, 0], mu_flat[i, 0])
+        psi_flat[i] = np.arcsin(np.dot(R_theta_phi.T, R_flat[i])[2, 1])
+    psi = psi_flat.reshape(mu.shape[:-1])
+    psi[psi < 0] += np.pi
+    return mu, psi
 
 
 def sphere2cart(spherical_coordinates):
