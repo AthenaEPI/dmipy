@@ -4,6 +4,7 @@ from microstruktur.core import modeling_framework
 from collections import OrderedDict
 from itertools import chain
 from microstruktur.utils.spherical_convolution import sh_convolution
+import numpy as np
 
 class DistributedModel:
     spherical_mean = False
