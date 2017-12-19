@@ -318,12 +318,19 @@ class MicrostructureModel:
 
         # estimate S0
         data_ = np.atleast_2d(data)
-        S0 = np.mean(data_[..., self.scheme.b0_mask], axis=-1)
+        if self.scheme.TE is None:
+            S0 = np.mean(data_[..., self.scheme.b0_mask], axis=-1)
+        else:
+            S0 = np.ones_like(data_)
+            for TE_ in self.scheme.shell_TE:
+                TE_mask = self.scheme.TE == TE_
+                TE_b0_mask = np.all([self.scheme.b0_mask, TE_mask], axis=0)
+                S0[..., TE_mask] = np.mean(data_[..., TE_b0_mask], axis=-1)
 
         if mask is None:
-            mask = S0 > 0
+            mask = data_[..., 0] > 0
         else:
-            mask = np.all([mask, S0 > 0], axis=0)
+            mask = np.all([mask, data_[..., 0] > 0], axis=0)
         mask_pos = np.where(mask)
 
         N_parameters = len(self.bounds_for_optimization)
@@ -389,7 +396,8 @@ class MicrostructureModel:
                 [p.get() for p in fitted_parameters_lin])
 
         fitting_time = time() - start
-        print ('Fitting complete in {} seconds.').format(fitting_time)
+        print ('Fitting of {} voxels complete in {} seconds.').format(
+            len(fitted_parameters_lin), fitting_time)
         print ('Average of {} seconds per voxel.').format(
             fitting_time / N_voxels)
 
@@ -427,7 +435,7 @@ class MicrostructureModel:
                     self.opt_params_for_optimization[i] is False):
                 bounds_fine[i] = np.r_[x0_, x0_]
 
-        if N_fractions > 1: # go to nested bounds
+        if N_fractions > 1:  # go to nested bounds
             bounds_brute = bounds_brute[:-1]
             bounds_fine = bounds_fine[:-1]
         # brute-force optimization returns initial guess for all parameters
@@ -486,7 +494,7 @@ class MicrostructureModel:
         for i, x0_ in enumerate(x0_vector):
             if (x0_ is not None and
                     self.opt_params_for_optimization[i] is False):
-                bounds[i] = np.r_[x0_, x0_]
+                bounds[i] = np.r_[x0_, x0_ + 1e-6]
         # step 1: Variable separation using genetic algorithm
 
         res_one = differential_evolution(self.stochastic_objective_function,
