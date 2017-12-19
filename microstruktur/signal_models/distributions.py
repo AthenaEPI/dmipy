@@ -78,17 +78,17 @@ class SD1Watson(MicrostructureModel):
 
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
-        'kappa': (0, 24),
+        'odi': (0.02, 0.99),
     }
     _parameter_scales = {
         'mu': np.r_[1., 1.],
-        'kappa': 1.,
+        'odi': 1.,
     }
     spherical_mean = False
 
-    def __init__(self, mu=None, kappa=None):
+    def __init__(self, mu=None, odi=None):
         self.mu = mu
-        self.kappa = kappa
+        self.odi = odi
 
     def __call__(self, n, **kwargs):
         r""" The Watson spherical distribution model [1, 2].
@@ -103,8 +103,10 @@ class SD1Watson(MicrostructureModel):
         Wn: float or array of shape(N),
             Probability density at orientations n, given mu and kappa.
         """
-        kappa = kwargs.get('kappa', self.kappa)
+        odi = kwargs.get('odi', self.odi)
         mu = kwargs.get('mu', self.mu)
+
+        kappa = odi2kappa(odi)
         mu_cart = utils.unitsphere2cart_1d(mu)
         numerator = np.exp(kappa * np.dot(n, mu_cart) ** 2)
         denominator = 4 * np.pi * special.hyp1f1(0.5, 1.5, kappa)
@@ -126,13 +128,14 @@ class SD1Watson(MicrostructureModel):
         watson_sh : array,
             spherical harmonics of Watson probability density.
         """
-        kappa = kwargs.get('kappa', self.kappa)
+        odi = kwargs.get('odi', self.odi)
         mu = kwargs.get('mu', self.mu)
 
+        kappa = odi2kappa(odi)
         if sh_order is None:
             sh_order = get_sh_order_from_kappa(kappa)
 
-        watson_sf = self(hemisphere.vertices, mu=mu, kappa=kappa)
+        watson_sf = self(hemisphere.vertices, mu=mu, odi=odi)
         sh_mat_inv = inverse_sh_matrix_kernel[sh_order]
         watson_sh = np.dot(sh_mat_inv, watson_sf)
         return watson_sh
@@ -172,22 +175,22 @@ class SD2Bingham(MicrostructureModel):
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
         'psi': (0, np.pi),
-        'kappa': (0, 24),
-        'beta': (0, 24)  # beta<=kappa in fact
+        'odi': (0.02, 0.99),
+        'beta_fraction': (0, 1)  # beta<=kappa in fact
     }
     _parameter_scales = {
         'mu': np.r_[1., 1.],
         'psi': 1.,
-        'kappa': 1.,
+        'odi': 1.,
         'beta': 1.
     }
     spherical_mean = False
 
-    def __init__(self, mu=None, psi=None, kappa=None, beta=None):
+    def __init__(self, mu=None, psi=None, odi=None, beta_fraction=None):
         self.mu = mu
         self.psi = psi
-        self.kappa = kappa
-        self.beta = beta
+        self.odi = odi
+        self.beta_fraction = beta_fraction
 
     def __call__(self, n, **kwargs):
         r""" The Watson spherical distribution model [1, 2].
@@ -202,10 +205,13 @@ class SD2Bingham(MicrostructureModel):
         Bn: float or array of shape(N),
             Probability density at orientations n, given mu and kappa.
         """
-        kappa = kwargs.get('kappa', self.kappa)
-        beta = kwargs.get('beta', self.beta)
+        odi = kwargs.get('odi', self.odi)
+        beta_fraction = kwargs.get('beta_fraction', self.beta_fraction)
         mu = kwargs.get('mu', self.mu)
         psi = kwargs.get('psi', self.psi)
+
+        kappa = odi2kappa(odi)
+        beta = beta_fraction * kappa
 
         mu_cart = utils.unitsphere2cart_1d(mu)
 
@@ -232,13 +238,13 @@ class SD2Bingham(MicrostructureModel):
         bingham_sh : array,
             spherical harmonics of Bingham probability density.
         """
-        kappa = kwargs.get('kappa', self.kappa)
-        beta = kwargs.get('beta', self.beta)
+        odi = kwargs.get('odi', self.odi)
+        beta_fraction = kwargs.get('beta_fraction', self.beta_fraction)
         mu = kwargs.get('mu', self.mu)
         psi = kwargs.get('psi', self.psi)
 
-        bingham_sf = self(hemisphere.vertices, mu=mu, psi=psi, kappa=kappa,
-                          beta=beta)
+        bingham_sf = self(hemisphere.vertices, mu=mu, psi=psi, odi=odi,
+                          beta_fraction=beta_fraction)
 
         sh_mat_inv = inverse_sh_matrix_kernel[sh_order]
         bingham_sh = np.dot(sh_mat_inv, bingham_sf)
@@ -333,8 +339,8 @@ class DD1GammaDistribution(MicrostructureModel):
         medicine 59.6 (2008): 1347-1354.
     """
     _parameter_ranges = {
-        'alpha': (1e-10, np.inf),
-        'beta': (1e-10, np.inf)
+        'alpha': (0.1, 30.),
+        'beta': (1e-3, 2)
     }
     _parameter_scales = {
         'alpha': 1.,
@@ -342,11 +348,12 @@ class DD1GammaDistribution(MicrostructureModel):
     }
     spherical_mean = False
 
-    def __init__(self, alpha=None, beta=None):
+    def __init__(self, alpha=None, beta=None, Nsteps=35):
         self.alpha = alpha
         self.beta = beta
+        self.Nsteps = Nsteps
 
-    def __call__(self, diameter, **kwargs):
+    def __call__(self, **kwargs):
         r"""
         Parameters
         ----------
@@ -360,15 +367,31 @@ class DD1GammaDistribution(MicrostructureModel):
         """
         alpha = kwargs.get('alpha', self.alpha)
         beta = kwargs.get('beta', self.beta)
-        radius = diameter / 2.
+
         gamma_dist = stats.gamma(alpha, scale=beta)
-        Pgamma = gamma_dist.pdf(radius)
-        return Pgamma
+        radius_max = gamma_dist.mean() + 6 * gamma_dist.std()
+        radii = np.linspace(1e-8, radius_max, self.Nsteps)
+        area = np.pi * radii ** 2
+        radii_pdf = gamma_dist.pdf(radii)
+        radii_pdf_area = radii_pdf * area
+        radii_pdf_normalized = (
+            radii_pdf_area /
+            np.trapz(x=radii, y=radii_pdf_area)
+        )
+        return radii, radii_pdf_normalized
 
 
 def probability_bingham(kappa, beta, mu, mu_beta, n):
     return np.exp(kappa * np.dot(n, mu) **
                   2 + beta * np.dot(n, mu_beta) ** 2)
+
+
+def odi2kappa(odi):
+    return 1. / np.tan(odi * (np.pi / 2.0))
+
+
+def kappa2odi(kappa):
+    return (2. / np.pi) * np.arctan(1. / kappa)
 
 
 if have_numba:

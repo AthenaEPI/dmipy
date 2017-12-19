@@ -1,14 +1,14 @@
 from microstruktur.signal_models.distributions import (
     SD1Watson, SD2Bingham, DD1GammaDistribution)
-from microstruktur.core import modeling_framework
 from collections import OrderedDict
 from itertools import chain
 from microstruktur.utils.spherical_convolution import sh_convolution
 import numpy as np
 
+
 class DistributedModel:
     spherical_mean = False
-    
+
     def _check_for_double_model_class_instances(self):
         if len(self.models) != len(np.unique(self.models)):
             msg = "Each model in the multi-compartment model must be "
@@ -17,14 +17,21 @@ class DistributedModel:
             msg += "models = [stick1, stick2], not as "
             msg += "models = [stick1, stick1]."
             raise ValueError(msg)
-    
-    def _check_for_distributable_models(self):
+
+    def _check_for_dispersable_models(self):
         for i, model in enumerate(self.models):
             try:
                 callable(model.rotational_harmonics_representation)
             except AttributeError:
-                msg = "Cannot distribute models input {}. ".format(i)
+                msg = "Cannot disperse models input {}. ".format(i)
                 msg += "It has no rotational_harmonics_representation."
+                raise AttributeError(msg)
+
+    def _check_for_distributable_models(self):
+        for i, model in enumerate(self.models):
+            if 'diameter' not in model._parameter_ranges:
+                msg = "Cannot distribute models input {}. ".format(i)
+                msg += "It has no diameter as parameter."
                 raise AttributeError(msg)
 
     def _prepare_parameters(self, models_and_distribution):
@@ -65,7 +72,7 @@ class DistributedModel:
         self._inverted_parameter_map = {
             v: k for k, v in self._parameter_map.items()
         }
-        
+
     def _delete_models_mu_from_parameters(self):
         for model in self.models:
             parameter_name = self._inverted_parameter_map[
@@ -73,7 +80,15 @@ class DistributedModel:
             ]
             del self._parameter_ranges[parameter_name]
             del self._parameter_scales[parameter_name]
-    
+
+    def _delete_models_diameter_from_parameters(self):
+        for model in self.models:
+            parameter_name = self._inverted_parameter_map[
+                (model, 'diameter')
+            ]
+            del self._parameter_ranges[parameter_name]
+            del self._parameter_scales[parameter_name]
+
     def _prepare_partial_volumes(self):
         if len(self.models) > 1:
             self.partial_volume_names = [
@@ -89,7 +104,7 @@ class DistributedModel:
                 )
                 self._inverted_parameter_map[(None, partial_volume_name)] = \
                     partial_volume_name
-    
+
     def _prepare_parameter_links(self):
         for i, parameter_function in enumerate(self.parameter_links):
             parameter_model, parameter_name, parameter_function, arguments = \
@@ -109,7 +124,7 @@ class DistributedModel:
 
             del self._parameter_ranges[parameter_name]
             del self._parameter_scales[parameter_name]
-    
+
     def add_linked_parameters_to_parameters(self, parameters):
         if len(self.parameter_links) == 0:
             return parameters
@@ -135,7 +150,7 @@ class DistributedModel:
             else:
                 parameters[parameter_name] = parameter_function()
         return parameters
-    
+
     @property
     def parameter_ranges(self):
         return self._parameter_ranges.copy()
@@ -144,15 +159,12 @@ class DistributedModel:
     def parameter_scales(self):
         return self._parameter_scales.copy()
 
-
     def __call__(self, acquisition_scheme, **kwargs):
-        if (isinstance(self.distribution, SD1Watson) or 
-            isinstance(self.distribution, SD2Bingham)
-        ):
+        if (isinstance(self.distribution, SD1Watson) or
+                isinstance(self.distribution, SD2Bingham)):
             return self.sh_convolved_model(acquisition_scheme, **kwargs)
         elif isinstance(self.distribution, DD1GammaDistribution):
-            msg = "Gamma distribution not yet implemented in DistributedModel"
-            msg += ". Use the implementations in dispersed_models module."
+            return self.gamma_convolved_model(acquisition_scheme, **kwargs)
         else:
             msg = "Unknown distribution."
             raise ValueError(msg)
@@ -162,7 +174,7 @@ class DistributedModel:
         kwargs = self.add_linked_parameters_to_parameters(
             kwargs
         )
-        
+
         distribution_parameters = {}
         for parameter in self.distribution.parameter_ranges:
             parameter_name = self._inverted_parameter_map[
@@ -172,15 +184,14 @@ class DistributedModel:
                 parameter_name)
         sh_distribution = self.distribution.spherical_harmonics_representation(
             **distribution_parameters)
-        
-        
+
         if len(self.models) > 1:
             partial_volumes = [
                 kwargs[p] for p in self.partial_volume_names
             ]
         else:
             partial_volumes = []
-        
+
         remaining_volume_fraction = 1.
         for model_name, model, partial_volume in zip(
             self.model_names, self.models,
@@ -194,7 +205,7 @@ class DistributedModel:
                 parameters[parameter] = kwargs.get(
                     parameter_name
                 )
-            
+
             shell_indices = acquisition_scheme.shell_indices
             unique_dwi_indices = acquisition_scheme.unique_dwi_indices
             E = np.ones(acquisition_scheme.number_of_measurements)
@@ -211,19 +222,70 @@ class DistributedModel:
                 # recover signal values from watson-convolved spherical harmonics
                 E[shell_mask] = np.dot(sh_mat[:, :len(E_dispersed_sh)],
                                        E_dispersed_sh)
-                
+
             if partial_volume is not None:
                 volume_fraction = remaining_volume_fraction * partial_volume
                 remaining_volume_fraction = remaining_volume_fraction - volume_fraction
             else:
                 volume_fraction = remaining_volume_fraction
-    
+
             values = (
                 values +
                 volume_fraction * E
             )
         return values
 
+    def gamma_convolved_model(self, acquisition_scheme, **kwargs):
+        kwargs = self.add_linked_parameters_to_parameters(
+            kwargs
+        )
+
+        distribution_parameters = {}
+        for parameter in self.distribution.parameter_ranges:
+            parameter_name = self._inverted_parameter_map[
+                (self.distribution, parameter)
+            ]
+            distribution_parameters[parameter] = kwargs.get(
+                parameter_name)
+        radii, P_radii = self.distribution(**distribution_parameters)
+        values = np.empty(
+            (len(radii),
+             acquisition_scheme.number_of_measurements))
+
+        if len(self.models) > 1:
+            partial_volumes = [
+                kwargs[p] for p in self.partial_volume_names
+            ]
+        else:
+            partial_volumes = []
+
+        remaining_volume_fraction = 1.
+        for model_name, model, partial_volume in zip(
+            self.model_names, self.models,
+            chain(partial_volumes, [None])
+        ):
+            parameters = {}
+            for parameter in model.parameter_ranges:
+                parameter_name = self._inverted_parameter_map[
+                    (model, parameter)
+                ]
+                parameters[parameter] = kwargs.get(
+                    parameter_name
+                )
+            if partial_volume is not None:
+                volume_fraction = remaining_volume_fraction * partial_volume
+                remaining_volume_fraction = remaining_volume_fraction - volume_fraction
+            else:
+                volume_fraction = remaining_volume_fraction
+
+            for i, radius in enumerate(radii):
+                parameters['diameter'] = radius * 2
+                values[i] = (
+                    P_radii[i] * volume_fraction *
+                    model(acquisition_scheme, **parameters)
+                )
+        values = np.trapz(values, x=radii, axis=0)
+        return values
 
     def fod(self, vertices, **kwargs):
         distribution_parameters = {}
@@ -241,7 +303,7 @@ class SD1WatsonDistributed(DistributedModel):
     def __init__(self, models, parameter_links=[]):
         self.models = models
         self._check_for_double_model_class_instances()
-        self._check_for_distributable_models()
+        self._check_for_dispersable_models()
 
         self.parameter_links = parameter_links
         self.distribution = SD1Watson()
@@ -259,7 +321,7 @@ class SD2BinghamDistributed(DistributedModel):
     def __init__(self, models, parameter_links=[]):
         self.models = models
         self._check_for_double_model_class_instances()
-        self._check_for_distributable_models()
+        self._check_for_dispersable_models()
 
         self.parameter_links = parameter_links
         self.distribution = SD2Bingham()
@@ -268,5 +330,23 @@ class SD2BinghamDistributed(DistributedModel):
         _models_and_distribution.append(self.distribution)
         self._prepare_parameters(_models_and_distribution)
         self._delete_models_mu_from_parameters()
+        self._prepare_partial_volumes()
+        self._prepare_parameter_links()
+
+
+class DD1GammaDistributed(DistributedModel):
+
+    def __init__(self, models, parameter_links=[]):
+        self.models = models
+        self._check_for_double_model_class_instances()
+        self._check_for_distributable_models()
+
+        self.parameter_links = parameter_links
+        self.distribution = DD1GammaDistribution()
+
+        _models_and_distribution = list(self.models)
+        _models_and_distribution.append(self.distribution)
+        self._prepare_parameters(_models_and_distribution)
+        self._delete_models_diameter_from_parameters()
         self._prepare_partial_volumes()
         self._prepare_parameter_links()
