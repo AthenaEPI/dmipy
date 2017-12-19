@@ -229,13 +229,11 @@ class DistributedModel:
             else:
                 volume_fraction = remaining_volume_fraction
 
-            values = (
-                values +
-                volume_fraction * E
-            )
+            values = values + volume_fraction * E
         return values
 
     def gamma_convolved_model(self, acquisition_scheme, **kwargs):
+        values = 0.
         kwargs = self.add_linked_parameters_to_parameters(
             kwargs
         )
@@ -248,9 +246,6 @@ class DistributedModel:
             distribution_parameters[parameter] = kwargs.get(
                 parameter_name)
         radii, P_radii = self.distribution(**distribution_parameters)
-        values = np.empty(
-            (len(radii),
-             acquisition_scheme.number_of_measurements))
 
         if len(self.models) > 1:
             partial_volumes = [
@@ -272,19 +267,24 @@ class DistributedModel:
                 parameters[parameter] = kwargs.get(
                     parameter_name
                 )
+            E = np.empty(
+                (len(radii),
+                 acquisition_scheme.number_of_measurements))
+            for i, radius in enumerate(radii):
+                parameters['diameter'] = radius * 2
+                E[i] = (
+                    P_radii[i] *
+                    model(acquisition_scheme, **parameters)
+                )
+            E = np.trapz(E, x=radii, axis=0)
+
             if partial_volume is not None:
                 volume_fraction = remaining_volume_fraction * partial_volume
                 remaining_volume_fraction = remaining_volume_fraction - volume_fraction
             else:
                 volume_fraction = remaining_volume_fraction
 
-            for i, radius in enumerate(radii):
-                parameters['diameter'] = radius * 2
-                values[i] = (
-                    P_radii[i] * volume_fraction *
-                    model(acquisition_scheme, **parameters)
-                )
-        values = np.trapz(values, x=radii, axis=0)
+            values = values + volume_fraction * E
         return values
 
     def fod(self, vertices, **kwargs):
