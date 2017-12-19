@@ -26,7 +26,7 @@ class MipyAcquisitionScheme:
     """
 
     def __init__(self, bvalues, gradient_directions, qvalues,
-                 gradient_strengths, delta, Delta,
+                 gradient_strengths, delta, Delta, TE,
                  min_b_shell_distance, b0_threshold):
         self.min_b_shell_distance = min_b_shell_distance
         self.b0_threshold = b0_threshold
@@ -39,11 +39,15 @@ class MipyAcquisitionScheme:
         self.gradient_strengths = gradient_strengths
         self.delta = delta
         self.Delta = Delta
+        self.TE = TE
         self.tau = Delta - delta / 3.
         # if there are more then 1 measurement
         if self.number_of_measurements > 1:
             # we check if there are multiple unique delta-Delta combinations
-            deltas = np.c_[self.delta, self.Delta]
+            if self.TE is not None:
+                deltas = np.c_[self.delta, self.Delta, self.TE]
+            else:
+                deltas = np.c_[self.delta, self.Delta]
             unique_deltas = np.unique(deltas, axis=0)
             self.shell_indices = np.zeros(len(bvalues), dtype=int)
             self.shell_bvalues = []
@@ -63,8 +67,8 @@ class MipyAcquisitionScheme:
                 self.shell_bvalues.append(shell_bvalues_)
                 max_index = max(self.shell_indices + 1)
             self.shell_bvalues = np.array(self.shell_bvalues).ravel()
-
             self.shell_b0_mask = self.shell_bvalues <= b0_threshold
+
             first_indices = [
                 np.argmax(self.shell_indices == ind)
                 for ind in np.arange(self.shell_indices.max() + 1)]
@@ -73,6 +77,9 @@ class MipyAcquisitionScheme:
                 self.gradient_strengths[first_indices])
             self.shell_delta = self.delta[first_indices]
             self.shell_Delta = self.Delta[first_indices]
+            self.shell_TE = self.TE
+            if self.TE is not None:
+                self.shell_TE = self.TE[first_indices]
         # if for some reason only one measurement is given (for testing)
         else:
             self.shell_bvalues = self.bvalues
@@ -85,6 +92,7 @@ class MipyAcquisitionScheme:
             self.shell_gradient_strengths = self.gradient_strengths
             self.shell_delta = self.delta
             self.shell_Delta = self.Delta
+            self.shell_TE = TE
 
         # calculates observation matrices to convert spherical harmonic
         # coefficients to the positions on the sphere for every shell
@@ -119,14 +127,23 @@ class MipyAcquisitionScheme:
         print "number of b0 measurements: {}".format(self.number_of_b0s)
         print "number of DWI shells: {}\n".format(np.sum(~self.shell_b0_mask))
         upper_line = "shell_index |# of DWIs |bvalue [s/mm^2] "
-        upper_line += "|gradient strength [mT/m] |delta [ms] |Delta[ms]"
+        upper_line += "|gradient strength [mT/m] |delta [ms] |Delta[ms] |TE[ms]"
         print upper_line
         for ind in np.arange(max(self.shell_indices) + 1):
-            print "{: <12}|{: <10}|{: <16}|{: <25}|{: <11}|{: <5}".format(
-                str(ind), sum(self.shell_indices == ind),
-                int(self.shell_bvalues[ind] / 1e6),
-                int(1e3 * self.shell_gradient_strengths[ind]),
-                self.shell_delta[ind] * 1e3, self.shell_Delta[ind] * 1e3)
+            if self.shell_TE is None:
+                print "{: <12}|{: <10}|{: <16}|{: <25}|{: <11}|{: <10}|{: <5}".format(
+                    str(ind), sum(self.shell_indices == ind),
+                    int(self.shell_bvalues[ind] / 1e6),
+                    int(1e3 * self.shell_gradient_strengths[ind]),
+                    self.shell_delta[ind] * 1e3, self.shell_Delta[ind] * 1e3,
+                    'N/A')
+            else:
+                print "{: <12}|{: <10}|{: <16}|{: <25}|{: <11}|{: <10}|{: <5}".format(
+                    str(ind), sum(self.shell_indices == ind),
+                    int(self.shell_bvalues[ind] / 1e6),
+                    int(1e3 * self.shell_gradient_strengths[ind]),
+                    self.shell_delta[ind] * 1e3, self.shell_Delta[ind] * 1e3,
+                    self.shell_TE[ind] * 1e3)
 
     def visualise_acquisition_G_Delta_rainbow(
             self,
@@ -230,7 +247,7 @@ class SimpleAcquisitionSchemeRH:
 
 
 def acquisition_scheme_from_bvalues(
-        bvalues, gradient_directions, delta, Delta,
+        bvalues, gradient_directions, delta, Delta, TE=None,
         min_b_shell_distance=50e6, b0_threshold=10e6):
     r"""
     Creates an acquisition scheme object from bvalues, gradient directions,
@@ -262,17 +279,18 @@ def acquisition_scheme_from_bvalues(
         contains all information of the acquisition scheme to be used in any
         microstructure model.
     """
-    delta_, Delta_ = unify_length_reference_delta_Delta(bvalues, delta, Delta)
-    check_acquisition_scheme(bvalues, gradient_directions, delta_, Delta_)
+    delta_, Delta_, TE_ = unify_length_reference_delta_Delta(
+        bvalues, delta, Delta, TE)
+    check_acquisition_scheme(bvalues, gradient_directions, delta_, Delta_, TE_)
     qvalues = q_from_b(bvalues, delta_, Delta_)
     gradient_strengths = g_from_b(bvalues, delta_, Delta_)
     return MipyAcquisitionScheme(bvalues, gradient_directions, qvalues,
-                                 gradient_strengths, delta_, Delta_,
+                                 gradient_strengths, delta_, Delta_, TE_,
                                  min_b_shell_distance, b0_threshold)
 
 
 def acquisition_scheme_from_qvalues(
-        qvalues, gradient_directions, delta, Delta,
+        qvalues, gradient_directions, delta, Delta, TE=None,
         min_b_shell_distance=50e6, b0_threshold=10e6):
     r"""
     Creates an acquisition scheme object from qvalues, gradient directions,
@@ -304,17 +322,18 @@ def acquisition_scheme_from_qvalues(
         contains all information of the acquisition scheme to be used in any
         microstructure model.
     """
-    delta_, Delta_ = unify_length_reference_delta_Delta(qvalues, delta, Delta)
-    check_acquisition_scheme(qvalues, gradient_directions, delta_, Delta_)
+    delta_, Delta_, TE_ = unify_length_reference_delta_Delta(
+        qvalues, delta, Delta, TE)
+    check_acquisition_scheme(qvalues, gradient_directions, delta_, Delta_, TE_)
     bvalues = b_from_q(qvalues, delta, Delta)
     gradient_strengths = g_from_q(qvalues, delta)
     return MipyAcquisitionScheme(bvalues, gradient_directions, qvalues,
-                                 gradient_strengths, delta_, Delta_,
+                                 gradient_strengths, delta_, Delta_, TE_,
                                  min_b_shell_distance, b0_threshold)
 
 
 def acquisition_scheme_from_gradient_strengths(
-        gradient_strengths, gradient_directions, delta, Delta,
+        gradient_strengths, gradient_directions, delta, Delta, TE=None,
         min_b_shell_distance=50e6, b0_threshold=10e6):
     r"""
     Creates an acquisition scheme object from gradient strengths, gradient
@@ -346,18 +365,18 @@ def acquisition_scheme_from_gradient_strengths(
         contains all information of the acquisition scheme to be used in any
         microstructure model.
     """
-    delta_, Delta_ = unify_length_reference_delta_Delta(gradient_strengths,
-                                                        delta, Delta)
+    delta_, Delta_, TE_ = unify_length_reference_delta_Delta(
+        gradient_strengths, delta, Delta, TE)
     check_acquisition_scheme(gradient_strengths, gradient_directions,
-                             delta_, Delta_)
+                             delta_, Delta_, TE_)
     bvalues = b_from_g(gradient_strengths, delta, Delta)
     qvalues = q_from_g(gradient_strengths, delta)
     return MipyAcquisitionScheme(bvalues, gradient_directions, qvalues,
-                                 gradient_strengths, delta_, Delta_,
+                                 gradient_strengths, delta_, Delta_, TE_,
                                  min_b_shell_distance, b0_threshold)
 
 
-def unify_length_reference_delta_Delta(reference_array, delta, Delta):
+def unify_length_reference_delta_Delta(reference_array, delta, Delta, TE):
     """
     If either delta or Delta are given as float, makes them an array the same
     size as the reference array.
@@ -370,7 +389,13 @@ def unify_length_reference_delta_Delta(reference_array, delta, Delta):
         Delta_ = np.tile(Delta, len(reference_array))
     else:
         Delta_ = Delta.copy()
-    return delta_, Delta_
+    if TE is None:
+        TE_ = None
+    elif isinstance(TE, float):
+        TE_ = np.tile(TE, len(reference_array))
+    else:
+        TE_ = TE.copy()
+    return delta_, Delta_, TE_
 
 
 def calculate_shell_bvalues_and_indices(bvalues, max_distance=50e6):
@@ -415,7 +440,7 @@ def calculate_shell_bvalues_and_indices(bvalues, max_distance=50e6):
 
 
 def check_acquisition_scheme(
-        bqg_values, gradient_directions, delta, Delta):
+        bqg_values, gradient_directions, delta, Delta, TE):
     "function to check the validity of the input parameters."
     if bqg_values.ndim > 1:
         msg = "b/q/G input must be a one-dimensional array. "
@@ -460,6 +485,11 @@ def check_acquisition_scheme(
             abs(np.linalg.norm(gradient_directions, axis=1) - 1.) < 0.001):
         msg = "gradient orientations n are not unit vectors. "
         raise ValueError(msg)
+    if TE is not None and len(TE) != len(bqg_values):
+        msg = "If given, TE must be same length b/q/G input."
+        msg += "Currently their lengths are {} and {}.".format(
+            len(TE), len(gradient_directions)
+        )
 
 
 def gtab_dipy2mipy(dipy_gradient_table):
