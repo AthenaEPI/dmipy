@@ -348,7 +348,7 @@ class DD1GammaDistribution(MicrostructureModel):
     }
     spherical_mean = False
 
-    def __init__(self, alpha=None, beta=None, Nsteps=35):
+    def __init__(self, alpha=None, beta=None, Nsteps=30):
         self.alpha = alpha
         self.beta = beta
         self.Nsteps = Nsteps

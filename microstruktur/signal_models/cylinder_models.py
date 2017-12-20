@@ -84,7 +84,7 @@ class C1Stick(MicrostructureModel):
         lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
         mu = utils.unitsphere2cart_1d(mu)
-        E_stick = attenuation_stick(bvals, lambda_par_, n, mu)
+        E_stick = attenuation_parallel_stick(bvals, lambda_par_, n, mu)
         return E_stick
 
     def rotational_harmonics_representation(self, bvalue, rh_order=14, **kwargs):
@@ -232,12 +232,11 @@ class C2CylinderSodermanApproximation(MicrostructureModel):
         """
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
-        mu = kwargs.get('mu', self.mu)
         simple_acq_scheme_rh.bvalues = np.full(samples, bvalue)
         simple_acq_scheme_rh.delta = np.full(samples, delta)
         simple_acq_scheme_rh.Delta = np.full(samples, Delta)
         E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.],
-            diameter=diameter, lambda_par=lambda_par)
+                           diameter=diameter, lambda_par=lambda_par)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
 
@@ -406,7 +405,7 @@ class C3CylinderCallaghanApproximation(MicrostructureModel):
         simple_acq_scheme_rh.delta = np.full(samples, delta)
         simple_acq_scheme_rh.Delta = np.full(samples, Delta)
         E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.],
-            diameter=diameter, lambda_par=lambda_par)
+                           diameter=diameter, lambda_par=lambda_par)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
 
@@ -446,7 +445,7 @@ class C4CylinderGaussianPhaseApproximation(MicrostructureModel):
         'diameter': DIAMETER_SCALING
     }
     spherical_mean = False
-    CYLINDER_TRASCENDENTAL_ROOTS = np.sort(special.jnp_zeros(1, 1000))
+    CYLINDER_TRASCENDENTAL_ROOTS = np.sort(special.jnp_zeros(1, 100))
 
     def __init__(
         self,
@@ -466,27 +465,9 @@ class C4CylinderGaussianPhaseApproximation(MicrostructureModel):
     ):
         D = self.diffusion_perpendicular
         gamma = self.gyromagnetic_ratio
-        radius = diameter / 2
-
-        first_factor = -2 * (gradient_strength * gamma) ** 2
-        alpha = self.CYLINDER_TRASCENDENTAL_ROOTS / radius
-        alpha2 = alpha ** 2
-        alpha2D = alpha2 * D
-
-        summands = (
-            2 * alpha2D * delta - 2 +
-            2 * np.exp(-alpha2D * delta) +
-            2 * np.exp(-alpha2D * Delta) -
-            np.exp(-alpha2D * (Delta - delta)) -
-            np.exp(-alpha2D * (Delta + delta))
-        ) / (D ** 2 * alpha ** 6 * (radius ** 2 * alpha2 - 1))
-
-        E = np.exp(
-            first_factor *
-            summands.sum()
-        )
-
-        return E
+        return attenuation_perpendicular_gaussian_phase(
+            diameter, gradient_strength, delta, Delta,
+            D, gamma, self.CYLINDER_TRASCENDENTAL_ROOTS)
 
     def __call__(self, acquisition_scheme, **kwargs):
         r'''
@@ -508,31 +489,22 @@ class C4CylinderGaussianPhaseApproximation(MicrostructureModel):
         Delta = acquisition_scheme.Delta
 
         diameter = kwargs.get('diameter', self.diameter)
-        lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
         mu = utils.unitsphere2cart_1d(mu)
         mu_perpendicular_plane = np.eye(3) - np.outer(mu, mu)
-        magnitude_parallel = np.dot(n, mu)
         magnitude_perpendicular = np.linalg.norm(
             np.dot(mu_perpendicular_plane, n.T),
             axis=0
         )
-        E_parallel = np.exp(-bvals * lambda_par_ * magnitude_parallel ** 2)
+        E_parallel = attenuation_parallel_stick(bvals, lambda_par, n, mu)
         E_perpendicular = np.ones_like(g)
         g_perp = g * magnitude_perpendicular
 
-        # select unique delta, Delta combinations
-        deltas = np.c_[delta, Delta]
-        temp = np.ascontiguousarray(deltas).view(
-            np.dtype((np.void, deltas.dtype.itemsize * deltas.shape[1]))
-        )
-        deltas_unique = np.unique(temp).view(deltas.dtype).reshape(
-            -1, deltas.shape[1]
-        )
-
         g_nonzero = g_perp > 0
         # for every unique combination get the perpendicular attenuation
-        for delta_, Delta_ in deltas_unique:
+        for delta_, Delta_ in zip(acquisition_scheme.shell_delta,
+                                  acquisition_scheme.shell_Delta):
             mask = np.all([g_nonzero, delta == delta_, Delta == Delta_],
                           axis=0)
             E_perpendicular[mask] = self.perpendicular_attenuation(
@@ -569,14 +541,37 @@ class C4CylinderGaussianPhaseApproximation(MicrostructureModel):
         simple_acq_scheme_rh.delta = np.full(samples, delta)
         simple_acq_scheme_rh.Delta = np.full(samples, Delta)
         E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.],
-            diameter=diameter, lambda_par=lambda_par)
+                           diameter=diameter, lambda_par=lambda_par)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
 
 
-def attenuation_stick(bvals, lambda_par, n, mu):
+def attenuation_parallel_stick(bvals, lambda_par, n, mu):
     return np.exp(-bvals * lambda_par * np.dot(n, mu) ** 2)
 
 
+def attenuation_perpendicular_gaussian_phase(
+        diameter, gradient_strength, delta, Delta,
+        D, gamma, CYLINDER_TRASCENDENTAL_ROOTS):
+    radius = diameter / 2.
+    first_factor = -2 * (gradient_strength * gamma) ** 2
+    alpha = CYLINDER_TRASCENDENTAL_ROOTS / radius
+    alpha2 = alpha ** 2
+    alpha2D = alpha2 * D
+
+    summands = (
+        2 * alpha2D * delta - 2 +
+        2 * np.exp(-alpha2D * delta) +
+        2 * np.exp(-alpha2D * Delta) -
+        np.exp(-alpha2D * (Delta - delta)) -
+        np.exp(-alpha2D * (Delta + delta))
+    ) / (D ** 2 * alpha ** 6 * (radius ** 2 * alpha2 - 1))
+
+    E = np.exp(first_factor * summands.sum())
+    return E
+
+
 if have_numba:
-    attenuation_stick = numba.njit()(attenuation_stick)
+    attenuation_parallel_stick = numba.njit()(attenuation_parallel_stick)
+    attenuation_perpendicular_gaussian_phase = numba.njit()(
+        attenuation_perpendicular_gaussian_phase)
