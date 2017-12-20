@@ -18,6 +18,18 @@ def wu_minn_hcp_coronal_slice():
     return nib.load(join(DATA_PATH, data_name)).get_data()
 
 
+def duval_cat_spinal_cord_2d():
+    msg = "This data was used by Duval et al. 'Validation of quantitative MRI "
+    msg += "metrics using full slice histology with automatic axon "
+    msg += "segmentation', ISMRM 2016. Reference at "
+    msg += "http://indexsmart.mirasmart.com/ISMRM2016/PDFfiles/0928.html"
+    print msg
+
+    data_name = "tanguy_cat_spinal_cord/tanguy_spinal_cord_2D.nii.gz"
+    data = nib.load(join(DATA_PATH, data_name)).get_data()
+    return data
+
+
 def synthetic_camino_data_parallel():
     """The parallel data was generated using the Camino Monte-Carlo
     Diffusion Simulator. See http://camino.cs.ucl.ac.uk/.
