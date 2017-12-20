@@ -408,7 +408,7 @@ class MicrostructureModel:
         if data.ndim == 1:
             fitted_parameters = np.squeeze(fitted_parameters)
 
-        return FittedMultiCompartmentMicrostructureModel(
+        return FittedMultiCompartmentModel(
             self, S0, mask, fitted_parameters)
 
     def fit_brute2fine(self, data, x0_vector, Ns):
@@ -566,7 +566,7 @@ class MicrostructureModel:
         return np.array(fe.value).squeeze()
 
 
-class MultiCompartmentMicrostructureModel(MicrostructureModel):
+class MultiCompartmentModel(MicrostructureModel):
     r'''
     Class for Partial Volume-Combined Microstrukture Models.
     Given a set of models :math:`m_1...m_N`, and the partial volume ratios
@@ -822,7 +822,7 @@ class MultiCompartmentMicrostructureModel(MicrostructureModel):
         return values
 
 
-class FittedMultiCompartmentMicrostructureModel:
+class FittedMultiCompartmentModel:
     def __init__(self, model, S0, mask, fitted_parameters_vector):
         self.model = model
         self.S0 = S0
