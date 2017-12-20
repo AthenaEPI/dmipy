@@ -196,17 +196,22 @@ def rotation_matrix_100_to_theta_phi_psi(theta, phi, psi):
     return np.dot(R_100_to_theta_phi, R_around_100)
 
 
-def T1_tortuosity(vf_intra, vf_extra, lambda_par):
+def T1_tortuosity(lambda_par, vf_intra, vf_extra=None):
     """Tortuosity model for perpendicular extra-axonal diffusivity [1, 2, 3].
+    If vf_extra=None, then vf_intra must be a nested volume fraction, in the
+    sense that E_bundle = vf_intra * E_intra + (1 - vf_intra) * E_extra, with
+    vf_intra + (1 - vf_intra) = 1.
+    If both vf_intra and vf_extra are given, then they have be be normalized
+    fractions, in the sense that vf_intra + vf_extra <= 1.
 
     Parameters
     ----------
+    lambda_par : float,
+        parallel diffusivity.
     vf_intra : float,
         intra-axonal volume fraction [0, 1].
-    vf_extra : float,
+    vf_extra : float, (optional)
         extra-axonal volume fraction [0, 1].
-    lambda_par : float,
-        parallel diffusivity.
 
     Returns
     -------
@@ -225,39 +230,11 @@ def T1_tortuosity(vf_intra, vf_extra, lambda_par):
     .. [3] Szafer et al. "Theoretical model for water diffusion in tissues."
         Magnetic resonance in medicine 33.5 (1995): 697-712.
     """
-    fraction_intra = vf_intra / (vf_intra + vf_extra)
-    lambda_perp = (1 - fraction_intra) * lambda_par
-    return lambda_perp
-
-
-def T1_nested_tortuosity(vf_intra, lambda_par):
-    """Tortuosity model for perpendicular extra-axonal diffusivity [1, 2, 3].
-
-    Parameters
-    ----------
-    vf_intra : float,
-        intra-axonal volume fraction [0, 1].
-    lambda_par : float,
-        parallel diffusivity.
-
-    Returns
-    -------
-    lambda_perp : float,
-        Rotation matrix.
-
-    References
-    -------
-    .. [1] Bruggeman, Von DAG. "Berechnung verschiedener physikalischer
-        Konstanten von heterogenen Substanzen. I. Dielektrizitätskonstanten und
-        Leitfähigkeiten der Mischkörper aus isotropen Substanzen." Annalen der
-        physik 416.7 (1935): 636-664.
-    .. [2] Sen et al. "A self-similar model for sedimentary rocks with
-        application to the dielectric constant of fused glass beads."
-        Geophysics 46.5 (1981): 781-795.
-    .. [3] Szafer et al. "Theoretical model for water diffusion in tissues."
-        Magnetic resonance in medicine 33.5 (1995): 697-712.
-    """
-    lambda_perp = (1 - vf_intra) * lambda_par
+    if vf_extra is None:
+        lambda_perp = (1 - vf_intra) * lambda_par
+    else:
+        fraction_intra = vf_intra / (vf_intra + vf_extra)
+        lambda_perp = (1 - fraction_intra) * lambda_par
     return lambda_perp
 
 
