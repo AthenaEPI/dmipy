@@ -4,6 +4,7 @@ import nibabel as nib
 import numpy as np
 from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
+from microstruktur.data import saved_acquisition_schemes
 DATA_PATH = pkg_resources.resource_filename(
     'microstruktur', 'data/'
 )
@@ -15,7 +16,10 @@ def wu_minn_hcp_coronal_slice():
     msg += "Connectome Project. View terms of use at "
     msg += "https://store.humanconnectome.org/data/data-use-terms/open-access.php"
     print msg
-    return nib.load(join(DATA_PATH, data_name)).get_data()
+
+    data = nib.load(join(DATA_PATH, data_name)).get_data()
+    scheme = saved_acquisition_schemes.wu_minn_hcp_acquisition_scheme()
+    return scheme, data
 
 
 def duval_cat_spinal_cord_2d():
@@ -27,7 +31,8 @@ def duval_cat_spinal_cord_2d():
 
     data_name = "tanguy_cat_spinal_cord/tanguy_spinal_cord_2D.nii.gz"
     data = nib.load(join(DATA_PATH, data_name)).get_data()
-    return data
+    scheme = saved_acquisition_schemes.duval_cat_spinal_cord_2d_acquisition_scheme()
+    return scheme, data
 
 
 def synthetic_camino_data_parallel():
@@ -53,7 +58,9 @@ def synthetic_camino_data_parallel():
             self.fractions = fractions
             self.diffusivities = diffusivity
             self.signal_attenuation = data
-    return CaminoData()
+
+    scheme = saved_acquisition_schemes.wu_minn_hcp_acquisition_scheme()
+    return scheme, CaminoData()
 
 
 def synthetic_camino_data_dispersed():
@@ -106,7 +113,9 @@ def synthetic_camino_data_dispersed():
             self.signal_attenuation = data
             self.kappa = kappas
             self.beta = betas
-    return DispersedCaminoData()
+
+    scheme = saved_acquisition_schemes.wu_minn_hcp_acquisition_scheme()
+    return scheme, DispersedCaminoData()
 
 
 def visualize_correlation_camino_and_estimated_fractions(
