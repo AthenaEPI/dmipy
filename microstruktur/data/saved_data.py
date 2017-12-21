@@ -29,8 +29,31 @@ def duval_cat_spinal_cord_2d():
     msg += "http://indexsmart.mirasmart.com/ISMRM2016/PDFfiles/0928.html"
     print msg
 
-    data_name = "tanguy_cat_spinal_cord/tanguy_spinal_cord_2D.nii.gz"
-    data = nib.load(join(DATA_PATH, data_name)).get_data()
+    data_folder = DATA_PATH + "tanguy_cat_spinal_cord/"
+
+    class Histology:
+        def __init__(self):
+            self._1_axonEquivDiameter = nib.load(
+                data_folder + '1_axonEquivDiameter.nii').get_data()
+            self._2_axonEquivDiameter_std = nib.load(
+                data_folder + '2_axonEquivDiameter_std.nii').get_data()
+            self._3_axonEquivDiameter_axonvolumeCorrected = nib.load(
+                data_folder + '3_axonEquivDiameter_axonvolumeCorrected.nii').get_data()
+            self._4_fr = nib.load(data_folder + '4_fr.nii').get_data()
+            self._5_MyelinVolumeFraction = nib.load(
+                data_folder + '5_MyelinVolumeFraction.nii').get_data()
+            self._6_gRatio = nib.load(data_folder + '6_gRatio.nii').get_data()
+            self._7_Number_axons = nib.load(
+                data_folder + '7_Number_axons.nii').get_data()
+
+    class DuvalSpinalCordData2D:
+        def __init__(self):
+            data_name = "tanguy_spinal_cord_2D.nii.gz"
+            self.signal = nib.load(data_folder + data_name).get_data()
+            self.histology = Histology()
+            self.mask = (self.histology._4_fr > 0)[..., None]
+
+    data = DuvalSpinalCordData2D()
     scheme = saved_acquisition_schemes.duval_cat_spinal_cord_2d_acquisition_scheme()
     return scheme, data
 
