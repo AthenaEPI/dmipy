@@ -144,7 +144,7 @@ class C2CylinderSodermanApproximation(MicrostructureModel):
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
         'lambda_par': (.1, 3),
-        'diameter': (1e-10, 50e-6)
+        'diameter': (1e-2, 20)
     }
     _parameter_scales = {
         'mu': np.r_[1., 1.],
@@ -269,7 +269,7 @@ class C3CylinderCallaghanApproximation(MicrostructureModel):
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
         'lambda_par': (.1, 3),
-        'diameter': (1e-10, 50e-6)
+        'diameter': (1e-2, 20)
     }
     _parameter_scales = {
         'mu': np.r_[1., 1.],
@@ -437,7 +437,7 @@ class C4CylinderGaussianPhaseApproximation(MicrostructureModel):
     _parameter_ranges = {
         'mu': ([0, -np.pi], [np.pi, np.pi]),
         'lambda_par': (.1, 3),
-        'diameter': (1e-10, 50e-6)
+        'diameter': (1e-2, 20)
     }
     _parameter_scales = {
         'mu': np.r_[1., 1.],
