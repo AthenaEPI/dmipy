@@ -23,7 +23,7 @@ Mipy stands apart from other packages is the complete freedom the user has to de
 - dipy
 - pathos (optional for multi-core processing)
 - cvxpy (optional for MIX optimization)
-- numba (optional for faster function compilation)
+- numba (optional for faster functions)
 
 ## Getting Started:
 To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
