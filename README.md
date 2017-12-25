@@ -51,8 +51,8 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - Watson/Bingham dispersed AxCaliber
 - ActiveAx [Alexander et al. 2010]
 ### Crossing Bundle Microstructure Models
-- Using Dipy's CSD as crossing orientation initial guess.
-- Using Brute Force optimization.
+- Using Brute Force optimization
+- Using Dipy's CSD as crossing orientation initial guess
 - [Using Microstructure Imaging of Crossing (MIX) [Farooq et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_mix_microstructure_imaging_in_crossings.ipynb)
 - [Multi-Compartment Spherical Mean Technique [Kaden et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_multi_compartment_spherical_mean_technique.ipynb)
 ### Other Models
