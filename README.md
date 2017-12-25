@@ -23,6 +23,7 @@ Mipy stands apart from other packages is the complete freedom the user has to de
 - dipy
 - pathos (optional for multi-core processing)
 - cvxpy (optional for MIX optimization)
+- numba (optional for faster function compilation)
 
 ## Getting Started:
 To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
@@ -49,10 +50,11 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - AxCaliber with restricted extra-axonal diffusion [Burcaw et al. 2015]
 - ActiveAx [Alexander et al. 2010]
 ### Crossing Bundle Microstructure Models
-- [Microstructure Imaging of Crossing (MIX) [Farooq et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_mix_microstructure_imaging_in_crossings.ipynb)
+- Using Dipy's CSD as crossing orientation initial guess.
+- Using Brute Force optimization.
+- [Using Microstructure Imaging of Crossing (MIX) [Farooq et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_mix_microstructure_imaging_in_crossings.ipynb)
 - [Multi-Compartment Spherical Mean Technique [Kaden et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_multi_compartment_spherical_mean_technique.ipynb)
 ### Other Models
-- Free Water Elimination [Pasternak et al. 2009]
 - VERDICT tumor model [Panagiotaki et al. 2014]
 
 When public, use http://htmlpreview.github.io/ to replace ipynb with html files for better rendering.
