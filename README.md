@@ -46,10 +46,10 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - [Ball and Racket [Sotiropoulos et al. 2012]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_ball_and_racket.ipynb)
 - [NODDI-Watson [Zhang et al. 2012]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_noddi_watson.ipynb)
 - [NODDI-Bingham [Tariq et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_noddi_bingham.ipynb)
+- ActiveAx [Alexander et al. 2010]
 - [AxCaliber [Assaf et al. 2008]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_axcaliber.ipynb)
 - AxCaliber with restricted extra-axonal diffusion [Burcaw et al. 2015]
 - AxCaliber in presence of axon dispersion [unpublished but similar to Zhang at al. 2010]
-- ActiveAx [Alexander et al. 2010]
 ### Crossing Bundle Microstructure Models
 - Using Brute Force optimization
 - Using Dipy's CSD as crossing orientation initial guess
