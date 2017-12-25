@@ -48,7 +48,7 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - [NODDI-Bingham [Tariq et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_noddi_bingham.ipynb)
 - [AxCaliber [Assaf et al. 2008]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_axcaliber.ipynb)
 - AxCaliber with restricted extra-axonal diffusion [Burcaw et al. 2015]
-- Watson/Bingham dispersed AxCaliber [unpublished but similar to Zhang at al. 2010]
+- AxCaliber in presence of axon dispersion [unpublished but similar to Zhang at al. 2010]
 - ActiveAx [Alexander et al. 2010]
 ### Crossing Bundle Microstructure Models
 - Using Brute Force optimization
