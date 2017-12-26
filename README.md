@@ -57,6 +57,6 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - [Multi-Compartment Spherical Mean Technique [Kaden et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_multi_compartment_spherical_mean_technique.ipynb)
 - MC-SMT with restricted extra-axonal diffusion [unpublished]
 ### Other Models
-- VERDICT tumor model [Panagiotaki et al. 2014]
+- [VERDICT tumor model [Panagiotaki et al. 2014]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_verdict.ipynb)
 
 When public, use http://htmlpreview.github.io/ to replace ipynb with html files for better rendering.
