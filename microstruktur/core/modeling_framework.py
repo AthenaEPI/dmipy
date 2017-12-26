@@ -5,7 +5,6 @@ Document Module
 from __future__ import division
 import pkg_resources
 from collections import OrderedDict
-from itertools import chain
 
 import numpy as np
 from time import time
@@ -230,21 +229,196 @@ class MicrostructureModel:
         else:
             return E_simulated
 
-    # def fod(self, vertices, model_parameters_array):
-    #     x0 = model_parameters_array
-    #     x0_at_least_2d = np.atleast_2d(x0)
-    #     x0_2d = x0_at_least_2d.reshape(-1, x0_at_least_2d.shape[-1])
-    #     fods_2d = np.empty(np.r_[x0_2d.shape[:-1], len(vertices)])
-    #     for i, x0_ in enumerate(x0_2d):
-    #         parameters = self.parameter_vector_to_parameters(x0_)
-    #         fods_2d[i] = self(vertices, quantity="FOD", **parameters)
-    #     fods = fods_2d.reshape(
-    #         np.r_[x0_at_least_2d.shape[:-1], len(vertices)])
 
-    #     if x0.ndim == 1:
-    #         return np.squeeze(fods)
-    #     else:
-    #         return fods
+class MultiCompartmentModel(MicrostructureModel):
+    r'''
+    Class for Partial Volume-Combined Microstrukture Models.
+    Given a set of models :math:`m_1...m_N`, and the partial volume ratios
+    math:`v_1...v_{N-1}`, the partial volume function is
+
+    .. math::
+        v_1 m_1 + (1 - v_1) v_2 m_2 + ... + (1 - v_1)...(1-v_{N-1}) m_N
+
+    Parameters
+    ----------
+    models : list of N MicrostructureModel instances,
+        the models to mix.
+    partial_volumes : array, shape(N - 1),
+        partial volume factors.
+    parameter_links : list of iterables (model, parameter name, link function,
+        argument list),
+        where model is a Microstruktur model, parameter name is a string
+        with the name of the parameter in that model that will be linked,
+        link function is a function returning the value of that parameter,
+        and argument list is a list of tuples (model, parameter name) where
+        those the parameters of those models will be used as arguments for the
+        link function. If the model is left as None, then the parameter comes
+        from the container partial volume mixing class.
+
+    '''
+
+    def __init__(
+        self, acquisition_scheme, models, partial_volumes=None,
+        parameter_links=[], optimise_partial_volumes=True
+    ):
+        self.scheme = acquisition_scheme
+        self.models = models
+        self.partial_volumes = partial_volumes
+        self.parameter_links = parameter_links
+        self.optimise_partial_volumes = optimise_partial_volumes
+
+        self._prepare_parameters()
+        self._prepare_partial_volumes()
+        self._prepare_parameter_links()
+        self._prepare_model_properties()
+        self._check_for_double_model_class_instances()
+        self._prepare_parameters_to_optimize()
+
+    def _prepare_parameters(self):
+        self.model_names = []
+        model_counts = {}
+
+        for model in self.models:
+            if model.__class__ not in model_counts:
+                model_counts[model.__class__] = 1
+            else:
+                model_counts[model.__class__] += 1
+
+            self.model_names.append(
+                '{}_{:d}_'.format(
+                    model.__class__.__name__,
+                    model_counts[model.__class__]
+                )
+            )
+
+        self._parameter_ranges = OrderedDict({
+            model_name + k: v
+            for model, model_name in zip(self.models, self.model_names)
+            for k, v in model.parameter_ranges.items()
+        })
+
+        self._parameter_scales = OrderedDict({
+            model_name + k: v
+            for model, model_name in zip(self.models, self.model_names)
+            for k, v in model.parameter_scales.items()
+        })
+
+        self._parameter_map = {
+            model_name + k: (model, k)
+            for model, model_name in zip(self.models, self.model_names)
+            for k in model.parameter_ranges
+        }
+
+        self._inverted_parameter_map = {
+            v: k for k, v in self._parameter_map.items()
+        }
+        self._parameter_cardinality = self.parameter_cardinality
+
+    def _prepare_partial_volumes(self):
+        if len(self.models) > 1:
+            if self.optimise_partial_volumes:
+                self.partial_volume_names = [
+                    'partial_volume_{:d}'.format(i)
+                    for i in range(len(self.models))
+                ]
+
+                for i, partial_volume_name in enumerate(self.partial_volume_names):
+                    self._parameter_ranges[partial_volume_name] = (0.01, .99)
+                    self._parameter_scales[partial_volume_name] = 1.
+                    # self.parameter_defaults[partial_volume_name] = (
+                    #     1 / (len(self.models) - i)
+                    # )
+                    self._parameter_map[partial_volume_name] = (
+                        None, partial_volume_name
+                    )
+                    self._inverted_parameter_map[(None, partial_volume_name)] = \
+                        partial_volume_name
+                    self._parameter_cardinality[partial_volume_name] = 1
+            else:
+                if self.partial_volumes is None:
+                    self.partial_volumes = np.array([
+                        1 / (len(self.models) - i)
+                        for i in range(len(self.models))
+                    ])
+
+    def _prepare_parameter_links(self):
+        for i, parameter_function in enumerate(self.parameter_links):
+            parameter_model, parameter_name, parameter_function, arguments = \
+                parameter_function
+
+            if (
+                (parameter_model, parameter_name)
+                not in self._inverted_parameter_map
+            ):
+                raise ValueError(
+                    "Parameter function {} doesn't exist".format(i)
+                )
+
+            parameter_name = self._inverted_parameter_map[
+                (parameter_model, parameter_name)
+            ]
+
+            del self._parameter_ranges[parameter_name]
+            # del self.parameter_defaults[parameter_name]
+            del self._parameter_cardinality[parameter_name]
+            del self._parameter_scales[parameter_name]
+
+    def _prepare_parameters_to_optimize(self):
+        self.optimized_parameters = OrderedDict({
+            k: True
+            for k, v in self.parameter_cardinality.items()
+        })
+
+    def _prepare_model_properties(self):
+        models_spherical_mean = [model.spherical_mean for model in self.models]
+        if len(np.unique(models_spherical_mean)) > 1:
+            msg = "Cannot mix spherical mean and non-spherical mean models. "
+            msg = "Current model selection is {}".format(self.models)
+            raise ValueError(msg)
+        self.spherical_mean = np.all(models_spherical_mean)
+        self.fod_available = False
+        for model in self.models:
+            try:
+                model.fod
+                self.fod_available = True
+            except AttributeError:
+                pass
+
+    def _check_for_double_model_class_instances(self):
+        if len(self.models) != len(np.unique(self.models)):
+            msg = "Each model in the multi-compartment model must be "
+            msg += "instantiated separately. For example, to make a model "
+            msg += "with two sticks, the models must be given as "
+            msg += "models = [stick1, stick2], not as "
+            msg += "models = [stick1, stick1]."
+            raise ValueError(msg)
+
+    def add_linked_parameters_to_parameters(self, parameters):
+        if len(self.parameter_links) == 0:
+            return parameters
+        parameters = parameters.copy()
+        for parameter in self.parameter_links:
+            parameter_model, parameter_name, parameter_function, arguments = \
+                parameter
+            parameter_name = self._inverted_parameter_map[
+                (parameter_model, parameter_name)
+            ]
+
+            if len(arguments) > 0:
+                argument_values = []
+                for argument in arguments:
+                    argument_name = self._inverted_parameter_map[argument]
+                    argument_values.append(parameters.get(
+                        argument_name  # ,
+                        # self.parameter_defaults[argument_name]
+                    ))
+
+                parameters[parameter_name] = parameter_function(
+                    *argument_values
+                )
+            else:
+                parameters[parameter_name] = parameter_function()
+        return parameters
 
     def fit(self, data, parameter_initial_guess=None, mask=None,
             solver='scipy', Ns=5, maxiter=300,
@@ -325,7 +499,8 @@ class MicrostructureModel:
             for TE_ in self.scheme.shell_TE:
                 TE_mask = self.scheme.TE == TE_
                 TE_b0_mask = np.all([self.scheme.b0_mask, TE_mask], axis=0)
-                S0[..., TE_mask] = np.mean(data_[..., TE_b0_mask], axis=-1)
+                S0[..., TE_mask] = np.mean(
+                    data_[..., TE_b0_mask], axis=-1)[..., None]
 
         if mask is None:
             mask = data_[..., 0] > 0
@@ -354,9 +529,9 @@ class MicrostructureModel:
             fitted_parameters_lin = [None] * N_voxels
             if number_of_processors is None:
                 number_of_processors = cpu_count()
-                pool = pp.ProcessPool(number_of_processors)
-                print ('Using parallel processing with {} workers.').format(
-                    cpu_count())
+            pool = pp.ProcessPool(number_of_processors)
+            print ('Using parallel processing with {} workers.').format(
+                number_of_processors)
         else:
             fitted_parameters_lin = np.empty(
                 np.r_[N_voxels, N_parameters], dtype=float)
@@ -564,204 +739,6 @@ class MicrostructureModel:
         prob = cvxpy.Problem(obj, constraints)
         prob.solve()
         return np.array(fe.value).squeeze()
-
-
-class MultiCompartmentModel(MicrostructureModel):
-    r'''
-    Class for Partial Volume-Combined Microstrukture Models.
-    Given a set of models :math:`m_1...m_N`, and the partial volume ratios
-    math:`v_1...v_{N-1}`, the partial volume function is
-
-    .. math::
-        v_1 m_1 + (1 - v_1) v_2 m_2 + ... + (1 - v_1)...(1-v_{N-1}) m_N
-
-    Parameters
-    ----------
-    models : list of N MicrostructureModel instances,
-        the models to mix.
-    partial_volumes : array, shape(N - 1),
-        partial volume factors.
-    parameter_links : list of iterables (model, parameter name, link function,
-        argument list),
-        where model is a Microstruktur model, parameter name is a string
-        with the name of the parameter in that model that will be linked,
-        link function is a function returning the value of that parameter,
-        and argument list is a list of tuples (model, parameter name) where
-        those the parameters of those models will be used as arguments for the
-        link function. If the model is left as None, then the parameter comes
-        from the container partial volume mixing class.
-
-    '''
-
-    def __init__(
-        self, acquisition_scheme, models, partial_volumes=None,
-        parameter_links=[], optimise_partial_volumes=True
-    ):
-        self.scheme = acquisition_scheme
-        self.models = models
-        self.partial_volumes = partial_volumes
-        self.parameter_links = parameter_links
-        self.optimise_partial_volumes = optimise_partial_volumes
-
-        self._prepare_parameters()
-        self._prepare_partial_volumes()
-        self._prepare_parameter_links()
-        self._prepare_model_properties()
-        self._check_for_double_model_class_instances()
-        self._prepare_parameters_to_optimize()
-
-    def _prepare_parameters(self):
-        self.model_names = []
-        model_counts = {}
-
-        for model in self.models:
-            if model.__class__ not in model_counts:
-                model_counts[model.__class__] = 1
-            else:
-                model_counts[model.__class__] += 1
-
-            self.model_names.append(
-                '{}_{:d}_'.format(
-                    model.__class__.__name__,
-                    model_counts[model.__class__]
-                )
-            )
-
-        self._parameter_ranges = OrderedDict({
-            model_name + k: v
-            for model, model_name in zip(self.models, self.model_names)
-            for k, v in model.parameter_ranges.items()
-        })
-
-        self._parameter_scales = OrderedDict({
-            model_name + k: v
-            for model, model_name in zip(self.models, self.model_names)
-            for k, v in model.parameter_scales.items()
-        })
-
-        self._parameter_map = {
-            model_name + k: (model, k)
-            for model, model_name in zip(self.models, self.model_names)
-            for k in model.parameter_ranges
-        }
-
-        # self.parameter_defaults = OrderedDict()
-        # for model_name, model in zip(self.model_names, self.models):
-        #     for parameter in model.parameter_ranges:
-        #         self.parameter_defaults[model_name + parameter] = getattr(
-        #             model, parameter
-        #         )
-
-        self._inverted_parameter_map = {
-            v: k for k, v in self._parameter_map.items()
-        }
-        self._parameter_cardinality = self.parameter_cardinality
-
-    def _prepare_partial_volumes(self):
-        if len(self.models) > 1:
-            if self.optimise_partial_volumes:
-                self.partial_volume_names = [
-                    'partial_volume_{:d}'.format(i)
-                    for i in range(len(self.models))
-                ]
-
-                for i, partial_volume_name in enumerate(self.partial_volume_names):
-                    self._parameter_ranges[partial_volume_name] = (0.01, .99)
-                    self._parameter_scales[partial_volume_name] = 1.
-                    # self.parameter_defaults[partial_volume_name] = (
-                    #     1 / (len(self.models) - i)
-                    # )
-                    self._parameter_map[partial_volume_name] = (
-                        None, partial_volume_name
-                    )
-                    self._inverted_parameter_map[(None, partial_volume_name)] = \
-                        partial_volume_name
-                    self._parameter_cardinality[partial_volume_name] = 1
-            else:
-                if self.partial_volumes is None:
-                    self.partial_volumes = np.array([
-                        1 / (len(self.models) - i)
-                        for i in range(len(self.models))
-                    ])
-
-    def _prepare_parameter_links(self):
-        for i, parameter_function in enumerate(self.parameter_links):
-            parameter_model, parameter_name, parameter_function, arguments = \
-                parameter_function
-
-            if (
-                (parameter_model, parameter_name)
-                not in self._inverted_parameter_map
-            ):
-                raise ValueError(
-                    "Parameter function {} doesn't exist".format(i)
-                )
-
-            parameter_name = self._inverted_parameter_map[
-                (parameter_model, parameter_name)
-            ]
-
-            del self._parameter_ranges[parameter_name]
-            # del self.parameter_defaults[parameter_name]
-            del self._parameter_cardinality[parameter_name]
-            del self._parameter_scales[parameter_name]
-
-    def _prepare_parameters_to_optimize(self):
-        self.optimized_parameters = OrderedDict({
-            k: True
-            for k, v in self.parameter_cardinality.items()
-        })
-
-    def _prepare_model_properties(self):
-        models_spherical_mean = [model.spherical_mean for model in self.models]
-        if len(np.unique(models_spherical_mean)) > 1:
-            msg = "Cannot mix spherical mean and non-spherical mean models. "
-            msg = "Current model selection is {}".format(self.models)
-            raise ValueError(msg)
-        self.spherical_mean = np.all(models_spherical_mean)
-        self.fod_available = False
-        for model in self.models:
-            try:
-                model.fod
-                self.fod_available = True
-            except AttributeError:
-                pass
-
-    def _check_for_double_model_class_instances(self):
-        if len(self.models) != len(np.unique(self.models)):
-            msg = "Each model in the multi-compartment model must be "
-            msg += "instantiated separately. For example, to make a model "
-            msg += "with two sticks, the models must be given as "
-            msg += "models = [stick1, stick2], not as "
-            msg += "models = [stick1, stick1]."
-            raise ValueError(msg)
-
-    def add_linked_parameters_to_parameters(self, parameters):
-        if len(self.parameter_links) == 0:
-            return parameters
-        parameters = parameters.copy()
-        for parameter in self.parameter_links:
-            parameter_model, parameter_name, parameter_function, arguments = \
-                parameter
-            parameter_name = self._inverted_parameter_map[
-                (parameter_model, parameter_name)
-            ]
-
-            if len(arguments) > 0:
-                argument_values = []
-                for argument in arguments:
-                    argument_name = self._inverted_parameter_map[argument]
-                    argument_values.append(parameters.get(
-                        argument_name  # ,
-                        # self.parameter_defaults[argument_name]
-                    ))
-
-                parameters[parameter_name] = parameter_function(
-                    *argument_values
-                )
-            else:
-                parameters[parameter_name] = parameter_function()
-        return parameters
 
     def __call__(self, acquisition_scheme_or_vertices,
                  quantity="signal", **kwargs):
