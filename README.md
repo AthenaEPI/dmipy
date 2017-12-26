@@ -1,4 +1,4 @@
-# Microstructure Imaging in Python
+# MIPY: Microstructure Imaging in Python
 
 The Mipy software package facilitates state-of-the-art diffusion MRI Microstructure Imaging using a "Building Block" philosophy. In this philosophy, any combination of biophysical models, typically representing intra- and/or extra-axonal tissue compartments, can be easy combined into a multi-compartment Microstructure Model in just a few lines of code. The created model can be used to both simulate and fit data for any PGSE-based dMRI acquisition, including single shell, multi-shell and qtau-dMRI acquisition schemes.
 
@@ -23,6 +23,7 @@ Mipy stands apart from other packages is the complete freedom the user has to de
 - dipy
 - pathos (optional for multi-core processing)
 - cvxpy (optional for MIX optimization)
+- numba (optional for faster functions)
 
 ## Getting Started:
 To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
@@ -45,14 +46,17 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - [Ball and Racket [Sotiropoulos et al. 2012]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_ball_and_racket.ipynb)
 - [NODDI-Watson [Zhang et al. 2012]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_noddi_watson.ipynb)
 - [NODDI-Bingham [Tariq et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_noddi_bingham.ipynb)
+- ActiveAx [Alexander et al. 2010]
 - [AxCaliber [Assaf et al. 2008]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_axcaliber.ipynb)
 - AxCaliber with restricted extra-axonal diffusion [Burcaw et al. 2015]
-- ActiveAx [Alexander et al. 2010]
+- AxCaliber in presence of axon dispersion [unpublished but similar to Zhang at al. 2010]
 ### Crossing Bundle Microstructure Models
-- [Microstructure Imaging of Crossing (MIX) [Farooq et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_mix_microstructure_imaging_in_crossings.ipynb)
+- Using Brute Force optimization
+- Using Dipy's CSD as crossing orientation initial guess
+- [Using Microstructure Imaging of Crossing (MIX) [Farooq et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_mix_microstructure_imaging_in_crossings.ipynb)
 - [Multi-Compartment Spherical Mean Technique [Kaden et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_multi_compartment_spherical_mean_technique.ipynb)
+- MC-SMT with restricted extra-axonal diffusion [unpublished]
 ### Other Models
-- Free Water Elimination [Pasternak et al. 2009]
 - VERDICT tumor model [Panagiotaki et al. 2014]
 
 When public, use http://htmlpreview.github.io/ to replace ipynb with html files for better rendering.
