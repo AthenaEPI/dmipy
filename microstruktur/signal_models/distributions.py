@@ -182,7 +182,7 @@ class SD2Bingham(MicrostructureModel):
         'mu': np.r_[1., 1.],
         'psi': 1.,
         'odi': 1.,
-        'beta': 1.
+        'beta_fraction': 1.
     }
     spherical_mean = False
 
