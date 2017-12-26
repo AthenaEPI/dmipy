@@ -66,7 +66,7 @@ class MipyAcquisitionScheme:
                 self.shell_indices[delta_mask] = shell_indices_ + max_index
                 self.shell_bvalues.append(shell_bvalues_)
                 max_index = max(self.shell_indices + 1)
-            self.shell_bvalues = np.array(self.shell_bvalues).ravel()
+            self.shell_bvalues = np.hstack(self.shell_bvalues)
             self.shell_b0_mask = self.shell_bvalues <= b0_threshold
 
             first_indices = [
