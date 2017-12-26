@@ -382,8 +382,8 @@ class DD1GammaDistribution(MicrostructureModel):
 
 
 def probability_bingham(kappa, beta, mu, mu_beta, n):
-    return np.exp(kappa * np.dot(n, mu) **
-                  2 + beta * np.dot(n, mu_beta) ** 2)
+    return np.exp(kappa * np.dot(n, mu) ** 2 +
+                  beta * np.dot(n, mu_beta) ** 2)
 
 
 def odi2kappa(odi):
