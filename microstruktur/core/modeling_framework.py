@@ -11,10 +11,10 @@ from time import time
 
 from microstruktur.utils.spherical_mean import (
     estimate_spherical_mean_multi_shell)
-from dipy.data import get_sphere
-from dipy.reconst.shm import sh_to_sf_matrix
-from microstruktur.utils.utils import unitsphere2cart_Nd
-from scipy.optimize import differential_evolution, brute, minimize
+from microstruktur.core.fitted_modeling_framework import (
+    FittedMultiCompartmentModel)
+from microstruktur.optimizers.brute2fine import FitBrute2Fine
+from microstruktur.optimizers.mix import FitMix
 from dipy.utils.optpkg import optional_package
 cvxpy, have_cvxpy, _ = optional_package("cvxpy")
 pathos, have_pathos, _ = optional_package("pathos")
@@ -421,7 +421,7 @@ class MultiCompartmentModel(MicrostructureModel):
         return parameters
 
     def fit(self, data, parameter_initial_guess=None, mask=None,
-            solver='scipy', Ns=5, maxiter=300,
+            solver='brute2fine', Ns=5, maxiter=300,
             use_parallel_processing=have_pathos, number_of_processors=None):
         """ The main data fitting function of a multi-compartment model.
 
@@ -438,8 +438,8 @@ class MultiCompartmentModel(MicrostructureModel):
         included.
 
         An optimization approach can be chosen as either 'scipy' or 'mix'.
-        - Choosing scipy will first use a brute-force optimization to find an
-          initial guess for parameters without one, and will then refine the
+        - Choosing brute2fine will first use a brute-force optimization to find
+          an initial guess for parameters without one, and will then refine the
           result using gradient-descent-based optimization.
         - Choosing mix will use the recent MIX algorithm based on separation of
           linear and non-linear parameters. MIX first uses a stochastic
@@ -465,8 +465,6 @@ class MultiCompartmentModel(MicrostructureModel):
             - 'scipy' to use standard brute-to-fine optimization.
             - 'mix' to use Microstructure Imaging of Crossing (MIX)
               optimization.
-            - [future] 'amico' to use Accelerated Microstructure Imaging via
-               Convex Optimization (AMICO).
         Ns : integer,
             for brute optimization, decised how many steps are sampled for
             every parameter.
@@ -551,15 +549,21 @@ class MultiCompartmentModel(MicrostructureModel):
         start = time()
         print ('Starting fitting process')
 
+        if solver == 'brute2fine':
+            if parameter_initial_guess is None:
+                parameter_initial_guess = np.tile(None, N_parameters)
+            fit_func = FitBrute2Fine(self, self.scheme,
+                                     parameter_initial_guess)
+        elif solver == 'mix':
+            fit_func = FitMix(self)
+
         for idx, pos in enumerate(zip(*mask_pos)):
             voxel_E = data_to_fit[pos] / S0[pos]
             voxel_x0_vector = x0_[pos]
 
-            if solver == 'scipy':
-                fit_func = self.fit_brute2fine
-                fit_args = (voxel_E, voxel_x0_vector, Ns)
+            if solver == 'brute2fine':
+                fit_args = (voxel_E, voxel_x0_vector)
             elif solver == 'mix':
-                fit_func = self.fit_mix
                 fit_args = (voxel_E, voxel_x0_vector, maxiter)
 
             if use_parallel_processing:
@@ -585,160 +589,6 @@ class MultiCompartmentModel(MicrostructureModel):
 
         return FittedMultiCompartmentModel(
             self, S0, mask, fitted_parameters)
-
-    def fit_brute2fine(self, data, x0_vector, Ns):
-        """
-        If initial x0 is given for a parameter, then the bounds are fixed for
-        brute-force optimization.
-        If initial x0 is given AND parameter_optimize is False for a parameter,
-        then its bounds are also fixed for subsequent gradient-based
-        optimization.
-        """
-        N_fractions = len(self.models)
-        fit_args = (data, self.scheme)
-        bounds = self.bounds_for_optimization
-        bounds_brute = []
-        bounds_fine = list(bounds)
-        for i, x0_ in enumerate(x0_vector):
-            if x0_ is None:
-                bounds_brute.append(
-                    slice(bounds[i][0], bounds[i][1],
-                          (bounds[i][1] - bounds[i][0]) / float(Ns)))
-            if x0_ is not None:
-                bounds_brute.append(slice(x0_, x0_ + 1e-2, None))
-            if (x0_ is not None and
-                    self.opt_params_for_optimization[i] is False):
-                bounds_fine[i] = np.r_[x0_, x0_]
-
-        if N_fractions > 1:  # go to nested bounds
-            bounds_brute = bounds_brute[:-1]
-            bounds_fine = bounds_fine[:-1]
-        # brute-force optimization returns initial guess for all parameters
-        x0_brute = brute(
-            self.objective_function, ranges=bounds_brute, args=fit_args,
-            finish=None)
-        # the intial guess is used to find a local minima using gradient-based
-        # optimization.
-        x_fine_nested = minimize(self.objective_function, x0_brute,
-                                 args=fit_args, bounds=bounds_fine,
-                                 method='L-BFGS-B').x
-        if N_fractions > 1:
-            nested_fractions = x_fine_nested[-(N_fractions - 1):]
-            normalized_fractions = nested_to_normalized_fractions(
-                nested_fractions)
-            x_fine = np.r_[
-                x_fine_nested[:-(N_fractions - 1)], normalized_fractions]
-        else:
-            x_fine = x_fine_nested
-        return x_fine
-
-    def objective_function(self, parameter_vector, data, acquisition_scheme):
-        N_fractions = len(self.models)
-        if N_fractions > 1:
-            nested_fractions = parameter_vector[-(N_fractions - 1):]
-            normalized_fractions = nested_to_normalized_fractions(
-                nested_fractions)
-            parameter_vector_ = np.r_[
-                parameter_vector[:-(N_fractions - 1)], normalized_fractions]
-        else:
-            parameter_vector_ = parameter_vector
-        parameter_vector_ = parameter_vector_ * self.scales_for_optimization
-        parameters = {}
-        parameters.update(
-            self.parameter_vector_to_parameters(parameter_vector_)
-        )
-        E_model = self(acquisition_scheme, **parameters)
-        E_diff = E_model - data
-        objective = np.sum(E_diff ** 2) / len(data)
-        return objective
-
-    def fit_mix(self, data, x0_vector, maxiter=150):
-        """
-        differential_evolution
-        cvxpy
-        least squares
-
-        References
-        ----------
-        .. [1] Farooq, Hamza, et al. "Microstructure Imaging of Crossing (MIX)
-               White Matter Fibers from diffusion MRI." Nature Scientific
-               reports 6 (2016).
-        """
-
-        bounds = list(self.bounds_for_optimization)
-        for i, x0_ in enumerate(x0_vector):
-            if (x0_ is not None and
-                    self.opt_params_for_optimization[i] is False):
-                bounds[i] = np.r_[x0_, x0_ + 1e-6]
-        # step 1: Variable separation using genetic algorithm
-
-        res_one = differential_evolution(self.stochastic_objective_function,
-                                         bounds=bounds,
-                                         maxiter=maxiter,
-                                         args=(data, self.scheme))
-        res_one_x = res_one.x
-        parameters = self.parameter_vector_to_parameters(
-            res_one_x * self.scales_for_optimization)
-
-        # step 2: Estimating linear variables using cvx (if there are any)
-        if len(self.models) > 1:
-            phi = self(self.scheme,
-                       quantity="stochastic cost function", **parameters)
-            x_fe = self._cvx_fit_linear_parameters(data, phi)
-
-            # step 3: refine using gradient method / convert nested fractions
-            x_fe_nested = np.ones(len(x_fe) - 1)
-            x_fe_nested[0] = x_fe[0]
-            for i in np.arange(1, len(x_fe_nested)):
-                x_fe_nested[i] = x_fe[i] / x_fe[i - 1]
-
-            x0_refine = np.r_[res_one_x[:-len(x_fe)], x_fe_nested]
-            bounds_ = bounds[:-1]
-        else:
-            x0_refine = res_one_x
-            bounds_ = bounds
-
-        x_fine_nested = minimize(self.objective_function, x0_refine,
-                                 (data, self.scheme),
-                                 bounds=bounds_).x
-
-        N_fractions = len(self.models)
-        if N_fractions > 1:
-            nested_fractions = x_fine_nested[-(N_fractions - 1):]
-            normalized_fractions = nested_to_normalized_fractions(
-                nested_fractions)
-            x_fine = np.r_[
-                x_fine_nested[:-(N_fractions - 1)], normalized_fractions]
-        else:
-            x_fine = x_fine_nested
-        return x_fine
-
-    def stochastic_objective_function(self, parameter_vector,
-                                      data, acquisition_scheme):
-        parameter_vector = parameter_vector * self.scales_for_optimization
-        parameters = {}
-        parameters.update(
-            self.parameter_vector_to_parameters(parameter_vector)
-        )
-
-        phi_x = self(acquisition_scheme,
-                     quantity="stochastic cost function", **parameters)
-
-        phi_mp = np.dot(np.linalg.pinv(np.dot(phi_x.T, phi_x)), phi_x.T)
-        f = np.dot(phi_mp, data)
-        yhat = np.dot(phi_x, f)
-        cost = np.dot(data - yhat, data - yhat).squeeze()
-        return cost
-
-    def _cvx_fit_linear_parameters(self, data, phi):
-        fe = cvxpy.Variable(phi.shape[1])
-        constraints = [cvxpy.sum_entries(fe) == 1,
-                       fe >= 0.011,
-                       fe <= 0.89]
-        obj = cvxpy.Minimize(cvxpy.sum_squares(phi * fe - data))
-        prob = cvxpy.Problem(obj, constraints)
-        prob.solve()
-        return np.array(fe.value).squeeze()
 
     def __call__(self, acquisition_scheme_or_vertices,
                  quantity="signal", **kwargs):
@@ -797,128 +647,6 @@ class MultiCompartmentModel(MicrostructureModel):
                                            **parameters)
                 counter += 1
         return values
-
-
-class FittedMultiCompartmentModel:
-    def __init__(self, model, S0, mask, fitted_parameters_vector):
-        self.model = model
-        self.S0 = S0
-        self.mask = mask
-        self.fitted_parameters_vector = fitted_parameters_vector
-
-    @property
-    def fitted_parameters(self):
-        return self.model.parameter_vector_to_parameters(
-            self.fitted_parameters_vector)
-
-    def fod(self, vertices):
-        if not self.model.fod_available:
-            msg = ('FODs not available for current model.')
-            raise ValueError(msg)
-        dataset_shape = self.fitted_parameters_vector.shape[:-1]
-        N_samples = len(vertices)
-        fods = np.zeros(np.r_[dataset_shape, N_samples])
-        mask_pos = np.where(self.mask)
-        for pos in zip(*mask_pos):
-            parameters = self.model.parameter_vector_to_parameters(
-                self.fitted_parameters_vector[pos])
-            fods[pos] = self.model(vertices, quantity='FOD', **parameters)
-        return fods
-
-    def fod_sh(self, sh_order=8, basis_type=None):
-        if not self.model.fod_available:
-            msg = ('FODs not available for current model.')
-            raise ValueError(msg)
-        sphere = get_sphere(name='repulsion724')
-        vertices = sphere.vertices
-        _, inv_sh_matrix = sh_to_sf_matrix(
-            sphere, sh_order, basis_type=basis_type, return_inv=True)
-        fods_sf = self.fod(vertices)
-
-        dataset_shape = self.fitted_parameters_vector.shape[:-1]
-        number_coef_used = int((sh_order + 2) * (sh_order + 1) // 2)
-        fods_sh = np.zeros(np.r_[dataset_shape, number_coef_used])
-        mask_pos = np.where(self.mask)
-        for pos in zip(*mask_pos):
-            fods_sh[pos] = np.dot(inv_sh_matrix.T, fods_sf[pos])
-        return fods_sh
-
-    def peaks_spherical(self):
-        mu_params = []
-        for name, card in self.model.parameter_cardinality.items():
-            if name[-2:] == 'mu' and card == 2:
-                mu_params.append(self.fitted_parameters[name])
-        if len(mu_params) == 0:
-            msg = ('peaks not available for current model.')
-            raise ValueError(msg)
-        if len(mu_params) == 1:
-            return mu_params[0]
-        return np.concatenate([mu[..., None] for mu in mu_params], axis=-1)
-
-    def peaks_cartesian(self):
-        peaks_spherical = self.peaks_spherical()
-        peaks_cartesian = unitsphere2cart_Nd(peaks_spherical)
-        return peaks_cartesian
-
-    def predict(self, acquisition_scheme=None, S0=None, mask=None):
-        if acquisition_scheme is None:
-            acquisition_scheme = self.model.scheme
-        dataset_shape = self.fitted_parameters_vector.shape[:-1]
-        if S0 is None:
-            S0 = self.S0
-        elif isinstance(S0, float):
-            S0 = np.ones(dataset_shape) * S0
-        if mask is None:
-            mask = self.mask
-
-        if self.model.spherical_mean:
-            N_samples = len(acquisition_scheme.shell_bvalues)
-        else:
-            N_samples = len(acquisition_scheme.bvalues)
-
-        predicted_signal = np.zeros(np.r_[dataset_shape, N_samples])
-        mask_pos = np.where(mask)
-        for pos in zip(*mask_pos):
-            parameters = self.model.parameter_vector_to_parameters(
-                self.fitted_parameters_vector[pos])
-            predicted_signal[pos] = self.model(
-                acquisition_scheme, **parameters) * S0[pos]
-        return predicted_signal
-
-    def R2_coefficient_of_determination(self, data):
-        "Calculates the R-squared of the model fit."
-        if self.model.spherical_mean:
-            Nshells = len(self.model.scheme.shell_bvalues)
-            data_ = np.zeros(np.r_[data.shape[:-1], Nshells])
-            for pos in zip(*np.where(self.mask)):
-                data_[pos] = estimate_spherical_mean_multi_shell(
-                    data[pos] / self.S0[pos], self.model.scheme)
-        else:
-            data_ = data / self.S0[..., None]
-
-        y_hat = self.predict(S0=1.)
-        y_bar = np.mean(data_, axis=-1)
-        SStot = np.sum((data_ - y_bar[..., None]) ** 2, axis=-1)
-        SSres = np.sum((data_ - y_hat) ** 2, axis=-1)
-        R2 = 1 - SSres / SStot
-        R2[~self.mask] = 0
-        return R2
-
-    def mean_squared_error(self, data):
-        "Calculates the mean squared error of the model fit."
-        if self.model.spherical_mean:
-            Nshells = len(self.model.scheme.shell_bvalues)
-            data_ = np.zeros(np.r_[data.shape[:-1], Nshells])
-            for pos in zip(*np.where(self.mask)):
-                data_[pos] = estimate_spherical_mean_multi_shell(
-                    data[pos] / self.S0[pos], self.model.scheme)
-        else:
-            data_ = data / self.S0[..., None]
-
-        y_hat = self.predict(S0=1.)
-        mse = np.mean((data_ - y_hat) ** 2, axis=-1)
-        mse[~self.mask] = 0
-        return mse
 
 
 def homogenize_x0_to_data(data, x0):
