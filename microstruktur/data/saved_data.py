@@ -26,7 +26,8 @@ def duval_cat_spinal_cord_2d():
     msg = "This data was used by Duval et al. 'Validation of quantitative MRI "
     msg += "metrics using full slice histology with automatic axon "
     msg += "segmentation', ISMRM 2016. Reference at "
-    msg += "http://indexsmart.mirasmart.com/ISMRM2016/PDFfiles/0928.html"
+    msg += "Cohen-Adad et al. White Matter Microscopy Database."
+    msg += " http://doi.org/10.17605/OSF.IO/YP4QG"
     print msg
 
     data_folder = DATA_PATH + "tanguy_cat_spinal_cord/"
