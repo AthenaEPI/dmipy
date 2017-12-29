@@ -34,17 +34,17 @@ def duval_cat_spinal_cord_2d():
 
     class Histology:
         def __init__(self):
-            self._1_axonEquivDiameter = nib.load(
+            self.h1_axonEquivDiameter = nib.load(
                 data_folder + '1_axonEquivDiameter.nii').get_data()
-            self._2_axonEquivDiameter_std = nib.load(
+            self.h2_axonEquivDiameter_std = nib.load(
                 data_folder + '2_axonEquivDiameter_std.nii').get_data()
-            self._3_axonEquivDiameter_axonvolumeCorrected = nib.load(
+            self.h3_axonEquivDiameter_axonvolumeCorrected = nib.load(
                 data_folder + '3_axonEquivDiameter_axonvolumeCorrected.nii').get_data()
-            self._4_fr = nib.load(data_folder + '4_fr.nii').get_data()
-            self._5_MyelinVolumeFraction = nib.load(
+            self.h4_fr = nib.load(data_folder + '4_fr.nii').get_data()
+            self.h5_MyelinVolumeFraction = nib.load(
                 data_folder + '5_MyelinVolumeFraction.nii').get_data()
-            self._6_gRatio = nib.load(data_folder + '6_gRatio.nii').get_data()
-            self._7_Number_axons = nib.load(
+            self.h6_gRatio = nib.load(data_folder + '6_gRatio.nii').get_data()
+            self.h7_Number_axons = nib.load(
                 data_folder + '7_Number_axons.nii').get_data()
 
     class DuvalSpinalCordData2D:
