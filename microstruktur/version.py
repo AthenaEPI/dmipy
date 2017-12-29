@@ -74,6 +74,7 @@ VERSION = __version__
 PACKAGE_DATA = {
     'microstruktur': [
         pjoin('data', 'gradient_tables', '*'),
+        pjoin('data', 'spheres', '*'),
         pjoin('data', 'bingham_normalization_splinefit.npz'),
         pjoin('data', 'wu_minn_hcp_coronal_slice.nii.gz'),
         pjoin('data', 'tanguy_cat_spinal_cord', '*')
