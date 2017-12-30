@@ -1,4 +1,4 @@
-from microstruktur.signal_models import gaussian_models
+from microstruktur.signal_models import gaussian_models, sphere_models
 from numpy.testing import assert_array_equal, assert_equal
 import numpy as np
 from microstruktur.core.acquisition_scheme import (
@@ -13,7 +13,7 @@ scheme = acquisition_scheme_from_bvalues(bvals, bvecs, delta, Delta)
 
 
 def test_dot():
-    dot = gaussian_models.G2Dot()
+    dot = sphere_models.S1Dot()
     E_dot = dot(scheme)
     assert_equal(np.all(E_dot == 1.), True)
 
