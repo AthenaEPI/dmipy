@@ -1,6 +1,6 @@
 from numpy.testing import assert_almost_equal, assert_equal
 import numpy as np
-from microstruktur.signal_models import distributions
+from microstruktur.distributions import distributions
 from microstruktur.utils import utils
 from dipy.data import get_sphere
 

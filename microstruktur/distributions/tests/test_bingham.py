@@ -5,7 +5,7 @@ from microstruktur.utils.utils import (
     rotation_matrix_100_to_theta_phi, rotation_matrix_around_100,
     rotation_matrix_100_to_theta_phi_psi
 )
-from microstruktur.signal_models import distributions
+from microstruktur.distributions import distributions
 
 
 def test_rotation_100_to_theta_phi():
