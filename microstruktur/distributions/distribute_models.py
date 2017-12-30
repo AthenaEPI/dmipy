@@ -164,7 +164,7 @@ class DistributedModel:
                 isinstance(self.distribution, SD2Bingham)):
             return self.sh_convolved_model(acquisition_scheme, **kwargs)
         elif isinstance(self.distribution, DD1GammaDistribution):
-            return self.gamma_convolved_model(acquisition_scheme, **kwargs)
+            return self.gamma_integrated_model(acquisition_scheme, **kwargs)
         else:
             msg = "Unknown distribution."
             raise ValueError(msg)
@@ -232,7 +232,7 @@ class DistributedModel:
             values = values + volume_fraction * E
         return values
 
-    def gamma_convolved_model(self, acquisition_scheme, **kwargs):
+    def gamma_integrated_model(self, acquisition_scheme, **kwargs):
         values = 0.
         kwargs = self.add_linked_parameters_to_parameters(
             kwargs
