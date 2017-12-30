@@ -48,15 +48,17 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - [NODDI-Bingham [Tariq et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_noddi_bingham.ipynb)
 - ActiveAx [Alexander et al. 2010]
 - [AxCaliber [Assaf et al. 2008]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_axcaliber.ipynb)
-- AxCaliber with restricted extra-axonal diffusion [Burcaw et al. 2015]
-- AxCaliber in presence of axon dispersion [unpublished but similar to Zhang at al. 2010]
 ### Crossing Bundle Microstructure Models
 - Using Brute Force optimization
 - Using Dipy's CSD as crossing orientation initial guess
 - [Using Microstructure Imaging of Crossing (MIX) [Farooq et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_mix_microstructure_imaging_in_crossings.ipynb)
 - [Multi-Compartment Spherical Mean Technique [Kaden et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_multi_compartment_spherical_mean_technique.ipynb)
-- MC-SMT with restricted extra-axonal diffusion [unpublished]
 ### Other Models
 - [VERDICT tumor model [Panagiotaki et al. 2014]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_verdict.ipynb)
+
+### Examples not to be included in first version
+- AxCaliber in presence of axon dispersion [unpublished but similar to Zhang at al. 2010]
+- AxCaliber with restricted extra-axonal diffusion [Burcaw et al. 2015]
+- MC-SMT with restricted extra-axonal diffusion [unpublished]
 
 When public, use http://htmlpreview.github.io/ to replace ipynb with html files for better rendering.
