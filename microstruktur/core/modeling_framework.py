@@ -666,14 +666,3 @@ def homogenize_x0_to_data(data, x0):
             x0_as_data.shape[:-1])
         raise ValueError(msg)
     return x0_as_data
-
-
-def nested_to_normalized_fractions(nested_fractions):
-    N = len(nested_fractions)
-    normalized_fractions = np.zeros(N + 1)
-    remaining_fraction = 1.
-    for i in xrange(N):
-        normalized_fractions[i] = remaining_fraction * nested_fractions[i]
-        remaining_fraction -= normalized_fractions[i]
-    normalized_fractions[-1] = remaining_fraction
-    return normalized_fractions
