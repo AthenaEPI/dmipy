@@ -7,12 +7,12 @@ from dipy.data import get_sphere
 
 def test_watson_integral_unity():
     # test for integral to unity for isotropic concentration (k=0)
-    kappa = 0  # isotropic distribution
+    odi = 1.  # isotropic distribution
     # first test for one orientation n
     random_n = np.random.rand(3)
     random_n /= np.linalg.norm(random_n)
     random_mu = np.random.rand(2)
-    watson = distributions.SD1Watson(mu=random_mu, kappa=kappa)
+    watson = distributions.SD1Watson(mu=random_mu, odi=odi)
     Wn = watson(n=random_n)  # in random direction
     spherical_integral = Wn * 4 * np.pi  # for isotropic distribution
     assert_equal(spherical_integral, 1.)
@@ -20,8 +20,8 @@ def test_watson_integral_unity():
     # third test for unity when k>0
     sphere = get_sphere('repulsion724')
     n_sphere = sphere.vertices
-    kappa = np.random.rand() + 0.1  # just to be sure kappa>0
-    Wn_sphere = watson(n=n_sphere, mu=random_mu, kappa=kappa)
+    odi = np.random.rand()
+    Wn_sphere = watson(n=n_sphere, mu=random_mu, odi=odi)
     spherical_integral = sum(Wn_sphere) / n_sphere.shape[0] * 4 * np.pi
     assert_almost_equal(spherical_integral, 1., 4)
 
@@ -36,8 +36,8 @@ def test_watson_orienting():
     mu_index = indices[0]
     mu_cart = n[mu_index]
     mu_sphere = utils.cart2sphere(mu_cart)[1:]
-    kappa = np.random.rand() + 0.1  # just to be sure kappa>0
-    watson = distributions.SD1Watson(mu=mu_sphere, kappa=kappa)
+    odi = np.random.rand()
+    watson = distributions.SD1Watson(mu=mu_sphere, odi=odi)
     Wn_vector = watson(n=n)
     assert_almost_equal(Wn_vector[mu_index], max(Wn_vector))
 
@@ -51,9 +51,9 @@ def test_watson_kappa():
     # test for Wn(k2) > Wn(k1) when k2>k1 along mu
     random_mu = np.random.rand(2)
     random_mu_cart = utils.sphere2cart(np.r_[1., random_mu])
-    kappa1 = np.random.rand()
-    kappa2 = kappa1 + np.random.rand() + 0.1
+    odi1 = .8
+    odi2 = .6
     watson = distributions.SD1Watson(mu=random_mu)
-    Wn1 = watson(n=random_mu_cart, kappa=kappa1)
-    Wn2 = watson(n=random_mu_cart, kappa=kappa2)
+    Wn1 = watson(n=random_mu_cart, odi=odi1)
+    Wn2 = watson(n=random_mu_cart, odi=odi2)
     assert_equal(Wn2 > Wn1, True)

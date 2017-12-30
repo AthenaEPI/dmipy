@@ -1,15 +1,8 @@
-from numpy.testing import (
-    assert_equal, assert_almost_equal, assert_array_almost_equal)
+from numpy.testing import assert_equal
 import numpy as np
-from scipy import stats
-from microstruktur.signal_models import cylinder_models, distributions
-from microstruktur.signal_models import dispersed_models
+from microstruktur.signal_models import cylinder_models
 from microstruktur.core.acquisition_scheme import (
-    acquisition_scheme_from_bvalues,
     acquisition_scheme_from_qvalues)
-from dipy.data import get_sphere
-sphere = get_sphere().subdivide()
-DIFFUSIVITY_SCALING = 1e-9
 
 
 def test_gaussian_phase_profile_narrow_pulse_not_restricted(samples=100):
@@ -42,94 +35,3 @@ def test_gaussian_phase_profile_narrow_pulse_restricted():
     # np.exp(-(gamma * G * delta * R) ** 2).R
     # But... how can it be Gaussian?
     return None
-
-
-def test_watson_dispersed_gaussian_phase_kappa0(
-    lambda_par=1.7, diameter=8e-6, bvalue=1e9, mu=[0, 0], kappa=0
-):
-
-    # testing uniformly dispersed watson zeppelin.
-    n = sphere.vertices
-    bvals = np.tile(bvalue, len(n))
-    delta = np.tile(1e-2, len(bvals))
-    Delta = np.tile(3e-2, len(bvals))
-    scheme = acquisition_scheme_from_bvalues(bvals, n, delta, Delta)
-
-    watson_gaussian_phase = (
-        dispersed_models.SD1C4WatsonDispersedGaussianPhaseCylinder(
-            mu=mu, kappa=kappa, lambda_par=lambda_par, diameter=diameter)
-    )
-    E_watson_gaussian_phase = watson_gaussian_phase(scheme)
-    # All values are the same:
-    assert_almost_equal(E_watson_gaussian_phase -
-                        E_watson_gaussian_phase[0], 0)
-
-
-def test_bingham_dispersed_gaussian_phase_kappa0(
-    lambda_par=1.7, diameter=8e-6, bvalue=1e9, mu=[0, 0], kappa=0, beta=0,
-    psi=0
-):
-    # testing uniformly dispersed bingham zeppelin.
-    n = sphere.vertices
-    bvals = np.tile(bvalue, len(n))
-    delta = np.tile(1e-2, len(bvals))
-    Delta = np.tile(3e-2, len(bvals))
-    scheme = acquisition_scheme_from_bvalues(bvals, n, delta, Delta)
-
-    bingham_gaussian_phase = (
-        dispersed_models.SD2C4BinghamDispersedGaussianPhaseCylinder(
-            mu=mu, kappa=kappa, beta=beta, psi=psi, lambda_par=lambda_par,
-            diameter=diameter)
-    )
-    E_bingham_gaussian_phase = bingham_gaussian_phase(scheme)
-    # All values are the same:
-    assert_almost_equal(E_bingham_gaussian_phase -
-                        E_bingham_gaussian_phase[0], 0)
-
-
-def test_gamma_distributed_vangelderen(alpha=.1, beta=1e-5,
-                                       radius_integral_steps=35,
-                                       samples=100,
-                                       mu=[0, 0],
-                                       lambda_par=.1):
-
-    delta = np.tile(1e-3, samples)  # delta towards zero
-    Delta = np.tile(20e-3, samples)  # Delta towards infinity
-    qvals_perp = np.linspace(0, 3e5, samples)
-    n_perp = np.tile(np.r_[1., 0., 0.], (samples, 1))
-    scheme = acquisition_scheme_from_qvalues(qvals_perp, n_perp, delta, Delta)
-
-    DD1 = distributions.DD1GammaDistribution(alpha=alpha, beta=beta)
-    vangelderen = (
-        cylinder_models.C4CylinderGaussianPhaseApproximation(
-            mu=mu, lambda_par=lambda_par)
-    )
-    DD1I2 = dispersed_models.DD1C4GammaDistributedGaussianPhaseCylinder(
-        mu=mu, lambda_par=lambda_par, alpha=.1, beta=1e-5)
-
-    gamma_dist = stats.gamma(alpha, scale=beta)
-    radius_max = gamma_dist.mean() + 6 * gamma_dist.std()
-
-    radii = np.linspace(1e-50, radius_max, radius_integral_steps)
-    area = np.pi * radii ** 2
-
-    radii_pdf = DD1(radii * 2)
-    radii_pdf_area = radii_pdf * area
-    radii_pdf_normalized = (
-        radii_pdf_area /
-        np.trapz(x=radii, y=radii_pdf_area)
-    )
-
-    E = np.empty(
-        (radius_integral_steps, scheme.number_of_measurements)
-    )
-    for i, radius in enumerate(radii):
-        E[i] = (
-            radii_pdf_normalized[i] *
-            vangelderen(scheme, diameter=radius * 2)
-        )
-
-    E_manual = np.trapz(E, x=radii, axis=0)
-    E_func = DD1I2(scheme)
-
-    assert_array_almost_equal(E_manual, E_func)

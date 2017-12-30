@@ -81,15 +81,16 @@ def test_rotation_on_bingham_tensor():
     assert_almost_equal(np.diag(Bdiag_), np.sort(eigvals)[::-1])
 
 
-def test_bingham_equal_to_watson(beta_=0):
+def test_bingham_equal_to_watson(beta_fraction=0):
     # test if bingham with beta=0 equals watson distribution
     mu_ = np.random.rand(2)
     n_cart = utils.sphere2cart(np.r_[1., mu_])
     psi_ = np.random.rand() * np.pi
-    kappa_ = np.random.rand()
+    odi_ = np.random.rand()
     bingham = distributions.SD2Bingham(mu=mu_, psi=psi_,
-                                       kappa=kappa_, beta=beta_)
-    watson = distributions.SD1Watson(mu=mu_, kappa=kappa_)
+                                       odi=odi_,
+                                       beta_fraction=beta_fraction)
+    watson = distributions.SD1Watson(mu=mu_, odi=odi_)
     Bn = bingham(n=n_cart)
     Wn = watson(n=n_cart)
     assert_almost_equal(Bn, Wn, 4)
