@@ -1,11 +1,13 @@
 from numpy.testing import assert_almost_equal
 import numpy as np
-from microstruktur.signal_models import cylinder_models
+from microstruktur.signal_models import cylinder_models, sphere_models
 from microstruktur.core.acquisition_scheme import (
     acquisition_scheme_from_qvalues,)
 
 
-def test_RTAP_to_diameter_soderman(samples=10000):
+def test_RTAP_to_diameter_soderman(samples=1000):
+    """This tests if the RTAP of the cylinder relates correctly to the diameter
+    of the cylinder."""
     mu = [0, 0]
     lambda_par = 1.7
     diameter = 10e-6
@@ -27,5 +29,32 @@ def test_RTAP_to_diameter_soderman(samples=10000):
     )
 
     diameter_soderman = 2 / np.sqrt(np.pi * rtap_soderman)
+
+    assert_almost_equal(diameter_soderman, diameter, 7)
+
+
+def test_RTOP_to_diameter_soderman(samples=1000):
+    """This tests if the RTAP of the sphere relates correctly to the diameter
+    of the sphere."""
+    diameter = 10e-6
+
+    delta = np.tile(1e-10, samples)  # delta towards zero
+    Delta = np.tile(1e10, samples)  # Delta towards infinity
+    qvals_perp = np.linspace(0, 10e6, samples)
+    n_perp = np.tile(np.r_[1., 0., 0.], (samples, 1))
+    scheme = acquisition_scheme_from_qvalues(
+        qvals_perp, n_perp, delta, Delta)
+
+    soderman = sphere_models.S2SphereSodermanApproximation(
+        diameter=diameter)
+
+    E_soderman = soderman(scheme)
+
+    rtop_soderman = 4 * np.pi * np.trapz(
+        E_soderman * qvals_perp ** 2, x=qvals_perp
+    )
+
+    sphere_volume = 1. / rtop_soderman
+    diameter_soderman = 2 * (sphere_volume / ((4. / 3.) * np.pi)) ** (1. / 3.)
 
     assert_almost_equal(diameter_soderman, diameter, 7)
