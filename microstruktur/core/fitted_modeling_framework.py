@@ -120,7 +120,10 @@ class FittedMultiCompartmentModel:
                 data_[pos] = estimate_spherical_mean_multi_shell(
                     data[pos] / self.S0[pos], self.model.scheme)
         else:
-            data_ = data / self.S0[..., None]
+            if self.model.scheme.TE is None:
+                data_ = data / self.S0[..., None]
+            else:
+                data_ = data / self.S0
 
         y_hat = self.predict(S0=1.)
         mse = np.mean((data_ - y_hat) ** 2, axis=-1)
