@@ -259,11 +259,13 @@ class MultiCompartmentModel(MicrostructureModel):
 
     def __init__(
         self, models, partial_volumes=None,
-        parameter_links=[], optimise_partial_volumes=True
+        parameter_links=None, optimise_partial_volumes=True
     ):
         self.models = models
         self.partial_volumes = partial_volumes
         self.parameter_links = parameter_links
+        if parameter_links is None:
+            self.parameter_links = []
         self.optimise_partial_volumes = optimise_partial_volumes
 
         self._prepare_parameters()
