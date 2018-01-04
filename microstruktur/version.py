@@ -77,7 +77,8 @@ PACKAGE_DATA = {
         pjoin('data', 'spheres', '*'),
         pjoin('data', 'bingham_normalization_splinefit.npz'),
         pjoin('data', 'wu_minn_hcp_coronal_slice.nii.gz'),
-        pjoin('data', 'tanguy_cat_spinal_cord', '*')
+        pjoin('data', 'tanguy_cat_spinal_cord', '*'),
+	pjoin('data', 'camino', '*')
     ]
 }
 REQUIRES = ["numpy", 'dipy']
