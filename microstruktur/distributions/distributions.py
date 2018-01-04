@@ -47,11 +47,11 @@ inverse_sh_matrix_kernel = {
 BETA_SCALING = 1e-6
 
 
-def get_sh_order_from_kappa(kappa):
-    kappas = np.array([0.32323232, 1.29292929, 2.58585859, 4.36363636,
-                       6.62626263, 9.37373737, np.inf])
+def get_sh_order_from_odi(odi):
+    odis = np.array([0.80606061, 0.46666667, 0.25333333,
+                     0.15636364, 0.09818182, 0.06909091, 0.])
     sh_orders = np.arange(2, 15, 2)
-    return sh_orders[np.argmax(kappas > kappa)]
+    return sh_orders[np.argmax(odis < odi)]
 
 
 class SD1Watson(MicrostructureModel):
@@ -130,10 +130,8 @@ class SD1Watson(MicrostructureModel):
         """
         odi = kwargs.get('odi', self.odi)
         mu = kwargs.get('mu', self.mu)
-
-        kappa = odi2kappa(odi)
         if sh_order is None:
-            sh_order = get_sh_order_from_kappa(kappa)
+            sh_order = get_sh_order_from_odi(odi)
 
         watson_sf = self(hemisphere.vertices, mu=mu, odi=odi)
         sh_mat_inv = inverse_sh_matrix_kernel[sh_order]
@@ -222,7 +220,7 @@ class SD2Bingham(MicrostructureModel):
         Bn = numerator / denominator
         return Bn
 
-    def spherical_harmonics_representation(self, sh_order=14, **kwargs):
+    def spherical_harmonics_representation(self, sh_order=None, **kwargs):
         r""" The Bingham spherical distribution model in spherical harmonics
         [1, 2].
 
@@ -242,6 +240,8 @@ class SD2Bingham(MicrostructureModel):
         beta_fraction = kwargs.get('beta_fraction', self.beta_fraction)
         mu = kwargs.get('mu', self.mu)
         psi = kwargs.get('psi', self.psi)
+        if sh_order is None:
+            sh_order = get_sh_order_from_odi(odi)
 
         bingham_sf = self(hemisphere.vertices, mu=mu, psi=psi, odi=odi,
                           beta_fraction=beta_fraction)
@@ -395,5 +395,5 @@ def kappa2odi(kappa):
 
 
 if have_numba:
-    get_sh_order_from_kappa = numba.njit()(get_sh_order_from_kappa)
+    get_sh_order_from_odi = numba.njit()(get_sh_order_from_odi)
     probability_bingham = numba.njit()(probability_bingham)
