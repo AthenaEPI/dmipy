@@ -422,7 +422,7 @@ class MultiCompartmentModel(MicrostructureModel):
     def fix_parameter(self, parameter_name, value):
         if parameter_name in self._parameter_ranges.keys():
             model, name = self._parameter_map[parameter_name]
-            parameter_link = (model, name, lambda: value, [])
+            parameter_link = (model, name, ReturnFixedValue(value), [])
             self.parameter_links.append(parameter_link)
             del self._parameter_ranges[parameter_name]
             del self._parameter_cardinality[parameter_name]
@@ -681,3 +681,11 @@ def homogenize_x0_to_data(data, x0):
             x0_as_data.shape[:-1])
         raise ValueError(msg)
     return x0_as_data
+
+
+class ReturnFixedValue:
+    def __init__(self, value):
+        self.value = value
+
+    def __call__(self):
+        return self.value
