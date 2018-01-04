@@ -1,4 +1,4 @@
-from microstruktur.signal_models.distributions import (
+from microstruktur.distributions.distributions import (
     SD1Watson, SD2Bingham, DD1GammaDistribution)
 from collections import OrderedDict
 from itertools import chain
