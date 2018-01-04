@@ -258,10 +258,9 @@ class MultiCompartmentModel(MicrostructureModel):
     '''
 
     def __init__(
-        self, acquisition_scheme, models, partial_volumes=None,
+        self, models, partial_volumes=None,
         parameter_links=[], optimise_partial_volumes=True
     ):
-        self.scheme = acquisition_scheme
         self.models = models
         self.partial_volumes = partial_volumes
         self.parameter_links = parameter_links
@@ -420,7 +419,19 @@ class MultiCompartmentModel(MicrostructureModel):
                 parameters[parameter_name] = parameter_function()
         return parameters
 
-    def fit(self, data, parameter_initial_guess=None, mask=None,
+    def fix_parameter(self, parameter_name, value):
+        if parameter_name in self._parameter_ranges.keys():
+            model, name = self._parameter_map[parameter_name]
+            parameter_link = (model, name, lambda: value, [])
+            self.parameter_links.append(parameter_link)
+            del self._parameter_ranges[parameter_name]
+            del self._parameter_cardinality[parameter_name]
+            del self._parameter_scales[parameter_name]
+        else:
+            print ('"{}" does not exist or has already been fixed.').format(
+                parameter_name)
+
+    def fit(self, acquisition_scheme, data, parameter_initial_guess=None, mask=None,
             solver='brute2fine', Ns=5, maxiter=300,
             use_parallel_processing=have_pathos, number_of_processors=None):
         """ The main data fitting function of a multi-compartment model.
@@ -489,6 +500,7 @@ class MultiCompartmentModel(MicrostructureModel):
         """
 
         # estimate S0
+        self.scheme = acquisition_scheme
         data_ = np.atleast_2d(data)
         if self.scheme.TE is None:
             S0 = np.mean(data_[..., self.scheme.b0_mask], axis=-1)
@@ -547,16 +559,19 @@ class MultiCompartmentModel(MicrostructureModel):
             data_to_fit = data_
 
         start = time()
-        print ('Starting fitting process')
-
         if solver == 'brute2fine':
             if parameter_initial_guess is None:
                 parameter_initial_guess = np.tile(None, N_parameters)
             fit_func = FitBrute2Fine(self, self.scheme,
                                      parameter_initial_guess)
+            print ('Setup brute2fine optimizer in {} seconds').format(
+                time() - start)
         elif solver == 'mix':
             fit_func = FitMix(self)
+            print ('Setup MIX optimizer in {} seconds').format(
+                time() - start)
 
+        start = time()
         for idx, pos in enumerate(zip(*mask_pos)):
             voxel_E = data_to_fit[pos] / S0[pos]
             voxel_x0_vector = x0_[pos]
