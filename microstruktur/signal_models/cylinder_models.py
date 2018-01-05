@@ -189,16 +189,15 @@ class C2CylinderSodermanApproximation(MicrostructureModel):
         q = acquisition_scheme.qvalues
 
         diameter = kwargs.get('diameter', self.diameter)
-        lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
         mu = utils.unitsphere2cart_1d(mu)
         mu_perpendicular_plane = np.eye(3) - np.outer(mu, mu)
-        magnitude_parallel = np.dot(n, mu)
         magnitude_perpendicular = np.linalg.norm(
             np.dot(mu_perpendicular_plane, n.T),
             axis=0
         )
-        E_parallel = np.exp(-bvals * lambda_par_ * magnitude_parallel ** 2)
+        E_parallel = attenuation_parallel_stick(bvals, lambda_par, n, mu)
         E_perpendicular = np.ones_like(q)
         q_perp = q * magnitude_perpendicular
         q_nonzero = q_perp > 0  # only q>0 attenuate
@@ -357,16 +356,15 @@ class C3CylinderCallaghanApproximation(MicrostructureModel):
         tau = acquisition_scheme.tau
 
         diameter = kwargs.get('diameter', self.diameter)
-        lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
         mu = utils.unitsphere2cart_1d(mu)
         mu_perpendicular_plane = np.eye(3) - np.outer(mu, mu)
-        magnitude_parallel = np.dot(n, mu)
         magnitude_perpendicular = np.linalg.norm(
             np.dot(mu_perpendicular_plane, n.T),
             axis=0
         )
-        E_parallel = np.exp(-bvals * lambda_par_ * magnitude_parallel ** 2)
+        E_parallel = attenuation_parallel_stick(bvals, lambda_par, n, mu)
         E_perpendicular = np.ones_like(q)
         q_perp = q * magnitude_perpendicular
 
