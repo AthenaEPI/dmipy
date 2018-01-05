@@ -8,18 +8,23 @@ SPHERES_PATH = pkg_resources.resource_filename(
 )
 
 
-class FitBrute2Fine:
-    def __init__(self, model, acquisition_scheme, x0_vector, Ns=5, N_sphere_samples=30):
+class GlobalBruteOptimizer:
+    def __init__(self, model, x0_vector=None, Ns=5, N_sphere_samples=30):
         self.model = model
-        self.acquisition_scheme = acquisition_scheme
+        self.acquisition_scheme = model.scheme
         self.x0_vector = x0_vector
         self.Ns = Ns
 
-        if x0_vector.squeeze().ndim == 1:
+        if x0_vector is None:
+            self.global_optimization_grid = True
+            x0_vector = np.tile(None, len(model.bounds_for_optimization))
+            self.precompute_signal_grid(model, x0_vector, Ns, N_sphere_samples)
+        elif x0_vector.squeeze().ndim == 1:
+            self.global_optimization_grid = True
             self.precompute_signal_grid(model, x0_vector, Ns, N_sphere_samples)
         else:
-            self.signal_grid = None
-            self.parameter_grid = None
+            msg = "Cannot estimate signal grid with voxel-dependent x0_vector."
+            print (msg)
 
     def precompute_signal_grid(self, model, x0_vector, Ns, N_sphere_samples):
         "fixed volume fraction will still be ignored... "
@@ -95,15 +100,23 @@ class FitBrute2Fine:
         self.signal_grid = model.simulate_signal(
             self.acquisition_scheme, self.parameter_grid)
 
-        if N_model_fracts > 0:
-            normalized_volume_fractions = self.parameter_grid[:, -N_model_fracts:]
-            nested_volume_fractions = normalized_to_nested_fractions_array(
-                normalized_volume_fractions)
-            self.parameter_grid_nested = np.concatenate(
-                [self.parameter_grid[:, :-N_model_fracts],
-                 nested_volume_fractions], axis=-1)
+    def __call__(self, data, parameter_scale_normalization=True):
+        if self.global_optimization_grid is True:
+            x0_brute = self.parameter_grid[
+                np.argmin(np.sum((self.signal_grid - data) ** 2, axis=-1))]
+            if parameter_scale_normalization:
+                return x0_brute / self.model.scales_for_optimization
+            return x0_brute
         else:
-            self.parameter_grid_nested = self.parameter_grid
+            msg = "Global Parameter Grid could not be set because parameter "
+            msg += "initial condition is voxel dependent."
+            raise ValueError(msg)
+
+
+class Brute2FitOptimizer:
+    def __init__(self, model, Ns=5):
+        self.model = model
+        self.Ns = Ns
 
     def objective_function(self, parameter_vector, data):
         N_fractions = len(self.model.models)
@@ -120,7 +133,7 @@ class FitBrute2Fine:
         parameters.update(
             self.model.parameter_vector_to_parameters(parameter_vector_)
         )
-        E_model = self.model(self.acquisition_scheme, **parameters)
+        E_model = self.model(self.model.scheme, **parameters)
         E_diff = E_model - data
         objective = np.sum(E_diff ** 2) / len(data)
         return objective
@@ -145,14 +158,14 @@ class FitBrute2Fine:
         if N_fractions > 1:  # go to nested bounds
             bounds_brute = bounds_brute[:-1]
             bounds_fine = bounds_fine[:-1]
+            x0_vector = x0_vector[:-1]
 
-        if self.signal_grid is not None:
-            x0_brute = self.parameter_grid_nested[
-                np.argmin(np.sum((self.signal_grid - data) ** 2, axis=-1))]
-        else:
+        if np.any(x0_vector == None):
             x0_brute = brute(
                 self.objective_function, ranges=bounds_brute, args=fit_args,
                 finish=None)
+        else:
+            x0_brute = x0_vector
 
         x_fine_nested = minimize(self.objective_function, x0_brute,
                                  args=fit_args, bounds=bounds_fine,

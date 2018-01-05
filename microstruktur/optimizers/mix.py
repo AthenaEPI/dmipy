@@ -4,11 +4,11 @@ from dipy.utils.optpkg import optional_package
 cvxpy, have_cvxpy, _ = optional_package("cvxpy")
 
 
-class FitMix:
-    def __init__(self, model):
+class MixOptimizer:
+    def __init__(self, model, maxiter=150):
         self.model = model
 
-    def __call__(self, data, x0_vector, maxiter=150):
+    def __call__(self, data, x0_vector):
         """
         differential_evolution
         cvxpy

@@ -13,8 +13,9 @@ from microstruktur.utils.spherical_mean import (
     estimate_spherical_mean_multi_shell)
 from microstruktur.core.fitted_modeling_framework import (
     FittedMultiCompartmentModel)
-from microstruktur.optimizers.brute2fine import FitBrute2Fine
-from microstruktur.optimizers.mix import FitMix
+from microstruktur.optimizers.brute2fine import (
+    GlobalBruteOptimizer, Brute2FitOptimizer)
+from microstruktur.optimizers.mix import MixOptimizer
 from dipy.utils.optpkg import optional_package
 cvxpy, have_cvxpy, _ = optional_package("cvxpy")
 pathos, have_pathos, _ = optional_package("pathos")
@@ -434,7 +435,7 @@ class MultiCompartmentModel(MicrostructureModel):
                 parameter_name)
 
     def fit(self, acquisition_scheme, data, parameter_initial_guess=None, mask=None,
-            solver='brute2fine', Ns=5, maxiter=300,
+            solver='brute2fine', Ns=5, maxiter=300, N_sphere_samples=30,
             use_parallel_processing=have_pathos, number_of_processors=None):
         """ The main data fitting function of a multi-compartment model.
 
@@ -563,13 +564,16 @@ class MultiCompartmentModel(MicrostructureModel):
         start = time()
         if solver == 'brute2fine':
             if parameter_initial_guess is None:
+                global_brute = GlobalBruteOptimizer(
+                    self, parameter_initial_guess, Ns, N_sphere_samples)
+                fit_func = Brute2FitOptimizer(self, Ns)
                 parameter_initial_guess = np.tile(None, N_parameters)
-            fit_func = FitBrute2Fine(self, self.scheme,
-                                     parameter_initial_guess)
+            # fit_func = FitBrute2Fine(self, self.scheme,
+            #                          parameter_initial_guess)
             print ('Setup brute2fine optimizer in {} seconds').format(
                 time() - start)
         elif solver == 'mix':
-            fit_func = FitMix(self)
+            fit_func = MixOptimizer(self, maxiter)
             print ('Setup MIX optimizer in {} seconds').format(
                 time() - start)
 
@@ -577,11 +581,10 @@ class MultiCompartmentModel(MicrostructureModel):
         for idx, pos in enumerate(zip(*mask_pos)):
             voxel_E = data_to_fit[pos] / S0[pos]
             voxel_x0_vector = x0_[pos]
-
             if solver == 'brute2fine':
-                fit_args = (voxel_E, voxel_x0_vector)
-            elif solver == 'mix':
-                fit_args = (voxel_E, voxel_x0_vector, maxiter)
+                if global_brute.global_optimization_grid is True:
+                    voxel_x0_vector = global_brute(voxel_E)
+            fit_args = (voxel_E, voxel_x0_vector)
 
             if use_parallel_processing:
                 fitted_parameters_lin[idx] = pool.apipe(fit_func, *fit_args)
