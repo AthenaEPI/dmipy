@@ -7,6 +7,7 @@ cvxpy, have_cvxpy, _ = optional_package("cvxpy")
 class MixOptimizer:
     def __init__(self, model, maxiter=150):
         self.model = model
+        self.maxiter = maxiter
 
     def __call__(self, data, x0_vector):
         """
@@ -30,7 +31,7 @@ class MixOptimizer:
 
         res_one = differential_evolution(self.stochastic_objective_function,
                                          bounds=bounds,
-                                         maxiter=maxiter,
+                                         maxiter=self.maxiter,
                                          args=(data, self.model.scheme))
         res_one_x = res_one.x
         parameters = self.model.parameter_vector_to_parameters(
