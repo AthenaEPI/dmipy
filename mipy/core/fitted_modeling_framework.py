@@ -59,7 +59,7 @@ class FittedMultiCompartmentModel:
             msg = ('peaks not available for current model.')
             raise ValueError(msg)
         if len(mu_params) == 1:
-            return mu_params[0]
+            return np.expand_dims(mu_params[0], axis=-2)
         return np.concatenate([mu[..., None] for mu in mu_params], axis=-1)
 
     def peaks_cartesian(self):
