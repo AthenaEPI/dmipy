@@ -58,6 +58,10 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 ### Other Models
 - [VERDICT tumor model [Panagiotaki et al. 2014]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_verdict.ipynb)
 
+## Dipy implementations of non-compartment-based Microstructure Models
+- Apparent Fiber Density [Raffelt et al. 2012] 
+- White Matter Tract Integrity [Fieremans et al. 2012]
+
 ### Examples not to be included in first version
 - AxCaliber in presence of axon dispersion [unpublished but similar to Zhang at al. 2010]
 - AxCaliber with restricted extra-axonal diffusion [Burcaw et al. 2015]
