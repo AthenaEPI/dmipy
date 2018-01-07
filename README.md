@@ -51,9 +51,9 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - ActiveAx [Alexander et al. 2010]
 - [AxCaliber [Assaf et al. 2008]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_axcaliber.ipynb)
 ### Crossing Bundle Microstructure Models
-- Using Brute Force optimization
-- Using Dipy's CSD as crossing orientation initial guess
-- [Using Microstructure Imaging of Crossing (MIX) [Farooq et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_mix_microstructure_imaging_in_crossings.ipynb)
+- Ball and Sticks [Behrens et al. 2003]
+- [NODDI in crossings (NODDIx) [Farooq et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_mix_microstructure_imaging_in_crossings.ipynb)
+- Adaptive selection of number of compartments using Dipy's Constrained Spherical Deconvolution
 - [Multi-Compartment Spherical Mean Technique [Kaden et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_multi_compartment_spherical_mean_technique.ipynb)
 ### Other Models
 - [VERDICT tumor model [Panagiotaki et al. 2014]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_verdict.ipynb)
