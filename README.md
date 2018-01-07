@@ -25,7 +25,7 @@ Mipy stands apart from other packages is the complete freedom the user has to de
 - [cvxpy](www.cvxpy.org/) (optional for MIX optimization)
 - [numba](https://numba.pydata.org/) (optional for faster functions)
 
-## Getting Started:
+## Getting Started
 To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - [Setting up an acquisition scheme](https://github.com/AthenaEPI/microstruktur/blob/master/examples/tutorial_setting_up_acquisition_scheme.ipynb)
 - [Simulating and fitting data using a simple Stick model](https://github.com/AthenaEPI/microstruktur/blob/master/examples/tutorial_simulating_and_fitting_using_a_simple_model.ipynb)
@@ -57,6 +57,10 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - [Multi-Compartment Spherical Mean Technique [Kaden et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_multi_compartment_spherical_mean_technique.ipynb)
 ### Other Models
 - [VERDICT tumor model [Panagiotaki et al. 2014]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_verdict.ipynb)
+
+## Dipy implementations of non-compartment-based Microstructure Models
+- Apparent Fiber Density [Raffelt et al. 2012] 
+- White Matter Tract Integrity [Fieremans et al. 2012]
 
 ### Examples not to be included in first version
 - AxCaliber in presence of axon dispersion [unpublished but similar to Zhang at al. 2010]
