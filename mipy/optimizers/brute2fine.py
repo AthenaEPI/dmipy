@@ -23,6 +23,7 @@ class GlobalBruteOptimizer:
             self.global_optimization_grid = True
             self.precompute_signal_grid(model, x0_vector, Ns, N_sphere_samples)
         else:
+            self.global_optimization_grid = False
             msg = "Cannot estimate signal grid with voxel-dependent x0_vector."
             print (msg)
 

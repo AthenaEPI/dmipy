@@ -563,13 +563,9 @@ class MultiCompartmentModel(MicrostructureModel):
 
         start = time()
         if solver == 'brute2fine':
-            if parameter_initial_guess is None:
-                global_brute = GlobalBruteOptimizer(
-                    self, parameter_initial_guess, Ns, N_sphere_samples)
-                fit_func = Brute2FitOptimizer(self, Ns)
-                parameter_initial_guess = np.tile(None, N_parameters)
-            # fit_func = FitBrute2Fine(self, self.scheme,
-            #                          parameter_initial_guess)
+            global_brute = GlobalBruteOptimizer(
+                self, parameter_initial_guess, Ns, N_sphere_samples)
+            fit_func = Brute2FitOptimizer(self, Ns)
             print ('Setup brute2fine optimizer in {} seconds').format(
                 time() - start)
         elif solver == 'mix':
