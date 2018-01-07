@@ -25,7 +25,7 @@ Mipy stands apart from other packages is the complete freedom the user has to de
 - [cvxpy](www.cvxpy.org/) (optional for MIX optimization)
 - [numba](https://numba.pydata.org/) (optional for faster functions)
 
-## Getting Started:
+## Getting Started
 To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - [Setting up an acquisition scheme](https://github.com/AthenaEPI/microstruktur/blob/master/examples/tutorial_setting_up_acquisition_scheme.ipynb)
 - [Simulating and fitting data using a simple Stick model](https://github.com/AthenaEPI/microstruktur/blob/master/examples/tutorial_simulating_and_fitting_using_a_simple_model.ipynb)
