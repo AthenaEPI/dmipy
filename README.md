@@ -62,9 +62,4 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - [Apparent Fiber Density [Raffelt et al. 2012]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_apparent_fiber_density.ipynb)
 - [White Matter Tract Integrity [Fieremans et al. 2012]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_white_matter_tract_density.ipynb)
 
-### Examples not to be included in first version
-- AxCaliber in presence of axon dispersion [unpublished but similar to Zhang at al. 2010]
-- AxCaliber with restricted extra-axonal diffusion [Burcaw et al. 2015]
-- MC-SMT with restricted extra-axonal diffusion [unpublished]
-
 When public, use http://htmlpreview.github.io/ to replace ipynb with html files for better rendering.
