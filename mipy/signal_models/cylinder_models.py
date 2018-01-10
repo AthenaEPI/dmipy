@@ -106,7 +106,7 @@ class C1Stick(MicrostructureModel):
             rotational harmonics of stick model aligned with z-axis.
         """
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
-        simple_acq_scheme_rh.bvalues = np.full(samples, bvalue)
+        simple_acq_scheme_rh.bvalues[:] = bvalue
         E_kernel_sf = self(simple_acq_scheme_rh,
                            mu=[0., 0.], lambda_par=lambda_par)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
@@ -231,9 +231,9 @@ class C2CylinderSodermanApproximation(MicrostructureModel):
         """
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
-        simple_acq_scheme_rh.bvalues = np.full(samples, bvalue)
-        simple_acq_scheme_rh.delta = np.full(samples, delta)
-        simple_acq_scheme_rh.Delta = np.full(samples, Delta)
+        simple_acq_scheme_rh.bvalues[:] = bvalue
+        simple_acq_scheme_rh.delta[:] = delta
+        simple_acq_scheme_rh.Delta[:] = Delta
         E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.],
                            diameter=diameter, lambda_par=lambda_par)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
@@ -399,9 +399,9 @@ class C3CylinderCallaghanApproximation(MicrostructureModel):
         """
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
-        simple_acq_scheme_rh.bvalues = np.full(samples, bvalue)
-        simple_acq_scheme_rh.delta = np.full(samples, delta)
-        simple_acq_scheme_rh.Delta = np.full(samples, Delta)
+        simple_acq_scheme_rh.bvalues[:] = bvalue
+        simple_acq_scheme_rh.delta[:] = delta
+        simple_acq_scheme_rh.Delta[:] = Delta
         E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.],
                            diameter=diameter, lambda_par=lambda_par)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
@@ -535,9 +535,9 @@ class C4CylinderGaussianPhaseApproximation(MicrostructureModel):
         """
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
-        simple_acq_scheme_rh.bvalues = np.full(samples, bvalue)
-        simple_acq_scheme_rh.delta = np.full(samples, delta)
-        simple_acq_scheme_rh.Delta = np.full(samples, Delta)
+        simple_acq_scheme_rh.bvalues[:] = bvalue
+        simple_acq_scheme_rh.delta[:] = delta
+        simple_acq_scheme_rh.Delta[:] = Delta
         E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.],
                            diameter=diameter, lambda_par=lambda_par)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)

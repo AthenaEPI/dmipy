@@ -166,7 +166,7 @@ class G4Zeppelin(MicrostructureModel):
         """
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
-        simple_acq_scheme_rh.bvalues = np.full(samples, bvalue)
+        simple_acq_scheme_rh.bvalues[:] = bvalue
         E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.],
                            lambda_par=lambda_par, lambda_perp=lambda_perp)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
@@ -289,9 +289,9 @@ class G5RestrictedZeppelin(MicrostructureModel):
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         lambda_inf = kwargs.get('lambda_inf', self.lambda_inf)
         A = kwargs.get('A', self.A)
-        simple_acq_scheme_rh.bvalues = np.full(samples, bvalue)
-        simple_acq_scheme_rh.delta = np.full(samples, delta)
-        simple_acq_scheme_rh.Delta = np.full(samples, Delta)
+        simple_acq_scheme_rh.bvalues[:] = bvalue
+        simple_acq_scheme_rh.delta[:] = delta
+        simple_acq_scheme_rh.Delta[:] = Delta
 
         E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.],
                            lambda_par=lambda_par, lambda_inf=lambda_inf, A=A)
