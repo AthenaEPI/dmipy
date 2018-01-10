@@ -369,7 +369,9 @@ class DD1GammaDistribution(MicrostructureModel):
         beta = kwargs.get('beta', self.beta)
 
         gamma_dist = stats.gamma(alpha, scale=beta)
-        radius_max = gamma_dist.mean() + 6 * gamma_dist.std()
+        mean = alpha * beta
+        std = np.sqrt(alpha) * beta
+        radius_max = mean + 6 * std
         radii = np.linspace(1e-8, radius_max, self.Nsteps)
         area = np.pi * radii ** 2
         radii_pdf = gamma_dist.pdf(radii)
