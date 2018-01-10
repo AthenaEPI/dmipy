@@ -18,7 +18,7 @@ class FittedMultiCompartmentModel:
         return self.model.parameter_vector_to_parameters(
             self.fitted_parameters_vector)
 
-    def fod(self, vertices):
+    def fod(self, vertices, visual_odi_lower_bound=0):
         if not self.model.fod_available:
             msg = ('FODs not available for current model.')
             raise ValueError(msg)
@@ -29,6 +29,12 @@ class FittedMultiCompartmentModel:
         for pos in zip(*mask_pos):
             parameters = self.model.parameter_vector_to_parameters(
                 self.fitted_parameters_vector[pos])
+            if visual_odi_lower_bound > 0:
+                param_keys = parameters.keys()
+                for key in param_keys:
+                    if key[-3:] == 'odi':
+                        parameters[key] = np.clip(parameters[key],
+                                                  visual_odi_lower_bound, 1)
             fods[pos] = self.model(vertices, quantity='FOD', **parameters)
         return fods
 
