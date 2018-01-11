@@ -4,6 +4,7 @@ from collections import OrderedDict
 from itertools import chain
 from mipy.utils.spherical_convolution import sh_convolution
 from mipy.utils.utils import T1_tortuosity, parameter_equality
+import copy
 import numpy as np
 
 
@@ -197,6 +198,9 @@ class DistributedModel:
             self._parameter_map[parameter_name_in]]])
         del self._parameter_ranges[parameter_name_out]
         del self._parameter_scales[parameter_name_out]
+
+    def copy(self):
+        return copy.copy(self)
 
     @property
     def parameter_ranges(self):
