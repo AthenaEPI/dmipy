@@ -11,6 +11,7 @@ from time import time
 
 from mipy.utils.spherical_mean import (
     estimate_spherical_mean_multi_shell)
+from mipy.utils.utils import T1_tortuosity, parameter_equality
 from mipy.core.fitted_modeling_framework import (
     FittedMultiCompartmentModel)
 from mipy.optimizers.brute2fine import (
@@ -52,6 +53,10 @@ class MicrostructureModel:
             ])
         else:
             return self._parameter_scales.copy()
+
+    @property
+    def parameter_names(self):
+        return self._parameter_ranges.keys()
 
     @property
     def parameter_cardinality(self):
@@ -399,7 +404,7 @@ class MultiCompartmentModel(MicrostructureModel):
         if len(self.parameter_links) == 0:
             return parameters
         parameters = parameters.copy()
-        for parameter in self.parameter_links:
+        for parameter in self.parameter_links[::-1]:
             parameter_model, parameter_name, parameter_function, arguments = \
                 parameter
             parameter_name = self._inverted_parameter_map[
@@ -422,7 +427,7 @@ class MultiCompartmentModel(MicrostructureModel):
                 parameters[parameter_name] = parameter_function()
         return parameters
 
-    def fix_parameter(self, parameter_name, value):
+    def set_fixed_parameter(self, parameter_name, value):
         if parameter_name in self._parameter_ranges.keys():
             model, name = self._parameter_map[parameter_name]
             parameter_link = (model, name, ReturnFixedValue(value), [])
@@ -433,6 +438,47 @@ class MultiCompartmentModel(MicrostructureModel):
         else:
             print ('"{}" does not exist or has already been fixed.').format(
                 parameter_name)
+
+    def set_tortuous_parameter(self, lambda_perp_parameter_name,
+                               lambda_par_parameter_name,
+                               volume_fraction_intra_parameter_name,
+                               volume_fraction_extra_parameter_name):
+        params = [lambda_perp_parameter_name, lambda_par_parameter_name,
+                  volume_fraction_intra_parameter_name,
+                  volume_fraction_extra_parameter_name]
+        for param in params:
+            try:
+                self.parameter_cardinality[param]
+            except KeyError:
+                msg = ("{} does not exist or has already been fixed.").format(
+                    param)
+                raise ValueError(msg)
+
+        model, name = self._parameter_map[lambda_perp_parameter_name]
+        self.parameter_links.append([model, name, T1_tortuosity, [
+            self._parameter_map[lambda_par_parameter_name],
+            self._parameter_map[volume_fraction_intra_parameter_name],
+            self._parameter_map[volume_fraction_extra_parameter_name]]
+        ])
+        del self._parameter_ranges[lambda_perp_parameter_name]
+        del self._parameter_cardinality[lambda_perp_parameter_name]
+        del self._parameter_scales[lambda_perp_parameter_name]
+
+    def set_equal_parameter(self, parameter_name_in, parameter_name_out):
+        params = [parameter_name_in, parameter_name_out]
+        for param in params:
+            try:
+                self.parameter_cardinality[param]
+            except KeyError:
+                msg = ("{} does not exist or has already been fixed.").format(
+                    param)
+                raise ValueError(msg)
+        model, name = self._parameter_map[parameter_name_out]
+        self.parameter_links.append([model, name, parameter_equality, [
+            self._parameter_map[parameter_name_in]]])
+        del self._parameter_ranges[parameter_name_out]
+        del self._parameter_cardinality[parameter_name_out]
+        del self._parameter_scales[parameter_name_out]
 
     def fit(self, acquisition_scheme, data, parameter_initial_guess=None, mask=None,
             solver='brute2fine', Ns=5, maxiter=300, N_sphere_samples=30,

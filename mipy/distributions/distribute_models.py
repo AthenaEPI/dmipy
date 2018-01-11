@@ -3,6 +3,7 @@ from mipy.distributions.distributions import (
 from collections import OrderedDict
 from itertools import chain
 from mipy.utils.spherical_convolution import sh_convolution
+from mipy.utils.utils import T1_tortuosity, parameter_equality
 import numpy as np
 
 
@@ -129,7 +130,7 @@ class DistributedModel:
         if len(self.parameter_links) == 0:
             return parameters
         parameters = parameters.copy()
-        for parameter in self.parameter_links:
+        for parameter in self.parameter_links[::-1]:
             parameter_model, parameter_name, parameter_function, arguments = \
                 parameter
             parameter_name = self._inverted_parameter_map[
@@ -151,9 +152,59 @@ class DistributedModel:
                 parameters[parameter_name] = parameter_function()
         return parameters
 
+    def set_fixed_parameter(self, parameter_name, value):
+        if parameter_name in self._parameter_ranges.keys():
+            model, name = self._parameter_map[parameter_name]
+            parameter_link = (model, name, ReturnFixedValue(value), [])
+            self.parameter_links.append(parameter_link)
+            del self._parameter_ranges[parameter_name]
+            del self._parameter_scales[parameter_name]
+        else:
+            print ('{} does not exist or has already been fixed.').format(
+                parameter_name)
+
+    def set_tortuous_parameter(self, lambda_perp,
+                               lambda_par,
+                               volume_fraction_intra):
+        params = [lambda_perp, lambda_par, volume_fraction_intra]
+        for param in params:
+            try:
+                self._parameter_ranges[param]
+            except KeyError:
+                print("{} does not exist or has already been fixed.").format(
+                    param)
+                return None
+
+        model, name = self._parameter_map[lambda_perp]
+        self.parameter_links.append([model, name, T1_tortuosity, [
+            self._parameter_map[lambda_par],
+            self._parameter_map[volume_fraction_intra]]
+        ])
+        del self._parameter_ranges[lambda_perp]
+        del self._parameter_scales[lambda_perp]
+
+    def set_equal_parameter(self, parameter_name_in, parameter_name_out):
+        params = [parameter_name_in, parameter_name_out]
+        for param in params:
+            try:
+                self._parameter_ranges[param]
+            except KeyError:
+                print("{} does not exist or has already been fixed.").format(
+                    param)
+                return None
+        model, name = self._parameter_map[parameter_name_out]
+        self.parameter_links.append([model, name, parameter_equality, [
+            self._parameter_map[parameter_name_in]]])
+        del self._parameter_ranges[parameter_name_out]
+        del self._parameter_scales[parameter_name_out]
+
     @property
     def parameter_ranges(self):
         return self._parameter_ranges.copy()
+
+    @property
+    def parameter_names(self):
+        return self._parameter_ranges.keys()
 
     @property
     def parameter_scales(self):
@@ -350,3 +401,11 @@ class DD1GammaDistributed(DistributedModel):
         self._delete_models_diameter_from_parameters()
         self._prepare_partial_volumes()
         self._prepare_parameter_links()
+
+
+class ReturnFixedValue:
+    def __init__(self, value):
+        self.value = value
+
+    def __call__(self):
+        return self.value
