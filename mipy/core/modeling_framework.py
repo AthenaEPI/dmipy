@@ -219,6 +219,8 @@ class MicrostructureModel:
             The simulated signal of the microstructure model.
         """
         Ndata = acquisition_scheme.number_of_measurements
+        if self.spherical_mean:
+            Ndata = len(acquisition_scheme.shell_bvalues)
         x0 = model_parameters_array
 
         x0_at_least_2d = np.atleast_2d(x0)
