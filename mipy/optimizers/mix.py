@@ -87,7 +87,7 @@ class MixOptimizer:
         )
         E_model = self.model(acquisition_scheme, **parameters)
         E_diff = E_model - data
-        objective = np.sum(E_diff ** 2) / len(data)
+        objective = np.dot(E_diff, E_diff) / len(data)
         return objective
 
     def stochastic_objective_function(self, parameter_vector,
@@ -101,7 +101,7 @@ class MixOptimizer:
         phi_x = self.model(acquisition_scheme,
                            quantity="stochastic cost function", **parameters)
 
-        phi_mp = np.dot(np.linalg.pinv(np.dot(phi_x.T, phi_x)), phi_x.T)
+        phi_mp = np.dot(np.linalg.inv(np.dot(phi_x.T, phi_x)), phi_x.T)
         f = np.dot(phi_mp, data)
         yhat = np.dot(phi_x, f)
         cost = np.dot(data - yhat, data - yhat).squeeze()

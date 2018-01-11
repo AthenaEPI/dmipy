@@ -136,7 +136,7 @@ class Brute2FitOptimizer:
         )
         E_model = self.model(self.model.scheme, **parameters)
         E_diff = E_model - data
-        objective = np.sum(E_diff ** 2) / len(data)
+        objective = np.dot(E_diff, E_diff) / len(data)
         return objective
 
     def __call__(self, data, x0_vector):
