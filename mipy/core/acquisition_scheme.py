@@ -376,6 +376,41 @@ def acquisition_scheme_from_gradient_strengths(
                                  min_b_shell_distance, b0_threshold)
 
 
+def acquisition_scheme_from_schemefile(file_path):
+    r"""
+    Created an acquisition scheme object from a Camino scheme file, containing
+    gradient directions, strengths, pulse duration $\delta$ and pulse
+    separation time $\Delta$ and TE.
+
+    Parameters
+    ----------
+    file_path: string
+        absolute file path to schemefile location
+
+    Returns
+    -------
+    MipyAcquisitionScheme: acquisition scheme object
+        contains all information of the acquisition scheme to be used in any
+        microstructure model.
+    """
+    skiprows = 0
+    while True:
+        try:
+            scheme = np.loadtxt(file_path, skiprows=skiprows)
+            break
+        except ValueError:
+            skiprows += 1
+
+    bvecs = scheme[:, :3]
+    bvecs[np.linalg.norm(bvecs, axis=1) == 0.] = np.r_[1., 0., 0.]
+    G = scheme[:, 3]
+    Delta = scheme[:, 4]
+    delta = scheme[:, 5]
+    TE = scheme[:, 6]
+    return acquisition_scheme_from_gradient_strengths(
+        G, bvecs, delta, Delta, TE)
+
+
 def unify_length_reference_delta_Delta(reference_array, delta, Delta, TE):
     """
     If either delta or Delta are given as float, makes them an array the same
