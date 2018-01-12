@@ -26,10 +26,10 @@ if have_pathos:
     from pathos.helpers import cpu_count
 
 GRADIENT_TABLES_PATH = pkg_resources.resource_filename(
-    'microstruktur', 'data/gradient_tables'
+    'mipy', 'data/gradient_tables'
 )
 SIGNAL_MODELS_PATH = pkg_resources.resource_filename(
-    'microstruktur', 'signal_models'
+    'mipy', 'signal_models'
 )
 
 
