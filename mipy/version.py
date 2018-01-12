@@ -26,7 +26,7 @@ CLASSIFIERS = ["Development Status :: 3 - Alpha",
                "Topic :: Scientific/Engineering"]
 
 # Description should be a one-liner:
-description = "microstruktur: a template for small scientific Python projects"
+description = "mipy: a template for small scientific Python projects"
 # Long description will go up on the pypi page
 long_description = """
 
@@ -42,11 +42,11 @@ to use in other projects.
 To get started using these components in your own software, please go to the
 repository README_.
 
-.. _README: https://github.com/uwescience/microstruktur/blob/master/README.md
+.. _README: https://github.com/uwescience/mipy/blob/master/README.md
 
 License
 =======
-``microstruktur`` is licensed under the terms of the MIT license. See the file
+``mipy`` is licensed under the terms of the MIT license. See the file
 "LICENSE" for information on the history of this software, terms & conditions
 for usage, and a DISCLAIMER OF ALL WARRANTIES.
 
@@ -56,12 +56,12 @@ Copyright (c) 2015--, Ariel Rokem, The University of Washington
 eScience Institute.
 """
 
-NAME = "microstruktur"
+NAME = "mipy"
 MAINTAINER = "Ariel Rokem"
 MAINTAINER_EMAIL = "arokem@gmail.com"
 DESCRIPTION = description
 LONG_DESCRIPTION = long_description
-URL = "http://github.com/uwescience/microstruktur"
+URL = "http://github.com/uwescience/mipy"
 DOWNLOAD_URL = ""
 LICENSE = "MIT"
 AUTHOR = "Ariel Rokem"
@@ -72,13 +72,13 @@ MINOR = _version_minor
 MICRO = _version_micro
 VERSION = __version__
 PACKAGE_DATA = {
-    'microstruktur': [
+    'mipy': [
         pjoin('data', 'gradient_tables', '*'),
         pjoin('data', 'spheres', '*'),
         pjoin('data', 'bingham_normalization_splinefit.npz'),
         pjoin('data', 'wu_minn_hcp_coronal_slice.nii.gz'),
         pjoin('data', 'tanguy_cat_spinal_cord', '*'),
-	pjoin('data', 'camino', '*')
+        pjoin('data', 'camino', '*')
     ]
 }
 REQUIRES = ["numpy", 'dipy']

@@ -6,10 +6,10 @@ from mipy.core.acquisition_scheme import (
     acquisition_scheme_from_gradient_strengths)
 
 _GRADIENT_TABLES_PATH = pkg_resources.resource_filename(
-    'microstruktur', 'data/gradient_tables'
+    'mipy', 'data/gradient_tables'
 )
 DATA_PATH = pkg_resources.resource_filename(
-    'microstruktur', 'data/'
+    'mipy', 'data/'
 )
 
 
