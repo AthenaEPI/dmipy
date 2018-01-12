@@ -4,7 +4,7 @@ from mipy.utils.utils import cart2mu
 import numpy as np
 
 SPHERES_PATH = pkg_resources.resource_filename(
-    'microstruktur', 'data/spheres'
+    'mipy', 'data/spheres'
 )
 
 
