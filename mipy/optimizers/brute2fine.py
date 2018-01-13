@@ -96,7 +96,7 @@ class GlobalBruteOptimizer:
                     np.r_[[fract[i] for fract in lin_nested_fractions]])
 
             counter = 0
-            for name, card in parameter_cardinality_items:
+            for name, card in model.parameter_cardinality.items()[-N_model_fracts:]:
                 param_dict[name] = lin_fractions[:, counter]
                 counter += 1
 
