@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.optimize import differential_evolution, minimize
+from scipy.optimize import differential_evolution, minimize, fmin_cobyla
 from dipy.utils.optpkg import optional_package
 cvxpy, have_cvxpy, _ = optional_package("cvxpy")
 
@@ -133,3 +133,11 @@ def nested_to_normalized_fractions(nested_fractions):
         remaining_fraction -= normalized_fractions[i]
     normalized_fractions[-1] = remaining_fraction
     return normalized_fractions
+
+
+def cobyla_positivity_constraint(volume_fractions):
+    return volume_fractions
+
+
+def cobyla_unity_constraint(volume_fractions):
+    return np.sum(volume_fractions) - 1
