@@ -22,7 +22,6 @@ Mipy stands apart from other packages is the complete freedom the user has to de
 - scipy
 - [dipy](http://nipy.org/dipy/)
 - [pathos](https://pypi.python.org/pypi/pathos) (optional for multi-core processing)
-- [cvxpy](www.cvxpy.org/) (optional for MIX optimization)
 - [numba](https://numba.pydata.org/) (optional for faster functions)
 
 ## Getting Started
