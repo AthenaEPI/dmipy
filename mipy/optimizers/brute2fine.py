@@ -2,6 +2,9 @@ from scipy.optimize import brute, minimize
 import pkg_resources
 from mipy.utils.utils import cart2mu
 import numpy as np
+from dipy.utils.optpkg import optional_package
+
+numba, have_numba, _ = optional_package("numba")
 
 SPHERES_PATH = pkg_resources.resource_filename(
     'mipy', 'data/spheres'
@@ -107,8 +110,8 @@ class GlobalBruteOptimizer:
 
     def __call__(self, data, parameter_scale_normalization=True):
         if self.global_optimization_grid is True:
-            x0_brute = self.parameter_grid[
-                np.argmin(np.sum((self.signal_grid - data) ** 2, axis=-1))]
+            argmin = find_minimum_argument(self.signal_grid, data)
+            x0_brute = self.parameter_grid[argmin]
             if parameter_scale_normalization:
                 return x0_brute / self.model.scales_for_optimization
             return x0_brute
@@ -207,3 +210,17 @@ def normalized_to_nested_fractions_array(normalized_fractions):
                                                         i] / remaining_fraction
         remaining_fraction -= normalized_fractions[..., i]
     return nested_fractions
+
+
+def find_minimum_argument(data_grid, signal):
+    return np.argmin(np.sum((data_grid - signal) ** 2, axis=-1))
+
+
+if have_numba:
+    @numba.njit()
+    def find_minimum_argument(data_grid, signal):
+        cost = np.zeros(len(data_grid))
+        for i in range(len(data_grid)):
+            diff = data_grid[i] - signal
+            cost[i] = np.dot(diff, diff)
+        return np.argmin(cost)
