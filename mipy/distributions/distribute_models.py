@@ -53,13 +53,13 @@ class DistributedModel:
                 )
             )
 
-        self._parameter_ranges = OrderedDict({
+        self.parameter_ranges = OrderedDict({
             model_name + k: v
             for model, model_name in zip(models_and_distribution, self.model_names)
             for k, v in model.parameter_ranges.items()
         })
 
-        self._parameter_scales = OrderedDict({
+        self.parameter_scales = OrderedDict({
             model_name + k: v
             for model, model_name in zip(models_and_distribution, self.model_names)
             for k, v in model.parameter_scales.items()
@@ -80,16 +80,16 @@ class DistributedModel:
             parameter_name = self._inverted_parameter_map[
                 (model, 'mu')
             ]
-            del self._parameter_ranges[parameter_name]
-            del self._parameter_scales[parameter_name]
+            del self.parameter_ranges[parameter_name]
+            del self.parameter_scales[parameter_name]
 
     def _delete_models_diameter_from_parameters(self):
         for model in self.models:
             parameter_name = self._inverted_parameter_map[
                 (model, 'diameter')
             ]
-            del self._parameter_ranges[parameter_name]
-            del self._parameter_scales[parameter_name]
+            del self.parameter_ranges[parameter_name]
+            del self.parameter_scales[parameter_name]
 
     def _prepare_partial_volumes(self):
         if len(self.models) > 1:
@@ -99,8 +99,8 @@ class DistributedModel:
             ]
 
             for i, partial_volume_name in enumerate(self.partial_volume_names):
-                self._parameter_ranges[partial_volume_name] = (0.01, .99)
-                self._parameter_scales[partial_volume_name] = 1.
+                self.parameter_ranges[partial_volume_name] = (0.01, .99)
+                self.parameter_scales[partial_volume_name] = 1.
                 self._parameter_map[partial_volume_name] = (
                     None, partial_volume_name
                 )
@@ -124,8 +124,8 @@ class DistributedModel:
                 (parameter_model, parameter_name)
             ]
 
-            del self._parameter_ranges[parameter_name]
-            del self._parameter_scales[parameter_name]
+            del self.parameter_ranges[parameter_name]
+            del self.parameter_scales[parameter_name]
 
     def add_linked_parameters_to_parameters(self, parameters):
         if len(self.parameter_links) == 0:
@@ -154,12 +154,12 @@ class DistributedModel:
         return parameters
 
     def set_fixed_parameter(self, parameter_name, value):
-        if parameter_name in self._parameter_ranges.keys():
+        if parameter_name in self.parameter_ranges.keys():
             model, name = self._parameter_map[parameter_name]
             parameter_link = (model, name, ReturnFixedValue(value), [])
             self.parameter_links.append(parameter_link)
-            del self._parameter_ranges[parameter_name]
-            del self._parameter_scales[parameter_name]
+            del self.parameter_ranges[parameter_name]
+            del self.parameter_scales[parameter_name]
         else:
             print ('{} does not exist or has already been fixed.').format(
                 parameter_name)
@@ -170,7 +170,7 @@ class DistributedModel:
         params = [lambda_perp, lambda_par, volume_fraction_intra]
         for param in params:
             try:
-                self._parameter_ranges[param]
+                self.parameter_ranges[param]
             except KeyError:
                 print("{} does not exist or has already been fixed.").format(
                     param)
@@ -181,14 +181,14 @@ class DistributedModel:
             self._parameter_map[lambda_par],
             self._parameter_map[volume_fraction_intra]]
         ])
-        del self._parameter_ranges[lambda_perp]
-        del self._parameter_scales[lambda_perp]
+        del self.parameter_ranges[lambda_perp]
+        del self.parameter_scales[lambda_perp]
 
     def set_equal_parameter(self, parameter_name_in, parameter_name_out):
         params = [parameter_name_in, parameter_name_out]
         for param in params:
             try:
-                self._parameter_ranges[param]
+                self.parameter_ranges[param]
             except KeyError:
                 print("{} does not exist or has already been fixed.").format(
                     param)
@@ -196,23 +196,15 @@ class DistributedModel:
         model, name = self._parameter_map[parameter_name_out]
         self.parameter_links.append([model, name, parameter_equality, [
             self._parameter_map[parameter_name_in]]])
-        del self._parameter_ranges[parameter_name_out]
-        del self._parameter_scales[parameter_name_out]
+        del self.parameter_ranges[parameter_name_out]
+        del self.parameter_scales[parameter_name_out]
 
     def copy(self):
         return copy.copy(self)
 
     @property
-    def parameter_ranges(self):
-        return self._parameter_ranges.copy()
-
-    @property
     def parameter_names(self):
-        return self._parameter_ranges.keys()
-
-    @property
-    def parameter_scales(self):
-        return self._parameter_scales.copy()
+        return self.parameter_ranges.keys()
 
     def __call__(self, acquisition_scheme, **kwargs):
         if (isinstance(self.distribution, SD1Watson) or
