@@ -18,7 +18,6 @@ from mipy.optimizers.brute2fine import (
     GlobalBruteOptimizer, Brute2FitOptimizer)
 from mipy.optimizers.mix import MixOptimizer
 from dipy.utils.optpkg import optional_package
-cvxpy, have_cvxpy, _ = optional_package("cvxpy")
 pathos, have_pathos, _ = optional_package("pathos")
 
 if have_pathos:

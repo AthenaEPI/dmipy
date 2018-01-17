@@ -1,7 +1,5 @@
 import numpy as np
 from scipy.optimize import differential_evolution, minimize, fmin_cobyla
-from dipy.utils.optpkg import optional_package
-cvxpy, have_cvxpy, _ = optional_package("cvxpy")
 
 
 class MixOptimizer:
@@ -13,7 +11,7 @@ class MixOptimizer:
     def __call__(self, data, x0_vector):
         """
         differential_evolution
-        cvxpy
+        cobyla
         least squares
 
         References
@@ -46,15 +44,22 @@ class MixOptimizer:
         if self.Nmodels > 1:
             phi = self.model(self.model.scheme,
                              quantity="stochastic cost function", **parameters)
-            x_fe = self._cvx_fit_linear_parameters(data, phi)
+            phi_inv = np.dot(np.linalg.inv(np.dot(phi.T, phi)), phi.T)
+            f_x0 = np.dot(phi_inv, data)
+            f_x0 /= np.sum(np.clip(f_x0, 0, np.inf))
+            vf = fmin_cobyla(self.cobyla_cost_function, x0=f_x0,
+                             cons=[cobyla_positivity_constraint,
+                                   cobyla_unity_constraint],
+                             args=(phi, data),
+                             maxfun=2000)
 
             # step 3: refine using gradient method / convert nested fractions
-            x_fe_nested = np.ones(len(x_fe) - 1)
-            x_fe_nested[0] = x_fe[0]
-            for i in np.arange(1, len(x_fe_nested)):
-                x_fe_nested[i] = x_fe[i] / x_fe[i - 1]
+            vf_nested = np.ones(len(vf) - 1)
+            vf_nested[0] = vf[0]
+            for i in np.arange(1, len(vf_nested)):
+                vf_nested[i] = vf[i] / vf[i - 1]
 
-            x0_refine = np.r_[res_one_x[:-len(x_fe)], x_fe_nested]
+            x0_refine = np.r_[res_one_x[:-len(vf)], vf_nested]
             bounds_ = bounds[:-1]
         else:
             x0_refine = res_one_x
@@ -113,15 +118,11 @@ class MixOptimizer:
         cost = np.dot(data - yhat, data - yhat).squeeze()
         return cost
 
-    def _cvx_fit_linear_parameters(self, data, phi):
-        fe = cvxpy.Variable(phi.shape[1])
-        constraints = [cvxpy.sum_entries(fe) == 1,
-                       fe >= 0.011,
-                       fe <= 0.989]
-        obj = cvxpy.Minimize(cvxpy.sum_squares(phi * fe - data))
-        prob = cvxpy.Problem(obj, constraints)
-        prob.solve()
-        return np.array(fe.value).squeeze()
+    def cobyla_cost_function(self, fractions, phi, data):
+        E_hat = np.dot(phi, fractions)
+        diff = data - E_hat
+        objective = np.dot(diff, diff)
+        return objective
 
 
 def nested_to_normalized_fractions(nested_fractions):
@@ -135,9 +136,9 @@ def nested_to_normalized_fractions(nested_fractions):
     return normalized_fractions
 
 
-def cobyla_positivity_constraint(volume_fractions):
-    return volume_fractions
+def cobyla_positivity_constraint(volume_fractions, *args):
+    return volume_fractions - 0.001
 
 
-def cobyla_unity_constraint(volume_fractions):
+def cobyla_unity_constraint(volume_fractions, *args):
     return np.sum(volume_fractions) - 1
