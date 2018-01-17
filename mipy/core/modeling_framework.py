@@ -54,40 +54,10 @@ class ModelProperties:
 
 
 class MicrostructureModel:
-    @property
-    def parameter_ranges(self):
-        if not isinstance(self._parameter_ranges, OrderedDict):
-            return OrderedDict([
-                (k, self._parameter_ranges[k])
-                for k in sorted(self._parameter_ranges)
-            ])
-        else:
-            return self._parameter_ranges.copy()
-
-    @property
-    def parameter_scales(self):
-        if not isinstance(self._parameter_scales, OrderedDict):
-            return OrderedDict([
-                (k, self._parameter_scales[k])
-                for k in sorted(self._parameter_scales)
-            ])
-        else:
-            return self._parameter_scales.copy()
 
     @property
     def parameter_names(self):
-        return self._parameter_ranges.keys()
-
-    @property
-    def parameter_cardinality(self):
-        if hasattr(self, '_parameter_cardinality'):
-            return self._parameter_cardinality
-
-        self._parameter_cardinality = OrderedDict([
-            (k, len(np.atleast_2d(self.parameter_ranges[k])))
-            for k in self.parameter_ranges
-        ])
-        return self._parameter_cardinality.copy()
+        return self.parameter_ranges.keys()
 
     def parameter_vector_to_parameters(self, parameter_vector):
         parameters = {}
@@ -320,13 +290,13 @@ class MultiCompartmentModel(MicrostructureModel):
                 )
             )
 
-        self._parameter_ranges = OrderedDict({
+        self.parameter_ranges = OrderedDict({
             model_name + k: v
             for model, model_name in zip(self.models, self.model_names)
             for k, v in model.parameter_ranges.items()
         })
 
-        self._parameter_scales = OrderedDict({
+        self.parameter_scales = OrderedDict({
             model_name + k: v
             for model, model_name in zip(self.models, self.model_names)
             for k, v in model.parameter_scales.items()
@@ -341,7 +311,11 @@ class MultiCompartmentModel(MicrostructureModel):
         self._inverted_parameter_map = {
             v: k for k, v in self._parameter_map.items()
         }
-        self._parameter_cardinality = self.parameter_cardinality
+
+        self.parameter_cardinality = OrderedDict([
+            (k, len(np.atleast_2d(self.parameter_ranges[k])))
+            for k in self.parameter_ranges
+        ])
 
     def _prepare_partial_volumes(self):
         if len(self.models) > 1:
@@ -352,8 +326,8 @@ class MultiCompartmentModel(MicrostructureModel):
                 ]
 
                 for i, partial_volume_name in enumerate(self.partial_volume_names):
-                    self._parameter_ranges[partial_volume_name] = (0.01, .99)
-                    self._parameter_scales[partial_volume_name] = 1.
+                    self.parameter_ranges[partial_volume_name] = (0.01, .99)
+                    self.parameter_scales[partial_volume_name] = 1.
                     # self.parameter_defaults[partial_volume_name] = (
                     #     1 / (len(self.models) - i)
                     # )
@@ -362,7 +336,7 @@ class MultiCompartmentModel(MicrostructureModel):
                     )
                     self._inverted_parameter_map[(None, partial_volume_name)] = \
                         partial_volume_name
-                    self._parameter_cardinality[partial_volume_name] = 1
+                    self.parameter_cardinality[partial_volume_name] = 1
             else:
                 if self.partial_volumes is None:
                     self.partial_volumes = np.array([
@@ -387,10 +361,10 @@ class MultiCompartmentModel(MicrostructureModel):
                 (parameter_model, parameter_name)
             ]
 
-            del self._parameter_ranges[parameter_name]
+            del self.parameter_ranges[parameter_name]
             # del self.parameter_defaults[parameter_name]
-            del self._parameter_cardinality[parameter_name]
-            del self._parameter_scales[parameter_name]
+            del self.parameter_cardinality[parameter_name]
+            del self.parameter_scales[parameter_name]
 
     def _prepare_parameters_to_optimize(self):
         self.optimized_parameters = OrderedDict({
@@ -450,13 +424,13 @@ class MultiCompartmentModel(MicrostructureModel):
         return parameters
 
     def set_fixed_parameter(self, parameter_name, value):
-        if parameter_name in self._parameter_ranges.keys():
+        if parameter_name in self.parameter_ranges.keys():
             model, name = self._parameter_map[parameter_name]
             parameter_link = (model, name, ReturnFixedValue(value), [])
             self.parameter_links.append(parameter_link)
-            del self._parameter_ranges[parameter_name]
-            del self._parameter_cardinality[parameter_name]
-            del self._parameter_scales[parameter_name]
+            del self.parameter_ranges[parameter_name]
+            del self.parameter_cardinality[parameter_name]
+            del self.parameter_scales[parameter_name]
         else:
             print ('"{}" does not exist or has already been fixed.').format(
                 parameter_name)
@@ -482,9 +456,9 @@ class MultiCompartmentModel(MicrostructureModel):
             self._parameter_map[volume_fraction_intra_parameter_name],
             self._parameter_map[volume_fraction_extra_parameter_name]]
         ])
-        del self._parameter_ranges[lambda_perp_parameter_name]
-        del self._parameter_cardinality[lambda_perp_parameter_name]
-        del self._parameter_scales[lambda_perp_parameter_name]
+        del self.parameter_ranges[lambda_perp_parameter_name]
+        del self.parameter_cardinality[lambda_perp_parameter_name]
+        del self.parameter_scales[lambda_perp_parameter_name]
 
     def set_equal_parameter(self, parameter_name_in, parameter_name_out):
         params = [parameter_name_in, parameter_name_out]
@@ -498,9 +472,9 @@ class MultiCompartmentModel(MicrostructureModel):
         model, name = self._parameter_map[parameter_name_out]
         self.parameter_links.append([model, name, parameter_equality, [
             self._parameter_map[parameter_name_in]]])
-        del self._parameter_ranges[parameter_name_out]
-        del self._parameter_cardinality[parameter_name_out]
-        del self._parameter_scales[parameter_name_out]
+        del self.parameter_ranges[parameter_name_out]
+        del self.parameter_cardinality[parameter_name_out]
+        del self.parameter_scales[parameter_name_out]
 
     def fit(self, acquisition_scheme, data, parameter_initial_guess=None, mask=None,
             solver='brute2fine', Ns=5, maxiter=300, N_sphere_samples=30,
