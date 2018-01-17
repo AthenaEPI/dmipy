@@ -33,7 +33,7 @@ DIFFUSIVITY_SCALING = 1e-9
 A_SCALING = 1e-12
 
 
-class G3Ball(MicrostructureModel):
+class G1Ball(MicrostructureModel):
     r""" The Ball model [1] - an isotropic Tensor with one diffusivity.
 
     Parameters
@@ -79,7 +79,7 @@ class G3Ball(MicrostructureModel):
         return E_ball
 
 
-class G4Zeppelin(MicrostructureModel):
+class G2Zeppelin(MicrostructureModel):
     r""" The Zeppelin model [1] - an axially symmetric Tensor - for
     extra-axonal diffusion.
 
@@ -173,7 +173,7 @@ class G4Zeppelin(MicrostructureModel):
         return rh
 
 
-class G5RestrictedZeppelin(MicrostructureModel):
+class G3RestrictedZeppelin(MicrostructureModel):
     r""" The restricted Zeppelin model [1] - an axially symmetric Tensor - for
     extra-axonal diffusion.
 

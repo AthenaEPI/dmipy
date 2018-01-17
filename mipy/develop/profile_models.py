@@ -112,8 +112,8 @@ def profile_G2Dot(reps=1000):
                     globals(), locals())
 
 
-def profile_G3Ball(reps=1000):
-    model = gaussian_models.G3Ball()
+def profile_G1Ball(reps=1000):
+    model = gaussian_models.G1Ball()
     mc_model = modeling_framework.MultiCompartmentModel(
         acquisition_scheme=scheme,
         models=[model])
@@ -129,8 +129,8 @@ def profile_G3Ball(reps=1000):
                     globals(), locals())
 
 
-def profile_G4Zeppelin(reps=1000):
-    model = gaussian_models.G4Zeppelin()
+def profile_G2Zeppelin(reps=1000):
+    model = gaussian_models.G2Zeppelin()
     mc_model = modeling_framework.MultiCompartmentModel(
         acquisition_scheme=scheme,
         models=[model])
@@ -146,8 +146,8 @@ def profile_G4Zeppelin(reps=1000):
                     globals(), locals())
 
 
-def profile_G5RestrictedZeppelin(reps=1000):
-    model = gaussian_models.G5RestrictedZeppelin()
+def profile_G3RestrictedZeppelin(reps=1000):
+    model = gaussian_models.G3RestrictedZeppelin()
     mc_model = modeling_framework.MultiCompartmentModel(
         acquisition_scheme=scheme,
         models=[model])
@@ -198,7 +198,7 @@ def profile_SD2C2BinghamDispersedSodermanCylinder(reps=1000):
 
 
 def profile_ball_and_racket(reps=1000):
-    ball = gaussian_models.G3Ball()
+    ball = gaussian_models.G1Ball()
     stick = cylinder_models.C1Stick()
     dispersed_stick = SD2BinghamDistributed([stick])
     mc_model = modeling_framework.MultiCompartmentModel(
@@ -419,8 +419,8 @@ def profile_C1StickSphericalMean(reps=1000):
                     globals(), locals())
 
 
-def profile_G4ZeppelinSphericalMean(reps=1000):
-    model = spherical_mean_models.G4ZeppelinSphericalMean()
+def profile_G2ZeppelinSphericalMean(reps=1000):
+    model = spherical_mean_models.G2ZeppelinSphericalMean()
     mc_model = modeling_framework.MultiCompartmentModel(
         acquisition_scheme=scheme,
         models=[model])
@@ -436,8 +436,8 @@ def profile_G4ZeppelinSphericalMean(reps=1000):
                     globals(), locals())
 
 
-def profile_G5RestrictedZeppelinSphericalMean(reps=1000):
-    model = spherical_mean_models.G5RestrictedZeppelinSphericalMean()
+def profile_G3RestrictedZeppelinSphericalMean(reps=1000):
+    model = spherical_mean_models.G3RestrictedZeppelinSphericalMean()
     mc_model = modeling_framework.MultiCompartmentModel(
         acquisition_scheme=scheme,
         models=[model])

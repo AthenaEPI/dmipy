@@ -14,7 +14,7 @@ camino_dispersed = saved_data.synthetic_camino_data_dispersed()
 
 def test_spherical_mean_stick_tortuous_zeppelin():
     stick_sm = spherical_mean_models.C1StickSphericalMean()
-    zeppelin_sm = spherical_mean_models.G4ZeppelinSphericalMean()
+    zeppelin_sm = spherical_mean_models.G2ZeppelinSphericalMean()
 
     parameter_links = [
         [zeppelin_sm, 'lambda_perp', T1_tortuosity, [
@@ -44,7 +44,7 @@ def test_spherical_mean_stick_tortuous_zeppelin():
 
 def test_stick_tortuous_zeppelin():
     stick = cylinder_models.C1Stick()
-    zeppelin = gaussian_models.G4Zeppelin()
+    zeppelin = gaussian_models.G2Zeppelin()
 
     parameter_links = [
         [zeppelin, 'lambda_perp', T1_tortuosity, [

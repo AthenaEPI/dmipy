@@ -51,7 +51,7 @@ def test_simple_stick_optimization():
 
 def test_simple_ball_and_stick_optimization():
     stick = cylinder_models.C1Stick()
-    ball = gaussian_models.G3Ball()
+    ball = gaussian_models.G1Ball()
 
     ball_and_stick = (
         modeling_framework.MultiCompartmentModel(
@@ -67,7 +67,7 @@ def test_simple_ball_and_stick_optimization():
 
     gt_parameter_vector = ball_and_stick.parameters_to_parameter_vector(
         C1Stick_1_lambda_par=gt_lambda_par,
-        G3Ball_1_lambda_iso=gt_lambda_iso,
+        G1Ball_1_lambda_iso=gt_lambda_iso,
         C1Stick_1_mu=gt_mu,
         partial_volume_0=gt_partial_volume,
         partial_volume_1=1 - gt_partial_volume
@@ -79,7 +79,7 @@ def test_simple_ball_and_stick_optimization():
     vf_rand = np.random.rand()
     x0 = ball_and_stick.parameters_to_parameter_vector(
         C1Stick_1_lambda_par=(np.random.rand() + 1.) * 1e-9,
-        G3Ball_1_lambda_iso=gt_lambda_par / 2.,
+        G1Ball_1_lambda_iso=gt_lambda_par / 2.,
         C1Stick_1_mu=np.random.rand(2),
         partial_volume_0=vf_rand,
         partial_volume_1=1 - vf_rand
@@ -90,7 +90,7 @@ def test_simple_ball_and_stick_optimization():
 
 def test_multi_dimensional_x0():
     stick = cylinder_models.C1Stick()
-    ball = gaussian_models.G3Ball()
+    ball = gaussian_models.G1Ball()
     ball_and_stick = (
         modeling_framework.MultiCompartmentModel(
             acquisition_scheme=scheme,
@@ -109,7 +109,7 @@ def test_multi_dimensional_x0():
     gt_parameter_vector = (
         ball_and_stick.parameters_to_parameter_vector(
             C1Stick_1_lambda_par=gt_lambda_par,
-            G3Ball_1_lambda_iso=gt_lambda_iso,
+            G1Ball_1_lambda_iso=gt_lambda_iso,
             C1Stick_1_mu=gt_mu_array,
             partial_volume_0=gt_partial_volume,
             partial_volume_1=1 - gt_partial_volume)
@@ -146,7 +146,7 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
     gt_partial_volume = 0.3
 
     stick = cylinder_models.C1Stick()
-    zeppelin = gaussian_models.G4Zeppelin()
+    zeppelin = gaussian_models.G2Zeppelin()
 
     parameter_links_stick_and_tortuous_zeppelin = [
         (  # tortuosity assumption
@@ -193,7 +193,7 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
     # now we make the stick and zeppelin spherical mean model and check if the
     # same lambda_par and volume fraction result as the 3D generated data.
     stick_sm = spherical_mean_models.C1StickSphericalMean()
-    zeppelin_sm = spherical_mean_models.G4ZeppelinSphericalMean()
+    zeppelin_sm = spherical_mean_models.G2ZeppelinSphericalMean()
 
     parameter_links_stick_and_tortuous_zeppelin_smt = [
         (  # tortuosity assumption
@@ -253,20 +253,20 @@ def test_fractions_add_up_to_one():
 
 
 def test_MIX_fitting():
-    ball = gaussian_models.G3Ball()
-    zeppelin = gaussian_models.G4Zeppelin()
+    ball = gaussian_models.G1Ball()
+    zeppelin = gaussian_models.G2Zeppelin()
     ball_and_zeppelin = (
         modeling_framework.MultiCompartmentModel(
             acquisition_scheme=scheme,
             models=[ball, zeppelin]))
 
     parameter_vector = ball_and_zeppelin.parameters_to_parameter_vector(
-        G3Ball_1_lambda_iso=2.7e-9,
+        G1Ball_1_lambda_iso=2.7e-9,
         partial_volume_0=.2,
         partial_volume_1=.8,
-        G4Zeppelin_1_lambda_perp=.5e-9,
-        G4Zeppelin_1_mu=(np.pi / 2., np.pi / 2.),
-        G4Zeppelin_1_lambda_par=1.7e-9
+        G2Zeppelin_1_lambda_perp=.5e-9,
+        G2Zeppelin_1_mu=(np.pi / 2., np.pi / 2.),
+        G2Zeppelin_1_lambda_par=1.7e-9
     )
 
     E = ball_and_zeppelin.simulate_signal(

@@ -77,7 +77,7 @@ class C1StickSphericalMean(MicrostructureModel):
         return der
 
 
-class G4ZeppelinSphericalMean(MicrostructureModel):
+class G2ZeppelinSphericalMean(MicrostructureModel):
     """ Spherical mean of the signal attenuation of the Zeppelin model
         for a given b-value and parallel and perpendicular diffusivity.
         Analytic expression from Eq. (8) in [1]).
@@ -151,7 +151,7 @@ class G4ZeppelinSphericalMean(MicrostructureModel):
         return der_lambda_par, der_lambda_perp
 
 
-class G5RestrictedZeppelinSphericalMean(MicrostructureModel):
+class G3RestrictedZeppelinSphericalMean(MicrostructureModel):
     """ Spherical mean of the signal attenuation of the restricted Zeppelin
         model [1] for a given b-value, parallel and perpendicular diffusivity,
         and characteristic coefficient A. The function is the same as the

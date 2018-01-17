@@ -32,11 +32,11 @@ def test_spherical_mean_zeppelin_analytic_vs_numerical(
     scheme = acquisition_scheme_from_bvalues(
         bvals, sphere.vertices, delta, Delta)
 
-    zeppelin_sm = spherical_mean_models.G4ZeppelinSphericalMean(
+    zeppelin_sm = spherical_mean_models.G2ZeppelinSphericalMean(
         lambda_par=lambda_par, lambda_perp=lambda_perp)
     sm_zep_analytic = zeppelin_sm(scheme)
 
-    zeppelin = gaussian_models.G4Zeppelin(
+    zeppelin = gaussian_models.G2Zeppelin(
         lambda_par=lambda_par, lambda_perp=lambda_perp, mu=mu)
     sm_zep_numerical = np.mean(zeppelin(scheme))
     assert_almost_equal(sm_zep_analytic, sm_zep_numerical, 3)
@@ -62,12 +62,12 @@ def test_spherical_mean_zeppelin_analytic_vs_sh(
     bvals = np.tile(bvalue, len(sphere.vertices))
     scheme = acquisition_scheme_from_bvalues(
         bvals, sphere.vertices, delta, Delta)
-    zeppelin_sm = spherical_mean_models.G4ZeppelinSphericalMean(
+    zeppelin_sm = spherical_mean_models.G2ZeppelinSphericalMean(
         lambda_par=lambda_par, lambda_perp=lambda_perp
     )
     sm_zep_analytic = zeppelin_sm(scheme)
 
-    zeppelin = gaussian_models.G4Zeppelin(
+    zeppelin = gaussian_models.G2Zeppelin(
         lambda_par=lambda_par, lambda_perp=lambda_perp, mu=mu
     )
     E_zep = zeppelin(scheme)
@@ -83,12 +83,12 @@ def test_restricted_vs_regular_zeppelin_analytic(
         np.r_[bvalue], np.array([[1., 0., 0.]]), delta, Delta)
 
     rest_zeppelin_sm = (
-        spherical_mean_models.G5RestrictedZeppelinSphericalMean(
+        spherical_mean_models.G3RestrictedZeppelinSphericalMean(
             lambda_par=lambda_par, lambda_inf=lambda_inf, A=A)
     )
     E_rest_zep_analytic = rest_zeppelin_sm(scheme)
 
-    zeppelin_sm = spherical_mean_models.G4ZeppelinSphericalMean(
+    zeppelin_sm = spherical_mean_models.G2ZeppelinSphericalMean(
         lambda_par=lambda_par, lambda_perp=lambda_perp)
     E_zep_analytic = zeppelin_sm(scheme)
     assert_almost_equal(E_rest_zep_analytic, E_zep_analytic)
@@ -104,12 +104,12 @@ def test_restricted_spherical_mean_zeppelin_analytic_vs_sh(
         bvals, n, delta, Delta)
 
     rest_zeppelin_sm = (
-        spherical_mean_models.G5RestrictedZeppelinSphericalMean(
+        spherical_mean_models.G3RestrictedZeppelinSphericalMean(
             lambda_par=lambda_par, lambda_inf=lambda_inf, A=A)
     )
     sm_rest_zep_analytic = rest_zeppelin_sm(scheme)
 
-    zeppelin = gaussian_models.G5RestrictedZeppelin(
+    zeppelin = gaussian_models.G3RestrictedZeppelin(
         mu=mu, lambda_par=lambda_par, lambda_inf=lambda_inf, A=A)
 
     E_zep = zeppelin(scheme)
@@ -127,12 +127,12 @@ def test_estimate_spherical_mean_multi_shell(
     bvecs_multi_shell = np.tile(sphere.vertices, (2, 1))
     scheme = acquisition_scheme_from_bvalues(
         bvals, bvecs_multi_shell, delta, Delta)
-    zeppelin_sm = spherical_mean_models.G4ZeppelinSphericalMean(
+    zeppelin_sm = spherical_mean_models.G2ZeppelinSphericalMean(
         lambda_par=lambda_par, lambda_perp=lambda_perp
     )
     sm_zep_analytic = zeppelin_sm(scheme)
 
-    zeppelin = zeppelin = gaussian_models.G4Zeppelin(
+    zeppelin = zeppelin = gaussian_models.G2Zeppelin(
         lambda_par=lambda_par, lambda_perp=lambda_perp, mu=mu
     )
 

@@ -22,7 +22,7 @@ def test_orienting_zeppelin():
     random_lambda_par = np.random.rand() * 3 * 1e-9
     random_lambda_perp = random_lambda_par / 2.
 
-    zeppelin = gaussian_models.G4Zeppelin(
+    zeppelin = gaussian_models.G2Zeppelin(
         mu=random_mu, lambda_par=random_lambda_par,
         lambda_perp=random_lambda_perp)
     E_zep_par = zeppelin(scheme)

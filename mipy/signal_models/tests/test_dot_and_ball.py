@@ -19,7 +19,7 @@ def test_dot():
 
 
 def test_ball(lambda_iso=1.7e-9):
-    ball = gaussian_models.G3Ball(lambda_iso=lambda_iso)
+    ball = gaussian_models.G1Ball(lambda_iso=lambda_iso)
     E_ball = ball(scheme)
     E = np.exp(-bvals * lambda_iso)
     assert_array_equal(E, E_ball)
