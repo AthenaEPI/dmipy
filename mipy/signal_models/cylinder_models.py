@@ -7,7 +7,7 @@ from mipy.utils.spherical_convolution import real_sym_rh_basis
 from mipy.utils import utils
 from mipy.core.constants import CONSTANTS
 from ..core.acquisition_scheme import SimpleAcquisitionSchemeRH
-from mipy.core.modeling_framework import MicrostructureModel
+from mipy.core.modeling_framework import ModelProperties
 from dipy.utils.optpkg import optional_package
 
 numba, have_numba, _ = optional_package("numba")
@@ -30,7 +30,7 @@ DIAMETER_SCALING = 1e-6
 A_SCALING = 1e-12
 
 
-class C1Stick(MicrostructureModel):
+class C1Stick(ModelProperties):
     r""" The Stick model [1] - a cylinder with zero radius - for
     intra-axonal diffusion.
 
@@ -113,7 +113,7 @@ class C1Stick(MicrostructureModel):
         return rh
 
 
-class C2CylinderSodermanApproximation(MicrostructureModel):
+class C2CylinderSodermanApproximation(ModelProperties):
     r""" The Soderman model [1]_ - a cylinder with finite radius - for
     intra-axonal diffusion. Assumes that the pulse length
     is infinitely short and the diffusion time is infinitely long.
@@ -240,7 +240,7 @@ class C2CylinderSodermanApproximation(MicrostructureModel):
         return rh
 
 
-class C3CylinderCallaghanApproximation(MicrostructureModel):
+class C3CylinderCallaghanApproximation(ModelProperties):
     r""" The Callaghan model [1]_ - a cylinder with finite radius - for
     intra-axonal diffusion. The perpendicular diffusion is modelled
     after Callaghan's solution for the disk.
@@ -408,7 +408,7 @@ class C3CylinderCallaghanApproximation(MicrostructureModel):
         return rh
 
 
-class C4CylinderGaussianPhaseApproximation(MicrostructureModel):
+class C4CylinderGaussianPhaseApproximation(ModelProperties):
     r""" The Gaussian phase model [1]_ - a cylinder with finite radius - for
     intra-axonal diffusion. The perpendicular diffusion is modelled
     after Van Gelderen's solution for the disk.

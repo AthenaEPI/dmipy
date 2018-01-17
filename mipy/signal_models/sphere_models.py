@@ -1,11 +1,11 @@
-from mipy.core.modeling_framework import MicrostructureModel
+from mipy.core.modeling_framework import ModelProperties
 from mipy.core.constants import CONSTANTS
 import numpy as np
 
 DIAMETER_SCALING = 1e-6
 
 
-class S1Dot(MicrostructureModel):
+class S1Dot(ModelProperties):
     r""" The Dot model [1] - an non-diffusing compartment.
 
     Parameters
@@ -46,7 +46,7 @@ class S1Dot(MicrostructureModel):
         return E_dot
 
 
-class S2SphereSodermanApproximation(MicrostructureModel):
+class S2SphereSodermanApproximation(ModelProperties):
     _parameter_ranges = {
         'diameter': (1e-2, 20)
     }
@@ -80,7 +80,7 @@ class S2SphereSodermanApproximation(MicrostructureModel):
         return E_sphere
 
 
-class S4SphereGaussianPhaseApproximation(MicrostructureModel):
+class S4SphereGaussianPhaseApproximation(ModelProperties):
 
     _parameter_ranges = {
         'diameter': (1e-2, 20)

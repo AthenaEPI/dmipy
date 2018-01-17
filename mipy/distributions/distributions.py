@@ -13,7 +13,7 @@ from dipy.reconst.shm import real_sym_sh_mrtrix
 
 from mipy.utils import utils
 from scipy.interpolate import bisplev
-from mipy.core.modeling_framework import MicrostructureModel
+from mipy.core.modeling_framework import ModelProperties
 from dipy.utils.optpkg import optional_package
 from dipy.data import get_sphere, HemiSphere
 sphere = get_sphere('symmetric724')
@@ -54,7 +54,7 @@ def get_sh_order_from_odi(odi):
     return sh_orders[np.argmax(odis < odi)]
 
 
-class SD1Watson(MicrostructureModel):
+class SD1Watson(ModelProperties):
     r""" The Watson spherical distribution model [1, 2].
 
     Parameters
@@ -139,7 +139,7 @@ class SD1Watson(MicrostructureModel):
         return watson_sh
 
 
-class SD2Bingham(MicrostructureModel):
+class SD2Bingham(ModelProperties):
     r""" The Bingham spherical distribution model [1, 2, 3] using angles.
 
     Parameters
@@ -316,7 +316,7 @@ class SD2Bingham(MicrostructureModel):
         return bingham_normalization
 
 
-class DD1GammaDistribution(MicrostructureModel):
+class DD1GammaDistribution(ModelProperties):
     r"""A Gamma distribution of cylinder diameter for given alpha and beta
     parameters. NOTE: This is a distribution for axon DIAMETER and not SURFACE.
     To simulate the diffusion signal of an ensemble of gamma-distributed

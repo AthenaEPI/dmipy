@@ -5,13 +5,13 @@ Document Module
 from __future__ import division
 import numpy as np
 from scipy.special import erf
-from mipy.core.modeling_framework import MicrostructureModel
+from mipy.core.modeling_framework import ModelProperties
 
 DIFFUSIVITY_SCALING = 1e-9
 A_SCALING = 1e-12
 
 
-class C1StickSphericalMean(MicrostructureModel):
+class C1StickSphericalMean(ModelProperties):
     """ Spherical mean of the signal attenuation of the Stick model [1] for
     a given b-value and parallel diffusivity. Analytic expression from
     Eq. (7) in [2].
@@ -77,7 +77,7 @@ class C1StickSphericalMean(MicrostructureModel):
         return der
 
 
-class G2ZeppelinSphericalMean(MicrostructureModel):
+class G2ZeppelinSphericalMean(ModelProperties):
     """ Spherical mean of the signal attenuation of the Zeppelin model
         for a given b-value and parallel and perpendicular diffusivity.
         Analytic expression from Eq. (8) in [1]).
@@ -151,7 +151,7 @@ class G2ZeppelinSphericalMean(MicrostructureModel):
         return der_lambda_par, der_lambda_perp
 
 
-class G3RestrictedZeppelinSphericalMean(MicrostructureModel):
+class G3RestrictedZeppelinSphericalMean(ModelProperties):
     """ Spherical mean of the signal attenuation of the restricted Zeppelin
         model [1] for a given b-value, parallel and perpendicular diffusivity,
         and characteristic coefficient A. The function is the same as the

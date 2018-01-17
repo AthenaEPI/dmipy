@@ -32,6 +32,27 @@ SIGNAL_MODELS_PATH = pkg_resources.resource_filename(
 )
 
 
+class ModelProperties:
+    @property
+    def parameter_ranges(self):
+        return OrderedDict(self._parameter_ranges.copy())
+
+    @property
+    def parameter_scales(self):
+        return OrderedDict(self._parameter_scales.copy())
+
+    @property
+    def parameter_names(self):
+        return self._parameter_ranges.keys()
+
+    @property
+    def parameter_cardinality(self):
+        return OrderedDict([
+            (k, len(np.atleast_2d(self.parameter_ranges[k])))
+            for k in self.parameter_ranges
+        ])
+
+
 class MicrostructureModel:
     @property
     def parameter_ranges(self):

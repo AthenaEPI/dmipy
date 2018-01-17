@@ -8,7 +8,7 @@ import numpy as np
 
 from mipy.utils import utils
 from mipy.core.acquisition_scheme import SimpleAcquisitionSchemeRH
-from mipy.core.modeling_framework import MicrostructureModel
+from mipy.core.modeling_framework import ModelProperties
 from mipy.utils.spherical_convolution import real_sym_rh_basis
 from mipy.utils.utils import sphere2cart
 from dipy.utils.optpkg import optional_package
@@ -33,7 +33,7 @@ DIFFUSIVITY_SCALING = 1e-9
 A_SCALING = 1e-12
 
 
-class G1Ball(MicrostructureModel):
+class G1Ball(ModelProperties):
     r""" The Ball model [1] - an isotropic Tensor with one diffusivity.
 
     Parameters
@@ -79,7 +79,7 @@ class G1Ball(MicrostructureModel):
         return E_ball
 
 
-class G2Zeppelin(MicrostructureModel):
+class G2Zeppelin(ModelProperties):
     r""" The Zeppelin model [1] - an axially symmetric Tensor - for
     extra-axonal diffusion.
 
@@ -173,7 +173,7 @@ class G2Zeppelin(MicrostructureModel):
         return rh
 
 
-class G3RestrictedZeppelin(MicrostructureModel):
+class G3RestrictedZeppelin(ModelProperties):
     r""" The restricted Zeppelin model [1] - an axially symmetric Tensor - for
     extra-axonal diffusion.
 
