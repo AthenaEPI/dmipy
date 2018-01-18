@@ -50,6 +50,7 @@ Examples for non-highlighted models will be added over time..
 - ActiveAx [Alexander et al. 2010]
 - [AxCaliber [Assaf et al. 2008]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_axcaliber.ipynb)
 - 3D-AxCaliber
+- Dispersed AxCaliber
 ### Crossing Bundle Microstructure Models
 - [Ball and Sticks [Behrens et al. 2003]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_ball_and_sticks.ipynb)
 - [NODDI in crossings (NODDIx) [Farooq et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_mix_microstructure_imaging_in_crossings.ipynb)
