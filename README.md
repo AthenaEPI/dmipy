@@ -63,4 +63,4 @@ Coming soon..
 - White Matter Tract Integrity [Fieremans et al. 2012]]
 
 ## How to cite Mipy
-Fick, Rutger. Advanced dMRI signal modeling for tissue microstructure characterization. Diss. Université Côte d'Azur; Inria Sophia Antipolis, 2017.
+Fick, Rutger. *Advanced dMRI signal modeling for tissue microstructure characterization*. Diss. Université Côte d'Azur; Inria Sophia Antipolis, 2017.
