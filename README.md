@@ -41,6 +41,7 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - [Spherical Mean Models](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_spherical_mean_models.ipynb)
 
 ## Mipy implementations of Microstructure Models in Literature
+Examples for non-highlighted models will be added over time..
 ### Single Bundle Microstructure Models
 - [Ball and Stick [Behrens et al. 2003]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_ball_and_stick.ipynb)
 - [Ball and Racket [Sotiropoulos et al. 2012]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_ball_and_racket.ipynb)
@@ -54,10 +55,11 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - [NODDI in crossings (NODDIx) [Farooq et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_mix_microstructure_imaging_in_crossings.ipynb)
 - [Multi-Compartment Spherical Mean Technique [Kaden et al. 2016]](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_multi_compartment_spherical_mean_technique.ipynb)
 ### Other Models
-- [VERDICT tumor model [Panagiotaki et al. 2014]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_verdict.ipynb)
+- VERDICT tumor model [Panagiotaki et al. 2014]
 
 ## Dipy implementations of non-compartment-based Microstructure Models
-- [Apparent Fiber Density [Raffelt et al. 2012]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_apparent_fiber_density.ipynb)
-- [White Matter Tract Integrity [Fieremans et al. 2012]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_white_matter_tract_density.ipynb)
+Coming soon..
+- Apparent Fiber Density [Raffelt et al. 2012]]
+- White Matter Tract Integrity [Fieremans et al. 2012]]
 
 When public, use http://htmlpreview.github.io/ to replace ipynb with html files for better rendering.
