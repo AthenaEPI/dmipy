@@ -62,4 +62,7 @@ Coming soon..
 - Apparent Fiber Density [Raffelt et al. 2012]]
 - White Matter Tract Integrity [Fieremans et al. 2012]]
 
+## How to cite:
+Fick, Rutger. Advanced dMRI signal modeling for tissue microstructure characterization. Diss. Université Côte d'Azur; Inria Sophia Antipolis, 2017.
+
 When public, use http://htmlpreview.github.io/ to replace ipynb with html files for better rendering.
