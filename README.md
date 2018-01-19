@@ -62,8 +62,8 @@ Examples for non-highlighted models will be added over time..
 - VERDICT tumor model [Panagiotaki et al. 2014]
 
 ## Dipy implementations of non-compartment-based Microstructure Models
-- Apparent Fiber Density [Raffelt et al. 2012]]
-- White Matter Tract Integrity [Fieremans et al. 2012]]
+- Apparent Fiber Density [Raffelt et al. 2012]
+- White Matter Tract Integrity [Fieremans et al. 2012]
 
 ## How to cite Mipy
 Fick, Rutger. *Advanced dMRI signal modeling for tissue microstructure characterization*. Diss. Université Côte d'Azur; Inria Sophia Antipolis, 2017.
