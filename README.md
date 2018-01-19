@@ -16,6 +16,7 @@ Mipy stands apart from other packages is the complete freedom the user has to de
 ## Installation
 - clone repository
 - python setup.py install
+
 See solutions to [common issues](https://github.com/AthenaEPI/mipy/blob/master/common_issues.md)
 ## Dependencies
 Recommended to use Anaconda Python distribution.
