@@ -18,6 +18,7 @@ Mipy stands apart from other packages is the complete freedom the user has to de
 - python setup.py install
 
 ## Dependencies
+Recommended to use Anaconda Python distribution.
 - numpy >= 1.13
 - scipy
 - [dipy](http://nipy.org/dipy/)
