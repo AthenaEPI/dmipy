@@ -12,8 +12,14 @@ DATA_PATH = pkg_resources.resource_filename(
 
 def wu_minn_hcp_coronal_slice():
     data_name = 'wu_minn_hcp_coronal_slice.nii.gz'
-    msg = "This data originates from Subject 100307 of the WU-Minn Human "
-    msg += "Connectome Project. View terms of use at "
+    msg = "This data slice originates from Subject 100307 of the Human "
+    msg += "Connectome Project, WU-Minn Consortium (Principal Investigators: "
+    msg += "David Van Essen and Kamil Ugurbil; 1U54MH091657) funded by the 16 "
+    msg += "NIH Institutes and Centers that support the NIH Blueprint for "
+    msg += "Neuroscience Research; and by the McDonnell Center for Systems "
+    msg += "Neuroscience at Washington University.\n\n"
+    msg += "To download more HCP data, we instruct users to sign up for a "
+    msg += "ConnectomeDB acount and sign the open access Data Use Terms at "
     msg += "https://store.humanconnectome.org/data/data-use-terms/open-access.php"
     print msg
 
