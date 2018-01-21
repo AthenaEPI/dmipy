@@ -355,7 +355,7 @@ class DD1GammaDistribution(ModelProperties):
         self.beta = beta
         self.Nsteps = Nsteps
 
-        if normalization is None:
+        if normalization is 'other':
             self.norm_func = self.unity
         elif normalization == 'cylinder':
             self.norm_func = self.surface_cylinder
