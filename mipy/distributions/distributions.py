@@ -12,7 +12,7 @@ from scipy import special
 from dipy.reconst.shm import real_sym_sh_mrtrix
 
 from mipy.utils import utils
-from scipy.interpolate import bisplev
+from scipy import interpolate
 from mipy.core.modeling_framework import ModelProperties
 from dipy.utils.optpkg import optional_package
 from dipy.data import get_sphere, HemiSphere
@@ -273,7 +273,7 @@ class SD2Bingham(ModelProperties):
         sphere = get_sphere()
         n = HemiSphere(sphere.x, sphere.y, sphere.z).subdivide().vertices
         R = np.eye(3)
-        norm_size = 5
+        norm_size = 50
         numerator = np.zeros(n.shape[0])
         norm_grid = np.ones((norm_size, norm_size))
         kappa_beta_range = np.linspace(0, 32, norm_size)
@@ -311,7 +311,8 @@ class SD2Bingham(ModelProperties):
         bingham_normalization: float
             spherical mean / normalization of the bingham distribution
         """
-        log_norm = bisplev(kappa, beta, log_bingham_normalization_splinefit)
+        log_norm = interpolate.bisplev(kappa, beta,
+                                       log_bingham_normalization_splinefit)
         bingham_normalization = np.exp(log_norm)
         return bingham_normalization
 
@@ -348,10 +349,67 @@ class DD1GammaDistribution(ModelProperties):
     }
     spherical_mean = False
 
-    def __init__(self, alpha=None, beta=None, Nsteps=30):
+    def __init__(self, alpha=None, beta=None, Nsteps=30,
+                 normalization='cylinder'):
         self.alpha = alpha
         self.beta = beta
         self.Nsteps = Nsteps
+
+        if normalization is None:
+            self.norm_func = self.unity
+        elif normalization == 'cylinder':
+            self.norm_func = self.surface_cylinder
+        elif normalization == 'sphere':
+            self.norm_func = self.volume_sphere
+        self.calculate_sampling_start_and_end_points(self.norm_func)
+
+    def surface_cylinder(self, radius):
+        return np.pi * radius ** 2
+
+    def volume_sphere(self, radius):
+        return (4. / 3.) * np.pi * radius ** 3
+
+    def unity(self, radius):
+        return np.ones(len(radius))
+
+    def calculate_sampling_start_and_end_points(self, norm_func, gridsize=50):
+        start_grid = np.ones([gridsize, gridsize])
+        end_grid = np.ones([gridsize, gridsize])
+
+        alpha_range = (np.array(self._parameter_ranges['alpha']) *
+                       self._parameter_scales['alpha'])
+        beta_range = (np.array(self._parameter_ranges['beta']) *
+                      self._parameter_scales['beta'])
+
+        alpha_linspace = np.linspace(alpha_range[0], alpha_range[1], gridsize)
+        beta_linspace = np.linspace(beta_range[0], beta_range[1], gridsize)
+
+        for i, alpha in enumerate(alpha_linspace):
+            for j, beta in enumerate(beta_linspace):
+                gamma_distribution = stats.gamma(alpha, scale=beta)
+                outer_limit = gamma_distribution.mean() + 9 * gamma_distribution.std()
+                x_grid = np.linspace(1e-8, outer_limit, 500)
+                pdf = gamma_distribution.pdf(x_grid)
+                pdf *= norm_func(x_grid)
+                cdf = np.cumsum(pdf)
+                cdf /= cdf.max()
+                inverse_cdf = np.cumsum(pdf[::-1])[::-1]
+                inverse_cdf /= inverse_cdf.max()
+                end_grid[i, j] = x_grid[np.argmax(cdf > 0.995)]
+                start_grid[i, j] = x_grid[np.argmax(inverse_cdf < 0.995)]
+        end_grid = np.clip(end_grid, 1e-7, np.inf)
+
+        alpha_grid, beta_grid = np.meshgrid(alpha_linspace, beta_linspace)
+
+        self.start_interpolator = interpolate.bisplrep(alpha_grid.ravel(),
+                                                       beta_grid.ravel(),
+                                                       start_grid.T.ravel(),
+                                                       kx=2, ky=2)
+
+        self.end_interpolator = interpolate.bisplrep(alpha_grid.ravel(),
+                                                     beta_grid.ravel(),
+                                                     end_grid.T.ravel(),
+                                                     kx=2, ky=2)
 
     def __call__(self, **kwargs):
         r"""
@@ -369,13 +427,12 @@ class DD1GammaDistribution(ModelProperties):
         beta = kwargs.get('beta', self.beta)
 
         gamma_dist = stats.gamma(alpha, scale=beta)
-        mean = alpha * beta
-        std = np.sqrt(alpha) * beta
-        radius_max = mean + 6 * std
-        radii = np.linspace(1e-8, radius_max, self.Nsteps)
-        area = np.pi * radii ** 2
+        start_point = interpolate.bisplev(alpha, beta, self.start_interpolator)
+        end_point = interpolate.bisplev(alpha, beta, self.end_interpolator)
+        radii = np.linspace(start_point, end_point, self.Nsteps)
+        normalization = self.norm_func(radii)
         radii_pdf = gamma_dist.pdf(radii)
-        radii_pdf_area = radii_pdf * area
+        radii_pdf_area = radii_pdf * normalization
         radii_pdf_normalized = (
             radii_pdf_area /
             np.trapz(x=radii, y=radii_pdf_area)
