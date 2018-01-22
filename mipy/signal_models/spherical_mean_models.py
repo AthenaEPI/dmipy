@@ -69,14 +69,6 @@ class C1StickSphericalMean(ModelProperties):
         E_mean[~acquisition_scheme.shell_b0_mask] = E_mean_
         return E_mean
 
-    def derivative(self, bvals, **kwargs):
-        lambda_par = kwargs.get('lambda_par', self.lambda_par)
-        blambda = bvals * lambda_par
-        der = np.exp(-blambda) / (2 * lambda_par) *\
-            (bvals * np.sqrt(np.pi) * erf(np.sqrt(blambda))) /\
-            (4 * blambda ** (3 / 2.))
-        return der
-
 
 class G2ZeppelinSphericalMean(ModelProperties):
     """ Spherical mean of the signal attenuation of the Zeppelin model
@@ -136,21 +128,6 @@ class G2ZeppelinSphericalMean(ModelProperties):
         E_mean_ = exp_bl * np.sqrt(np.pi) * erf(sqrt_bl) / (2 * sqrt_bl)
         E_mean[~acquisition_scheme.shell_b0_mask] = E_mean_
         return E_mean
-
-    def derivative(self, bvals, n, **kwargs):
-        lambda_par = kwargs.get('lambda_par', self.lambda_par)
-        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
-        bllext = bvals * (lambda_par - lambda_perp)
-
-        der_lambda_perp = bvals * np.exp(-bvals * lambda_par) *\
-            (-2 * np.sqrt(bllext) - np.exp(bllext) * np.sqrt(np.pi) *
-             (-1 + 2 * bllext) * erf(np.sqrt(bllext))) /\
-            (4 * bllext ** (3 / 2.))
-
-        der_lambda_par = bvals * np.exp(-bvals * lambda_par) *\
-            (2 * np.sqrt(bllext) - np.exp(bllext) * np.sqrt(np.pi) *
-             erf(bllext)) / (4 * bllext ** (3 / 2.))
-        return der_lambda_par, der_lambda_perp
 
 
 class G3RestrictedZeppelinSphericalMean(ModelProperties):
