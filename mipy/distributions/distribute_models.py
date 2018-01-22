@@ -31,10 +31,20 @@ class DistributedModel:
 
     def _check_for_distributable_models(self):
         for i, model in enumerate(self.models):
-            if 'diameter' not in model._parameter_ranges:
+            if self.target_parameter not in model._parameter_ranges:
                 msg = "Cannot distribute models input {}. ".format(i)
-                msg += "It has no diameter as parameter."
+                msg += "It has no {} as parameter.".format(
+                    self.target_parameter)
                 raise AttributeError(msg)
+
+    def _check_for_same_model_type(self):
+        model_types = [model._model_type for model in self.models]
+        if len(np.unique(model_types)) > 1:
+            msg = "Cannot mix models of different types. "
+            msg += "Current input model types are {}.".format(
+                model_types)
+            raise AttributeError(msg)
+        self.normalization = model_types[0]
 
     def _prepare_parameters(self, models_and_distribution):
         self.model_names = []
@@ -75,18 +85,10 @@ class DistributedModel:
             v: k for k, v in self._parameter_map.items()
         }
 
-    def _delete_models_mu_from_parameters(self):
+    def _delete_target_parameter_from_parameters(self):
         for model in self.models:
             parameter_name = self._inverted_parameter_map[
-                (model, 'mu')
-            ]
-            del self.parameter_ranges[parameter_name]
-            del self.parameter_scales[parameter_name]
-
-    def _delete_models_diameter_from_parameters(self):
-        for model in self.models:
-            parameter_name = self._inverted_parameter_map[
-                (model, 'diameter')
+                (model, self.target_parameter)
             ]
             del self.parameter_ranges[parameter_name]
             del self.parameter_scales[parameter_name]
@@ -211,7 +213,7 @@ class DistributedModel:
                 isinstance(self.distribution, SD2Bingham)):
             return self.sh_convolved_model(acquisition_scheme, **kwargs)
         elif isinstance(self.distribution, DD1GammaDistribution):
-            return self.gamma_integrated_model(acquisition_scheme, **kwargs)
+            return self.integrated_model(acquisition_scheme, **kwargs)
         else:
             msg = "Unknown distribution."
             raise ValueError(msg)
@@ -279,7 +281,7 @@ class DistributedModel:
             values = values + volume_fraction * E
         return values
 
-    def gamma_integrated_model(self, acquisition_scheme, **kwargs):
+    def integrated_model(self, acquisition_scheme, **kwargs):
         values = 0.
         kwargs = self.add_linked_parameters_to_parameters(
             kwargs
@@ -349,6 +351,7 @@ class SD1WatsonDistributed(DistributedModel):
 
     def __init__(self, models, parameter_links=[]):
         self.models = models
+        self.target_parameter = "mu"
         self._check_for_double_model_class_instances()
         self._check_for_dispersable_models()
 
@@ -358,7 +361,7 @@ class SD1WatsonDistributed(DistributedModel):
         _models_and_distribution = list(self.models)
         _models_and_distribution.append(self.distribution)
         self._prepare_parameters(_models_and_distribution)
-        self._delete_models_mu_from_parameters()
+        self._delete_target_parameter_from_parameters()
         self._prepare_partial_volumes()
         self._prepare_parameter_links()
 
@@ -367,6 +370,7 @@ class SD2BinghamDistributed(DistributedModel):
 
     def __init__(self, models, parameter_links=[]):
         self.models = models
+        self.target_parameter = "mu"
         self._check_for_double_model_class_instances()
         self._check_for_dispersable_models()
 
@@ -376,7 +380,7 @@ class SD2BinghamDistributed(DistributedModel):
         _models_and_distribution = list(self.models)
         _models_and_distribution.append(self.distribution)
         self._prepare_parameters(_models_and_distribution)
-        self._delete_models_mu_from_parameters()
+        self._delete_target_parameter_from_parameters()
         self._prepare_partial_volumes()
         self._prepare_parameter_links()
 
@@ -385,16 +389,19 @@ class DD1GammaDistributed(DistributedModel):
 
     def __init__(self, models, parameter_links=[]):
         self.models = models
+        self.target_parameter = "diameter"
         self._check_for_double_model_class_instances()
         self._check_for_distributable_models()
+        self._check_for_same_model_type()
 
         self.parameter_links = parameter_links
-        self.distribution = DD1GammaDistribution()
+        self.distribution = DD1GammaDistribution(
+            normalization=self.normalization)
 
         _models_and_distribution = list(self.models)
         _models_and_distribution.append(self.distribution)
         self._prepare_parameters(_models_and_distribution)
-        self._delete_models_diameter_from_parameters()
+        self._delete_target_parameter_from_parameters()
         self._prepare_partial_volumes()
         self._prepare_parameter_links()
 

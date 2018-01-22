@@ -17,7 +17,9 @@ Mipy stands apart from other packages is the complete freedom the user has to de
 - clone repository
 - python setup.py install
 
+See solutions to [common issues](https://github.com/AthenaEPI/mipy/blob/master/common_issues.md)
 ## Dependencies
+Recommended to use Anaconda Python distribution.
 - numpy >= 1.13
 - scipy
 - [dipy](http://nipy.org/dipy/)
@@ -32,14 +34,17 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - [Creating a dispersed axon bundle representation and imposing parameter links](https://github.com/AthenaEPI/microstruktur/blob/master/examples/tutorial_imposing_parameter_links.ipynb)
 - [Parameter Cascading: Using a simple model to initialize a complex one](https://github.com/AthenaEPI/microstruktur/blob/master/examples/tutorial_varying_intial_parameter_settings_for_larger_data_sets.ipynb)
 
-## Explanations and Illustrations of Biophysical Models in the Toolbox
+## Explanations and Illustrations of Mipy Contents
+### Biophysical Models and Distributions
 - [Restricted Cylinder models](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_intra_axonal_cylinder_models.ipynb)
 - Restricted Sphere Models
 - [Diameter distribution models](https://github.com/AthenaEPI/mipy/blob/master/examples/example_diameter_distributions.ipynb)
 - [Gaussian models](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_extra_axonal_gaussian_models.ipynb)
 - [Axon dispersion models](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_watson_bingham.ipynb)
 - [Spherical Mean Models](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_spherical_mean_models.ipynb)
-
+### Global Optimizers
+- Brute2Fine
+- Microstructure estimation in crossings (MIX)
 ## Mipy implementations of Microstructure Models in Literature
 Examples for non-highlighted models will be added over time..
 ### Single Bundle Microstructure Models
@@ -60,9 +65,8 @@ Examples for non-highlighted models will be added over time..
 - VERDICT tumor model [Panagiotaki et al. 2014]
 
 ## Dipy implementations of non-compartment-based Microstructure Models
-Coming soon..
-- Apparent Fiber Density [Raffelt et al. 2012]]
-- White Matter Tract Integrity [Fieremans et al. 2012]]
+- Apparent Fiber Density [Raffelt et al. 2012]
+- White Matter Tract Integrity [Fieremans et al. 2012]
 
 ## How to cite Mipy
 Fick, Rutger. *Advanced dMRI signal modeling for tissue microstructure characterization*. Diss. Université Côte d'Azur; Inria Sophia Antipolis, 2017.

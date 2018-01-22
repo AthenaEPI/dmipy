@@ -24,6 +24,7 @@ class S1Dot(ModelProperties):
     _parameter_scales = {
     }
     spherical_mean = False
+    _model_type = 'other'
 
     def __init__(self, dummy=None):
         self.dummy = dummy
@@ -54,6 +55,7 @@ class S2SphereSodermanApproximation(ModelProperties):
         'diameter': DIAMETER_SCALING
     }
     spherical_mean = False
+    _model_type = 'sphere'
 
     def __init__(self, diameter=None):
         self.diameter = diameter
@@ -89,6 +91,8 @@ class S4SphereGaussianPhaseApproximation(ModelProperties):
         'diameter': DIAMETER_SCALING
     }
     spherical_mean = False
+    _model_type = 'sphere'
+
     # According to Balinov et al., solutions of
     # 1/(alpha * R) * J(3/2,alpha * R) = J(5/2, alpha * R)
     # with R = 1 with alpha * R < 100 * pi
