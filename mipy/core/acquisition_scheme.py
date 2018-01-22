@@ -145,6 +145,21 @@ class MipyAcquisitionScheme:
                     self.shell_delta[ind] * 1e3, self.shell_Delta[ind] * 1e3,
                     self.shell_TE[ind] * 1e3)
 
+    def to_schemefile(self, filename):
+        TE_ = self.TE
+        if TE_ is None:
+            TE_ = self.Delta + 2 * self.delta + 0.001
+        schemefile_data = np.hstack(
+            [self.gradient_directions,
+             self.gradient_strengths[:, None],
+             self.Delta[:, None],
+             self.delta[:, None],
+             TE_[:, None]])
+        header = "#g_x  g_y  g_z  |G| DELTA delta TE\n"
+        header += "VERSION: STEJSKALTANNER"
+        np.savetxt(filename, schemefile_data,
+                   header=header, comments='')
+
     def visualise_acquisition_G_Delta_rainbow(
             self,
             Delta_start=None, Delta_end=None, G_start=None, G_end=None,
