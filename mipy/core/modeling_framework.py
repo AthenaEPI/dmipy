@@ -613,9 +613,6 @@ class MultiCompartmentModel(MicrostructureModel):
         fitted_parameters[mask_pos] = (
             fitted_parameters_lin * self.scales_for_optimization)
 
-        if data.ndim == 1:
-            fitted_parameters = np.squeeze(fitted_parameters)
-
         return FittedMultiCompartmentModel(
             self, S0, mask, fitted_parameters)
 
