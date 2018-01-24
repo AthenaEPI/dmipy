@@ -349,13 +349,15 @@ class DistributedModel:
 
 class SD1WatsonDistributed(DistributedModel):
 
-    def __init__(self, models, parameter_links=[]):
+    def __init__(self, models, parameter_links=None):
         self.models = models
         self.target_parameter = "mu"
         self._check_for_double_model_class_instances()
         self._check_for_dispersable_models()
 
         self.parameter_links = parameter_links
+        if parameter_links is None:
+            self.parameter_links = []
         self.distribution = SD1Watson()
 
         _models_and_distribution = list(self.models)
@@ -368,13 +370,15 @@ class SD1WatsonDistributed(DistributedModel):
 
 class SD2BinghamDistributed(DistributedModel):
 
-    def __init__(self, models, parameter_links=[]):
+    def __init__(self, models, parameter_links=None):
         self.models = models
         self.target_parameter = "mu"
         self._check_for_double_model_class_instances()
         self._check_for_dispersable_models()
 
         self.parameter_links = parameter_links
+        if parameter_links is None:
+            self.parameter_links = []
         self.distribution = SD2Bingham()
 
         _models_and_distribution = list(self.models)
@@ -387,7 +391,7 @@ class SD2BinghamDistributed(DistributedModel):
 
 class DD1GammaDistributed(DistributedModel):
 
-    def __init__(self, models, parameter_links=[]):
+    def __init__(self, models, parameter_links=None):
         self.models = models
         self.target_parameter = "diameter"
         self._check_for_double_model_class_instances()
@@ -395,6 +399,8 @@ class DD1GammaDistributed(DistributedModel):
         self._check_for_same_model_type()
 
         self.parameter_links = parameter_links
+        if parameter_links is None:
+            self.parameter_links = []
         self.distribution = DD1GammaDistribution(
             normalization=self.normalization)
 
