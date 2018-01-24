@@ -285,14 +285,12 @@ class C3CylinderCallaghanApproximation(ModelProperties):
         mu=None, lambda_par=None,
         diameter=None,
         diffusion_perpendicular=CONSTANTS['water_in_axons_diffusion_constant'],
-        gyromagnetic_ratio=CONSTANTS['water_gyromagnetic_ratio'],
-        number_of_roots=10,
-        number_of_functions=10,
+        number_of_roots=20,
+        number_of_functions=50,
     ):
         self.mu = mu
         self.lambda_par = lambda_par
         self.diffusion_perpendicular = diffusion_perpendicular
-        self.gyromagnetic_ratio = gyromagnetic_ratio
         self.diameter = diameter
 
         self.alpha = np.empty((number_of_roots, number_of_functions))
@@ -301,9 +299,6 @@ class C3CylinderCallaghanApproximation(ModelProperties):
             self.alpha[1:, 0] = special.jnp_zeros(0, number_of_roots - 1)
         for m in xrange(1, number_of_functions):
             self.alpha[:, m] = special.jnp_zeros(m, number_of_roots)
-
-        self.xi = np.array(range(number_of_roots)) * np.pi
-        self.zeta = np.array(range(number_of_roots)) * np.pi + np.pi / 2.0
 
     def perpendicular_attenuation(self, q, tau, diameter):
         """Implements the finite time Callaghan model for cylinders [1]
