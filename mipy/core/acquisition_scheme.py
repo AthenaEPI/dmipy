@@ -40,8 +40,8 @@ class MipyAcquisitionScheme:
         self.delta = delta.astype(float)
         self.Delta = Delta.astype(float)
         self.TE = TE
-        if self.TE is not None:
-            self.TE.astype(float)
+        if TE is not None:
+            self.TE = TE.astype(float)
         self.tau = Delta - delta / 3.
         # if there are more then 1 measurement
         if self.number_of_measurements > 1:
