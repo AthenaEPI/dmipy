@@ -61,10 +61,13 @@ class MipyAcquisitionScheme:
             for unique_deltas_ in unique_deltas:
                 delta_mask = np.all(deltas == unique_deltas_, axis=1)
                 masked_bvals = bvalues[delta_mask]
-                shell_indices_, shell_bvalues_ = (
-                    calculate_shell_bvalues_and_indices(
-                        masked_bvals, min_b_shell_distance)
-                )
+                if len(masked_bvals) > 1:
+                    shell_indices_, shell_bvalues_ = (
+                        calculate_shell_bvalues_and_indices(
+                            masked_bvals, min_b_shell_distance)
+                    )
+                else:
+                    shell_indices_, shell_bvalues_ = np.array(0), masked_bvals
                 self.shell_indices[delta_mask] = shell_indices_ + max_index
                 self.shell_bvalues.append(shell_bvalues_)
                 max_index = max(self.shell_indices + 1)
@@ -82,6 +85,12 @@ class MipyAcquisitionScheme:
             self.shell_TE = self.TE
             if self.TE is not None:
                 self.shell_TE = self.TE[first_indices]
+                if len(np.unique(self.TE)) != len(self.TE[self.b0_mask]):
+                    msg = "Not every TE shell has b0 measurements.\n"
+                    msg += "This is required to properly normalize the signal."
+                    msg += " Make sure the TE values for b0-measurements have "
+                    msg += "not defaulted to 0 for example."
+                    raise ValueError(msg)
         # if for some reason only one measurement is given (for testing)
         else:
             self.shell_bvalues = self.bvalues
