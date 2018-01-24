@@ -28,18 +28,20 @@ class MipyAcquisitionScheme:
     def __init__(self, bvalues, gradient_directions, qvalues,
                  gradient_strengths, delta, Delta, TE,
                  min_b_shell_distance, b0_threshold):
-        self.min_b_shell_distance = min_b_shell_distance
-        self.b0_threshold = b0_threshold
-        self.bvalues = bvalues
+        self.min_b_shell_distance = float(min_b_shell_distance)
+        self.b0_threshold = float(b0_threshold)
+        self.bvalues = bvalues.astype(float)
         self.b0_mask = self.bvalues <= b0_threshold
         self.number_of_b0s = np.sum(self.b0_mask)
         self.number_of_measurements = len(self.bvalues)
-        self.gradient_directions = gradient_directions
-        self.qvalues = qvalues
-        self.gradient_strengths = gradient_strengths
-        self.delta = delta
-        self.Delta = Delta
+        self.gradient_directions = gradient_directions.astype(float)
+        self.qvalues = qvalues.astype(float)
+        self.gradient_strengths = gradient_strengths.astype(float)
+        self.delta = delta.astype(float)
+        self.Delta = Delta.astype(float)
         self.TE = TE
+        if self.TE is not None:
+            self.TE.astype(float)
         self.tau = Delta - delta / 3.
         # if there are more then 1 measurement
         if self.number_of_measurements > 1:
@@ -431,17 +433,17 @@ def unify_length_reference_delta_Delta(reference_array, delta, Delta, TE):
     If either delta or Delta are given as float, makes them an array the same
     size as the reference array.
     """
-    if isinstance(delta, float):
+    if isinstance(delta, float) or isinstance(delta, int):
         delta_ = np.tile(delta, len(reference_array))
     else:
         delta_ = delta.copy()
-    if isinstance(Delta, float):
+    if isinstance(Delta, float) or isinstance(Delta, int):
         Delta_ = np.tile(Delta, len(reference_array))
     else:
         Delta_ = Delta.copy()
     if TE is None:
         TE_ = None
-    elif isinstance(TE, float):
+    elif isinstance(TE, float) or isinstance(TE, int):
         TE_ = np.tile(TE, len(reference_array))
     else:
         TE_ = TE.copy()
