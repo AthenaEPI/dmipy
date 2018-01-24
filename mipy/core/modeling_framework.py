@@ -57,7 +57,7 @@ class MicrostructureModel:
 
     @property
     def parameter_names(self):
-        return self.parameter_ranges.keys()
+        return list(self.parameter_ranges.keys())
 
     def parameter_vector_to_parameters(self, parameter_vector):
         parameters = {}
@@ -110,51 +110,22 @@ class MicrostructureModel:
             parameter_vector = np.concatenate(parameter_vector, axis=-1)
         return parameter_vector
 
-    def parameters_to_parameter_vector2(self, parameters):
-        parameter_vector = []
-        parameter_shapes = []
-        for parameter, card in self.parameter_cardinality.items():
-            value = np.atleast_1d(parameters[parameter])
-            if not np.all(value == None):
-                if card == 1 and not np.all(value.shape == np.r_[1]):
-                    parameter_shapes.append(value.shape)
-                if card == 2 and not np.all(value.shape == np.r_[2]):
-                    parameter_shapes.append(value.shape[:-1])
-
-        if len(set(parameter_shapes)) > 1:
-            msg = "parameter shapes are inconsistent."
-            raise ValueError(msg)
-        elif len(set(parameter_shapes)) == 0:
-            for parameter, card in self.parameter_cardinality.items():
-                parameter_vector.append(parameters[parameter])
-            parameter_vector = np.hstack(parameter_vector)
-        elif len(set(parameter_shapes)) == 1:
-            for parameter, card in self.parameter_cardinality.items():
-                value = np.atleast_1d(parameters[parameter])
-                if card == 1 and np.all(value.shape == np.r_[1]):
-                    parameter_vector.append(
-                        np.tile(value[0], np.r_[parameter_shapes[0], 1]))
-                elif card == 1 and not np.all(value.shape == np.r_[1]):
-                    parameter_vector.append(value[..., None])
-                elif card == 2 and np.all(value.shape == np.r_[2]):
-                    parameter_vector.append(
-                        np.tile(value, np.r_[parameter_shapes[0], 1])
-                    )
-                else:
-                    parameter_vector.append(parameters[parameter])
-            parameter_vector = np.concatenate(parameter_vector, axis=-1)
-        return parameter_vector
-
     def parameter_initial_guess_to_parameter_vector(self, **parameters):
         set_parameters = {}
-        for parameter, card in self.parameter_cardinality.items():
-            try:
-                set_parameters[parameter] = parameters[parameter]
-                msg = str(parameter) + ' successfully set.'
-                print (msg)
-            except KeyError:
+        parameter_cardinality = self.parameter_cardinality.copy()
+        for parameter, value in parameters.items():
+            if parameter in self.parameter_cardinality.keys():
+                set_parameters[parameter] = value
+                del parameter_cardinality[parameter]
+            else:
+                msg = '"{}" is not a valid model parameter.'.format(parameter)
+                raise ValueError(msg)
+        if len(parameter_cardinality) == 0:
+            print("All model parameters set.")
+        else:
+            for parameter, card in parameter_cardinality.items():
                 set_parameters[parameter] = np.tile(None, card)
-        return self.parameters_to_parameter_vector2(set_parameters)
+        return self.parameters_to_parameter_vector(**set_parameters)
 
     @property
     def bounds_for_optimization(self):
