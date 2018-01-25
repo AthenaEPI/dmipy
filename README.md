@@ -22,6 +22,7 @@ See solutions to [common issues](https://github.com/AthenaEPI/mipy/blob/master/c
 Recommended to use Anaconda Python distribution.
 - numpy >= 1.13
 - scipy
+- boto
 - [dipy](http://nipy.org/dipy/)
 - [pathos](https://pypi.python.org/pypi/pathos) (optional for multi-core processing)
 - [numba](https://numba.pydata.org/) (optional for faster functions)
