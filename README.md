@@ -37,7 +37,7 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 ## Explanations and Illustrations of Mipy Contents
 ### Biophysical Models and Distributions
 - Plane models
-- [Cylinder models (Axons)](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_intra_axonal_cylinder_models.ipynb)
+- [Cylinder models (Axons)](https://github.com/AthenaEPI/mipy/blob/master/examples/example_cylinder_models.ipynb)
 - Capped Cylinder models (Myocytes)
 - [Sphere Models (Neurons/Tumor cells)](https://github.com/AthenaEPI/mipy/blob/master/examples/example_sphere_models.ipynb)
 - [Parameter distribution models (Gamma)](https://github.com/AthenaEPI/mipy/blob/master/examples/example_diameter_distributions.ipynb)
