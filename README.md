@@ -49,7 +49,7 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - Brute Force (Brute2Fine)
 - Stochastic (MIX)
 ## Mipy implementations of Microstructure Models in Literature
-Mipy uses Human Connectome Project (HCP) data to illustrate microstructure model examples. To improve reproducibilty, we provide a direct way to download HCP (using your own AWS credentials) in the HCP tutorial.
+Mipy uses HCP data to illustrate microstructure model examples. To improve reproducibilty, we provide a direct way to download HCP (using your own AWS credentials) in the [HCP tutorial](https://github.com/AthenaEPI/mipy/blob/master/examples/tutorial_human_connectome_project_aws.ipynb).
 ### Single Bundle Microstructure Models
 - [Ball and Stick [Behrens et al. 2003]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_ball_and_stick.ipynb)
 - [Ball and Racket [Sotiropoulos et al. 2012]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_ball_and_racket.ipynb)
