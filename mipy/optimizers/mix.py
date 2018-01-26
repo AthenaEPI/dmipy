@@ -3,8 +3,9 @@ from scipy.optimize import differential_evolution, minimize, fmin_cobyla
 
 
 class MixOptimizer:
-    def __init__(self, model, maxiter=150):
+    def __init__(self, model, acquisition_scheme, maxiter=150):
         self.model = model
+        self.acquisition_scheme = acquisition_scheme
         self.maxiter = maxiter
         self.Nmodels = len(self.model.models)
 
@@ -33,7 +34,7 @@ class MixOptimizer:
         res_one = differential_evolution(self.stochastic_objective_function,
                                          bounds=bounds_de,
                                          maxiter=self.maxiter,
-                                         args=(data, self.model.scheme))
+                                         args=(data, self.acquisition_scheme))
         res_one_x = res_one.x
         if self.Nmodels > 1:
             res_one_x = np.r_[res_one_x, np.ones(self.Nmodels)]
@@ -42,7 +43,7 @@ class MixOptimizer:
 
         # step 2: Estimating linear variables using cvx (if there are any)
         if self.Nmodels > 1:
-            phi = self.model(self.model.scheme,
+            phi = self.model(self.acquisition_scheme,
                              quantity="stochastic cost function", **parameters)
             phi_inv = np.dot(np.linalg.inv(np.dot(phi.T, phi)), phi.T)
             f_x0 = np.dot(phi_inv, data)
@@ -66,7 +67,7 @@ class MixOptimizer:
             bounds_ = bounds
 
         x_fine_nested = minimize(self.objective_function, x0_refine,
-                                 (data, self.model.scheme),
+                                 (data, self.acquisition_scheme),
                                  bounds=bounds_).x
 
         if self.Nmodels > 1:
