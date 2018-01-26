@@ -40,7 +40,7 @@ class C1StickSphericalMean(ModelProperties):
     spherical_mean = True
     _model_type = 'other'
 
-    def __init__(self, mu=None, lambda_par=None):
+    def __init__(self, lambda_par=None):
         self.lambda_par = lambda_par
 
     def __call__(self, acquisition_scheme, **kwargs):
