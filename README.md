@@ -33,7 +33,7 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - [Simulating and fitting data using a simple Stick model](https://github.com/AthenaEPI/microstruktur/blob/master/examples/tutorial_simulating_and_fitting_using_a_simple_model.ipynb)
 - [Combining biophysical models into a Microstructure model](https://github.com/AthenaEPI/microstruktur/blob/master/examples/tutorial_combining_biophysical_models_into_microstructure_model.ipynb)
 - [Creating a dispersed axon bundle representation and imposing parameter links](https://github.com/AthenaEPI/microstruktur/blob/master/examples/tutorial_imposing_parameter_links.ipynb)
-- [Parameter Cascading: Using a simple model to initialize a complex one](https://github.com/AthenaEPI/microstruktur/blob/master/examples/tutorial_varying_intial_parameter_settings_for_larger_data_sets.ipynb)
+- [Parameter Cascading: Using a simple model to initialize a complex one](https://github.com/AthenaEPI/microstruktur/blob/master/examples/tutorial_parameter_cascading_and_simulating_nd_datasets.ipynb)
 
 ## Explanations and Illustrations of Mipy Contents
 ### Biophysical Models and Distributions
