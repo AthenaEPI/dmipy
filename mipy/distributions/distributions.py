@@ -350,7 +350,7 @@ class DD1GammaDistribution(ModelProperties):
     spherical_mean = False
 
     def __init__(self, alpha=None, beta=None, Nsteps=30,
-                 normalization='cylinder'):
+                 normalization='standard'):
         self.alpha = alpha
         self.beta = beta
         self.Nsteps = Nsteps
