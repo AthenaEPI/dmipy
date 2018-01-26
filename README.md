@@ -42,7 +42,7 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - Capped Cylinder models (Myocytes)
 - [Sphere Models (Neurons/Tumor cells)](https://github.com/AthenaEPI/mipy/blob/master/examples/example_sphere_models.ipynb)
 - [Parameter distribution models (Gamma)](https://github.com/AthenaEPI/mipy/blob/master/examples/example_diameter_distributions.ipynb)
-- [Gaussian models (Extra-axonal)](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_extra_axonal_gaussian_models.ipynb)
+- [Gaussian models (Extra-axonal)](https://github.com/AthenaEPI/mipy/blob/master/examples/example_gaussian_models.ipynb)
 - [Spherical Distribution models (Axon Dispersion)](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_watson_bingham.ipynb)
 - [Spherical Mean Models](https://github.com/AthenaEPI/microstruktur/blob/master/examples/example_spherical_mean_models.ipynb)
 ### Global Optimizers
