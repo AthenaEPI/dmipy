@@ -62,7 +62,7 @@ Mipy uses HCP data to illustrate microstructure model examples. To reproduce the
 ### Crossing Bundle Microstructure Models
 - [Ball and Sticks [Behrens et al. 2003]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_ball_and_sticks.ipynb)
 - [NODDI in crossings (NODDIx) [Farooq et al. 2016]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_mix_microstructure_imaging_in_crossings.ipynb)
-- [Multi-Compartment Spherical Mean Technique [Kaden et al. 2016]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_multi_compartment_spherical_mean_technique.ipynb)
+- [Multi-Compartment Microscopic Diffusion Imaging [Kaden et al. 2016]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_multi_compartment_spherical_mean_technique.ipynb)
 ### Other Models
 - VERDICT tumor model [Panagiotaki et al. 2014]
 
