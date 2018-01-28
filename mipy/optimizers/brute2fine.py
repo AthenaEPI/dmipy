@@ -12,9 +12,10 @@ SPHERES_PATH = pkg_resources.resource_filename(
 
 
 class GlobalBruteOptimizer:
-    def __init__(self, model, x0_vector=None, Ns=5, N_sphere_samples=30):
+    def __init__(self, model, acquisition_scheme,
+                 x0_vector=None, Ns=5, N_sphere_samples=30):
         self.model = model
-        self.acquisition_scheme = model.scheme
+        self.acquisition_scheme = acquisition_scheme
         self.x0_vector = x0_vector
         self.Ns = Ns
 
@@ -122,8 +123,9 @@ class GlobalBruteOptimizer:
 
 
 class Brute2FitOptimizer:
-    def __init__(self, model, Ns=5):
+    def __init__(self, model, acquisition_scheme, Ns=5):
         self.model = model
+        self.acquisition_scheme = acquisition_scheme
         self.Ns = Ns
 
     def objective_function(self, parameter_vector, data):
@@ -141,7 +143,7 @@ class Brute2FitOptimizer:
         parameters.update(
             self.model.parameter_vector_to_parameters(parameter_vector_)
         )
-        E_model = self.model(self.model.scheme, **parameters)
+        E_model = self.model(self.acquisition_scheme, **parameters)
         E_diff = E_model - data
         objective = np.dot(E_diff, E_diff) / len(data)
         return objective
