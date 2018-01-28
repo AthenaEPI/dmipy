@@ -1,4 +1,4 @@
-# MIPY: Microstructure Imaging in Python
+# dMIPY: diffusion Microstructure Imaging in Python
 
 The Mipy software package facilitates state-of-the-art diffusion MRI Microstructure Imaging using a "Building Block" philosophy. In this philosophy, any combination of biophysical models, typically representing intra- and/or extra-axonal tissue compartments, can be easy combined into a multi-compartment Microstructure Model in just a few lines of code. The created model can be used to both simulate and fit data for any PGSE-based dMRI acquisition, including single shell, multi-shell and qtau-dMRI acquisition schemes.
 
@@ -37,10 +37,8 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 
 ## Explanations and Illustrations of Mipy Contents
 ### Biophysical Models and Distributions
-- Plane models
 - [Cylinder models (Axons)](https://github.com/AthenaEPI/mipy/blob/master/examples/example_cylinder_models.ipynb)
-- Capped Cylinder models (Myocytes)
-- [Sphere Models (Neurons/Tumor cells)](https://github.com/AthenaEPI/mipy/blob/master/examples/example_sphere_models.ipynb)
+- [Sphere Models (Tumor cells)](https://github.com/AthenaEPI/mipy/blob/master/examples/example_sphere_models.ipynb)
 - [Parameter distribution models (Gamma)](https://github.com/AthenaEPI/mipy/blob/master/examples/example_diameter_distributions.ipynb)
 - [Gaussian models (Extra-axonal)](https://github.com/AthenaEPI/mipy/blob/master/examples/example_gaussian_models.ipynb)
 - [Spherical Distribution models (Axon Dispersion)](https://github.com/AthenaEPI/mipy/blob/master/examples/example_watson_bingham.ipynb)
@@ -55,24 +53,18 @@ Mipy uses HCP data to illustrate microstructure model examples. To reproduce the
 - [Ball and Racket [Sotiropoulos et al. 2012]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_ball_and_racket.ipynb)
 - [NODDI-Watson [Zhang et al. 2012]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_noddi_watson.ipynb)
 - [NODDI-Bingham [Tariq et al. 2016]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_noddi_bingham.ipynb)
-- ActiveAx [Alexander et al. 2010]
 - [AxCaliber [Assaf et al. 2008]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_axcaliber.ipynb)
-- AxCaliber with Extra-Axonal Restriction [Burcaw et al. 2015]
-- 3D-Dispersed AxCaliber
+
 ### Crossing Bundle Microstructure Models
 - [Ball and Sticks [Behrens et al. 2003]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_ball_and_sticks.ipynb)
 - [NODDI in crossings (NODDIx) [Farooq et al. 2016]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_mix_microstructure_imaging_in_crossings.ipynb)
 ### Spherical Mean-Based Microstructure Models
 - Spherical Mean Technique [Kaden et al. 2015]
 - [Multi-Compartment Microscopic Diffusion Imaging [Kaden et al. 2016]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_multi_compartment_spherical_mean_technique.ipynb)
-### Other Models
-- VERDICT tumor model [Panagiotaki et al. 2014]
-
-## Dipy implementations of non-compartment-based Microstructure Models
-- Apparent Fiber Density [Raffelt et al. 2012]
-- White Matter Tract Integrity [Fieremans et al. 2012]
 
 ## How to contribute to Mipy
 Mipy's design is completely modular and can easily be extended with new models, distributions or optimizers. To contribute, view our contribution guidelines[link] and wanted additions[link].
 ## How to cite Mipy
 Fick, Rutger. *Advanced dMRI signal modeling for tissue microstructure characterization*. Diss. Université Côte d'Azur; Inria Sophia Antipolis, 2017.
+
+NOTE: PACKAGE NOT FUNCTIONAL YET
