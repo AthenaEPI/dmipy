@@ -23,6 +23,9 @@ class MixOptimizer:
     given the solutions of step one and two. For this we use scipy's
     gradient-based L-BFGS-B algorithm with nested volume fractions.
 
+    The final result takes a model's parameter_ranges into account, only
+    yielding parameters within their allowed optimization domain.
+
     Parameters
     ----------
     model : MultiCompartmentModel instance,
