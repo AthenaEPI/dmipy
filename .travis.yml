@@ -62,3 +62,8 @@ script:
 after_success:
 - coveralls
 - codecov -t a66df7b8-efce-412e-9ea8-2598b09b186e
+- conda install nbconvert
+- conda install entrypoints
+- for a in examples/*ipynb; do 
+    jupyter nbconvert --execute $a
+  done
