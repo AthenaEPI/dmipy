@@ -62,6 +62,8 @@ Mipy uses HCP data to illustrate microstructure model examples. To reproduce the
 ### Crossing Bundle Microstructure Models
 - [Ball and Sticks [Behrens et al. 2003]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_ball_and_sticks.ipynb)
 - [NODDI in crossings (NODDIx) [Farooq et al. 2016]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_mix_microstructure_imaging_in_crossings.ipynb)
+### Spherical Mean-Based Microstructure Models
+- Spherical Mean Technique [Kaden et al. 2015]
 - [Multi-Compartment Microscopic Diffusion Imaging [Kaden et al. 2016]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_multi_compartment_spherical_mean_technique.ipynb)
 ### Other Models
 - VERDICT tumor model [Panagiotaki et al. 2014]
@@ -70,5 +72,7 @@ Mipy uses HCP data to illustrate microstructure model examples. To reproduce the
 - Apparent Fiber Density [Raffelt et al. 2012]
 - White Matter Tract Integrity [Fieremans et al. 2012]
 
+## How to contribute to Mipy
+Mipy's design is completely modular and can easily be extended with new models, distributions or optimizers. To contribute, view our contribution guidelines[link] and wanted additions[link].
 ## How to cite Mipy
 Fick, Rutger. *Advanced dMRI signal modeling for tissue microstructure characterization*. Diss. Université Côte d'Azur; Inria Sophia Antipolis, 2017.
