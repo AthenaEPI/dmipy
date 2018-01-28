@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# microstruktur documentation build configuration file, created by
+# mipy documentation build configuration file, created by
 # sphinx-quickstart on Tue Apr 14 10:29:06 2015.
 #
 # This file is execfile()d with the current directory set to its
@@ -17,7 +17,7 @@ import sys
 import os
 
 # General information about the project.
-project = 'microstruktur'
+project = 'mipy'
 copyright = '2017, Rutger Fick and Demian Wassermann'
 
 currentdir = os.path.abspath(os.path.dirname(__file__))
@@ -65,7 +65,8 @@ extensions = ['sphinx.ext.autodoc',
               'math_dollar',  # has to go before numpydoc
               'numpydoc',
               'github',
-              'sphinx_gallery.gen_gallery']
+             # 'sphinx_gallery.gen_gallery'
+              ]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -218,7 +219,7 @@ html_domain_indices = False
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'microstrukturdoc'
+htmlhelp_basename = 'mipydoc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -238,8 +239,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'microstruktur.tex', 'microstruktur Documentation',
-   'Ariel Rokem', 'manual'),
+  ('index', 'mipy.tex', 'mipy Documentation',
+   'Rutger Fick, Demian Wassermann', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -268,8 +269,8 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'microstruktur', 'microstruktur Documentation',
-     ['Ariel Rokem'], 1)
+    ('index', 'mipy', 'mipy Documentation',
+     ['Rutger Fick, Demian Wassermann'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -282,8 +283,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'microstruktur', 'microstruktur Documentation',
-   'Ariel Rokem', 'microstruktur', 'One line description of project.',
+  ('index', 'mipy', 'mipy Documentation',
+   'Rutger Fick, Demian Wassermann', 'mipy', 'One line description of project.',
    'Miscellaneous'),
 ]
 

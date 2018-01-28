@@ -22,8 +22,8 @@ See solutions to [common issues](https://github.com/AthenaEPI/mipy/blob/master/c
 Recommended to use Anaconda Python distribution.
 - numpy >= 1.13
 - scipy
-- boto
 - [dipy](http://nipy.org/dipy/)
+- boto (optional for HCP-AWS interface)
 - [pathos](https://pypi.python.org/pypi/pathos) (optional for multi-core processing)
 - [numba](https://numba.pydata.org/) (optional for faster functions)
 
@@ -49,7 +49,7 @@ To get a feeling for how to use Mipy, we provide a few tutorial notebooks:
 - Brute Force (Brute2Fine)
 - Stochastic (MIX)
 ## Mipy implementations of Microstructure Models in Literature
-Mipy uses HCP data to illustrate microstructure model examples. To improve reproducibilty, we provide a direct way to download HCP (using your own AWS credentials) in the [HCP tutorial](https://github.com/AthenaEPI/mipy/blob/master/examples/tutorial_human_connectome_project_aws.ipynb).
+Mipy uses HCP data to illustrate microstructure model examples. To reproduce these examples, Mipy provides a direct way to download HCP data (using your own AWS credentials) in the [HCP tutorial](https://github.com/AthenaEPI/mipy/blob/master/examples/tutorial_human_connectome_project_aws.ipynb).
 ### Single Bundle Microstructure Models
 - [Ball and Stick [Behrens et al. 2003]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_ball_and_stick.ipynb)
 - [Ball and Racket [Sotiropoulos et al. 2012]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_ball_and_racket.ipynb)
@@ -57,13 +57,14 @@ Mipy uses HCP data to illustrate microstructure model examples. To improve repro
 - [NODDI-Bingham [Tariq et al. 2016]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_noddi_bingham.ipynb)
 - ActiveAx [Alexander et al. 2010]
 - [AxCaliber [Assaf et al. 2008]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_axcaliber.ipynb)
-- 3D-AxCaliber
-- Dispersed AxCaliber
 - AxCaliber with Extra-Axonal Restriction [Burcaw et al. 2015]
+- 3D-Dispersed AxCaliber
 ### Crossing Bundle Microstructure Models
 - [Ball and Sticks [Behrens et al. 2003]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_ball_and_sticks.ipynb)
 - [NODDI in crossings (NODDIx) [Farooq et al. 2016]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_mix_microstructure_imaging_in_crossings.ipynb)
-- [Multi-Compartment Spherical Mean Technique [Kaden et al. 2016]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_multi_compartment_spherical_mean_technique.ipynb)
+### Spherical Mean-Based Microstructure Models
+- Spherical Mean Technique [Kaden et al. 2015]
+- [Multi-Compartment Microscopic Diffusion Imaging [Kaden et al. 2016]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_multi_compartment_spherical_mean_technique.ipynb)
 ### Other Models
 - VERDICT tumor model [Panagiotaki et al. 2014]
 
@@ -71,5 +72,7 @@ Mipy uses HCP data to illustrate microstructure model examples. To improve repro
 - Apparent Fiber Density [Raffelt et al. 2012]
 - White Matter Tract Integrity [Fieremans et al. 2012]
 
+## How to contribute to Mipy
+Mipy's design is completely modular and can easily be extended with new models, distributions or optimizers. To contribute, view our contribution guidelines[link] and wanted additions[link].
 ## How to cite Mipy
 Fick, Rutger. *Advanced dMRI signal modeling for tissue microstructure characterization*. Diss. Université Côte d'Azur; Inria Sophia Antipolis, 2017.
