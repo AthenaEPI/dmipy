@@ -1,30 +1,12 @@
-from os.path import join
 from mipy.signal_models import (
     cylinder_models, gaussian_models, sphere_models, spherical_mean_models)
-from mipy.utils.utils import (
-    T1_tortuosity, parameter_equality
-)
 from mipy.core import modeling_framework
 from numpy.testing import (
     assert_equal, assert_array_almost_equal, assert_array_equal)
 import numpy as np
-from mipy.core.acquisition_scheme import (
-    acquisition_scheme_from_bvalues)
+from mipy.data.saved_acquisition_schemes import wu_minn_hcp_acquisition_scheme
 
-
-bvals = np.loadtxt(
-    join(modeling_framework.GRADIENT_TABLES_PATH,
-         'bvals_hcp_wu_minn.txt')
-)
-bvals *= 1e6
-gradient_directions = np.loadtxt(
-    join(modeling_framework.GRADIENT_TABLES_PATH,
-         'bvecs_hcp_wu_minn.txt')
-)
-delta = 0.01
-Delta = 0.03
-scheme = acquisition_scheme_from_bvalues(
-    bvals, gradient_directions, delta, Delta)
+scheme = wu_minn_hcp_acquisition_scheme()
 
 
 def test_simple_stick_optimization():
@@ -33,7 +15,6 @@ def test_simple_stick_optimization():
     gt_lambda_par = (np.random.rand() + 1.) * 1e-9
 
     stick_model = modeling_framework.MultiCompartmentModel(
-        acquisition_scheme=scheme,
         models=[stick])
 
     gt_parameter_vector = stick_model.parameters_to_parameter_vector(
@@ -45,8 +26,8 @@ def test_simple_stick_optimization():
         C1Stick_1_lambda_par=(np.random.rand() + 1.) * 1e-9,
         C1Stick_1_mu=np.random.rand(2)
     )
-    res = stick_model.fit(E, x0).fitted_parameters_vector
-    assert_array_almost_equal(gt_parameter_vector, res, 2)
+    res = stick_model.fit(scheme, E, x0).fitted_parameters_vector
+    assert_array_almost_equal(gt_parameter_vector, res.squeeze(), 2)
 
 
 def test_simple_ball_and_stick_optimization():
@@ -55,7 +36,6 @@ def test_simple_ball_and_stick_optimization():
 
     ball_and_stick = (
         modeling_framework.MultiCompartmentModel(
-            acquisition_scheme=scheme,
             models=[ball, stick],
             parameter_links=[],
             optimise_partial_volumes=True)
@@ -84,8 +64,8 @@ def test_simple_ball_and_stick_optimization():
         partial_volume_0=vf_rand,
         partial_volume_1=1 - vf_rand
     )
-    res = ball_and_stick.fit(E, x0).fitted_parameters_vector
-    assert_array_almost_equal(gt_parameter_vector, res, 3)
+    res = ball_and_stick.fit(scheme, E, x0).fitted_parameters_vector
+    assert_array_almost_equal(gt_parameter_vector, res.squeeze(), 2)
 
 
 def test_multi_dimensional_x0():
@@ -93,7 +73,6 @@ def test_multi_dimensional_x0():
     ball = gaussian_models.G1Ball()
     ball_and_stick = (
         modeling_framework.MultiCompartmentModel(
-            acquisition_scheme=scheme,
             models=[ball, stick],)
     )
     gt_lambda_par = (np.random.rand() + 1.) * 1e-9
@@ -119,7 +98,8 @@ def test_multi_dimensional_x0():
         scheme, gt_parameter_vector)
 
     # I'm giving a voxel-dependent initial condition with gt_mu_array
-    res = ball_and_stick.fit(E_array,
+    res = ball_and_stick.fit(scheme,
+                             E_array,
                              gt_parameter_vector).fitted_parameters_vector
     # optimization should stop immediately as I'm giving the ground truth.
     assert_equal(np.all(np.ravel(res - gt_parameter_vector) == 0.), True)
@@ -148,46 +128,36 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
     stick = cylinder_models.C1Stick()
     zeppelin = gaussian_models.G2Zeppelin()
 
-    parameter_links_stick_and_tortuous_zeppelin = [
-        (  # tortuosity assumption
-            zeppelin, 'lambda_perp',
-            T1_tortuosity, [
-                (None, 'partial_volume_0'),
-                (None, 'partial_volume_1'),
-                (stick, 'lambda_par')
-            ]
-        ),
-        (  # equal parallel diffusivities
-            zeppelin, 'lambda_par',
-            parameter_equality, [
-                (stick, 'lambda_par')
-            ]
-        ),
-        (  # equal parallel diffusivities
-            zeppelin, 'mu',
-            parameter_equality, [
-                (stick, 'mu')
-            ]
-        )
-    ]
-
-    stick_and_tortuous_zeppelin = (
+    stick_and_zeppelin = (
         modeling_framework.MultiCompartmentModel(
-            acquisition_scheme=scheme,
-            models=[stick, zeppelin],
-            parameter_links=parameter_links_stick_and_tortuous_zeppelin,
-            optimise_partial_volumes=True)
+            models=[stick, zeppelin])
+    )
+
+    stick_and_zeppelin.set_tortuous_parameter(
+        'G2Zeppelin_1_lambda_perp',
+        'C1Stick_1_lambda_par',
+        'partial_volume_0',
+        'partial_volume_1'
+    )
+    stick_and_zeppelin.set_equal_parameter(
+        'C1Stick_1_mu',
+        'G2Zeppelin_1_mu'
+    )
+
+    stick_and_zeppelin.set_equal_parameter(
+        'C1Stick_1_lambda_par',
+        'G2Zeppelin_1_lambda_par'
     )
 
     gt_parameter_vector = (
-        stick_and_tortuous_zeppelin.parameters_to_parameter_vector(
+        stick_and_zeppelin.parameters_to_parameter_vector(
             C1Stick_1_lambda_par=gt_lambda_par,
             C1Stick_1_mu=gt_mu,
             partial_volume_0=gt_partial_volume,
             partial_volume_1=1 - gt_partial_volume)
     )
 
-    E = stick_and_tortuous_zeppelin.simulate_signal(
+    E = stick_and_zeppelin.simulate_signal(
         scheme, gt_parameter_vector)
 
     # now we make the stick and zeppelin spherical mean model and check if the
@@ -195,40 +165,25 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
     stick_sm = spherical_mean_models.C1StickSphericalMean()
     zeppelin_sm = spherical_mean_models.G2ZeppelinSphericalMean()
 
-    parameter_links_stick_and_tortuous_zeppelin_smt = [
-        (  # tortuosity assumption
-            zeppelin_sm, 'lambda_perp',
-            T1_tortuosity, [
-                (None, 'partial_volume_0'),
-                (None, 'partial_volume_1'),
-                (stick_sm, 'lambda_par')
-            ]
-        ),
-        (  # equal parallel diffusivities
-            zeppelin_sm, 'lambda_par',
-            parameter_equality, [
-                (stick_sm, 'lambda_par')
-            ]
-        )
-    ]
-
     stick_and_tortuous_zeppelin_sm = (
         modeling_framework.MultiCompartmentModel(
-            acquisition_scheme=scheme,
-            models=[stick_sm, zeppelin_sm],
-            parameter_links=parameter_links_stick_and_tortuous_zeppelin_smt,
-            optimise_partial_volumes=True)
-    )
-    x0 = stick_and_tortuous_zeppelin_sm.parameters_to_parameter_vector(
-        C1StickSphericalMean_1_lambda_par=.6 * 1e-9,
-        partial_volume_0=0.55,
-        partial_volume_1=0.45
+            models=[stick_sm, zeppelin_sm])
     )
 
-    res_sm = stick_and_tortuous_zeppelin_sm.fit(E, x0).fitted_parameters_vector
+    stick_and_tortuous_zeppelin_sm.set_tortuous_parameter(
+        'G2ZeppelinSphericalMean_1_lambda_perp',
+        'C1StickSphericalMean_1_lambda_par',
+        'partial_volume_0',
+        'partial_volume_1')
+    stick_and_tortuous_zeppelin_sm.set_equal_parameter(
+        'G2ZeppelinSphericalMean_1_lambda_par',
+        'C1StickSphericalMean_1_lambda_par')
+
+    res_sm = stick_and_tortuous_zeppelin_sm.fit(scheme, E
+                                                ).fitted_parameters_vector
 
     assert_array_almost_equal(
-        np.r_[gt_lambda_par, gt_partial_volume], res_sm[:-1], 2)
+        np.r_[gt_lambda_par, gt_partial_volume], res_sm.squeeze()[:-1], 2)
 
 
 def test_fractions_add_up_to_one():
@@ -238,7 +193,6 @@ def test_fractions_add_up_to_one():
     dot4 = sphere_models.S1Dot()
     dot5 = sphere_models.S1Dot()
     dots = modeling_framework.MultiCompartmentModel(
-        acquisition_scheme=scheme,
         models=[dot1, dot2, dot3, dot4, dot5])
     random_fractions = np.random.rand(5)
     random_fractions /= random_fractions.sum()
@@ -257,7 +211,6 @@ def test_MIX_fitting():
     zeppelin = gaussian_models.G2Zeppelin()
     ball_and_zeppelin = (
         modeling_framework.MultiCompartmentModel(
-            acquisition_scheme=scheme,
             models=[ball, zeppelin]))
 
     parameter_vector = ball_and_zeppelin.parameters_to_parameter_vector(
@@ -272,5 +225,6 @@ def test_MIX_fitting():
     E = ball_and_zeppelin.simulate_signal(
         scheme, parameter_vector)
     fit = ball_and_zeppelin.fit(
-        np.array([E]), solver='mix').fitted_parameters_vector
-    assert_array_almost_equal(abs(fit[0]), parameter_vector, 2)
+        scheme,
+        E, solver='mix').fitted_parameters_vector
+    assert_array_almost_equal(abs(fit).squeeze(), parameter_vector, 2)

@@ -25,7 +25,7 @@ def test_spherical_convolution_watson_sh(sh_order=4):
     mu_watson = sphere.vertices[mu_index]
     mu_watson_sphere = utils.cart2sphere(mu_watson)[1:]
 
-    watson = distributions.SD1Watson(mu=mu_watson_sphere, kappa=10.)
+    watson = distributions.SD1Watson(mu=mu_watson_sphere, odi=.3)
     f_sf = watson(n=sphere.vertices)
     f_sh = sf_to_sh(f_sf, sphere, sh_order)
 

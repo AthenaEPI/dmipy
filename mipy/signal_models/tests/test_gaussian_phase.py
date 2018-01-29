@@ -1,11 +1,12 @@
 from numpy.testing import assert_equal
 import numpy as np
-from mipy.signal_models import cylinder_models, sphere_models
+from mipy.signal_models import cylinder_models
 from mipy.core.acquisition_scheme import (
     acquisition_scheme_from_qvalues)
 
 
-def test_cylinder_gaussian_phase_profile_narrow_pulse_not_restricted(samples=100):
+def test_cylinder_gaussian_phase_profile_narrow_pulse_not_restricted(
+        samples=100):
     # the Gaussian Phase model approaches the following equation
     # when delta << tau according to Eq. (13) in VanGelderen et al:
     # np.exp(-2 * (gamma * G * delta * lambda_perp) ** 2)
@@ -35,23 +36,3 @@ def test_cylinder_gaussian_phase_profile_narrow_pulse_restricted():
     # np.exp(-(gamma * G * delta * R) ** 2).R
     # But... how can it be Gaussian?
     return None
-
-
-def test_sphere_gaussian_phase_profile_narrow_pulse_not_restricted():
-    "balinov"
-    diameter = 1e-4
-    sphere_GFA = (
-        sphere_models.S4SphereGaussianPhaseApproximation(
-            diameter=diameter)
-    )
-    pass
-
-
-def test_cylinder_gaussian_phase_profile_narrow_pulse_restricted():
-    "balinov"
-    diameter = 1e-4
-    sphere_GFA = (
-        sphere_models.S4SphereGaussianPhaseApproximation(
-            diameter=diameter)
-    )
-    pass
