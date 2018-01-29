@@ -138,18 +138,19 @@ class MipyAcquisitionScheme:
         print "number of b0 measurements: {}".format(self.number_of_b0s)
         print "number of DWI shells: {}\n".format(np.sum(~self.shell_b0_mask))
         upper_line = "shell_index |# of DWIs |bvalue [s/mm^2] "
-        upper_line += "|gradient strength [mT/m] |delta [ms] |Delta[ms] |TE[ms]"
+        upper_line += "|gradient strength [mT/m] |delta [ms] |Delta[ms]"
+        upper_line += " |TE[ms]"
         print upper_line
         for ind in np.arange(max(self.shell_indices) + 1):
             if self.shell_TE is None:
-                print "{: <12}|{: <10}|{: <16}|{: <25}|{: <11}|{: <10}|{: <5}".format(
+                print ("{: <12}|{: <10}|{: <16}|{: <25}|{: <11}|{: <10}|{: <5}").format(
                     str(ind), sum(self.shell_indices == ind),
                     int(self.shell_bvalues[ind] / 1e6),
                     int(1e3 * self.shell_gradient_strengths[ind]),
                     self.shell_delta[ind] * 1e3, self.shell_Delta[ind] * 1e3,
                     'N/A')
             else:
-                print "{: <12}|{: <10}|{: <16}|{: <25}|{: <11}|{: <10}|{: <5}".format(
+                print ("{: <12}|{: <10}|{: <16}|{: <25}|{: <11}|{: <10}|{: <5}").format(
                     str(ind), sum(self.shell_indices == ind),
                     int(self.shell_bvalues[ind] / 1e6),
                     int(1e3 * self.shell_gradient_strengths[ind]),
