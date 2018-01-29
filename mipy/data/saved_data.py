@@ -4,7 +4,7 @@ import nibabel as nib
 import numpy as np
 from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
-from mipy.data import saved_acquisition_schemes
+from . import saved_acquisition_schemes
 DATA_PATH = pkg_resources.resource_filename(
     'mipy', 'data/'
 )

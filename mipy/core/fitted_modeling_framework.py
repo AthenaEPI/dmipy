@@ -1,8 +1,8 @@
 import numpy as np
 from dipy.data import get_sphere
 from dipy.reconst.shm import sh_to_sf_matrix
-from mipy.utils.utils import unitsphere2cart_Nd
-from mipy.utils.spherical_mean import (
+from ..utils.utils import unitsphere2cart_Nd
+from ..utils.spherical_mean import (
     estimate_spherical_mean_multi_shell)
 
 

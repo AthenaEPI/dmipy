@@ -1,6 +1,6 @@
 from scipy.optimize import brute, minimize
 import pkg_resources
-from mipy.utils.utils import cart2mu
+from ..utils.utils import cart2mu
 import numpy as np
 from dipy.utils.optpkg import optional_package
 

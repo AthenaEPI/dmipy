@@ -1,6 +1,6 @@
 import numpy as np
 from dipy.reconst.shm import real_sym_sh_mrtrix
-from mipy.utils import utils
+from . import utils
 
 
 def estimate_spherical_mean_multi_shell(E_attenuation, acquisition_scheme,
@@ -41,7 +41,8 @@ def estimate_spherical_mean_multi_shell(E_attenuation, acquisition_scheme,
     return E_mean
 
 
-def estimate_spherical_mean_shell(E_shell, bvecs_shell, sh_order=6, sh_mat=None):
+def estimate_spherical_mean_shell(
+        E_shell, bvecs_shell, sh_order=6, sh_mat=None):
     """ Estimates spherical mean of a shell of measurements using
     spherical harmonics.
     The spherical mean is contained only in the Y00 spherical harmonic, as long

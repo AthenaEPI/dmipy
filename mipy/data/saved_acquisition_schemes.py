@@ -1,7 +1,7 @@
 import numpy as np
 from os.path import join
 import pkg_resources
-from mipy.core.acquisition_scheme import (
+from ..core.acquisition_scheme import (
     acquisition_scheme_from_bvalues,
     acquisition_scheme_from_gradient_strengths)
 

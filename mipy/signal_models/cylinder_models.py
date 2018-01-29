@@ -2,12 +2,12 @@ from __future__ import division
 
 import numpy as np
 from scipy import special
-from mipy.utils.spherical_convolution import real_sym_rh_basis
+from ..utils.spherical_convolution import real_sym_rh_basis
 
-from mipy.utils import utils
-from mipy.core.constants import CONSTANTS
+from ..utils import utils
+from ..core.constants import CONSTANTS
 from ..core.acquisition_scheme import SimpleAcquisitionSchemeRH
-from mipy.core.modeling_framework import ModelProperties
+from ..core.modeling_framework import ModelProperties
 from dipy.utils.optpkg import optional_package
 
 numba, have_numba, _ = optional_package("numba")

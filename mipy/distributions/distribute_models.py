@@ -1,9 +1,9 @@
-from mipy.distributions.distributions import (
+from .distributions import (
     SD1Watson, SD2Bingham, DD1GammaDistribution)
 from collections import OrderedDict
 from itertools import chain
-from mipy.utils.spherical_convolution import sh_convolution
-from mipy.utils.utils import T1_tortuosity, parameter_equality
+from ..utils.spherical_convolution import sh_convolution
+from ..utils.utils import T1_tortuosity, parameter_equality
 import copy
 import numpy as np
 

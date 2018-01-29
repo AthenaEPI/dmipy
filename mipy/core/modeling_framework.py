@@ -9,14 +9,14 @@ from collections import OrderedDict
 import numpy as np
 from time import time
 
-from mipy.utils.spherical_mean import (
+from ..utils.spherical_mean import (
     estimate_spherical_mean_multi_shell)
-from mipy.utils.utils import T1_tortuosity, parameter_equality
-from mipy.core.fitted_modeling_framework import (
+from ..utils.utils import T1_tortuosity, parameter_equality
+from .fitted_modeling_framework import (
     FittedMultiCompartmentModel)
-from mipy.optimizers.brute2fine import (
+from ..optimizers.brute2fine import (
     GlobalBruteOptimizer, Brute2FitOptimizer)
-from mipy.optimizers.mix import MixOptimizer
+from ..optimizers.mix import MixOptimizer
 from dipy.utils.optpkg import optional_package
 pathos, have_pathos, _ = optional_package("pathos")
 

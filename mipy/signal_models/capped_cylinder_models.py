@@ -1,6 +1,6 @@
-from mipy.signal_models import cylinder_models, plane_models
-from mipy.utils import utils
-from mipy.core.modeling_framework import ModelProperties
+from . import cylinder_models, plane_models
+from ..utils import utils
+from ..core.modeling_framework import ModelProperties
 import numpy as np
 
 

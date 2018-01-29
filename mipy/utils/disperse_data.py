@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from dipy.reconst.shm import real_sym_sh_mrtrix
 import numpy as np
-from . import three_dimensional_models, spherical_convolution, utils, distributions
+from . import spherical_convolution, utils, distributions
 BINGHAM_SH_ORDER = 14
 
 

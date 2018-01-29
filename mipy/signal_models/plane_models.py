@@ -1,7 +1,7 @@
 
 import numpy as np
-from mipy.core.modeling_framework import ModelProperties
-from mipy.core.constants import CONSTANTS
+from ..core.modeling_framework import ModelProperties
+from ..core.constants import CONSTANTS
 
 LENGTH_SCALING = 1e-6
 

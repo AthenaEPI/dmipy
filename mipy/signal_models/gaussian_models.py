@@ -6,11 +6,11 @@ from __future__ import division
 
 import numpy as np
 
-from mipy.utils import utils
-from mipy.core.acquisition_scheme import SimpleAcquisitionSchemeRH
-from mipy.core.modeling_framework import ModelProperties
-from mipy.utils.spherical_convolution import real_sym_rh_basis
-from mipy.utils.utils import sphere2cart
+from ..utils import utils
+from ..core.acquisition_scheme import SimpleAcquisitionSchemeRH
+from ..core.modeling_framework import ModelProperties
+from ..utils.spherical_convolution import real_sym_rh_basis
+from ..utils.utils import sphere2cart
 from dipy.utils.optpkg import optional_package
 
 numba, have_numba, _ = optional_package("numba")

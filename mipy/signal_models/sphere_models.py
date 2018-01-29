@@ -1,4 +1,4 @@
-from mipy.core.modeling_framework import ModelProperties
+from ..core.modeling_framework import ModelProperties
 import numpy as np
 
 DIAMETER_SCALING = 1e-6

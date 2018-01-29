@@ -5,7 +5,7 @@ Document Module
 from __future__ import division
 import numpy as np
 from scipy.special import erf
-from mipy.core.modeling_framework import ModelProperties
+from ..core.modeling_framework import ModelProperties
 
 DIFFUSIVITY_SCALING = 1e-9
 A_SCALING = 1e-12
