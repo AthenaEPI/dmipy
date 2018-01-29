@@ -1,7 +1,7 @@
 import numpy as np
-from mipy.core.gradient_conversions import (
+from .gradient_conversions import (
     g_from_b, q_from_b, b_from_q, g_from_q, b_from_g, q_from_g)
-from mipy.utils import utils
+from ..utils import utils
 from dipy.reconst.shm import real_sym_sh_mrtrix
 from scipy.cluster.hierarchy import fcluster, linkage
 from dipy.core.gradients import gradient_table, GradientTable
