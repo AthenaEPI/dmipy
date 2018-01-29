@@ -132,15 +132,16 @@ class MipyAcquisitionScheme:
         the function correctly separated the shells and if the input parameters
         were given in the right scale.
         """
-        print "Acquisition scheme summary\n"
-        print "total number of measurements: {}".format(
+        print ("Acquisition scheme summary\n")
+        print ("total number of measurements: {}").format(
             self.number_of_measurements)
-        print "number of b0 measurements: {}".format(self.number_of_b0s)
-        print "number of DWI shells: {}\n".format(np.sum(~self.shell_b0_mask))
+        print ("number of b0 measurements: {}").format(self.number_of_b0s)
+        print ("number of DWI shells: {}\n").format(
+            np.sum(~self.shell_b0_mask))
         upper_line = "shell_index |# of DWIs |bvalue [s/mm^2] "
         upper_line += "|gradient strength [mT/m] |delta [ms] |Delta[ms]"
         upper_line += " |TE[ms]"
-        print upper_line
+        print (upper_line)
         for ind in np.arange(max(self.shell_indices) + 1):
             if self.shell_TE is None:
                 print ("{: <12}|{: <10}|{: <16}|{: <25}|{: <11}|{: <10}|{: <5}").format(
