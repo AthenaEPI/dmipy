@@ -81,4 +81,4 @@ PACKAGE_DATA = {
         pjoin('data', 'camino', '*')
     ]
 }
-REQUIRES = ["numpy", 'dipy']
+REQUIRES = ["dipy", "scipy", "numpy (>=1.13)"]
