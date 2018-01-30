@@ -1,7 +1,7 @@
 [run]
 branch = True
-source = microstruktur/*
-include = microstruktur/*
+source = mipy/*
+include = mipy/*
 omit = */setup.py
 [report]
-include = microstruktur/*
+include = mipy/*
