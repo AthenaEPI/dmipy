@@ -58,8 +58,14 @@ script:
 - flake8 --ignore N802,N806,E731 `find . -name \*.py | grep -v setup.py | grep -v /doc/`
 - nosetests --with-coverage -v
 - for a in examples/*ipynb; do 
-    jupyter nbconvert --execute $a
-
+    echo $a
+    jupyter nbconvert --execute $a >/dev/null
+    if [ $? -eq 0 ]; then
+      echo "Succesful"
+    else
+      echo "Failed"
+    fi
+  done
   # - mkdir for_test
   # - cd for_test
   #- py.test --pyargs microstruktur --cov-report term-missing --cov=microstruktur
@@ -67,4 +73,3 @@ script:
 after_success:
 - coveralls
 - codecov -t a66df7b8-efce-412e-9ea8-2598b09b186e
-  done
