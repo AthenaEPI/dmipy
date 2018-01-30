@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from dipy.reconst.shm import real_sym_sh_mrtrix
 import numpy as np
-from . import spherical_convolution, utils, distributions
+from .. import distributions
+from . import spherical_convolution, utils
 BINGHAM_SH_ORDER = 14
 
 
