@@ -1,9 +1,9 @@
-from mipy.data import saved_data
-from mipy.signal_models import (
+from dmipy.data import saved_data
+from dmipy.signal_models import (
     spherical_mean_models, cylinder_models, gaussian_models)
-from mipy.utils.utils import parameter_equality, T1_tortuosity
-from mipy.core import modeling_framework
-from mipy.distributions import distribute_models
+from dmipy.utils.utils import parameter_equality, T1_tortuosity
+from dmipy.core import modeling_framework
+from dmipy.distributions import distribute_models
 from numpy.testing import assert_equal
 import numpy as np
 

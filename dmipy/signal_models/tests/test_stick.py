@@ -1,11 +1,11 @@
 from numpy.testing import assert_almost_equal
 import numpy as np
-from mipy.utils import utils
-from mipy.signal_models import cylinder_models
-from mipy.utils.utils import perpendicular_vector
+from dmipy.utils import utils
+from dmipy.signal_models import cylinder_models
+from dmipy.utils.utils import perpendicular_vector
 from dipy.data import get_sphere
 
-from mipy.core.acquisition_scheme import (
+from dmipy.core.acquisition_scheme import (
     acquisition_scheme_from_bvalues)
 sphere = get_sphere().subdivide()
 

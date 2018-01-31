@@ -1,7 +1,7 @@
-from mipy.signal_models import gaussian_models, sphere_models
+from dmipy.signal_models import gaussian_models, sphere_models
 from numpy.testing import assert_array_equal, assert_equal
 import numpy as np
-from mipy.core.acquisition_scheme import (
+from dmipy.core.acquisition_scheme import (
     acquisition_scheme_from_bvalues)
 
 bvals = np.random.rand(10) * 1e9

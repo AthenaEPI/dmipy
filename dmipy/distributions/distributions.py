@@ -11,9 +11,9 @@ from scipy import stats
 from scipy import special
 from dipy.reconst.shm import real_sym_sh_mrtrix
 
-from mipy.utils import utils
+from dmipy.utils import utils
 from scipy import interpolate
-from mipy.core.modeling_framework import ModelProperties
+from dmipy.core.modeling_framework import ModelProperties
 from dipy.utils.optpkg import optional_package
 from dipy.data import get_sphere, HemiSphere
 sphere = get_sphere('symmetric724')
@@ -267,7 +267,7 @@ class SD2Bingham(ModelProperties):
         code to generate the interpolation:
 
         from dipy.data import get_sphere, HemiSphere
-        from mipy.signal_models.spherical_mean import (
+        from dmipy.signal_models.spherical_mean import (
             estimate_spherical_mean_shell)
         import numpy as np
         sphere = get_sphere()

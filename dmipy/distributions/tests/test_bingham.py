@@ -1,11 +1,11 @@
 from numpy.testing import assert_almost_equal, assert_equal
-from mipy.utils import utils
+from dmipy.utils import utils
 import numpy as np
-from mipy.utils.utils import (
+from dmipy.utils.utils import (
     rotation_matrix_100_to_theta_phi, rotation_matrix_around_100,
     rotation_matrix_100_to_theta_phi_psi
 )
-from mipy.distributions import distributions
+from dmipy.distributions import distributions
 
 
 def test_rotation_100_to_theta_phi():

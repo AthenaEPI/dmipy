@@ -1,10 +1,10 @@
-from mipy.signal_models import (
+from dmipy.signal_models import (
     cylinder_models, gaussian_models, sphere_models, spherical_mean_models)
-from mipy.core import modeling_framework
+from dmipy.core import modeling_framework
 from numpy.testing import (
     assert_equal, assert_array_almost_equal, assert_array_equal)
 import numpy as np
-from mipy.data.saved_acquisition_schemes import wu_minn_hcp_acquisition_scheme
+from dmipy.data.saved_acquisition_schemes import wu_minn_hcp_acquisition_scheme
 
 scheme = wu_minn_hcp_acquisition_scheme()
 

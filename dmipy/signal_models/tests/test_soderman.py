@@ -1,7 +1,7 @@
 from numpy.testing import assert_almost_equal
 import numpy as np
-from mipy.signal_models import cylinder_models, sphere_models
-from mipy.core.acquisition_scheme import (
+from dmipy.signal_models import cylinder_models, sphere_models
+from dmipy.core.acquisition_scheme import (
     acquisition_scheme_from_qvalues,)
 
 

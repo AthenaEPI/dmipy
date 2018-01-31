@@ -1,12 +1,12 @@
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_array_almost_equal
 from dipy.data import get_sphere
-from mipy.utils.spherical_mean import (
+from dmipy.utils.spherical_mean import (
     estimate_spherical_mean_shell,
     estimate_spherical_mean_multi_shell
 )
-from mipy.signal_models import cylinder_models, spherical_mean_models, gaussian_models
-from mipy.core.acquisition_scheme import (
+from dmipy.signal_models import cylinder_models, spherical_mean_models, gaussian_models
+from dmipy.core.acquisition_scheme import (
     acquisition_scheme_from_bvalues)
 sphere = get_sphere().subdivide()
 delta = 0.01

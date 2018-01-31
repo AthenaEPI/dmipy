@@ -1,12 +1,12 @@
 from numpy.testing import assert_almost_equal, assert_equal
-from mipy.signal_models import cylinder_models
-from mipy.distributions import distributions
-from mipy.utils.spherical_convolution import sh_convolution
-from mipy.utils import utils
+from dmipy.signal_models import cylinder_models
+from dmipy.distributions import distributions
+from dmipy.utils.spherical_convolution import sh_convolution
+from dmipy.utils import utils
 from dipy.reconst.shm import sf_to_sh, sh_to_sf, real_sym_sh_mrtrix
 from dipy.data import get_sphere
 import numpy as np
-from mipy.core.acquisition_scheme import (
+from dmipy.core.acquisition_scheme import (
     acquisition_scheme_from_bvalues)
 
 delta = 0.01

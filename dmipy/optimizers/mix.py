@@ -30,7 +30,7 @@ class MixOptimizer:
     ----------
     model : MultiCompartmentModel instance,
         A multicompartment model that has been instantiated using dMipy.
-    acquisition_scheme : MipyAcquisitionScheme instance,
+    acquisition_scheme : DmipyAcquisitionScheme instance,
         An acquisition scheme that has been instantiated using dMipy.
     maxiter : integer
         The maximum allowed iterations for the differential evolution algorithm

@@ -1,5 +1,5 @@
 import numpy as np
-from mipy.core.acquisition_scheme import (
+from dmipy.core.acquisition_scheme import (
     acquisition_scheme_from_bvalues,
     acquisition_scheme_from_qvalues,
     acquisition_scheme_from_gradient_strengths,

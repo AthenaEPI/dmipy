@@ -1,7 +1,7 @@
 [run]
 branch = True
-source = mipy/*
-include = mipy/*
+source = dmipy/*
+include = dmipy/*
 omit = */setup.py
 [report]
-include = mipy/*
+include = dmipy/*

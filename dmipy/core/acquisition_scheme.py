@@ -19,7 +19,7 @@ def get_sh_order_from_bval(bval):
     return sh_orders[np.argmax(bvals > bval)]
 
 
-class MipyAcquisitionScheme:
+class DmipyAcquisitionScheme:
     """
     Class that calculates and contains all information needed to simulate and
     fit data using microstructure models.
@@ -303,7 +303,7 @@ def acquisition_scheme_from_bvalues(
 
     Returns
     -------
-    MipyAcquisitionScheme: acquisition scheme object
+    DmipyAcquisitionScheme: acquisition scheme object
         contains all information of the acquisition scheme to be used in any
         microstructure model.
     """
@@ -312,9 +312,9 @@ def acquisition_scheme_from_bvalues(
     check_acquisition_scheme(bvalues, gradient_directions, delta_, Delta_, TE_)
     qvalues = q_from_b(bvalues, delta_, Delta_)
     gradient_strengths = g_from_b(bvalues, delta_, Delta_)
-    return MipyAcquisitionScheme(bvalues, gradient_directions, qvalues,
-                                 gradient_strengths, delta_, Delta_, TE_,
-                                 min_b_shell_distance, b0_threshold)
+    return DmipyAcquisitionScheme(bvalues, gradient_directions, qvalues,
+                                  gradient_strengths, delta_, Delta_, TE_,
+                                  min_b_shell_distance, b0_threshold)
 
 
 def acquisition_scheme_from_qvalues(
@@ -346,7 +346,7 @@ def acquisition_scheme_from_qvalues(
 
     Returns
     -------
-    MipyAcquisitionScheme: acquisition scheme object
+    DmipyAcquisitionScheme: acquisition scheme object
         contains all information of the acquisition scheme to be used in any
         microstructure model.
     """
@@ -355,9 +355,9 @@ def acquisition_scheme_from_qvalues(
     check_acquisition_scheme(qvalues, gradient_directions, delta_, Delta_, TE_)
     bvalues = b_from_q(qvalues, delta, Delta)
     gradient_strengths = g_from_q(qvalues, delta)
-    return MipyAcquisitionScheme(bvalues, gradient_directions, qvalues,
-                                 gradient_strengths, delta_, Delta_, TE_,
-                                 min_b_shell_distance, b0_threshold)
+    return DmipyAcquisitionScheme(bvalues, gradient_directions, qvalues,
+                                  gradient_strengths, delta_, Delta_, TE_,
+                                  min_b_shell_distance, b0_threshold)
 
 
 def acquisition_scheme_from_gradient_strengths(
@@ -389,7 +389,7 @@ def acquisition_scheme_from_gradient_strengths(
 
     Returns
     -------
-    MipyAcquisitionScheme: acquisition scheme object
+    DmipyAcquisitionScheme: acquisition scheme object
         contains all information of the acquisition scheme to be used in any
         microstructure model.
     """
@@ -399,9 +399,9 @@ def acquisition_scheme_from_gradient_strengths(
                              delta_, Delta_, TE_)
     bvalues = b_from_g(gradient_strengths, delta, Delta)
     qvalues = q_from_g(gradient_strengths, delta)
-    return MipyAcquisitionScheme(bvalues, gradient_directions, qvalues,
-                                 gradient_strengths, delta_, Delta_, TE_,
-                                 min_b_shell_distance, b0_threshold)
+    return DmipyAcquisitionScheme(bvalues, gradient_directions, qvalues,
+                                  gradient_strengths, delta_, Delta_, TE_,
+                                  min_b_shell_distance, b0_threshold)
 
 
 def acquisition_scheme_from_schemefile(file_path):
@@ -417,7 +417,7 @@ def acquisition_scheme_from_schemefile(file_path):
 
     Returns
     -------
-    MipyAcquisitionScheme: acquisition scheme object
+    DmipyAcquisitionScheme: acquisition scheme object
         contains all information of the acquisition scheme to be used in any
         microstructure model.
     """
@@ -556,7 +556,7 @@ def check_acquisition_scheme(
 
 
 def gtab_dipy2mipy(dipy_gradient_table):
-    "Converts a dipy gradient_table to a mipy acquisition_scheme."
+    "Converts a dipy gradient_table to a dmipy acquisition_scheme."
     if not isinstance(dipy_gradient_table, GradientTable):
         msg = "Input must be a dipy GradientTable object. "
         raise ValueError(msg)
@@ -564,20 +564,25 @@ def gtab_dipy2mipy(dipy_gradient_table):
     bvecs = dipy_gradient_table.bvecs
     delta = dipy_gradient_table.small_delta
     Delta = dipy_gradient_table.big_delta
-    gtab_mipy = acquisition_scheme_from_bvalues(
+    gtab_dmipy = acquisition_scheme_from_bvalues(
         bvalues=bvals, gradient_directions=bvecs, delta=delta, Delta=Delta)
-    return gtab_mipy
+    return gtab_dmipy
 
 
-def gtab_mipy2dipy(mipy_gradient_table):
-    "Converts a mipy acquisition scheme to a dipy gradient_table."
-    if not isinstance(mipy_gradient_table, MipyAcquisitionScheme):
-        msg = "Input must be a MipyAcquisitionScheme object. "
+def gtab_mipy2dipy(dmipy_gradient_table):
+    "Converts a dmipy acquisition scheme to a dipy gradient_table."
+    if not isinstance(dmipy_gradient_table, DmipyAcquisitionScheme):
+        msg = "Input must be a DmipyAcquisitionScheme object. "
         raise ValueError(msg)
-    bvals = mipy_gradient_table.bvalues / 1e6
-    bvecs = mipy_gradient_table.gradient_directions
-    delta = mipy_gradient_table.delta
-    Delta = mipy_gradient_table.Delta
+    bvals = dmipy_gradient_table.bvalues / 1e6
+    bvecs = dmipy_gradient_table.gradient_directions
+    delta = dmipy_gradient_table.delta
+    Delta = dmipy_gradient_table.Delta
+
+    if len(np.unique(delta)) == 1:
+        delta = delta[0]
+    if len(np.unique(Delta)) == 1:
+        Delta = Delta[0]
     gtab_dipy = gradient_table(
         bvals=bvals, bvecs=bvecs, small_delta=delta, big_delta=Delta)
     return gtab_dipy

@@ -1,7 +1,7 @@
 from numpy.testing import assert_almost_equal, assert_equal
 import numpy as np
-from mipy.distributions import distributions
-from mipy.utils import utils
+from dmipy.distributions import distributions
+from dmipy.utils import utils
 from dipy.data import get_sphere
 
 

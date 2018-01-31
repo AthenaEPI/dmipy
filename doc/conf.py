@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# mipy documentation build configuration file, created by
+# dmipy documentation build configuration file, created by
 # sphinx-quickstart on Tue Apr 14 10:29:06 2015.
 #
 # This file is execfile()d with the current directory set to its
@@ -17,7 +17,7 @@ import sys
 import os
 
 # General information about the project.
-project = 'mipy'
+project = 'dmipy'
 copyright = '2017, Rutger Fick and Demian Wassermann'
 
 currentdir = os.path.abspath(os.path.dirname(__file__))
@@ -219,7 +219,7 @@ html_domain_indices = False
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'mipydoc'
+htmlhelp_basename = 'dmipydoc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -239,7 +239,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'mipy.tex', 'mipy Documentation',
+  ('index', 'dmipy.tex', 'dmipy Documentation',
    'Rutger Fick, Demian Wassermann', 'manual'),
 ]
 
@@ -269,7 +269,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'mipy', 'mipy Documentation',
+    ('index', 'dmipy', 'dmipy Documentation',
      ['Rutger Fick, Demian Wassermann'], 1)
 ]
 
@@ -283,8 +283,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'mipy', 'mipy Documentation',
-   'Rutger Fick, Demian Wassermann', 'mipy', 'One line description of project.',
+  ('index', 'mipy', 'dmipy Documentation',
+   'Rutger Fick, Demian Wassermann', 'dmipy', 'One line description of project.',
    'Miscellaneous'),
 ]
 
