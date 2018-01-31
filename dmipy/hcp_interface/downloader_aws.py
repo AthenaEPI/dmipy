@@ -82,6 +82,9 @@ class HCPInterface:
                         break
 
     def prepare_example_slice(self, subject):
+        msg = "Preparing coronal slice for dmipy examples"
+        print (msg)
+
         folder_name = "hcp_example_slice"
         example_directory = os.path.join(self.hcp_directory, folder_name)
         if not os.path.exists(example_directory):
@@ -104,3 +107,4 @@ class HCPInterface:
 
         nib.save(nib.Nifti1Image(data_slice, affine), os.path.join(
             example_directory, 'coronal_slice.nii.gz'))
+        print ('Done')
