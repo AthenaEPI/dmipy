@@ -15,7 +15,7 @@ from ..utils.utils import T1_tortuosity, parameter_equality
 from .fitted_modeling_framework import (
     FittedMultiCompartmentModel)
 from ..optimizers.brute2fine import (
-    GlobalBruteOptimizer, Brute2FitOptimizer)
+    GlobalBruteOptimizer, Brute2FineOptimizer)
 from ..optimizers.mix import MixOptimizer
 from dipy.utils.optpkg import optional_package
 pathos, have_pathos, _ = optional_package("pathos")
@@ -622,7 +622,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             global_brute = GlobalBruteOptimizer(
                 self, self.scheme,
                 parameter_initial_guess, Ns, N_sphere_samples)
-            fit_func = Brute2FitOptimizer(self, self.scheme, Ns)
+            fit_func = Brute2FineOptimizer(self, self.scheme, Ns)
             print ('Setup brute2fine optimizer in {} seconds').format(
                 time() - start)
         elif solver == 'mix':
