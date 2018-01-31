@@ -48,7 +48,7 @@ MINOR = _version_minor
 MICRO = _version_micro
 VERSION = __version__
 PACKAGE_DATA = {
-    'mipy': [
+    'dmipy': [
         pjoin('data', 'gradient_tables', '*'),
         pjoin('data', 'spheres', '*'),
         pjoin('data', 'bingham_normalization_splinefit.npz'),
