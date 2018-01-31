@@ -35,31 +35,58 @@ SIGNAL_MODELS_PATH = pkg_resources.resource_filename(
 class ModelProperties:
     @property
     def parameter_ranges(self):
+        """Returns the optimization ranges of the model parameters.
+        These ranges are given in O(1) scale so optimization algorithms
+        don't suffer from large scale differences in optimization parameters.
+        """
         return OrderedDict(self._parameter_ranges.copy())
 
     @property
     def parameter_scales(self):
+        """Returns the optimization scales for the model parameters.
+        The scales scale the parameter_ranges to their actual size inside
+        optimization algorithms.
+        """
         return OrderedDict(self._parameter_scales.copy())
 
     @property
     def parameter_names(self):
+        "Returns the names of model parameters."
         return self._parameter_ranges.keys()
 
     @property
     def parameter_cardinality(self):
+        "Returns the cardinality of model parameters"
         return OrderedDict([
             (k, len(np.atleast_2d(self.parameter_ranges[k])))
             for k in self.parameter_ranges
         ])
 
 
-class MicrostructureModel:
+class MultiCompartmentModelProperties:
+    "Class that contains various properties of MultiCompartmentModel instance."
 
     @property
     def parameter_names(self):
+        "Returns the names of model parameters."
         return list(self.parameter_ranges.keys())
 
     def parameter_vector_to_parameters(self, parameter_vector):
+        """Returns the model parameters in dictionary format according to their
+        parameter_names. Takes parameter_vector as input, which is the same as
+        the output of a FittedMultiCompartmentModel.fitted_parameter_vector.
+
+        Parameters
+        ----------
+        parameter_vector: array of size (Ndata_x, Ndata_y, ..., Nparameters),
+            array that contains the linearized model parameters for an ND-array
+            of data voxels.
+
+        Returns
+        -------
+        parameter: dictionary with parameter_names as parameter keys,
+            contains the model parameters in dictionary format.
+        """
         parameters = {}
         current_pos = 0
         if parameter_vector.ndim == 1:
@@ -77,6 +104,30 @@ class MicrostructureModel:
         return parameters
 
     def parameters_to_parameter_vector(self, **parameters):
+        """Returns the model parameters in array format. The input is a
+        parameters dictionary that has parameter_names as keys. This is also
+        the output of a FittedMultiCompartmentModel.fitted_parameters.
+
+        It's possible to give an array of values for one parameter and only a
+        float for others. The function will automatically assume that that the
+        float parameters are constant in the data set and broadcast them
+        accordingly.
+
+        The output parameter_vector can be used in simulate_data() to generate
+        data according to the given input parameters.
+
+        Parameters
+        ----------
+        parameters: keyword arguments of parameter_names.
+            Can be given as **parameter_dictionary that contains the model
+            parameter values.
+
+        Returns
+        -------
+        parameter_vector: array of size (Ndata_x, Ndata_y, ..., Nparameters),
+            array that contains the linearized model parameters for an ND-array
+            of data voxels.
+        """
         parameter_vector = []
         parameter_shapes = []
         for parameter, card in self.parameter_cardinality.items():
@@ -111,6 +162,23 @@ class MicrostructureModel:
         return parameter_vector
 
     def parameter_initial_guess_to_parameter_vector(self, **parameters):
+        """Function that returns a parameter_vector while allowing for partial
+        input of model parameters, setting the ones that were not given to
+        'None'. Such an array can be given to the fit() function to provide an
+        initial parameter guess when fitting the data to the model.
+
+        Parameters
+        ----------
+        parameters: keyword arguments of parameter names,
+            parameter values of only the parameters you want to give as an
+            initial condition for the optimizer.
+
+        Returns
+        -------
+        parameter_vector: array of size (Ndata_x, Ndata_y, ..., Nparameters),
+            array that contains the linearized model parameters for an ND-array
+            of data voxels, with None's for non-given parameters.
+        """
         set_parameters = {}
         parameter_cardinality = self.parameter_cardinality.copy()
         for parameter, value in parameters.items():
@@ -127,124 +195,9 @@ class MicrostructureModel:
                 set_parameters[parameter] = np.tile(None, card)
         return self.parameters_to_parameter_vector(**set_parameters)
 
-    @property
-    def bounds_for_optimization(self):
-        bounds = []
-        for parameter, card in self.parameter_cardinality.items():
-            range_ = self.parameter_ranges[parameter]
-            if card == 1:
-                bounds.append(range_)
-            else:
-                for i in range(card):
-                    bounds.append((range_[0][i], range_[1][i]))
-        return bounds
-
-    @property
-    def opt_params_for_optimization(self):
-        params = []
-        for parameter, card in self.parameter_cardinality.items():
-            optimize_param = self.optimized_parameters[parameter]
-            if card == 1:
-                params.append(optimize_param)
-            else:
-                for i in range(card):
-                    params.append(optimize_param)
-        return params
-
-    @property
-    def scales_for_optimization(self):
-        return np.hstack([scale for parameter, scale in
-                          self.parameter_scales.items()])
-
-    def simulate_signal(self, acquisition_scheme, model_parameters_array):
-        """ Function to simulate diffusion data using the defined
-        microstructure model and acquisition parameters.
-
-                Parameters
-        ----------
-        acquisition_scheme : acquisition scheme object
-            contains all information on acquisition parameters such as bvalues,
-            gradient directions, etc. Created from acquisition_scheme module.
-        x0 : 1D array of size (N_parameters) or N-dimensional array the same
-            size as the data.
-            The model parameters of the microstructure model.
-            If a 1D array is given, this is the same initial condition for
-            every fitted voxel. If a higher-dimenensional array the same size
-            as the data is given, then every voxel can possibly be given a
-            different initial condition.
-
-        Returns
-        -------
-        E_simulated: 1D array of size (N_parameters) or N-dimensional
-            array the same size as x0.
-            The simulated signal of the microstructure model.
-        """
-        Ndata = acquisition_scheme.number_of_measurements
-        if self.spherical_mean:
-            Ndata = len(acquisition_scheme.shell_bvalues)
-        x0 = model_parameters_array
-
-        x0_at_least_2d = np.atleast_2d(x0)
-        x0_2d = x0_at_least_2d.reshape(-1, x0_at_least_2d.shape[-1])
-        E_2d = np.empty(np.r_[x0_2d.shape[:-1], Ndata])
-        for i, x0_ in enumerate(x0_2d):
-            parameters = self.parameter_vector_to_parameters(x0_)
-            E_2d[i] = self(acquisition_scheme, **parameters)
-        E_simulated = E_2d.reshape(
-            np.r_[x0_at_least_2d.shape[:-1], Ndata])
-
-        if x0.ndim == 1:
-            return np.squeeze(E_simulated)
-        else:
-            return E_simulated
-
-
-class MultiCompartmentModel(MicrostructureModel):
-    r'''
-    Class for Partial Volume-Combined Microstrukture Models.
-    Given a set of models :math:`m_1...m_N`, and the partial volume ratios
-    math:`v_1...v_{N-1}`, the partial volume function is
-
-    .. math::
-        v_1 m_1 + (1 - v_1) v_2 m_2 + ... + (1 - v_1)...(1-v_{N-1}) m_N
-
-    Parameters
-    ----------
-    models : list of N MicrostructureModel instances,
-        the models to mix.
-    partial_volumes : array, shape(N - 1),
-        partial volume factors.
-    parameter_links : list of iterables (model, parameter name, link function,
-        argument list),
-        where model is a Microstruktur model, parameter name is a string
-        with the name of the parameter in that model that will be linked,
-        link function is a function returning the value of that parameter,
-        and argument list is a list of tuples (model, parameter name) where
-        those the parameters of those models will be used as arguments for the
-        link function. If the model is left as None, then the parameter comes
-        from the container partial volume mixing class.
-
-    '''
-
-    def __init__(
-        self, models, partial_volumes=None,
-        parameter_links=None, optimise_partial_volumes=True
-    ):
-        self.models = models
-        self.partial_volumes = partial_volumes
-        self.parameter_links = parameter_links
-        if parameter_links is None:
-            self.parameter_links = []
-        self.optimise_partial_volumes = optimise_partial_volumes
-
-        self._prepare_parameters()
-        self._prepare_partial_volumes()
-        self._prepare_parameter_links()
-        self._prepare_model_properties()
-        self._check_for_double_model_class_instances()
-        self._prepare_parameters_to_optimize()
-
     def _prepare_parameters(self):
+        """Prepares the parameter ranges, scales, cadinality and parameter
+        upon instantiating the MultiCompartmentModel"""
         self.model_names = []
         model_counts = {}
 
@@ -289,6 +242,7 @@ class MultiCompartmentModel(MicrostructureModel):
         ])
 
     def _prepare_partial_volumes(self):
+        "Prepares partial volumes upon instantiating the MultiCompartmentModel"
         if len(self.models) > 1:
             if self.optimise_partial_volumes:
                 self.partial_volume_names = [
@@ -296,7 +250,8 @@ class MultiCompartmentModel(MicrostructureModel):
                     for i in range(len(self.models))
                 ]
 
-                for i, partial_volume_name in enumerate(self.partial_volume_names):
+                for i, partial_volume_name in enumerate(
+                        self.partial_volume_names):
                     self.parameter_ranges[partial_volume_name] = (0.01, .99)
                     self.parameter_scales[partial_volume_name] = 1.
                     self._parameter_map[partial_volume_name] = (
@@ -313,6 +268,11 @@ class MultiCompartmentModel(MicrostructureModel):
                     ])
 
     def _prepare_parameter_links(self):
+        """Prepares parameter links if given as input to MultiCompartmentModel.
+        It first checks if the parameter that will be linked exists. If so,
+        then it removes it from the parameter ranges, scales and cardinality,
+        so it will not be optimized (as it will be a function of other
+        parameters)."""
         for i, parameter_function in enumerate(self.parameter_links):
             parameter_model, parameter_name, parameter_function, arguments = \
                 parameter_function
@@ -333,13 +293,10 @@ class MultiCompartmentModel(MicrostructureModel):
             del self.parameter_cardinality[parameter_name]
             del self.parameter_scales[parameter_name]
 
-    def _prepare_parameters_to_optimize(self):
-        self.optimized_parameters = OrderedDict({
-            k: True
-            for k, v in self.parameter_cardinality.items()
-        })
-
     def _prepare_model_properties(self):
+        """Checks that spherical mean and regular models cannot be optimized
+        together, and whether the model can estimate a Fiber Orientation
+        Distribution (FOD)."""
         models_spherical_mean = [model.spherical_mean for model in self.models]
         if len(np.unique(models_spherical_mean)) > 1:
             msg = "Cannot mix spherical mean and non-spherical mean models. "
@@ -355,6 +312,7 @@ class MultiCompartmentModel(MicrostructureModel):
                 pass
 
     def _check_for_double_model_class_instances(self):
+        "Checks all models have unique class instances."
         if len(self.models) != len(np.unique(self.models)):
             msg = "Each model in the multi-compartment model must be "
             msg += "instantiated separately. For example, to make a model "
@@ -364,6 +322,9 @@ class MultiCompartmentModel(MicrostructureModel):
             raise ValueError(msg)
 
     def add_linked_parameters_to_parameters(self, parameters):
+        """When making the MultiCompartmentModel function call, adds the linked
+        parameter to the optimized parameters by evaluating the parameter link
+        function."""
         if len(self.parameter_links) == 0:
             return parameters
         parameters = parameters.copy()
@@ -389,6 +350,91 @@ class MultiCompartmentModel(MicrostructureModel):
             else:
                 parameters[parameter_name] = parameter_function()
         return parameters
+
+    def _prepare_parameters_to_optimize(self):
+        "Sets up which parmameters to optimize."
+        self.optimized_parameters = OrderedDict({
+            k: True
+            for k, v in self.parameter_cardinality.items()
+        })
+
+    @property
+    def bounds_for_optimization(self):
+        "Returns the linear parameter bounds for the model optimization."
+        bounds = []
+        for parameter, card in self.parameter_cardinality.items():
+            range_ = self.parameter_ranges[parameter]
+            if card == 1:
+                bounds.append(range_)
+            else:
+                for i in range(card):
+                    bounds.append((range_[0][i], range_[1][i]))
+        return bounds
+
+    @property
+    def opt_params_for_optimization(self):
+        "Returns the linear bools whether to optimize a model parameter."
+        params = []
+        for parameter, card in self.parameter_cardinality.items():
+            optimize_param = self.optimized_parameters[parameter]
+            if card == 1:
+                params.append(optimize_param)
+            else:
+                for i in range(card):
+                    params.append(optimize_param)
+        return params
+
+    @property
+    def scales_for_optimization(self):
+        "Returns the linear parameter scales for model optimization."
+        return np.hstack([scale for parameter, scale in
+                          self.parameter_scales.items()])
+
+
+class MultiCompartmentModel(MultiCompartmentModelProperties):
+    r'''
+    Class for Partial Volume-Combined Microstrukture Models.
+    Given a set of models :math:`m_1...m_N`, and the partial volume ratios
+    math:`v_1...v_{N-1}`, the partial volume function is
+
+    .. math::
+        v_1 m_1 + (1 - v_1) v_2 m_2 + ... + (1 - v_1)...(1-v_{N-1}) m_N
+
+    Parameters
+    ----------
+    models : list of N MicrostructureModel instances,
+        the models to mix.
+    partial_volumes : array, shape(N - 1),
+        partial volume factors.
+    parameter_links : list of iterables (model, parameter name, link function,
+        argument list),
+        where model is a Microstruktur model, parameter name is a string
+        with the name of the parameter in that model that will be linked,
+        link function is a function returning the value of that parameter,
+        and argument list is a list of tuples (model, parameter name) where
+        those the parameters of those models will be used as arguments for the
+        link function. If the model is left as None, then the parameter comes
+        from the container partial volume mixing class.
+
+    '''
+
+    def __init__(
+        self, models, partial_volumes=None,
+        parameter_links=None, optimise_partial_volumes=True
+    ):
+        self.models = models
+        self.partial_volumes = partial_volumes
+        self.parameter_links = parameter_links
+        if parameter_links is None:
+            self.parameter_links = []
+        self.optimise_partial_volumes = optimise_partial_volumes
+
+        self._prepare_parameters()
+        self._prepare_partial_volumes()
+        self._prepare_parameter_links()
+        self._prepare_model_properties()
+        self._check_for_double_model_class_instances()
+        self._prepare_parameters_to_optimize()
 
     def set_fixed_parameter(self, parameter_name, value):
         if parameter_name in self.parameter_ranges.keys():
@@ -443,9 +489,10 @@ class MultiCompartmentModel(MicrostructureModel):
         del self.parameter_cardinality[parameter_name_out]
         del self.parameter_scales[parameter_name_out]
 
-    def fit(self, acquisition_scheme, data, parameter_initial_guess=None, mask=None,
-            solver='brute2fine', Ns=5, maxiter=300, N_sphere_samples=30,
-            use_parallel_processing=have_pathos, number_of_processors=None):
+    def fit(self, acquisition_scheme, data, parameter_initial_guess=None,
+            mask=None, solver='brute2fine', Ns=5, maxiter=300,
+            N_sphere_samples=30, use_parallel_processing=have_pathos,
+            number_of_processors=None):
         """ The main data fitting function of a multi-compartment model.
 
         Once a microstructure model is formed, this function can fit it to an
@@ -612,6 +659,48 @@ class MultiCompartmentModel(MicrostructureModel):
 
         return FittedMultiCompartmentModel(
             self, S0, mask, fitted_parameters)
+
+    def simulate_signal(self, acquisition_scheme, model_parameters_array):
+        """ Function to simulate diffusion data using the defined
+        microstructure model and acquisition parameters.
+
+                Parameters
+        ----------
+        acquisition_scheme : acquisition scheme object
+            contains all information on acquisition parameters such as bvalues,
+            gradient directions, etc. Created from acquisition_scheme module.
+        x0 : 1D array of size (N_parameters) or N-dimensional array the same
+            size as the data.
+            The model parameters of the microstructure model.
+            If a 1D array is given, this is the same initial condition for
+            every fitted voxel. If a higher-dimenensional array the same size
+            as the data is given, then every voxel can possibly be given a
+            different initial condition.
+
+        Returns
+        -------
+        E_simulated: 1D array of size (N_parameters) or N-dimensional
+            array the same size as x0.
+            The simulated signal of the microstructure model.
+        """
+        Ndata = acquisition_scheme.number_of_measurements
+        if self.spherical_mean:
+            Ndata = len(acquisition_scheme.shell_bvalues)
+        x0 = model_parameters_array
+
+        x0_at_least_2d = np.atleast_2d(x0)
+        x0_2d = x0_at_least_2d.reshape(-1, x0_at_least_2d.shape[-1])
+        E_2d = np.empty(np.r_[x0_2d.shape[:-1], Ndata])
+        for i, x0_ in enumerate(x0_2d):
+            parameters = self.parameter_vector_to_parameters(x0_)
+            E_2d[i] = self(acquisition_scheme, **parameters)
+        E_simulated = E_2d.reshape(
+            np.r_[x0_at_least_2d.shape[:-1], Ndata])
+
+        if x0.ndim == 1:
+            return np.squeeze(E_simulated)
+        else:
+            return E_simulated
 
     def __call__(self, acquisition_scheme_or_vertices,
                  quantity="signal", **kwargs):
