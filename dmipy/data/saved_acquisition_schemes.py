@@ -9,7 +9,7 @@ _GRADIENT_TABLES_PATH = pkg_resources.resource_filename(
     'dmipy', 'data/gradient_tables'
 )
 DATA_PATH = pkg_resources.resource_filename(
-    'dmipy', 'data/'
+    'dmipy', 'data'
 )
 
 

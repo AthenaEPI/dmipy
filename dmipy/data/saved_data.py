@@ -6,25 +6,32 @@ from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
 from . import saved_acquisition_schemes
 DATA_PATH = pkg_resources.resource_filename(
-    'dmipy', 'data/'
+    'dmipy', 'data'
 )
 
 
 def wu_minn_hcp_coronal_slice():
-    data_name = 'wu_minn_hcp_coronal_slice.nii.gz'
+    data_path = join(
+        DATA_PATH, 'hcp', 'hcp_example_slice', 'coronal_slice.nii.gz')
+    try:
+        data = nib.load(data_path).get_data()
+    except IOError:
+        msg = "The example HCP data has not been downloaded yet. "
+        msg += "Please follow our HCP tutorial where you can use your own AWS "
+        msg += "credentials to download the example data and any other HCP "
+        msg += "subject data."
+        raise ValueError(msg)
+
+    scheme = saved_acquisition_schemes.wu_minn_hcp_acquisition_scheme()
+
     msg = "This data slice originates from Subject 100307 of the Human "
     msg += "Connectome Project, WU-Minn Consortium (Principal Investigators: "
     msg += "David Van Essen and Kamil Ugurbil; 1U54MH091657) funded by the 16 "
     msg += "NIH Institutes and Centers that support the NIH Blueprint for "
     msg += "Neuroscience Research; and by the McDonnell Center for Systems "
-    msg += "Neuroscience at Washington University.\n\n"
-    msg += "To download more HCP data, we instruct users to sign up for a "
-    msg += "ConnectomeDB acount and sign the open access Data Use Terms at "
-    msg += "https://store.humanconnectome.org/data/data-use-terms/open-access.php"
-    print msg
+    msg += "Neuroscience at Washington University."
+    print (msg)
 
-    data = nib.load(join(DATA_PATH, data_name)).get_data()
-    scheme = saved_acquisition_schemes.wu_minn_hcp_acquisition_scheme()
     return scheme, data
 
 
@@ -34,7 +41,7 @@ def duval_cat_spinal_cord_2d():
     msg += "segmentation', ISMRM 2016. Reference at "
     msg += "Cohen-Adad et al. White Matter Microscopy Database."
     msg += " http://doi.org/10.17605/OSF.IO/YP4QG"
-    print msg
+    print (msg)
 
     data_folder = DATA_PATH + "tanguy_cat_spinal_cord/"
 
@@ -45,7 +52,8 @@ def duval_cat_spinal_cord_2d():
             self.h2_axonEquivDiameter_std = nib.load(
                 data_folder + '2_axonEquivDiameter_std.nii').get_data()
             self.h3_axonEquivDiameter_axonvolumeCorrected = nib.load(
-                data_folder + '3_axonEquivDiameter_axonvolumeCorrected.nii').get_data()
+                data_folder + '3_axonEquivDiameter_axonvolumeCorrected.nii'
+            ).get_data()
             self.h4_fr = nib.load(data_folder + '4_fr.nii').get_data()
             self.h5_MyelinVolumeFraction = nib.load(
                 data_folder + '5_MyelinVolumeFraction.nii').get_data()
@@ -61,7 +69,9 @@ def duval_cat_spinal_cord_2d():
             self.mask = (self.histology.h4_fr > 0)[..., None]
 
     data = DuvalSpinalCordData2D()
-    scheme = saved_acquisition_schemes.duval_cat_spinal_cord_2d_acquisition_scheme()
+    scheme = (
+        saved_acquisition_schemes.duval_cat_spinal_cord_2d_acquisition_scheme()
+    )
     return scheme, data
 
 
@@ -177,13 +187,17 @@ def visualize_correlation_camino_and_estimated_fractions(
     ax4.scatter(data_dispersed.fractions, estim_fractions_dispersed)
 
     ax1.text(.216, .817, 'pearsonR= ' +
-             str(np.round(pr[0], 3)), fontsize=10, bbox=dict(facecolor='white', alpha=1))
+             str(np.round(pr[0], 3)), fontsize=10,
+             bbox=dict(facecolor='white', alpha=1))
     ax2.text(.216, .817, 'pearsonR= ' +
-             str(np.round(pr_multidif[0], 3)), fontsize=10, bbox=dict(facecolor='white', alpha=1))
+             str(np.round(pr_multidif[0], 3)), fontsize=10,
+             bbox=dict(facecolor='white', alpha=1))
     ax3.text(.216, .817, 'pearsonR= ' +
-             str(np.round(pr_dispersed[0], 3)), fontsize=10, bbox=dict(facecolor='white', alpha=1))
+             str(np.round(pr_dispersed[0], 3)), fontsize=10,
+             bbox=dict(facecolor='white', alpha=1))
     ax4.text(.216, .817, 'pearsonR= ' + str(np.round(
-        pr_multidif_dispersed[0], 3)), fontsize=10, bbox=dict(facecolor='white', alpha=1))
+        pr_multidif_dispersed[0], 3)), fontsize=10,
+        bbox=dict(facecolor='white', alpha=1))
 
     ax1.set_title('Static Diffusivity')
     ax3.set_xlabel('Ground Truth')
