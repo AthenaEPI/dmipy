@@ -12,6 +12,21 @@ SPHERES_PATH = pkg_resources.resource_filename(
 
 
 class GlobalBruteOptimizer:
+    r"""
+    Brute-Force optimizer. Upon instantiation, given a model and an acquisition
+    scheme, first computes a global grid of parameters and corresponding signal
+    attenuations. All except the spherical orientation parameter 'mu' is
+    sampled between their corresponding parameter_ranges in 'Ns' steps. For
+    'mu' a spherical grid of 'N_sphere_samples" points is used, which were
+    generated using the work of Caruyer et al. [1].
+
+    When calling the function with some data, the closest parameters are
+    return based on the sum-squared error between the signal grid and the data.
+
+    Parameters
+    ----------
+    model: 
+    """
     def __init__(self, model, acquisition_scheme,
                  x0_vector=None, Ns=5, N_sphere_samples=30):
         self.model = model
