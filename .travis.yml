@@ -57,7 +57,7 @@ install:
 script:
 - flake8 --ignore N802,N806,E731 `find . -name \*.py | grep -v setup.py | grep -v /doc/`
 - nosetests --with-coverage -v
-- travis-sphinx build
+- travis-sphinx build -s doc
 - for a in examples/*ipynb; do 
     echo $a;
     jupyter nbconvert --execute $a >/dev/null;
