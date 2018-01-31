@@ -7,7 +7,7 @@ from dipy.utils.optpkg import optional_package
 numba, have_numba, _ = optional_package("numba")
 
 SPHERES_PATH = pkg_resources.resource_filename(
-    'mipy', 'data/spheres'
+    'dmipy', 'data/spheres'
 )
 
 

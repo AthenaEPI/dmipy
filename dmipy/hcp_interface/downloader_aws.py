@@ -2,9 +2,11 @@ import pathlib
 import boto
 import pkg_resources
 import os
+import nibabel as nib
+
 
 HCP_DATA_PATH = pkg_resources.resource_filename(
-    'mipy', 'data/hcp/'
+    'dmipy', 'data/hcp/'
 )
 
 
@@ -48,6 +50,9 @@ class HCPInterface:
         if not os.path.exists(directory):
             os.makedirs(directory)
 
+        print ('Downloading data to {}'.format(directory))
+
+        counter = 0
         for key in self.s3_bucket.list("HCP_1200"):
             path = pathlib.Path(key.name)
             if (
@@ -61,34 +66,17 @@ class HCPInterface:
                     'data' in path.parts[-1] or
                     'nodif' in path.parts[-1]
                 ):
+                    print ('Downloading {}'.format(path.parts[-1]))
                     filepath = os.path.join(directory, path.parts[-1])
                     with open(filepath, 'wb') as f:
                         key.get_contents_to_file(f)
+                    counter += 1
+                    if counter == 4:
+                        break
 
-    def download_hcp_dataset(self, subject):
-        """
-        Parameters
-        ----------
-        subject: integer
-            the identification number of the HCP subject to download
-        """
+        folder_name = "example_slice"
+        example_directory = os.path.join(HCP_DATA_PATH, folder_name)
+        if not os.path.exists(example_directory):
+            os.makedirs(example_directory)
 
-
-def download(aws_key, aws_secret, subject=100307):
-
-    for key in s3_bucket.list("HCP_1200"):
-        path = pathlib.Path(key.name)
-        if (
-            len(path.parts) == 5 and
-            subject == int(path.parts[1]) and
-            path.parts[-2] == "Diffusion"
-        ):
-            if (
-                'bval' in path.parts[-1] or
-                'bvec' in path.parts[-1] or
-                'data' in path.parts[-1] or
-                'nodif' in path.parts[-1]
-            ):
-
-                with open(path.parts[-1], 'wb') as f:
-                    key.get_contents_to_file(f)
+        data = nib.load(os.path.join(directory, 'data.nii.gz')).get_data()

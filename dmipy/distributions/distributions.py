@@ -23,13 +23,13 @@ numba, have_numba, _ = optional_package("numba")
 
 SPHERICAL_INTEGRATOR = utils.SphericalIntegrator()
 GRADIENT_TABLES_PATH = pkg_resources.resource_filename(
-    'mipy', 'data/gradient_tables'
+    'dmipy', 'data/gradient_tables'
 )
 SIGNAL_MODELS_PATH = pkg_resources.resource_filename(
-    'mipy', 'signal_models'
+    'dmipy', 'signal_models'
 )
 DATA_PATH = pkg_resources.resource_filename(
-    'mipy', 'data'
+    'dmipy', 'data'
 )
 SPHERE_CARTESIAN = np.loadtxt(
     join(GRADIENT_TABLES_PATH, 'sphere_with_cap.txt')

@@ -283,7 +283,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'mipy', 'dmipy Documentation',
+  ('index', 'dmipy', 'dmipy Documentation',
    'Rutger Fick, Demian Wassermann', 'dmipy', 'One line description of project.',
    'Miscellaneous'),
 ]

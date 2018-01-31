@@ -6,7 +6,7 @@ from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
 from . import saved_acquisition_schemes
 DATA_PATH = pkg_resources.resource_filename(
-    'mipy', 'data/'
+    'dmipy', 'data/'
 )
 
 
