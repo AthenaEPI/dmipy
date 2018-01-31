@@ -5,8 +5,8 @@ import os
 import nibabel as nib
 
 
-HCP_DATA_PATH = pkg_resources.resource_filename(
-    'dmipy', 'data/hcp/'
+DATA_PATH = pkg_resources.resource_filename(
+    'dmipy', 'data'
 )
 
 
@@ -42,15 +42,22 @@ class HCPInterface:
         )
         self.s3_bucket = s3.get_all_buckets()[1]
 
-    def download_and_prepare_dmipy_example_dataset(self):
-        subject = 100307
+        self.hcp_directory = os.path.join(DATA_PATH, 'hcp')
+        if not os.path.exists(self.hcp_directory):
+            os.makedirs(self.hcp_directory)
 
-        directory = os.path.join(HCP_DATA_PATH, str(subject))
+    def download_and_prepare_dmipy_example_dataset(self, subject=100307):
+        self.download_subject(subject)
+        self.prepare_example_slice(subject)
 
-        if not os.path.exists(directory):
-            os.makedirs(directory)
+    def download_subject(self, subject):
 
-        print ('Downloading data to {}'.format(directory))
+        hcp_data_path = os.path.join(self.hcp_directory, str(subject))
+
+        if not os.path.exists(hcp_data_path):
+            os.makedirs(hcp_data_path)
+
+        print ('Downloading data to {}'.format(hcp_data_path))
 
         counter = 0
         for key in self.s3_bucket.list("HCP_1200"):
@@ -67,16 +74,33 @@ class HCPInterface:
                     'nodif' in path.parts[-1]
                 ):
                     print ('Downloading {}'.format(path.parts[-1]))
-                    filepath = os.path.join(directory, path.parts[-1])
+                    filepath = os.path.join(hcp_data_path, path.parts[-1])
                     with open(filepath, 'wb') as f:
                         key.get_contents_to_file(f)
                     counter += 1
                     if counter == 4:
                         break
 
-        folder_name = "example_slice"
-        example_directory = os.path.join(HCP_DATA_PATH, folder_name)
+    def prepare_example_slice(self, subject):
+        folder_name = "hcp_example_slice"
+        example_directory = os.path.join(self.hcp_directory, folder_name)
         if not os.path.exists(example_directory):
             os.makedirs(example_directory)
 
-        data = nib.load(os.path.join(directory, 'data.nii.gz')).get_data()
+        subject_data_path = os.path.join(self.hcp_directory, str(subject))
+
+        data = nib.load(os.path.join(
+            subject_data_path, 'data.nii.gz')).get_data()
+        affine = nib.load(os.path.join(
+            subject_data_path, 'data.nii.gz')).affine
+        mask = nib.load(os.path.join(
+            subject_data_path, 'nodif_brain_mask.nii.gz')).get_data()
+        data_shape = data.shape
+
+        slice_index = data_shape[1] // 2
+        data_slice = data[:, slice_index: slice_index + 1]
+        mask_slice = mask[:, slice_index: slice_index + 1]
+        data_slice[mask_slice == 0] = 0
+
+        nib.save(nib.Nifti1Image(data_slice, affine), os.path.join(
+            example_directory, 'coronal_slice.nii.gz'))
