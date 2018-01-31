@@ -9,7 +9,7 @@
 
 env:
   global:
-    - CONDA_DEPS="pip flake8 nose coverage pytest numpy scipy matplotlib seaborn pandas h5py" PIP_DEPS="coveralls pytest-cov codecov pathlib"
+    - CONDA_DEPS="pip flake8 nose coverage pytest numpy scipy matplotlib seaborn pandas h5py" PIP_DEPS="coveralls pytest-cov codecov pathlib travis-sphinx"
 
 matrix:
   include:
@@ -57,6 +57,7 @@ install:
 script:
 - flake8 --ignore N802,N806,E731 `find . -name \*.py | grep -v setup.py | grep -v /doc/`
 - nosetests --with-coverage -v
+- travis-sphinx build
 - for a in examples/*ipynb; do 
     echo $a;
     jupyter nbconvert --execute $a >/dev/null;
@@ -73,3 +74,4 @@ script:
 after_success:
 - coveralls
 - codecov -t a66df7b8-efce-412e-9ea8-2598b09b186e
+- travis-sphinx deploy
