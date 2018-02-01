@@ -38,15 +38,15 @@ To get a feeling for how to use Dmipy, we provide a few tutorial notebooks:
 
 ## Explanations and Illustrations of Dmipy Contents
 ### Biophysical Models and Distributions
-- [Cylinder models (Axons)](https://github.com/AthenaEPI/mipy/blob/master/examples/example_cylinder_models.ipynb)
-- [Sphere Models (Tumor cells)](https://github.com/AthenaEPI/mipy/blob/master/examples/example_sphere_models.ipynb)
-- [Parameter distribution models (Gamma)](https://github.com/AthenaEPI/mipy/blob/master/examples/example_diameter_distributions.ipynb)
-- [Gaussian models (Extra-axonal)](https://github.com/AthenaEPI/mipy/blob/master/examples/example_gaussian_models.ipynb)
-- [Spherical Distribution models (Axon Dispersion)](https://github.com/AthenaEPI/mipy/blob/master/examples/example_watson_bingham.ipynb)
+- [Cylinder models (Axons, e.g. [Assaf et al. 2004])](https://github.com/AthenaEPI/mipy/blob/master/examples/example_cylinder_models.ipynb)
+- [Sphere Models (Tumor cells, e.g. [Panagiotaki et al. 2014])](https://github.com/AthenaEPI/mipy/blob/master/examples/example_sphere_models.ipynb)
+- [Parameter distribution models (Axon Diameter Distribution, e.g. [Assaf et al. 2008])](https://github.com/AthenaEPI/mipy/blob/master/examples/example_diameter_distributions.ipynb)
+- [Gaussian models (Extra-axonal, e.g. [Behrens et al. 2003])](https://github.com/AthenaEPI/mipy/blob/master/examples/example_gaussian_models.ipynb)
+- [Spherical Distribution models (Axon Dispersion, e.g. [Kaden et al. 2007])](https://github.com/AthenaEPI/mipy/blob/master/examples/example_watson_bingham.ipynb)
 - [Spherical Mean Models](https://github.com/AthenaEPI/mipy/blob/master/examples/example_spherical_mean_models.ipynb)
 ### Global Optimizers
 - Brute Force (Brute2Fine)
-- Stochastic (MIX)
+- Stochastic (MIX) [Farooq et al. 2016]
 ## Dmipy implementations of Microstructure Models in Literature
 Dmipy uses HCP data to illustrate microstructure model examples. To reproduce these examples, Dmipy provides a direct way to download HCP data (using your own AWS credentials) in the [HCP tutorial](https://github.com/AthenaEPI/mipy/blob/master/examples/tutorial_human_connectome_project_aws.ipynb).
 ### Single Bundle Microstructure Models
