@@ -244,28 +244,21 @@ class MultiCompartmentModelProperties:
     def _prepare_partial_volumes(self):
         "Prepares partial volumes upon instantiating the MultiCompartmentModel"
         if len(self.models) > 1:
-            if self.optimise_partial_volumes:
-                self.partial_volume_names = [
-                    'partial_volume_{:d}'.format(i)
-                    for i in range(len(self.models))
-                ]
+            self.partial_volume_names = [
+                'partial_volume_{:d}'.format(i)
+                for i in range(len(self.models))
+            ]
 
-                for i, partial_volume_name in enumerate(
-                        self.partial_volume_names):
-                    self.parameter_ranges[partial_volume_name] = (0.01, .99)
-                    self.parameter_scales[partial_volume_name] = 1.
-                    self._parameter_map[partial_volume_name] = (
-                        None, partial_volume_name
-                    )
-                    self._inverted_parameter_map[(None, partial_volume_name)] = \
-                        partial_volume_name
-                    self.parameter_cardinality[partial_volume_name] = 1
-            else:
-                if self.partial_volumes is None:
-                    self.partial_volumes = np.array([
-                        1 / (len(self.models) - i)
-                        for i in range(len(self.models))
-                    ])
+            for i, partial_volume_name in enumerate(
+                    self.partial_volume_names):
+                self.parameter_ranges[partial_volume_name] = (0.01, .99)
+                self.parameter_scales[partial_volume_name] = 1.
+                self._parameter_map[partial_volume_name] = (
+                    None, partial_volume_name
+                )
+                self._inverted_parameter_map[(None, partial_volume_name)] = \
+                    partial_volume_name
+                self.parameter_cardinality[partial_volume_name] = 1
 
     def _prepare_parameter_links(self):
         """Prepares parameter links if given as input to MultiCompartmentModel.
@@ -393,41 +386,24 @@ class MultiCompartmentModelProperties:
 
 class MultiCompartmentModel(MultiCompartmentModelProperties):
     r'''
-    Class for Partial Volume-Combined Microstrukture Models.
-    Given a set of models :math:`m_1...m_N`, and the partial volume ratios
-    math:`v_1...v_{N-1}`, the partial volume function is
-
-    .. math::
-        v_1 m_1 + (1 - v_1) v_2 m_2 + ... + (1 - v_1)...(1-v_{N-1}) m_N
+    The MultiCompartmentModel class allows to combine any number of
+    CompartmentModels and DistributedModels into one combined model that can
+    be used to fit and simulate dMRI data.
 
     Parameters
     ----------
-    models : list of N MicrostructureModel instances,
-        the models to mix.
-    partial_volumes : array, shape(N - 1),
-        partial volume factors.
+    models : list of N CompartmentModel instances,
+        the models to combine into the MultiCompartmentModel.
     parameter_links : list of iterables (model, parameter name, link function,
         argument list),
-        where model is a Microstruktur model, parameter name is a string
-        with the name of the parameter in that model that will be linked,
-        link function is a function returning the value of that parameter,
-        and argument list is a list of tuples (model, parameter name) where
-        those the parameters of those models will be used as arguments for the
-        link function. If the model is left as None, then the parameter comes
-        from the container partial volume mixing class.
-
+        deprecated, for testing only.
     '''
 
-    def __init__(
-        self, models, partial_volumes=None,
-        parameter_links=None, optimise_partial_volumes=True
-    ):
+    def __init__(self, models, parameter_links=None):
         self.models = models
-        self.partial_volumes = partial_volumes
         self.parameter_links = parameter_links
         if parameter_links is None:
             self.parameter_links = []
-        self.optimise_partial_volumes = optimise_partial_volumes
 
         self._prepare_parameters()
         self._prepare_partial_volumes()
@@ -437,6 +413,18 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         self._prepare_parameters_to_optimize()
 
     def set_fixed_parameter(self, parameter_name, value):
+        """
+        Allows the user to fix an optimization parameter to a static value.
+        The fixed parameter will be removed from the optimized parameters and
+        added as a linked parameter.
+
+        Parameters
+        ----------
+        parameter_name: string
+            name of the to-be-fixed parameters, see self.parameter_names.
+        value: float or list of corresponding parameter_cardinality.
+            the value to fix the parameter at in SI units.
+        """
         if parameter_name in self.parameter_ranges.keys():
             model, name = self._parameter_map[parameter_name]
             parameter_link = (model, name, ReturnFixedValue(value), [])
@@ -452,6 +440,29 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
                                lambda_par_parameter_name,
                                volume_fraction_intra_parameter_name,
                                volume_fraction_extra_parameter_name):
+        """
+        Allows the user to set a tortuosity constraint on the perpendicular
+        diffusivity of the extra-axonal compartment, which depends on the
+        intra-axonal volume fraction and parallel diffusivity.
+
+        The perpendicular diffusivity parameter will be removed from the
+        optimized parameters and added as a linked parameter.
+
+        Parameters
+        ----------
+        lambda_perp_parameter_name: string
+            name of the perpendicular diffusivity parameter, see
+            self.parameter_names.
+        lambda_par_parameter_name: string
+            name of the parallel diffusivity parameter, see
+            self.parameter_names.
+        volume_fraction_intra_parameter_name: string
+            name of the intra-axonal volume fraction parameter, see
+            self.parameter_names.
+        volume_fraction_extra_parameter_name: string
+            name of the extra-axonal volume fraction parameter, see
+            self.parameter_names.
+        """
         params = [lambda_perp_parameter_name, lambda_par_parameter_name,
                   volume_fraction_intra_parameter_name,
                   volume_fraction_extra_parameter_name]
@@ -474,6 +485,22 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         del self.parameter_scales[lambda_perp_parameter_name]
 
     def set_equal_parameter(self, parameter_name_in, parameter_name_out):
+        """
+        Allows the user to set two parameters equal to each other. This is used
+        for example in the NODDI model to set the parallel diffusivities of the
+        Stick and Zeppelin compartment to the same value.
+
+        The second input parameter will be removed from the optimized
+        parameters and added as a linked parameter.
+
+        Parameters
+        ----------
+        parameter_name_in: string
+            the first parameter name, see self.parameter_names.
+        parameter_name_out: string,
+            the second parameter name, see self.parameter_names. This is the
+            parameter that will be removed form the optimzed parameters.
+        """
         params = [parameter_name_in, parameter_name_out]
         for param in params:
             try:
@@ -493,24 +520,32 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             mask=None, solver='brute2fine', Ns=5, maxiter=300,
             N_sphere_samples=30, use_parallel_processing=have_pathos,
             number_of_processors=None):
-        """ The main data fitting function of a multi-compartment model.
+        """ The main data fitting function of a MultiCompartmentModel.
 
-        Once a microstructure model is formed, this function can fit it to an
-        N-dimensional dMRI data set, and returns for every voxel the fitted
-        model parameters.
+        This function can fit it to an N-dimensional dMRI data set, and returns
+        a FittedMultiCompartmentModel instance that contains the fitted
+        parameters and other useful functions to study the results.
 
-        No initial guess needs to be given to fit a model, but can (and should)
-        be given to speed up the fitting process. The parameter_initial_guess
-        input can be created using parameter_initial_guess_to_parameter_vector.
+        No initial guess needs to be given to fit a model, but a partial or
+        complete initial guess can be given if the user wants to have a
+        solution that is a local minimum close to that guess. The
+        parameter_initial_guess input can be created using
+        parameter_initial_guess_to_parameter_vector().
 
         A mask can also be given to exclude voxels from fitting (e.g. voxels
         that are outside the brain). If no mask is given then all voxels are
         included.
 
-        An optimization approach can be chosen as either 'scipy' or 'mix'.
+        An optimization approach can be chosen as either 'brute2fine' or 'mix'.
         - Choosing brute2fine will first use a brute-force optimization to find
           an initial guess for parameters without one, and will then refine the
           result using gradient-descent-based optimization.
+
+          Note that given no initial guess will make brute2fine precompute an
+          global parameter grid that will be re-used for all voxels, which in
+          many cases is much faster than giving voxel-varying initial condition
+          that requires a grid to be estimated per voxel.
+
         - Choosing mix will use the recent MIX algorithm based on separation of
           linear and non-linear parameters. MIX first uses a stochastic
           algorithm to find the non-linear parameters (non-volume fractions),
@@ -519,51 +554,57 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
           a gradient-descent-based algorithm.
 
         The fitting process can be readily parallelized using the optional
-        "pathos" package. To use it set use_parallel_processing=True. The
+        "pathos" package. If it is installed then it will automatically use it,
+        but it can be turned off by setting use_parallel_processing=False. The
         algorithm will automatically use all cores in the machine, unless
         otherwise specified in number_of_processors.
 
+        Data with multiple TE are normalized in separate segments using the
+        b0-values according that TE.
+
         Parameters
         ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
         data : N-dimensional array of size (N_x, N_y, ..., N_dwis),
             The measured DWI signal attenuation array of either a single voxel
             or an N-dimensional dataset.
+        parameter_initial_guess: parameter array,
+            must be of size (Nparameters,) or the same size as the data.
         mask : (N-1)-dimensional integer/boolean array of size (N_x, N_y, ...),
             Optional mask of voxels to be included in the optimization.
         solver : string,
             Selection of optimization algorithm.
-            - 'scipy' to use standard brute-to-fine optimization.
+            - 'brute2fine' to use brute-force optimization.
             - 'mix' to use Microstructure Imaging of Crossing (MIX)
               optimization.
         Ns : integer,
             for brute optimization, decised how many steps are sampled for
             every parameter.
+        maxiter : integer,
+            for MIX optimization, how many iterations are allowed.
+        N_sphere_samples : integer,
+            for brute optimization, how many spherical orientations are sampled
+            for 'mu'.
         use_parallel_processing : bool,
             whether or not to use parallel processing using pathos.
         number_of_processors : integer,
             number of processors to use for parallel processing. Defaults to
             the number of processors in the computer according to cpu_count().
-        x0 : 1D array of size (N_parameters) or N-dimensional array the same
-            size as the data.
-            The initial condition for the scipy minimize function.
-            If a 1D array is given, this is the same initial condition for
-            every fitted voxel. If a higher-dimenensional array the same size
-            as the data is given, then every voxel can possibly be given a
-            different initial condition.
 
         Returns
         -------
-        fitted_parameters: 1D array of size (N_parameters) or N-dimensional
-            array the same size as the data.
-            The fitted parameters of the microstructure model.
+        FittedCompartmentModel: class instance that contains fitted parameters,
+            Can be used to recover parameters themselves or other useful
+            functions.
         """
 
         # estimate S0
         self.scheme = acquisition_scheme
         data_ = np.atleast_2d(data)
-        if self.scheme.TE is None:
+        if self.scheme.TE is None:  # if no TE is given
             S0 = np.mean(data_[..., self.scheme.b0_mask], axis=-1)
-        else:
+        else:  # if multiple TE are in the data
             S0 = np.ones_like(data_)
             for TE_ in self.scheme.shell_TE:
                 TE_mask = self.scheme.TE == TE_
@@ -661,21 +702,17 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             self, S0, mask, fitted_parameters)
 
     def simulate_signal(self, acquisition_scheme, model_parameters_array):
-        """ Function to simulate diffusion data using the defined
-        microstructure model and acquisition parameters.
+        """
+        Function to simulate diffusion data for a given acquisition_scheme
+        and model parameters for the MultiCompartmentModel.
 
-                Parameters
+        Parameters
         ----------
-        acquisition_scheme : acquisition scheme object
-            contains all information on acquisition parameters such as bvalues,
-            gradient directions, etc. Created from acquisition_scheme module.
-        x0 : 1D array of size (N_parameters) or N-dimensional array the same
-            size as the data.
-            The model parameters of the microstructure model.
-            If a 1D array is given, this is the same initial condition for
-            every fitted voxel. If a higher-dimenensional array the same size
-            as the data is given, then every voxel can possibly be given a
-            different initial condition.
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy
+        model_parameters_array : 1D array of size (N_parameters) or
+            N-dimensional array the same size as the data.
+            The model parameters of the MultiCompartmentModel model.
 
         Returns
         -------
@@ -704,6 +741,31 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
 
     def __call__(self, acquisition_scheme_or_vertices,
                  quantity="signal", **kwargs):
+        """
+        The MultiCompartmentModel function call for to generate signal
+        attenuation for a given acquisition scheme and model parameters.
+
+        First, the linked parameters are added to the optimized parameters.
+
+        Then, every model in the MultiCompartmentModel is called with the right
+        parameters to recover the part of the signal attenuation of that model.
+        The resulting values are multiplied with the volume fractions and
+        finally the combined signal attenuation is returned.
+
+        Aside from the signal, the function call can also return the Fiber
+        Orientation Distributions (FODs) when a dispersed model is used, and
+        can also return the stochastic cost function for the MIX algorithm.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        quantity : string
+            can be 'signal', 'FOD' or 'stochastic cost function' depending on
+            the need of the model.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+        """
         if quantity == "signal" or quantity == "FOD":
             values = 0
         elif quantity == "stochastic cost function":
@@ -717,12 +779,9 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             kwargs
         )
         if len(self.models) > 1:
-            if self.optimise_partial_volumes:
-                partial_volumes = [
-                    kwargs[p] for p in self.partial_volume_names
-                ]
-            else:
-                partial_volumes = self.partial_volumes
+            partial_volumes = [
+                kwargs[p] for p in self.partial_volume_names
+            ]
         else:
             partial_volumes = [1.]
 
@@ -762,6 +821,10 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
 
 
 def homogenize_x0_to_data(data, x0):
+    """
+    Function that checks if data and initial guess x0 are of the same size.
+    If x0 is 1D, it will be tiled to be the same size as data.
+    """
     if x0 is not None:
         if x0.ndim == 1:
             # the same x0 will be used for every voxel in N-dimensional data.
@@ -781,6 +844,8 @@ def homogenize_x0_to_data(data, x0):
 
 
 class ReturnFixedValue:
+    "Parameter fixing class for parameter links."
+
     def __init__(self, value):
         self.value = value
 

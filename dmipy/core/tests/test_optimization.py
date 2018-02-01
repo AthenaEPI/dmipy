@@ -36,9 +36,7 @@ def test_simple_ball_and_stick_optimization():
 
     ball_and_stick = (
         modeling_framework.MultiCompartmentModel(
-            models=[ball, stick],
-            parameter_links=[],
-            optimise_partial_volumes=True)
+            models=[ball, stick])
     )
     gt_mu = np.clip(np.random.rand(2), .3, np.inf)
     gt_lambda_par = (np.random.rand() + 1.) * 1e-9

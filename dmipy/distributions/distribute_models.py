@@ -306,7 +306,7 @@ class DistributedModel:
         Parameters
         ----------
         acquisition_scheme : DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using dMipy. 
+            An acquisition scheme that has been instantiated using dMipy.
         kwargs: keyword arguments to the model parameter values,
             Is internally given as **parameter_dictionary.
         """
@@ -326,7 +326,7 @@ class DistributedModel:
 
         First, the linked parameters are added to the optimized parameters, and
         the spherical harmonics of the spherical distribution are recovered.
-        The volume fractions are also converted from nested to regular ones. 
+        The volume fractions are also converted from nested to regular ones.
 
         Then, for every model in the DistributedModel, and for every
         acquisition shell, the rotational harmonics of the model are recovered
@@ -337,7 +337,7 @@ class DistributedModel:
         Parameters
         ----------
         acquisition_scheme : DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using dMipy. 
+            An acquisition scheme that has been instantiated using dMipy.
         kwargs: keyword arguments to the model parameter values,
             Is internally given as **parameter_dictionary.
         """
