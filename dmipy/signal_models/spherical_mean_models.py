@@ -12,14 +12,15 @@ A_SCALING = 1e-12
 
 
 class C1StickSphericalMean(ModelProperties):
-    """ Spherical mean of the signal attenuation of the Stick model [1] for
+    r"""
+    Spherical mean of the signal attenuation of the Stick model [1]_ for
     a given b-value and parallel diffusivity. Analytic expression from
-    Eq. (7) in [2].
+    Eq. (7) in [2]_.
 
     Parameters
     ----------
     lambda_par : float,
-        parallel diffusivity in 10^9 m^2/s.
+        parallel diffusivity m^2/s.
 
     References
     ----------
@@ -45,16 +46,20 @@ class C1StickSphericalMean(ModelProperties):
 
     def __call__(self, acquisition_scheme, **kwargs):
         """
+        Estimates spherical mean for every shell in acquisition scheme for
+        Stick model.
+
         Parameters
         ----------
-        acquisition_scheme : acquisition scheme object
-            contains all information on acquisition parameters such as bvalues,
-            gradient directions, etc. Created from acquisition_scheme module.
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
 
         Returns
         -------
-        E_mean : float,
-            spherical mean of the Stick model.
+        E_mean : array of size (Nshells)
+            spherical mean of the Stick model for every acquisition shell.
         """
         bvals = acquisition_scheme.shell_bvalues
         bvals_ = bvals[~acquisition_scheme.shell_b0_mask]
@@ -73,14 +78,14 @@ class C1StickSphericalMean(ModelProperties):
 class G2ZeppelinSphericalMean(ModelProperties):
     """ Spherical mean of the signal attenuation of the Zeppelin model
         for a given b-value and parallel and perpendicular diffusivity.
-        Analytic expression from Eq. (8) in [1]).
+        Analytic expression from Eq. (8) in [1]_).
 
         Parameters
         ----------
         lambda_par : float,
-            parallel diffusivity in 10^9 m^2/s.
+            parallel diffusivity in m^2/s.
         lambda_perp : float,
-            perpendicular diffusivity in 10^9 m^2/s.
+            perpendicular diffusivity in m^2/s.
 
         References
         ----------
@@ -105,16 +110,20 @@ class G2ZeppelinSphericalMean(ModelProperties):
 
     def __call__(self, acquisition_scheme, **kwargs):
         """
+        Estimates spherical mean for every shell in acquisition scheme for
+        Zeppelin model.
+
         Parameters
         ----------
-        acquisition_scheme : acquisition scheme object
-            contains all information on acquisition parameters such as bvalues,
-            gradient directions, etc. Created from acquisition_scheme module.
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
 
         Returns
         -------
         E_mean : float,
-            spherical mean of the Zeppelin model.
+            spherical mean of the Zeppelin model for every acquisition shell.
         """
         bvals = acquisition_scheme.shell_bvalues
         bvals_ = bvals[~acquisition_scheme.shell_b0_mask]
@@ -131,29 +140,30 @@ class G2ZeppelinSphericalMean(ModelProperties):
 
 
 class G3RestrictedZeppelinSphericalMean(ModelProperties):
-    """ Spherical mean of the signal attenuation of the restricted Zeppelin
-        model [1] for a given b-value, parallel and perpendicular diffusivity,
-        and characteristic coefficient A. The function is the same as the
-        zeppelin spherical mean [2] but lambda_perp is replaced with the
-        restricted function.
+    """ 
+    Spherical mean of the signal attenuation of the restricted Zeppelin
+    model [1]_ for a given b-value, parallel and perpendicular diffusivity,
+    and characteristic coefficient A. The function is the same as the
+    zeppelin spherical mean [2]_ but lambda_perp is replaced with the
+    restricted function.
 
-        Parameters
-        ----------
-        lambda_par : float,
-            parallel diffusivity in 10^9 m^2/s.
-        lambda_inf : float,
-            bulk diffusivity constant 10^9 m^2/s.
-        A: float,
-            characteristic coefficient in 10^6 m^2
+    Parameters
+    ----------
+    lambda_par : float,
+        parallel diffusivity in m^2/s.
+    lambda_inf : float,
+        bulk diffusivity constant m^2/s.
+    A: float,
+        characteristic coefficient in m^2
 
-        References
-        ----------
-        .. [1] Burcaw, L.M., Fieremans, E., Novikov, D.S., 2015. Mesoscopic
-            structure of neuronal tracts from time-dependent diffusion.
-            NeuroImage 114, 18.
-        .. [2] Kaden et al. "Multi-compartment microscopic diffusion imaging."
-            NeuroImage 139 (2016): 346-359.
-        """
+    References
+    ----------
+    .. [1] Burcaw, L.M., Fieremans, E., Novikov, D.S., 2015. Mesoscopic
+        structure of neuronal tracts from time-dependent diffusion.
+        NeuroImage 114, 18.
+    .. [2] Kaden et al. "Multi-compartment microscopic diffusion imaging."
+        NeuroImage 139 (2016): 346-359.
+    """
 
     _parameter_ranges = {
         'lambda_par': (.1, 3),
@@ -175,16 +185,21 @@ class G3RestrictedZeppelinSphericalMean(ModelProperties):
 
     def __call__(self, acquisition_scheme, **kwargs):
         """
+        Estimates spherical mean for every shell in acquisition scheme for
+        Restricted Zeppelin model.
+
         Parameters
         ----------
-        acquisition_scheme : acquisition scheme object
-            contains all information on acquisition parameters such as bvalues,
-            gradient directions, etc. Created from acquisition_scheme module.
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
 
         Returns
         -------
         E_mean : float,
-            spherical mean of the Zeppelin model.
+            spherical mean of the Restricted Zeppelin model for every
+            acquisition shell.
         """
         bvals = acquisition_scheme.shell_bvalues
         delta = acquisition_scheme.shell_delta
