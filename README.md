@@ -60,7 +60,6 @@ Dmipy uses HCP data to illustrate microstructure model examples. To reproduce th
 - [Ball and Sticks [Behrens et al. 2003]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_ball_and_sticks.ipynb)
 - [NODDI in crossings (NODDIx) [Farooq et al. 2016]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_mix_microstructure_imaging_in_crossings.ipynb)
 ### Spherical Mean-Based Microstructure Models
-- Spherical Mean Technique [Kaden et al. 2015]
 - [Multi-Compartment Microscopic Diffusion Imaging [Kaden et al. 2016]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_multi_compartment_spherical_mean_technique.ipynb)
 
 ## How to contribute to Dmipy
