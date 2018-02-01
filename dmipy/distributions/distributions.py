@@ -21,7 +21,6 @@ hemisphere = HemiSphere(phi=sphere.phi, theta=sphere.theta)
 
 numba, have_numba, _ = optional_package("numba")
 
-SPHERICAL_INTEGRATOR = utils.SphericalIntegrator()
 GRADIENT_TABLES_PATH = pkg_resources.resource_filename(
     'dmipy', 'data/gradient_tables'
 )
