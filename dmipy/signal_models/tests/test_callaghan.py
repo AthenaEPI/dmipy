@@ -92,7 +92,7 @@ def test_RTPP_to_length_callaghan(samples=1000):
     n_perp = np.tile(np.r_[1., 0., 0.], (samples, 1))
     scheme = acquisition_scheme_from_qvalues(qvals_perp, n_perp, delta, Delta)
 
-    plane = plane_models.P3PlaneCallaghanApproximation(length=length)
+    plane = plane_models.P3PlaneCallaghanApproximation(diameter=length)
     E_callaghan = plane(scheme)
 
     rtpp_callaghan = 2 * np.trapz(E_callaghan, x=qvals_perp)
@@ -116,7 +116,7 @@ def test_callaghan_plane_profile_narrow_pulse_not_restricted(samples=100):
     # needed to increase the number of roots and functions to approximate
     # the gaussian function.
     callaghan = plane_models.P3PlaneCallaghanApproximation(
-        length=length, n_roots=50)
+        diameter=length, number_of_roots=50)
 
     E_callaghan = callaghan(scheme)
     E_free_diffusion = np.exp(-scheme.bvalues * diffusion_perpendicular)

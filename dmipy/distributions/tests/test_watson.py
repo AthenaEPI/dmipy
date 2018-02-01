@@ -23,7 +23,7 @@ def test_watson_integral_unity():
     odi = np.random.rand()
     Wn_sphere = watson(n=n_sphere, mu=random_mu, odi=odi)
     spherical_integral = sum(Wn_sphere) / n_sphere.shape[0] * 4 * np.pi
-    assert_almost_equal(spherical_integral, 1., 4)
+    assert_almost_equal(spherical_integral, 1., 3)
 
 
 def test_watson_orienting():
