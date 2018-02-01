@@ -12,27 +12,27 @@ from dipy.utils.optpkg import optional_package
 
 numba, have_numba, _ = optional_package("numba")
 
-samples = 10
-thetas = np.linspace(0, np.pi / 2, samples)
-r = np.ones(samples)
-phis = np.zeros(samples)
-angles = np.c_[r, thetas, phis]
-angles_cart = utils.sphere2cart(angles)
+_samples = 10
+_thetas = np.linspace(0, np.pi / 2, _samples)
+_r = np.ones(_samples)
+_phis = np.zeros(_samples)
+_angles = np.c_[_r, _thetas, _phis]
+_angles_cart = utils.sphere2cart(_angles)
 
 inverse_rh_matrix_kernel = {
     rh_order: np.linalg.pinv(real_sym_rh_basis(
-        rh_order, thetas, phis
+        rh_order, _thetas, _phis
     )) for rh_order in np.arange(0, 15, 2)
 }
-simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(0., angles_cart)
+simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(0., _angles_cart)
 DIFFUSIVITY_SCALING = 1e-9
 DIAMETER_SCALING = 1e-6
 A_SCALING = 1e-12
 
 
 class C1Stick(ModelProperties):
-    r""" The Stick model [1] - a cylinder with zero radius - for
-    intra-axonal diffusion.
+    r""" The Stick model [1]_ - a cylinder with zero radius - typically used
+    for intra-axonal diffusion.
 
     Parameters
     ----------
@@ -68,11 +68,14 @@ class C1Stick(ModelProperties):
 
     def __call__(self, acquisition_scheme, **kwargs):
         r'''
+        Estimates the signal attenuation.
+
         Parameters
         ----------
-        acquisition_scheme : acquisition scheme object
-            contains all information on acquisition parameters such as bvalues,
-            gradient directions, etc. Created from acquisition_scheme module.
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
 
         Returns
         -------
@@ -85,11 +88,12 @@ class C1Stick(ModelProperties):
         lambda_par_ = kwargs.get('lambda_par', self.lambda_par)
         mu = kwargs.get('mu', self.mu)
         mu = utils.unitsphere2cart_1d(mu)
-        E_stick = attenuation_parallel_stick(bvals, lambda_par_, n, mu)
+        E_stick = _attenuation_parallel_stick(bvals, lambda_par_, n, mu)
         return E_stick
 
-    def rotational_harmonics_representation(self, bvalue, rh_order=14, **kwargs):
-        r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
+    def rotational_harmonics_representation(self, bvalue, rh_order=14,
+                                            **kwargs):
+        r""" The rotational harmonics of the model, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernelfor spherical
         convolution.
 
@@ -99,7 +103,6 @@ class C1Stick(ModelProperties):
             b-value in s/m^2.
         sh_order : int,
             maximum spherical harmonics order to be used in the approximation.
-            set to 14 to conform with order used for watson distribution.
 
         Returns
         -------
@@ -115,9 +118,10 @@ class C1Stick(ModelProperties):
 
 
 class C2CylinderSodermanApproximation(ModelProperties):
-    r""" The Soderman model [1]_ - a cylinder with finite radius - for
-    intra-axonal diffusion. Assumes that the pulse length
-    is infinitely short and the diffusion time is infinitely long.
+    r""" The Soderman model [1]_ - a cylinder with finite radius - typically
+    used for intra-axonal diffusion. Assumes that the pulse length is
+    infinitely short and the diffusion time is infinitely long, and is
+    therefore only dependent on the q-value.
 
     Parameters
     ----------
@@ -128,7 +132,7 @@ class C2CylinderSodermanApproximation(ModelProperties):
     lambda_par : float,
         parallel diffusivity in m^2/s.
     diameter : float,
-        axon (cylinder) diameter in meters.
+        cylinder diameter in meters.
 
     Returns
     -------
@@ -167,6 +171,7 @@ class C2CylinderSodermanApproximation(ModelProperties):
     def perpendicular_attenuation(
         self, q, diameter
     ):
+        "Returns the cylinder's perpendicular signal attenuation."
         radius = diameter / 2
         # Eq. [6] in the paper
         E = ((2 * special.jn(1, 2 * np.pi * q * radius)) ** 2 /
@@ -175,11 +180,14 @@ class C2CylinderSodermanApproximation(ModelProperties):
 
     def __call__(self, acquisition_scheme, **kwargs):
         r'''
+        Estimates the signal attenuation.
+
         Parameters
         ----------
-        acquisition_scheme : acquisition scheme object
-            contains all information on acquisition parameters such as bvalues,
-            gradient directions, etc. Created from acquisition_scheme module.
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
 
         Returns
         -------
@@ -199,7 +207,7 @@ class C2CylinderSodermanApproximation(ModelProperties):
             np.dot(mu_perpendicular_plane, n.T),
             axis=0
         )
-        E_parallel = attenuation_parallel_stick(bvals, lambda_par, n, mu)
+        E_parallel = _attenuation_parallel_stick(bvals, lambda_par, n, mu)
         E_perpendicular = np.ones_like(q)
         q_perp = q * magnitude_perpendicular
         q_nonzero = q_perp > 0  # only q>0 attenuate
@@ -210,7 +218,7 @@ class C2CylinderSodermanApproximation(ModelProperties):
 
     def rotational_harmonics_representation(self, bvalue, delta, Delta,
                                             rh_order=14, **kwargs):
-        r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
+        r""" The rotational harmonics of the model, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernelfor spherical
         convolution.
 
@@ -224,7 +232,6 @@ class C2CylinderSodermanApproximation(ModelProperties):
             pulse separation in seconds.
         sh_order : int,
             maximum spherical harmonics order to be used in the approximation.
-            set to 14 to conform with order used for watson distribution.
 
         Returns
         -------
@@ -243,9 +250,10 @@ class C2CylinderSodermanApproximation(ModelProperties):
 
 
 class C3CylinderCallaghanApproximation(ModelProperties):
-    r""" The Callaghan model [1]_ - a cylinder with finite radius - for
-    intra-axonal diffusion. The perpendicular diffusion is modelled
-    after Callaghan's solution for the disk.
+    r""" The Callaghan model [1]_ - a cylinder with finite radius - typically
+    used for intra-axonal diffusion. The perpendicular diffusion is modelled
+    after Callaghan's solution for the disk. Is dependent on both q-value
+    and diffusion time.
 
     Parameters
     ----------
@@ -257,11 +265,17 @@ class C3CylinderCallaghanApproximation(ModelProperties):
         parallel diffusivity in m^2/s.
     diameter : float,
         cylinder (axon) diameter in meters.
-
+    diffusion_perpendicular : float,
+        the intra-cylindrical, perpenicular diffusivity. By default it is set
+        to a typical value for intra-axonal diffusion as 1.7e-9 m^2/s.
+    number_of_roots : integer,
+        number of roots to use for the Callaghan cylinder model.
+    number_of_function : integer,
+        number of functions to use for the Callaghan cylinder model.
 
     References
     ----------
-    .. [1]_ Callaghan, Paul T. "Pulsed-gradient spin-echo NMR for planar,
+    .. [1] Callaghan, Paul T. "Pulsed-gradient spin-echo NMR for planar,
             cylindrical, and spherical pores under conditions of wall
             relaxation." Journal of magnetic resonance, Series A 113.1 (1995):
             53-59.
@@ -301,8 +315,7 @@ class C3CylinderCallaghanApproximation(ModelProperties):
             self.alpha[:, m] = special.jnp_zeros(m, number_of_roots)
 
     def perpendicular_attenuation(self, q, tau, diameter):
-        """Implements the finite time Callaghan model for cylinders [1]
-        """
+        "Implements the finite time Callaghan model for cylinders"
         radius = diameter / 2.
         alpha = self.alpha
         q_argument = 2 * np.pi * q * radius
@@ -337,11 +350,14 @@ class C3CylinderCallaghanApproximation(ModelProperties):
 
     def __call__(self, acquisition_scheme, **kwargs):
         r'''
+        Estimates the signal attenuation.
+
         Parameters
         ----------
-        acquisition_scheme : acquisition scheme object
-            contains all information on acquisition parameters such as bvalues,
-            gradient directions, etc. Created from acquisition_scheme module.
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
 
         Returns
         -------
@@ -362,7 +378,7 @@ class C3CylinderCallaghanApproximation(ModelProperties):
             np.dot(mu_perpendicular_plane, n.T),
             axis=0
         )
-        E_parallel = attenuation_parallel_stick(bvals, lambda_par, n, mu)
+        E_parallel = _attenuation_parallel_stick(bvals, lambda_par, n, mu)
         E_perpendicular = np.ones_like(q)
         q_perp = q * magnitude_perpendicular
 
@@ -374,8 +390,8 @@ class C3CylinderCallaghanApproximation(ModelProperties):
 
     def rotational_harmonics_representation(
             self, bvalue, delta=None, Delta=None, rh_order=14, **kwargs):
-        r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
-        Axis aligned with z-axis to be used as kernelfor spherical
+        r""" The rotational harmonics of the model, such that Y_lm = Yl0.
+        Axis aligned with z-axis to be used as kernel for spherical
         convolution.
 
         Parameters
@@ -388,7 +404,6 @@ class C3CylinderCallaghanApproximation(ModelProperties):
             Delta parameter in seconds.
         sh_order : int,
             maximum spherical harmonics order to be used in the approximation.
-            set to 14 to conform with order used for watson distribution.
 
         Returns
         -------
@@ -407,9 +422,10 @@ class C3CylinderCallaghanApproximation(ModelProperties):
 
 
 class C4CylinderGaussianPhaseApproximation(ModelProperties):
-    r""" The Gaussian phase model [1]_ - a cylinder with finite radius - for
-    intra-axonal diffusion. The perpendicular diffusion is modelled
-    after Van Gelderen's solution for the disk.
+    r""" The Gaussian phase model [1]_ - a cylinder with finite radius -
+    typically used for intra-axonal diffusion. The perpendicular diffusion is
+    modelled after Van Gelderen's solution for the disk. It is dependent on
+    gradient strength, pulse separation and pulse length.
 
     Parameters
     ----------
@@ -425,7 +441,7 @@ class C4CylinderGaussianPhaseApproximation(ModelProperties):
 
     References
     ----------
-    .. [1]_ Van Gelderen et al. "Evaluation of Restricted Diffusion in
+    .. [1] Van Gelderen et al. "Evaluation of Restricted Diffusion in
             Cylinders. Phosphocreatine in Rabbit Leg Muscle"
             Journal of Magnetic Resonance Series B (1994)
     """
@@ -442,37 +458,40 @@ class C4CylinderGaussianPhaseApproximation(ModelProperties):
     }
     spherical_mean = False
     _model_type = 'cylinder'
-    CYLINDER_TRASCENDENTAL_ROOTS = np.sort(special.jnp_zeros(1, 100))
+    _CYLINDER_TRASCENDENTAL_ROOTS = np.sort(special.jnp_zeros(1, 100))
 
     def __init__(
         self,
         mu=None, lambda_par=None,
         diameter=None,
-        diffusion_perpendicular=CONSTANTS['water_in_axons_diffusion_constant'],
-        gyromagnetic_ratio=CONSTANTS['water_gyromagnetic_ratio'],
+        diffusion_perpendicular=CONSTANTS['water_in_axons_diffusion_constant']
     ):
         self.mu = mu
         self.lambda_par = lambda_par
         self.diffusion_perpendicular = diffusion_perpendicular
-        self.gyromagnetic_ratio = gyromagnetic_ratio
+        self.gyromagnetic_ratio = CONSTANTS['water_gyromagnetic_ratio']
         self.diameter = diameter
 
     def perpendicular_attenuation(
         self, gradient_strength, delta, Delta, diameter
     ):
+        "Calculates the cylinder's perpendicular signal attenuation."
         D = self.diffusion_perpendicular
         gamma = self.gyromagnetic_ratio
-        return attenuation_perpendicular_gaussian_phase(
+        return _attenuation_perpendicular_gaussian_phase(
             diameter, gradient_strength, delta, Delta,
-            D, gamma, self.CYLINDER_TRASCENDENTAL_ROOTS)
+            D, gamma, self._CYLINDER_TRASCENDENTAL_ROOTS)
 
     def __call__(self, acquisition_scheme, **kwargs):
         r'''
+        Calculates the signal attenuation.
+
         Parameters
         ----------
-        acquisition_scheme : acquisition scheme object
-            contains all information on acquisition parameters such as bvalues,
-            gradient directions, etc. Created from acquisition_scheme module.
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
 
         Returns
         -------
@@ -494,7 +513,7 @@ class C4CylinderGaussianPhaseApproximation(ModelProperties):
             np.dot(mu_perpendicular_plane, n.T),
             axis=0
         )
-        E_parallel = attenuation_parallel_stick(bvals, lambda_par, n, mu)
+        E_parallel = _attenuation_parallel_stick(bvals, lambda_par, n, mu)
         E_perpendicular = np.ones_like(g)
         g_perp = g * magnitude_perpendicular
 
@@ -511,7 +530,7 @@ class C4CylinderGaussianPhaseApproximation(ModelProperties):
 
     def rotational_harmonics_representation(
             self, bvalue, delta=None, Delta=None, rh_order=14, **kwargs):
-        r""" The model in rotational harmonics, such that Y_lm = Yl0.
+        r""" The rotational harmonics of the mode, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernelfor spherical
         convolution.
 
@@ -525,7 +544,6 @@ class C4CylinderGaussianPhaseApproximation(ModelProperties):
             Delta parameter in seconds.
         sh_order : int,
             maximum spherical harmonics order to be used in the approximation.
-            set to 14 to conform with order used for watson distribution.
 
         Returns
         -------
@@ -543,13 +561,15 @@ class C4CylinderGaussianPhaseApproximation(ModelProperties):
         return rh
 
 
-def attenuation_parallel_stick(bvals, lambda_par, n, mu):
+def _attenuation_parallel_stick(bvals, lambda_par, n, mu):
+    "Free gaussian diffusion for parallel cylinder direction."
     return np.exp(-bvals * lambda_par * np.dot(n, mu) ** 2)
 
 
-def attenuation_perpendicular_gaussian_phase(
+def _attenuation_perpendicular_gaussian_phase(
         diameter, gradient_strength, delta, Delta,
         D, gamma, CYLINDER_TRASCENDENTAL_ROOTS):
+    "Perpendicular Gaussian Phase signal attenuation."
     radius = diameter / 2.
     first_factor = -2 * (gradient_strength * gamma) ** 2
     alpha = CYLINDER_TRASCENDENTAL_ROOTS / radius
@@ -569,6 +589,6 @@ def attenuation_perpendicular_gaussian_phase(
 
 
 if have_numba:
-    attenuation_parallel_stick = numba.njit()(attenuation_parallel_stick)
-    attenuation_perpendicular_gaussian_phase = numba.njit()(
-        attenuation_perpendicular_gaussian_phase)
+    _attenuation_parallel_stick = numba.njit()(_attenuation_parallel_stick)
+    _attenuation_perpendicular_gaussian_phase = numba.njit()(
+        _attenuation_perpendicular_gaussian_phase)
