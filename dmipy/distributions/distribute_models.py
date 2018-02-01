@@ -9,9 +9,11 @@ import numpy as np
 
 
 class DistributedModel:
+    "Contains various properties of distributed models."
     spherical_mean = False
 
     def _check_for_double_model_class_instances(self):
+        "Checks if there are no models with the same class instantiation."
         if len(self.models) != len(np.unique(self.models)):
             msg = "Each model in the multi-compartment model must be "
             msg += "instantiated separately. For example, to make a model "
@@ -21,6 +23,10 @@ class DistributedModel:
             raise ValueError(msg)
 
     def _check_for_dispersable_models(self):
+        """
+        Checks if a model can be dispersed, i.e. has a rotational harmonics
+        representation.
+        """
         for i, model in enumerate(self.models):
             try:
                 callable(model.rotational_harmonics_representation)
@@ -30,6 +36,7 @@ class DistributedModel:
                 raise AttributeError(msg)
 
     def _check_for_distributable_models(self):
+        "Checks if the to-be distributed parameter is in the input models."
         for i, model in enumerate(self.models):
             if self.target_parameter not in model._parameter_ranges:
                 msg = "Cannot distribute models input {}. ".format(i)
@@ -38,6 +45,10 @@ class DistributedModel:
                 raise AttributeError(msg)
 
     def _check_for_same_model_type(self):
+        """
+        For gamma distribution, checks if sphere/cylinder models are not
+        mixed.
+        """
         model_types = [model._model_type for model in self.models]
         if len(np.unique(model_types)) > 1:
             msg = "Cannot mix models of different types. "
@@ -47,6 +58,10 @@ class DistributedModel:
         self.normalization = model_types[0]
 
     def _prepare_parameters(self, models_and_distribution):
+        """
+        Prepares the DistributedModel parameter properties for both the
+        distribution and the distributed models.
+        """
         self.model_names = []
         model_counts = {}
 
@@ -65,19 +80,22 @@ class DistributedModel:
 
         self.parameter_ranges = OrderedDict({
             model_name + k: v
-            for model, model_name in zip(models_and_distribution, self.model_names)
+            for model, model_name in zip(models_and_distribution,
+                                         self.model_names)
             for k, v in model.parameter_ranges.items()
         })
 
         self.parameter_scales = OrderedDict({
             model_name + k: v
-            for model, model_name in zip(models_and_distribution, self.model_names)
+            for model, model_name in zip(models_and_distribution,
+                                         self.model_names)
             for k, v in model.parameter_scales.items()
         })
 
         self._parameter_map = {
             model_name + k: (model, k)
-            for model, model_name in zip(models_and_distribution, self.model_names)
+            for model, model_name in zip(models_and_distribution,
+                                         self.model_names)
             for k in model.parameter_ranges
         }
 
@@ -86,6 +104,7 @@ class DistributedModel:
         }
 
     def _delete_target_parameter_from_parameters(self):
+        "Removes the to-be-distributed parameter from the parameter list."
         for model in self.models:
             parameter_name = self._inverted_parameter_map[
                 (model, self.target_parameter)
@@ -94,6 +113,7 @@ class DistributedModel:
             del self.parameter_scales[parameter_name]
 
     def _prepare_partial_volumes(self):
+        "Prepares the partial volumes for the DistributedModel."
         if len(self.models) > 1:
             self.partial_volume_names = [
                 'partial_volume_{:d}'.format(i)
@@ -110,6 +130,7 @@ class DistributedModel:
                     partial_volume_name
 
     def _prepare_parameter_links(self):
+        "Prepares the parameter links, if they are given."
         for i, parameter_function in enumerate(self.parameter_links):
             parameter_model, parameter_name, parameter_function, arguments = \
                 parameter_function
@@ -130,6 +151,19 @@ class DistributedModel:
             del self.parameter_scales[parameter_name]
 
     def add_linked_parameters_to_parameters(self, parameters):
+        """
+        Adds the linked parameters to the optimized parameters.
+
+        Parameters
+        ----------
+        parameters: dictionary of model parameters,
+            contains the optimized parameters.
+
+        Returns
+        -------
+        parameters: dictionary of model parameters,
+            contains the optimzed and linked parameters.
+        """
         if len(self.parameter_links) == 0:
             return parameters
         parameters = parameters.copy()
@@ -156,6 +190,18 @@ class DistributedModel:
         return parameters
 
     def set_fixed_parameter(self, parameter_name, value):
+        """
+        Allows the user to fix an optimization parameter to a static value.
+        The fixed parameter will be removed from the optimized parameters and
+        added as a linked parameter.
+
+        Parameters
+        ----------
+        parameter_name: string
+            name of the to-be-fixed parameters, see self.parameter_names.
+        value: float or list of corresponding parameter_cardinality.
+            the value to fix the parameter at in SI units.
+        """
         if parameter_name in self.parameter_ranges.keys():
             model, name = self._parameter_map[parameter_name]
             parameter_link = (model, name, ReturnFixedValue(value), [])
@@ -169,6 +215,26 @@ class DistributedModel:
     def set_tortuous_parameter(self, lambda_perp,
                                lambda_par,
                                volume_fraction_intra):
+        """
+        Allows the user to set a tortuosity constraint on the perpendicular
+        diffusivity of the extra-axonal compartment, which depends on the
+        intra-axonal volume fraction and parallel diffusivity.
+
+        The perpendicular diffusivity parameter will be removed from the
+        optimized parameters and added as a linked parameter.
+
+        Parameters
+        ----------
+        lambda_perp: string
+            name of the perpendicular diffusivity parameter, see
+            self.parameter_names.
+        lambda_par: string
+            name of the parallel diffusivity parameter, see
+            self.parameter_names.
+        volume_fraction_intra: string
+            name of the intra-axonal volume fraction parameter, see
+            self.parameter_names.
+        """
         params = [lambda_perp, lambda_par, volume_fraction_intra]
         for param in params:
             try:
@@ -187,6 +253,22 @@ class DistributedModel:
         del self.parameter_scales[lambda_perp]
 
     def set_equal_parameter(self, parameter_name_in, parameter_name_out):
+        """
+        Allows the user to set two parameters equal to each other. This is used
+        for example in the NODDI model to set the parallel diffusivities of the
+        Stick and Zeppelin compartment to the same value.
+
+        The second input parameter will be removed from the optimized
+        parameters and added as a linked parameter.
+
+        Parameters
+        ----------
+        parameter_name_in: string
+            the first parameter name, see self.parameter_names.
+        parameter_name_out: string,
+            the second parameter name, see self.parameter_names. This is the
+            parameter that will be removed form the optimzed parameters.
+        """
         params = [parameter_name_in, parameter_name_out]
         for param in params:
             try:
@@ -202,13 +284,32 @@ class DistributedModel:
         del self.parameter_scales[parameter_name_out]
 
     def copy(self):
+        """
+        Retuns a different instantiation of the DistributedModel with the same
+        configuration, which can be used together with the original in a
+        MultiCompartmentModel. For example, to do NODDI with multiple
+        orientations.
+        """
         return copy.copy(self)
 
     @property
     def parameter_names(self):
+        "Retuns the DistributedModel parameter names."
         return self.parameter_ranges.keys()
 
     def __call__(self, acquisition_scheme, **kwargs):
+        """
+        The DistributedModel function call. If the model is spherical
+        distribution it will return a spherical harmonics-convolved model.
+        If it is a spatial distribution then it returns an integrated model.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy. 
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+        """
         if (isinstance(self.distribution, SD1Watson) or
                 isinstance(self.distribution, SD2Bingham)):
             return self.sh_convolved_model(acquisition_scheme, **kwargs)
@@ -219,6 +320,27 @@ class DistributedModel:
             raise ValueError(msg)
 
     def sh_convolved_model(self, acquisition_scheme, **kwargs):
+        """
+        The spherical harmonics convolved function call for spherically
+        distributions like Watson and Bingham.
+
+        First, the linked parameters are added to the optimized parameters, and
+        the spherical harmonics of the spherical distribution are recovered.
+        The volume fractions are also converted from nested to regular ones. 
+
+        Then, for every model in the DistributedModel, and for every
+        acquisition shell, the rotational harmonics of the model are recovered
+        and convolved with the distribution spherical harmonics. The resulting
+        values are multiplied with the volume fractions and finally the
+        dispersed signal attenuation is returned.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy. 
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+        """
         values = 0.
         kwargs = self.add_linked_parameters_to_parameters(
             kwargs
@@ -268,13 +390,14 @@ class DistributedModel:
                     **parameters)
                 # convolving micro-environment with watson distribution
                 E_dispersed_sh = sh_convolution(sh_distribution, rh_stick)
-                # recover signal values from watson-convolved spherical harmonics
+                # recover signal values from convolved spherical harmonics
                 E[shell_mask] = np.dot(sh_mat[:, :len(E_dispersed_sh)],
                                        E_dispersed_sh)
 
             if partial_volume is not None:
                 volume_fraction = remaining_volume_fraction * partial_volume
-                remaining_volume_fraction = remaining_volume_fraction - volume_fraction
+                remaining_volume_fraction = (
+                    remaining_volume_fraction - volume_fraction)
             else:
                 volume_fraction = remaining_volume_fraction
 
@@ -282,6 +405,30 @@ class DistributedModel:
         return values
 
     def integrated_model(self, acquisition_scheme, **kwargs):
+        """
+        The spatially integrated function call for spatial distributions like
+        Gamma. Currently, the model assumed we are distributing diameters.
+
+        First, the linked parameters are added to the optimized parameters, and
+        the probability that a water particle exists inside a cylinder of a
+        certain size in the distribution is sampled for a range of diameters.
+        The volume fractions are also converted from nested to regular ones
+        (although typically not more than 1 model is used for a Gamma
+        distribution). 
+
+        Then, for every model in the DistributedModel, the signal attenuations
+        of the model are are recovered for the sampled diameters and multiplied
+        and integrated over their probabilities. The resulting
+        values are multiplied with the volume fractions and finally the
+        integrated signal attenuation is returned.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy. 
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+        """
         values = 0.
         kwargs = self.add_linked_parameters_to_parameters(
             kwargs
@@ -329,7 +476,8 @@ class DistributedModel:
 
             if partial_volume is not None:
                 volume_fraction = remaining_volume_fraction * partial_volume
-                remaining_volume_fraction = remaining_volume_fraction - volume_fraction
+                remaining_volume_fraction = (
+                    remaining_volume_fraction - volume_fraction)
             else:
                 volume_fraction = remaining_volume_fraction
 
@@ -337,6 +485,16 @@ class DistributedModel:
         return values
 
     def fod(self, vertices, **kwargs):
+        """
+        Returns the Fiber Orientation Distribution (FOD) of a dispersed model.
+
+        Parameters
+        ----------
+        vertices: array of size (N_samples, 3)
+            cartesian unit vectors at which to sample the FOD
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+        """
         distribution_parameters = {}
         for parameter in self.distribution.parameter_ranges:
             parameter_name = self._inverted_parameter_map[
@@ -348,6 +506,22 @@ class DistributedModel:
 
 
 class SD1WatsonDistributed(DistributedModel):
+    """
+    The DistributedModel instantiation for a Watson-dispersed model. Multiple
+    models can be dispersed at the same time (like a Stick and Zeppelin for
+    NODDI for example). The parameter 'mu' of the models will be removed and
+    replaced by the 'mu' and 'odi' of the Watson distribution.
+
+    After instantiation the WatsonDistributed model can be treated exactly the
+    same as a CompartmentModel as an input for a MultiCompartmentModel.
+
+    Parameters
+    ----------
+    models: list of length 1 or more,
+        list of models to be Watson-dispersed.
+    parameters_links: list of length 1 or more,
+        deprecated for testing use only.
+    """
 
     def __init__(self, models, parameter_links=None):
         self.models = models
@@ -369,6 +543,23 @@ class SD1WatsonDistributed(DistributedModel):
 
 
 class SD2BinghamDistributed(DistributedModel):
+    """
+    The DistributedModel instantiation for a Bingham-dispersed model. Multiple
+    models can be dispersed at the same time (like a Stick and Zeppelin for
+    NODDI for example). The parameter 'mu' of the models will be removed and
+    replaced by the 'mu', 'odi', 'beta_fraction' and 'psi' of the Bingham
+    distribution.
+
+    After instantiation the BinghamDistributed model can be treated exactly the
+    same as a CompartmentModel as an input for a MultiCompartmentModel.
+
+    Parameters
+    ----------
+    models: list of length 1 or more,
+        list of models to be Watson-dispersed.
+    parameters_links: list of length 1 or more,
+        deprecated for testing use only.
+    """
 
     def __init__(self, models, parameter_links=None):
         self.models = models
@@ -390,6 +581,23 @@ class SD2BinghamDistributed(DistributedModel):
 
 
 class DD1GammaDistributed(DistributedModel):
+    """
+    The DistributedModel instantiation for a Gamma-distributed model for
+    cylinder or sphere models. Multiple models can be distributed at the same
+    time (but such multi-cylinder-distribution models have never been used as
+    far as we know). The parameter 'diameter' of the models will be removed and
+    replaced by the 'alpha' and 'beta', of the Gamma distribution.
+
+    After instantiation the GammaDistributed model can be treated exactly the
+    same as a CompartmentModel as an input for a MultiCompartmentModel.
+
+    Parameters
+    ----------
+    models: list of length 1 or more,
+        list of models to be Watson-dispersed.
+    parameters_links: list of length 1 or more,
+        deprecated for testing use only.
+    """
 
     def __init__(self, models, parameter_links=None):
         self.models = models
@@ -413,6 +621,8 @@ class DD1GammaDistributed(DistributedModel):
 
 
 class ReturnFixedValue:
+    "Parameter fixing class for parameter links."
+
     def __init__(self, value):
         self.value = value
 
