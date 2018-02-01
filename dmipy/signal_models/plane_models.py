@@ -18,7 +18,7 @@ class P3PlaneCallaghanApproximation(ModelProperties):
         The diffusion constant of the water particles between the two planes.
         The default value is the approximate diffusivity of water inside axons
         as 1.7e-9 m^2/s.
-    n_roots : integer,
+    number_of_roots : integer,
         The number of roots for the Callaghan approximation.
 
     References
@@ -42,13 +42,13 @@ class P3PlaneCallaghanApproximation(ModelProperties):
         self,
         diameter=None,
         diffusion_constant=CONSTANTS['water_in_axons_diffusion_constant'],
-        n_roots=40,
+        number_of_roots=40,
     ):
 
         self.diameter = diameter
         self.Dintra = diffusion_constant
-        self.xi = np.arange(n_roots) * np.pi
-        self.zeta = np.arange(n_roots) * np.pi + np.pi / 2.0
+        self.xi = np.arange(number_of_roots) * np.pi
+        self.zeta = np.arange(number_of_roots) * np.pi + np.pi / 2.0
 
     def plane_attenuation(self, q, tau, diameter):
         """Implements the finite time Callaghan model for planes."""

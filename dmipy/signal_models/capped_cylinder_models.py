@@ -1,13 +1,17 @@
 from . import cylinder_models, plane_models
 from ..utils import utils
 from ..core.modeling_framework import ModelProperties
+from ..core.constants import CONSTANTS
 import numpy as np
 
 
 class CC3CappedCylinderCallaghanApproximation(ModelProperties):
     r""" The Callaghan model [1]_ - a cylinder with finite radius - for
     intra-axonal diffusion. The perpendicular diffusion is modelled
-    after Callaghan's solution for the disk.
+    after Callaghan's solution for the disk. The parallel diffusion of the
+    capped cylinder is modelled using the same Callaghan approximation but
+    between two parallel planes with a certain distance or 'length' between
+    them.
 
     Parameters
     ----------
@@ -19,23 +23,24 @@ class CC3CappedCylinderCallaghanApproximation(ModelProperties):
         cylinder (axon) diameter in meters.
     length : float,
         cylinder length in meters.
-
+    diffusion_intra : float,
+        The diffusion constant of the water particles inside the cylinder.
+        The default value is the approximate diffusivity of water inside axons
+        as 1.7e-9 m^2/s.
+    number_of_roots_cylinder : integer,
+        number of roots for the cylinder Callaghan approximation.
+    number_of_functions_cylinder : integer,
+        number of functions for the cylinder Callaghan approximation.
+    number_of_roots_plane : integer,
+        number of roots for the plane Callaghan approximation.
 
     References
     ----------
-    .. [1]_ Callaghan, Paul T. "Pulsed-gradient spin-echo NMR for planar,
-            cylindrical, and spherical pores under conditions of wall
-            relaxation." Journal of magnetic resonance, Series A 113.1 (1995):
-            53-59.
+    .. [1] Callaghan, Paul T. "Pulsed-gradient spin-echo NMR for planar,
+        cylindrical, and spherical pores under conditions of wall
+        relaxation." Journal of magnetic resonance, Series A 113.1 (1995):
+        53-59.
     """
-    _cylinder_model = cylinder_models.C3CylinderCallaghanApproximation()
-    _plane_model = plane_models.P3PlaneCallaghanApproximation()
-
-    _parameter_ranges = _cylinder_model._parameter_ranges.copy()
-    _parameter_ranges.update(_plane_model._parameter_ranges)
-
-    _parameter_scales = _cylinder_model._parameter_scales.copy()
-    _parameter_scales.update(_plane_model._parameter_scales)
 
     spherical_mean = False
     _model_type = 'experimental'
@@ -45,18 +50,48 @@ class CC3CappedCylinderCallaghanApproximation(ModelProperties):
         mu=None,
         diameter=None,
         length=None,
+        diffusion_intra=CONSTANTS['water_in_axons_diffusion_constant'],
+        number_of_roots_cylinder=20,
+        number_of_functions_cylinder=50,
+        number_of_roots_plane=40
     ):
         self.mu = mu
         self.diameter = diameter
         self.length = length
+        self.diffusion_intra = diffusion_intra
+        self.number_of_roots_cylinder = number_of_roots_cylinder
+        self.number_of_functions_cylinder = number_of_functions_cylinder
+        self.number_of_roots_plane = number_of_roots_plane
+
+        self._cylinder_model = (
+            cylinder_models.C3CylinderCallaghanApproximation(
+                mu=self.mu,
+                diameter=self.diameter,
+                diffusion_perpendicular=self.diffusion_intra,
+                number_of_roots=self.number_of_roots_cylinder,
+                number_of_functions=self.number_of_functions_cylinder)
+        )
+        self._plane_model = plane_models.P3PlaneCallaghanApproximation(
+            diameter=length,
+            diffusion_constant=self.diffusion_intra,
+            n_roots=self.number_of_roots_plane)
+
+        self._parameter_ranges = self._cylinder_model._parameter_ranges.copy()
+        self._parameter_ranges.update(self._plane_model._parameter_ranges)
+
+        self._parameter_scales = self._cylinder_model._parameter_scales.copy()
+        self._parameter_scales.update(self._plane_model._parameter_scales)
 
     def __call__(self, acquisition_scheme, **kwargs):
         r'''
+        Calculates the signal attenuation.
+
         Parameters
         ----------
-        acquisition_scheme : acquisition scheme object
-            contains all information on acquisition parameters such as bvalues,
-            gradient directions, etc. Created from acquisition_scheme module.
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
 
         Returns
         -------
