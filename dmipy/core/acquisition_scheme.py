@@ -12,6 +12,7 @@ sh_order = 14
 
 
 def get_sh_order_from_bval(bval):
+    "Estimates minimum sh_order to represent data of given b-value."
     bvals = np.r_[2.02020202e+08, 7.07070707e+08, 1.21212121e+09,
                   2.52525253e+09, 3.13131313e+09, 5.35353535e+09,
                   np.inf]
@@ -159,6 +160,15 @@ class DmipyAcquisitionScheme:
                     self.shell_TE[ind] * 1e3)
 
     def to_schemefile(self, filename):
+        """
+        Exports acquisition scheme information in schemefile format, which can be
+        used by the Camino Monte-Carlo simulator.
+
+        Parameters
+        ----------
+        filename : string,
+            location at which to save the schemefile.
+        """
         TE_ = self.TE
         if TE_ is None:
             TE_ = self.Delta + 2 * self.delta + 0.001
@@ -244,6 +254,17 @@ class SimpleAcquisitionSchemeRH:
     """
     This is a very simple class that is only used internally to create the
     rotational harmonics to be used in spherical convolution.
+
+    Parameters
+    ----------
+    bvalue : float,
+        b-value of the acquisition shell.
+    gradient_directions: array of size (N, 3),
+        Array of cartesian unit-vectors at which to sample the sphere.
+    delta : float,
+        pulse duration of the acquisition
+    Delta : float,
+        pulse separation of the acquisition.
     """
 
     def __init__(self, bvalue, gradient_directions, delta=None, Delta=None):
@@ -260,16 +281,19 @@ class SimpleAcquisitionSchemeRH:
 
     @property
     def qvalues(self):
+        "Returns q-values of acquisition scheme."
         if self.delta is not None and self.Delta is not None:
             return q_from_b(self.bvalues, self.delta, self.Delta)
 
     @property
     def gradient_strengths(self):
+        "Returns gradient strength of acquisition scheme."
         if self.delta is not None and self.Delta is not None:
             return g_from_b(self.bvalues, self.delta, self.Delta)
 
     @property
     def tau(self):
+        "Returns diffusion time of acquisition scheme."
         if self.delta is not None and self.Delta is not None:
             return self.Delta - self.delta / 3.0
 
@@ -443,6 +467,26 @@ def unify_length_reference_delta_Delta(reference_array, delta, Delta, TE):
     """
     If either delta or Delta are given as float, makes them an array the same
     size as the reference array.
+
+    Parameters
+    ----------
+    reference_array : array of size (Nsamples)
+        typically b-values, q-values or gradient strengths.
+    delta : float or array of size (Nsamples)
+        pulse duration in seconds.
+    Delta : float or array of size (Nsamples)
+        pulse separation in seconds.
+    TE : None, float or array of size (Nsamples)
+        Echo time of the acquisition in seconds.
+
+    Returns
+    -------
+    delta_ : array of size (Nsamples)
+        pulse duration copied to be same size as reference_array
+    Delta_ : array of size (Nsamples)
+        pulse separation copied to be same size as reference_array
+    TE_ : None or array of size (Nsamples)
+        Echo time copied to be same size as reference_array
     """
     if isinstance(delta, float) or isinstance(delta, int):
         delta_ = np.tile(delta, len(reference_array))
