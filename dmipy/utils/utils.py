@@ -6,50 +6,6 @@ SPHERE = get_sphere('symmetric362')
 numba, have_numba, _ = optional_package("numba")
 
 
-class SphericalIntegrator:
-    def __init__(self, sphere=SPHERE):
-        self.sphere = sphere
-        self.spherical_excesses = np.empty(len(sphere.faces))
-        self.spherical_face_centroids = np.empty((len(sphere.faces), 3))
-
-        for i, face in enumerate(sphere.faces):
-            face_vertices = sphere.vertices[face]
-            self.spherical_excesses[i] = spherical_excess(face_vertices)
-
-            self.spherical_face_centroids[i] = face_vertices.mean(0)
-            self.spherical_face_centroids[i] /= np.linalg.norm(
-                self.spherical_face_centroids[i]
-            )
-
-    def integrate(self, f, args=tuple()):
-        return (
-            np.atleast_2d(f(self.spherical_face_centroids, *args)) *
-            self.spherical_excesses[:, None]
-        ).sum(0)
-
-
-def spherical_excess(abc):
-    a, b, c = abc
-    vs = np.r_[
-        np.linalg.norm(b - a),
-        np.linalg.norm(c - a),
-        np.linalg.norm(b - c)
-    ]
-    s = vs.sum() / 2
-    vs = 2 * np.arcsin(vs / 2)
-    vs_ = np.tan((s - vs) / 2)
-
-    excess = np.arctan(4 * np.sqrt(np.tan(s / 2) * np.prod(vs_)))
-
-    return excess
-
-
-def spherical_triangle_centroid_value(f, abc, args=tuple()):
-    mean_point = abc.mean(axis=0)
-    mean_point /= np.linalg.norm(mean_point)
-    return f(mean_point, *args)
-
-
 def perpendicular_vector(v):
     """Returns a perpendicular vector to vector "v".
 
@@ -329,7 +285,8 @@ def cart2sphere(cartesian_coordinates):
 
 
 def cart2mu(xyz):
-    """"Function to estimate spherical coordinates from cartesian coordinates
+    """
+    Function to estimate spherical coordinates from cartesian coordinates
     according to wikipedia. Conforms with the dipy notation.
 
     Parameters
@@ -339,8 +296,8 @@ def cart2mu(xyz):
 
     Returns
     -------
-    spherical_coordinates : array of size (3) or (N x 3),
-        array of spherical coordinate vectors [r, theta, phi].
+    spherical_coordinates : array of size (2) or (N x 2),
+        array of spherical coordinate vectors [theta, phi].
         range of theta [0, pi]. range of phi [-pi, pi].
     """
     shape = xyz.shape[:-1]
@@ -353,6 +310,22 @@ def cart2mu(xyz):
 
 
 def R2mu_psi(R):
+    """
+    Function to estimate orientation mu and secondary orientation angle psi
+    from a 3x3 rotation matrix. Can be given array of rotation matrices.
+
+    Parameters
+    ----------
+    R : Array of size (N, 3, 3)
+        rotation matrices that possibly can be estimated by DTI.
+
+    Returns
+    -------
+    mu : array of size (N, 2),
+        orientations in [theta, phi] angles
+    psi : array of size (N),
+        secondary orientation psi (for Bingham for example).
+    """
     mu = cart2mu(R[..., :, 0])
     mu_flat = mu.reshape([-1, 2])
     R_flat = R.reshape([-1, 3, 3])
@@ -402,7 +375,7 @@ def sphere2cart(spherical_coordinates):
 
 
 def unitsphere2cart_1d(mu):
-    """Optimized function deicated to convert 1D unit sphere coordinates
+    """Optimized function dedicated to convert 1D unit sphere coordinates
     to cartesian coordinates.
 
     Parameters
@@ -450,5 +423,3 @@ def unitsphere2cart_Nd(mu):
 
 if have_numba:
     unitsphere2cart_1d = numba.njit()(unitsphere2cart_1d)
-    # rotation_matrix_around_100 = numba.njit()(rotation_matrix_around_100)
-    # rotation_matrix_100_to_xyz = numba.njit()(rotation_matrix_100_to_xyz)
