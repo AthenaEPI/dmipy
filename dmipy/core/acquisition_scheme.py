@@ -86,7 +86,8 @@ class DmipyAcquisitionScheme:
             self.shell_TE = self.TE
             if self.TE is not None:
                 self.shell_TE = self.TE[first_indices]
-                if len(np.unique(self.TE)) != len(self.TE[self.b0_mask]):
+                if (len(np.unique(self.TE)) != len(np.unique(
+                        self.TE[self.b0_mask]))):
                     msg = "Not every TE shell has b0 measurements.\n"
                     msg += "This is required to properly normalize the signal."
                     msg += " Make sure the TE values for b0-measurements have "
