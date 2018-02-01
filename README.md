@@ -45,7 +45,7 @@ To get a feeling for how to use dmipy, we provide a few tutorial notebooks:
 - [Spherical Distribution models (Axon Dispersion, e.g. [Kaden et al. 2007])](https://github.com/AthenaEPI/mipy/blob/master/examples/example_watson_bingham.ipynb)
 - [Spherical Mean Models](https://github.com/AthenaEPI/mipy/blob/master/examples/example_spherical_mean_models.ipynb)
 ### Global Optimizers
-- Brute Force (Brute2Fine)
+- [Brute Force (Brute2Fine)](https://github.com/AthenaEPI/dmipy/blob/master/examples/example_brute_force_optimization.ipynb)
 - Stochastic (MIX) [Farooq et al. 2016]
 ## dmipy implementations of Microstructure Models in Literature
 dmipy uses HCP data to illustrate microstructure model examples. To reproduce these examples, dmipy provides a direct way to download HCP data (using your own AWS credentials) in the [HCP tutorial](https://github.com/AthenaEPI/mipy/blob/master/examples/tutorial_human_connectome_project_aws.ipynb).
