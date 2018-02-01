@@ -140,7 +140,7 @@ class G2ZeppelinSphericalMean(ModelProperties):
 
 
 class G3RestrictedZeppelinSphericalMean(ModelProperties):
-    """ 
+    """
     Spherical mean of the signal attenuation of the restricted Zeppelin
     model [1]_ for a given b-value, parallel and perpendicular diffusivity,
     and characteristic coefficient A. The function is the same as the

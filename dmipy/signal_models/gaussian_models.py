@@ -15,31 +15,31 @@ from dipy.utils.optpkg import optional_package
 
 numba, have_numba, _ = optional_package("numba")
 
-samples = 10
-thetas = np.linspace(0, np.pi / 2, samples)
-r = np.ones(samples)
-phis = np.zeros(samples)
-angles = np.c_[r, thetas, phis]
-angles_cart = sphere2cart(angles)
+_samples = 10
+_thetas = np.linspace(0, np.pi / 2, _samples)
+_r = np.ones(_samples)
+_phis = np.zeros(_samples)
+_angles = np.c_[_r, _thetas, _phis]
+_angles_cart = sphere2cart(_angles)
 
 inverse_rh_matrix_kernel = {
     rh_order: np.linalg.pinv(real_sym_rh_basis(
-        rh_order, thetas, phis
+        rh_order, _thetas, _phis
     )) for rh_order in np.arange(0, 15, 2)
 }
-simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(0., angles_cart)
+simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(0., _angles_cart)
 
 DIFFUSIVITY_SCALING = 1e-9
 A_SCALING = 1e-12
 
 
 class G1Ball(ModelProperties):
-    r""" The Ball model [1] - an isotropic Tensor with one diffusivity.
+    r""" The Ball model [1]_ - an isotropic Tensor with one diffusivity.
 
     Parameters
     ----------
     lambda_iso : float,
-        isotropic diffusivity in 10^9 m^2/s.
+        isotropic diffusivity in m^2/s.
 
     References
     ----------
@@ -63,11 +63,14 @@ class G1Ball(ModelProperties):
 
     def __call__(self, acquisition_scheme, **kwargs):
         r'''
+        Estimates the signal attenuation.
+
         Parameters
         ----------
-        acquisition_scheme : acquisition scheme object
-            contains all information on acquisition parameters such as bvalues,
-            gradient directions, etc. Created from acquisition_scheme module.
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
 
         Returns
         -------
@@ -81,8 +84,8 @@ class G1Ball(ModelProperties):
 
 
 class G2Zeppelin(ModelProperties):
-    r""" The Zeppelin model [1] - an axially symmetric Tensor - for
-    extra-axonal diffusion.
+    r""" The Zeppelin model [1]_ - an axially symmetric Tensor - typically used
+    for extra-axonal diffusion.
 
     Parameters
     ----------
@@ -91,9 +94,9 @@ class G2Zeppelin(ModelProperties):
         theta is inclination of polar angle of main angle mu [0, pi].
         phi is polar angle of main angle mu [-pi, pi].
     lambda_par : float,
-        parallel diffusivity in 10^9 m^2/s.
+        parallel diffusivity in m^2/s.
     lambda_perp : float,
-        perpendicular diffusivity in 10^9 m^2/s.
+        perpendicular diffusivity in m^2/s.
 
     Returns
     -------
@@ -127,11 +130,14 @@ class G2Zeppelin(ModelProperties):
 
     def __call__(self, acquisition_scheme, **kwargs):
         r'''
+        Estimates the signal attenuation.
+
         Parameters
         ----------
-        acquisition_scheme : acquisition scheme object
-            contains all information on acquisition parameters such as bvalues,
-            gradient directions, etc. Created from acquisition_scheme module.
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
 
         Returns
         -------
@@ -144,13 +150,15 @@ class G2Zeppelin(ModelProperties):
         lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
         mu = kwargs.get('mu', self.mu)
         mu = utils.unitsphere2cart_1d(mu)
-        E_zeppelin = attenuation_zeppelin(
+        E_zeppelin = _attenuation_zeppelin(
             bvals, lambda_par, lambda_perp, n, mu)
         return E_zeppelin
 
-    def rotational_harmonics_representation(self, bvalue, rh_order=14, **kwargs):
-        r""" The Stick model in rotational harmonics, such that Y_lm = Yl0.
-        Axis aligned with z-axis to be used as kernelfor spherical
+    def rotational_harmonics_representation(self, bvalue, rh_order=14,
+                                            **kwargs):
+        r"""
+        The rotational harmonics of the model, such that Y_lm = Yl0.
+        Axis aligned with z-axis to be used as kernel for spherical
         convolution.
 
         Parameters
@@ -159,7 +167,6 @@ class G2Zeppelin(ModelProperties):
             b-value in s/m^2.
         sh_order : int,
             maximum spherical harmonics order to be used in the approximation.
-            set to 14 to conform with order used for watson distribution.
 
         Returns
         -------
@@ -176,7 +183,8 @@ class G2Zeppelin(ModelProperties):
 
 
 class G3RestrictedZeppelin(ModelProperties):
-    r""" The restricted Zeppelin model [1] - an axially symmetric Tensor - for
+    r"""
+    The restricted Zeppelin model [1]_ - an axially symmetric Tensor - for
     extra-axonal diffusion.
 
     Parameters
@@ -199,7 +207,9 @@ class G3RestrictedZeppelin(ModelProperties):
 
     References
     ----------
-    .. [1] Burcaw
+    .. [1] Burcaw, L.M., Fieremans, E., Novikov, D.S., 2015. Mesoscopic
+        structure of neuronal tracts from time-dependent diffusion.
+        NeuroImage 114, 18.
     """
 
     _parameter_ranges = {
@@ -225,11 +235,14 @@ class G3RestrictedZeppelin(ModelProperties):
 
     def __call__(self, acquisition_scheme, **kwargs):
         r'''
+        Estimates the signal attenuation.
+
         Parameters
         ----------
-        acquisition_scheme : acquisition scheme object
-            contains all information on acquisition parameters such as bvalues,
-            gradient directions, etc. Created from acquisition_scheme module.
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
 
         Returns
         -------
@@ -269,7 +282,7 @@ class G3RestrictedZeppelin(ModelProperties):
     def rotational_harmonics_representation(
             self, bvalue, delta=None, Delta=None, rh_order=14, **kwargs):
         r""" The model in rotational harmonics, such that Y_lm = Yl0.
-        Axis aligned with z-axis to be used as kernelfor spherical
+        Axis aligned with z-axis to be used as kernel for spherical
         convolution.
 
         Parameters
@@ -282,7 +295,6 @@ class G3RestrictedZeppelin(ModelProperties):
             Delta parameter in seconds.
         sh_order : int,
             maximum spherical harmonics order to be used in the approximation.
-            set to 14 to conform with order used for watson distribution.
 
         Returns
         -------
@@ -302,7 +314,8 @@ class G3RestrictedZeppelin(ModelProperties):
         return rh
 
 
-def attenuation_zeppelin(bvals, lambda_par, lambda_perp, n, mu):
+def _attenuation_zeppelin(bvals, lambda_par, lambda_perp, n, mu):
+    "Signal attenuation for Zeppelin model."
     mu_perpendicular_plane = np.eye(3) - np.outer(mu, mu)
     magnitude_parallel = np.dot(n, mu)
     proj = np.dot(mu_perpendicular_plane, n.T)
@@ -316,4 +329,4 @@ def attenuation_zeppelin(bvals, lambda_par, lambda_perp, n, mu):
 
 
 if have_numba:
-    attenuation_zeppelin = numba.njit()(attenuation_zeppelin)
+    _attenuation_zeppelin = numba.njit()(_attenuation_zeppelin)
