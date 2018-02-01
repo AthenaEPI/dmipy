@@ -5,11 +5,9 @@ DIAMETER_SCALING = 1e-6
 
 
 class S1Dot(ModelProperties):
-    r""" The Dot model [1] - an non-diffusing compartment.
-
-    Parameters
-    ----------
-    no parameters
+    r"""
+    The Dot model [1]_ - an non-diffusing compartment.
+    It has no parameters and returns 1 no matter the input.
 
     References
     ----------
@@ -25,28 +23,44 @@ class S1Dot(ModelProperties):
     spherical_mean = False
     _model_type = 'other'
 
-    def __init__(self, dummy=None):
-        self.dummy = dummy
-
     def __call__(self, acquisition_scheme, **kwargs):
         r'''
+        Calculates the signal attenation.
+
         Parameters
         ----------
-        acquisition_scheme : acquisition scheme object
-            contains all information on acquisition parameters such as bvalues,
-            gradient directions, etc. Created from acquisition_scheme module.
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
 
         Returns
         -------
         attenuation : float or array, shape(N),
             signal attenuation
         '''
-
         E_dot = np.ones(acquisition_scheme.number_of_measurements)
         return E_dot
 
 
 class S2SphereSodermanApproximation(ModelProperties):
+    r"""
+    The Stejskal Tanner signal approximation of a sphere model. It assumes
+    that pulse length is infinitessimally small and diffusion time large enough
+    so that the diffusion is completely restricted. Only depends on q-value.
+
+    Parameters
+    ----------
+    diameter : float,
+        sphere diameter in meters.
+
+    References
+    ----------
+    .. [1] Balinov, Balin, et al. "The NMR self-diffusion method applied to
+        restricted diffusion. Simulation of echo attenuation from molecules in
+        spheres and between planes." Journal of Magnetic Resonance, Series A
+        104.1 (1993): 17-25.
+    """
     _parameter_ranges = {
         'diameter': (1e-2, 20)
     }
@@ -60,6 +74,7 @@ class S2SphereSodermanApproximation(ModelProperties):
         self.diameter = diameter
 
     def sphere_attenuation(self, q, diameter):
+        "The signal attenuation for the sphere model."
         radius = diameter / 2
         factor = 2 * np.pi * q * radius
         E = (
@@ -72,6 +87,21 @@ class S2SphereSodermanApproximation(ModelProperties):
         return E
 
     def __call__(self, acquisition_scheme, **kwargs):
+        r'''
+        Calculates the signal attenation.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+
+        Returns
+        -------
+        attenuation : float or array, shape(N),
+            signal attenuation
+        '''
         q = acquisition_scheme.qvalues
         diameter = kwargs.get('diameter', self.diameter)
         E_sphere = np.ones_like(q)
