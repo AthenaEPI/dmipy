@@ -7,6 +7,25 @@ from ..utils.spherical_mean import (
 
 
 class FittedMultiCompartmentModel:
+    """
+    The FittedMultiCompartmentModel instance contains information about the
+    original MultiCompartmentModel, the estimated S0 values, the fitting mask
+    and the fitted model parameters.
+
+    Parameters
+    ----------
+    model : MultiCompartmentModel instance,
+        A dmipy MultiCompartmentModel.
+    S0 : array of size (Ndata,) or (N_data, N_DWIs),
+        Array containing the estimated S0 values of the data. If data is 4D,
+        then S0 is 3D if there is only one TE, and the same 4D size of the data
+        if there are multiple TEs.
+    mask : array of size (N_data,),
+        boolean mask of voxels that were fitted.
+    fitted_parameters_vector : array of size (N_data, Nparameters),
+        fitted model parameters array.
+    """
+
     def __init__(self, model, S0, mask, fitted_parameters_vector):
         self.model = model
         self.S0 = S0
@@ -15,10 +34,28 @@ class FittedMultiCompartmentModel:
 
     @property
     def fitted_parameters(self):
+        "Returns the fitted parameters as a dictionary."
         return self.model.parameter_vector_to_parameters(
             self.fitted_parameters_vector)
 
-    def fod(self, vertices, visual_odi_lower_bound=0):
+    def fod(self, vertices, visual_odi_lower_bound=0.):
+        """
+        Returns the Fiber Orientation Distribution if it is available.
+
+        Parameters
+        ----------
+        vertices : array of size (Nvertices, 3),
+            Array of cartesian unit vectors at which to sample the FOD.
+        visual_odi_lower_bound : float,
+            gives a lower bound to the Orientation Distribution Index (ODI) of
+            FODs of Watson and Bingham distributions. This can be useful to
+            visualize FOD fields where some FODs are extremely sharp.
+
+        Returns
+        -------
+        fods : array of size (Ndata, Nvertices),
+            the FODs of the fitted model, scaled by volume fraction.
+        """
         if not self.model.fod_available:
             msg = ('FODs not available for current model.')
             raise ValueError(msg)
@@ -39,6 +76,25 @@ class FittedMultiCompartmentModel:
         return fods
 
     def fod_sh(self, sh_order=8, basis_type=None):
+        """
+        Returns the spherical harmonics coefficients of the Fiber Orientation
+        Distribution (FOD) if it is available. Uses are 724 spherical
+        tessellation to do the spherical harmonics transform.
+
+        Parameters
+        ----------
+        sh_order : integer,
+            the maximum spherical harmonics order of the coefficient expansion.
+        basis_type : string,
+            type of spherical harmonics basis to use for the expansion, see
+            sh_to_sf_matrix for more info.
+
+        Returns
+        -------
+        fods_sh : array of size (Ndata, Ncoefficients),
+            spherical harmonics coefficients of the FODs, scaled by volume
+            fraction.
+        """
         if not self.model.fod_available:
             msg = ('FODs not available for current model.')
             raise ValueError(msg)
@@ -57,6 +113,7 @@ class FittedMultiCompartmentModel:
         return fods_sh
 
     def peaks_spherical(self):
+        "Returns the peak angles of the model."
         mu_params = []
         for name, card in self.model.parameter_cardinality.items():
             if name[-2:] == 'mu' and card == 2:
@@ -69,11 +126,35 @@ class FittedMultiCompartmentModel:
         return np.concatenate([mu[..., None] for mu in mu_params], axis=-1)
 
     def peaks_cartesian(self):
+        "Returns the cartesian peak unit vectors of the model."
         peaks_spherical = self.peaks_spherical()
         peaks_cartesian = unitsphere2cart_Nd(peaks_spherical)
         return peaks_cartesian
 
     def predict(self, acquisition_scheme=None, S0=None, mask=None):
+        """
+        simulates the dMRI signal of the fitted MultiCompartmentModel for the
+        estimated model parameters. If no acquisition_scheme is given, then
+        the same acquisition_scheme that was used for the fitting is used. If
+        no S0 is given then it is assumed to be the estimated one. If no mask
+        is given then all voxels are assumed to have been fitted.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        S0 : None or float,
+            Signal intensity without diffusion sensitization. If None, uses
+            estimated SO from fitting process. If float, uses that value.
+        mask : (N-1)-dimensional integer/boolean array of size (N_x, N_y, ...),
+            mask of voxels to simulate data at.
+
+        Returns
+        -------
+        predicted_signal : array of size (Ndata, N_DWIS),
+            predicted DWIs for the given model parameters and acquisition
+            scheme.
+        """
         if acquisition_scheme is None:
             acquisition_scheme = self.model.scheme
         dataset_shape = self.fitted_parameters_vector.shape[:-1]
