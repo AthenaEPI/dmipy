@@ -3,29 +3,36 @@ import numpy as np
 from ..core.modeling_framework import ModelProperties
 from ..core.constants import CONSTANTS
 
-LENGTH_SCALING = 1e-6
+DIAMETER_SCALING = 1e-6
 
 
 class P3PlaneCallaghanApproximation(ModelProperties):
-    r""" The Callaghan model [1] of diffusion between two parallel infinite plates.
+    r"""
+    The Callaghan model [1]_ of diffusion between two parallel infinite plates.
 
-        Parameters
-        ----------
-        length : float
-            distance between the two plates in meters.
+    Parameters
+    ----------
+    diameter : float
+        Distance between the two plates in meters.
+    diffusion_constant : float,
+        The diffusion constant of the water particles between the two planes.
+        The default value is the approximate diffusivity of water inside axons
+        as 1.7e-9 m^2/s.
+    n_roots : integer,
+        The number of roots for the Callaghan approximation.
 
-        References
-        ----------
-        [1] Callaghan, "Pulsed-Gradient Spin-Echo NMR for Planar, Cylindrical,
+    References
+    ----------
+    [1] Callaghan, "Pulsed-Gradient Spin-Echo NMR for Planar, Cylindrical,
         and Spherical Pores under Conditions of Wall Relaxation", JMR 1995
-        """
+    """
 
     _parameter_ranges = {
-        'length': (1e-2, 20)
+        'diameter': (1e-2, 20)
     }
 
     _parameter_scales = {
-        'length': LENGTH_SCALING
+        'diameter': DIAMETER_SCALING
     }
 
     spherical_mean = False
@@ -33,20 +40,19 @@ class P3PlaneCallaghanApproximation(ModelProperties):
 
     def __init__(
         self,
-        length=None,
+        diameter=None,
         diffusion_constant=CONSTANTS['water_in_axons_diffusion_constant'],
         n_roots=40,
     ):
 
-        self.length = length
+        self.diameter = diameter
         self.Dintra = diffusion_constant
         self.xi = np.arange(n_roots) * np.pi
         self.zeta = np.arange(n_roots) * np.pi + np.pi / 2.0
 
-    def plane_attenuation(self, q, tau, length):
-        """Implements the finite time Callaghan model for planes [1]
-        """
-        radius = length / 2.0
+    def plane_attenuation(self, q, tau, diameter):
+        """Implements the finite time Callaghan model for planes."""
+        radius = diameter / 2.0
         q_argument = 2 * np.pi * q * radius
         q_argument_2 = q_argument ** 2
         res = np.zeros_like(q)
@@ -88,13 +94,28 @@ class P3PlaneCallaghanApproximation(ModelProperties):
         return res
 
     def __call__(self, acquisition_scheme, **kwargs):
+        r'''
+        Calculates the signal attenuation.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+
+        Returns
+        -------
+        attenuation : float or array, shape(N),
+            signal attenuation
+        '''
         q = acquisition_scheme.qvalues
         tau = acquisition_scheme.tau
-        length = kwargs.get('length', self.length)
+        diameter = kwargs.get('diameter', self.diameter)
 
         E_plane = np.ones_like(q)
         q_nonzero = q > 0
         E_plane[q_nonzero] = self.plane_attenuation(
-            q[q_nonzero], tau[q_nonzero], length
+            q[q_nonzero], tau[q_nonzero], diameter
         )
         return E_plane
