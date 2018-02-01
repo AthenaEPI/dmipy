@@ -68,7 +68,7 @@ def sh_convolution(f_distribution_sh, kernel_rh):
     f_kernel_convolved = np.zeros(number_coef_used)
 
     counter = 0
-    for n_ in xrange(0, sh_order_used + 1, 2):
+    for n_ in range(0, sh_order_used + 1, 2):
         coef_in_order = 2 * n_ + 1
         f_kernel_convolved[counter: counter + coef_in_order] = (
             f_distribution_sh[counter: counter + coef_in_order] *

@@ -330,7 +330,7 @@ def R2mu_psi(R):
     mu_flat = mu.reshape([-1, 2])
     R_flat = R.reshape([-1, 3, 3])
     psi_flat = np.zeros(len(mu_flat))
-    for i in xrange(len(mu_flat)):
+    for i in range(len(mu_flat)):
         R_theta_phi = rotation_matrix_100_to_theta_phi(
             mu_flat[i, 0], mu_flat[i, 0])
         psi_flat[i] = np.arcsin(np.dot(R_theta_phi.T, R_flat[i])[2, 1])

@@ -77,7 +77,7 @@ class P3PlaneCallaghanApproximation(ModelProperties):
 
             res += update
 
-        for m in xrange(len(self.zeta)):
+        for m in range(len(self.zeta)):
             zeta_m = self.zeta[m]
             zeta_m2 = self.zeta[m] ** 2
 

@@ -311,7 +311,7 @@ class C3CylinderCallaghanApproximation(ModelProperties):
         self.alpha[0, 0] = 0
         if number_of_roots > 1:
             self.alpha[1:, 0] = special.jnp_zeros(0, number_of_roots - 1)
-        for m in xrange(1, number_of_functions):
+        for m in range(1, number_of_functions):
             self.alpha[:, m] = special.jnp_zeros(m, number_of_roots)
 
     def perpendicular_attenuation(self, q, tau, diameter):
@@ -323,7 +323,7 @@ class C3CylinderCallaghanApproximation(ModelProperties):
         res = np.zeros_like(q)
 
         J = special.j1(q_argument) ** 2
-        for k in xrange(0, self.alpha.shape[0]):
+        for k in range(0, self.alpha.shape[0]):
             alpha2 = alpha[k, 0] ** 2
             update = (
                 4 * np.exp(-alpha2 * self.diffusion_perpendicular *
@@ -333,10 +333,10 @@ class C3CylinderCallaghanApproximation(ModelProperties):
             )
             res += update
 
-        for m in xrange(1, self.alpha.shape[1]):
+        for m in range(1, self.alpha.shape[1]):
             J = special.jvp(m, q_argument, 1)
             q_argument_J = (q_argument * J) ** 2
-            for k in xrange(self.alpha.shape[0]):
+            for k in range(self.alpha.shape[0]):
                 alpha2 = self.alpha[k, m] ** 2
                 update = (
                     8 * np.exp(-alpha2 * self.diffusion_perpendicular *
