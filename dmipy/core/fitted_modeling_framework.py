@@ -165,7 +165,7 @@ class FittedMultiCompartmentModel:
         if mask is None:
             mask = self.mask
 
-        if self.model.spherical_mean:
+        if self.model._spherical_mean:
             N_samples = len(acquisition_scheme.shell_bvalues)
         else:
             N_samples = len(acquisition_scheme.bvalues)
@@ -181,7 +181,7 @@ class FittedMultiCompartmentModel:
 
     def R2_coefficient_of_determination(self, data):
         "Calculates the R-squared of the model fit."
-        if self.model.spherical_mean:
+        if self.model._spherical_mean:
             Nshells = len(self.model.scheme.shell_bvalues)
             data_ = np.zeros(np.r_[data.shape[:-1], Nshells])
             for pos in zip(*np.where(self.mask)):
@@ -200,7 +200,7 @@ class FittedMultiCompartmentModel:
 
     def mean_squared_error(self, data):
         "Calculates the mean squared error of the model fit."
-        if self.model.spherical_mean:
+        if self.model._spherical_mean:
             Nshells = len(self.model.scheme.shell_bvalues)
             data_ = np.zeros(np.r_[data.shape[:-1], Nshells])
             for pos in zip(*np.where(self.mask)):

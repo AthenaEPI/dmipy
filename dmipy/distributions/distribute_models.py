@@ -10,7 +10,7 @@ import numpy as np
 
 class DistributedModel:
     "Contains various properties of distributed models."
-    spherical_mean = False
+    _spherical_mean = False
 
     def _check_for_double_model_class_instances(self):
         "Checks if there are no models with the same class instantiation."

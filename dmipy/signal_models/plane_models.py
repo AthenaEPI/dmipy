@@ -35,7 +35,7 @@ class P3PlaneCallaghanApproximation(ModelProperties):
         'diameter': DIAMETER_SCALING
     }
 
-    spherical_mean = False
+    _spherical_mean = False
     _model_type = 'plane'
 
     def __init__(

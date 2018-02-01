@@ -84,7 +84,7 @@ class SD1Watson(ModelProperties):
         'mu': np.r_[1., 1.],
         'odi': 1.,
     }
-    spherical_mean = False
+    _spherical_mean = False
 
     def __init__(self, mu=None, odi=None):
         self.mu = mu
@@ -182,7 +182,7 @@ class SD2Bingham(ModelProperties):
         'odi': 1.,
         'beta_fraction': 1.
     }
-    spherical_mean = False
+    _spherical_mean = False
 
     def __init__(self, mu=None, psi=None, odi=None, beta_fraction=None):
         self.mu = mu
@@ -346,7 +346,7 @@ class DD1GammaDistribution(ModelProperties):
         'alpha': 1.,
         'beta': BETA_SCALING,
     }
-    spherical_mean = False
+    _spherical_mean = False
 
     def __init__(self, alpha=None, beta=None, Nsteps=30,
                  normalization='standard'):

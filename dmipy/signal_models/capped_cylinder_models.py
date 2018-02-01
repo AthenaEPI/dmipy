@@ -42,7 +42,7 @@ class CC3CappedCylinderCallaghanApproximation(ModelProperties):
         53-59.
     """
 
-    spherical_mean = False
+    _spherical_mean = False
     _model_type = 'experimental'
 
     def __init__(

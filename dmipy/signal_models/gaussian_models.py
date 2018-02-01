@@ -55,7 +55,7 @@ class G1Ball(ModelProperties):
     _parameter_scales = {
         'lambda_iso': DIFFUSIVITY_SCALING
     }
-    spherical_mean = False
+    _spherical_mean = False
     _model_type = 'other'
 
     def __init__(self, lambda_iso=None):
@@ -120,7 +120,7 @@ class G2Zeppelin(ModelProperties):
         'lambda_par': DIFFUSIVITY_SCALING,
         'lambda_perp': DIFFUSIVITY_SCALING
     }
-    spherical_mean = False
+    _spherical_mean = False
     _model_type = 'other'
 
     def __init__(self, mu=None, lambda_par=None, lambda_perp=None):
@@ -224,7 +224,7 @@ class G3RestrictedZeppelin(ModelProperties):
         'lambda_perp': DIFFUSIVITY_SCALING,
         'A': A_SCALING
     }
-    spherical_mean = False
+    _spherical_mean = False
     _model_type = 'other'
 
     def __init__(self, mu=None, lambda_par=None, lambda_inf=None, A=None):

@@ -38,7 +38,7 @@ class C1StickSphericalMean(ModelProperties):
     _parameter_scales = {
         'lambda_par': DIFFUSIVITY_SCALING,
     }
-    spherical_mean = True
+    _spherical_mean = True
     _model_type = 'other'
 
     def __init__(self, lambda_par=None):
@@ -101,7 +101,7 @@ class G2ZeppelinSphericalMean(ModelProperties):
         'lambda_par': DIFFUSIVITY_SCALING,
         'lambda_perp': DIFFUSIVITY_SCALING
     }
-    spherical_mean = True
+    _spherical_mean = True
     _model_type = 'other'
 
     def __init__(self, lambda_par=None, lambda_perp=None):
@@ -175,7 +175,7 @@ class G3RestrictedZeppelinSphericalMean(ModelProperties):
         'lambda_inf': DIFFUSIVITY_SCALING,
         'A': A_SCALING
     }
-    spherical_mean = True
+    _spherical_mean = True
     _model_type = 'other'
 
     def __init__(self, lambda_par=None, lambda_inf=None, A=None):

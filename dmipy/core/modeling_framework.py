@@ -290,12 +290,13 @@ class MultiCompartmentModelProperties:
         """Checks that spherical mean and regular models cannot be optimized
         together, and whether the model can estimate a Fiber Orientation
         Distribution (FOD)."""
-        models_spherical_mean = [model.spherical_mean for model in self.models]
+        models_spherical_mean = [
+            model._spherical_mean for model in self.models]
         if len(np.unique(models_spherical_mean)) > 1:
             msg = "Cannot mix spherical mean and non-spherical mean models. "
             msg = "Current model selection is {}".format(self.models)
             raise ValueError(msg)
-        self.spherical_mean = np.all(models_spherical_mean)
+        self._spherical_mean = np.all(models_spherical_mean)
         self.fod_available = False
         for model in self.models:
             try:
@@ -648,7 +649,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
 
         # if the models are spherical mean based then estimate the
         # spherical mean of the data.
-        if self.spherical_mean:
+        if self._spherical_mean:
             data_to_fit = np.zeros(
                 np.r_[data_.shape[:-1],
                       self.scheme.unique_dwi_indices.max() + 1])
@@ -721,7 +722,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             The simulated signal of the microstructure model.
         """
         Ndata = acquisition_scheme.number_of_measurements
-        if self.spherical_mean:
+        if self._spherical_mean:
             Ndata = len(acquisition_scheme.shell_bvalues)
         x0 = model_parameters_array
 
