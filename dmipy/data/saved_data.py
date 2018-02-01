@@ -79,13 +79,16 @@ def synthetic_camino_data_parallel():
     """The parallel data was generated using the Camino Monte-Carlo
     Diffusion Simulator. See http://camino.cs.ucl.ac.uk/.
     """
-    fractions_1_7 = np.loadtxt(DATA_PATH + 'camino/fractions_camino_D1_7.txt')
-    fractions_2_0 = np.loadtxt(DATA_PATH + 'camino/fractions_camino_D2_0.txt')
-    fractions_2_3 = np.loadtxt(DATA_PATH + 'camino/fractions_camino_D2_3.txt')
+    fractions_1_7 = np.loadtxt(
+        join(DATA_PATH, 'camino', 'fractions_camino_D1_7.txt'))
+    fractions_2_0 = np.loadtxt(
+        join(DATA_PATH, 'camino', 'fractions_camino_D2_0.txt'))
+    fractions_2_3 = np.loadtxt(
+        join(DATA_PATH, 'camino', 'fractions_camino_D2_3.txt'))
 
-    data_1_7 = np.loadtxt(join(DATA_PATH, 'camino/data_camino_D1_7.txt'))
-    data_2_0 = np.loadtxt(join(DATA_PATH, 'camino/data_camino_D2_0.txt'))
-    data_2_3 = np.loadtxt(join(DATA_PATH, 'camino/data_camino_D2_3.txt'))
+    data_1_7 = np.loadtxt(join(DATA_PATH, 'camino', 'data_camino_D1_7.txt'))
+    data_2_0 = np.loadtxt(join(DATA_PATH, 'camino', 'data_camino_D2_0.txt'))
+    data_2_3 = np.loadtxt(join(DATA_PATH, 'camino', 'data_camino_D2_3.txt'))
 
     fractions = np.r_[fractions_1_7, fractions_2_0, fractions_2_3]
     data = np.r_[data_1_7, data_2_0, data_2_3]
@@ -109,20 +112,20 @@ def synthetic_camino_data_dispersed():
     distributions.
     """
     data_1_7_dispersed = np.loadtxt(
-        join(DATA_PATH, 'camino/data_camino_dispersed_D1_7.txt'))
+        join(DATA_PATH, 'camino', 'data_camino_dispersed_D1_7.txt'))
     data_2_0_dispersed = np.loadtxt(
-        join(DATA_PATH, 'camino/data_camino_dispersed_D2_0.txt'))
+        join(DATA_PATH, 'camino', 'data_camino_dispersed_D2_0.txt'))
     data_2_3_dispersed = np.loadtxt(
-        join(DATA_PATH, 'camino/data_camino_dispersed_D2_3.txt'))
+        join(DATA_PATH, 'camino', 'data_camino_dispersed_D2_3.txt'))
     data = np.r_[
         data_1_7_dispersed, data_2_0_dispersed, data_2_3_dispersed]
 
     parameters_1_7_dispersed = np.loadtxt(
-        join(DATA_PATH, 'camino/parameters_camino_dispersed_D1_7.txt'))
+        join(DATA_PATH, 'camino', 'parameters_camino_dispersed_D1_7.txt'))
     parameters_2_0_dispersed = np.loadtxt(
-        join(DATA_PATH, 'camino/parameters_camino_dispersed_D2_0.txt'))
+        join(DATA_PATH, 'camino', 'parameters_camino_dispersed_D2_0.txt'))
     parameters_2_3_dispersed = np.loadtxt(
-        join(DATA_PATH, 'camino/parameters_camino_dispersed_D2_3.txt'))
+        join(DATA_PATH, 'camino', 'parameters_camino_dispersed_D2_3.txt'))
 
     fractions = np.r_[
         parameters_1_7_dispersed[:, 0],
