@@ -6,17 +6,14 @@ numba, have_numba, _ = optional_package("numba")
 
 
 def real_sym_rh_basis(sh_order, theta, phi):
-    """Samples a real symmetric rotational harmonic basis at point on the sphere
+    r"""Samples a real symmetric rotational harmonic basis at point on the sphere
 
     Samples the basis functions up to order `sh_order` at points on the sphere
     given by `theta` and `phi`. The basis functions are defined here the same
-    way as in fibernavigator [1]_ where the real harmonic $Y^m_n$ is defined to
+    way as in fibernavigator, where the real harmonic $Y^m_n$ is defined to
     be:
 
         $Y^0_n$                     if m = 0
-
-    This may take scalar or array arguments. The inputs will be broadcasted
-    against each other.
 
     Parameters
     -----------
@@ -43,7 +40,7 @@ def real_sym_rh_basis(sh_order, theta, phi):
 
 
 def sh_convolution(f_distribution_sh, kernel_rh):
-    """Spherical convolution between a fiber distribution (f) in spherical
+    r"""Spherical convolution between a fiber distribution (f) in spherical
     harmonics and a kernel in terms of rotational harmonics (oriented along the
     z-axis).
 

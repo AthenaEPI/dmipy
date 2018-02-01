@@ -59,6 +59,8 @@ def estimate_spherical_mean_shell(
         maximum spherical harmonics order. It needs to be high enough to
         describe the spherical profile of the signal attenuation. The order 6
         is sufficient to describe a stick at b-values up to 10,000 s/mm^2.
+    sh_mat : array of size (N_bvecs, N_coefficients),
+        possibly precomputed spherical harmonics transform matrix.
 
     Returns
     -------
