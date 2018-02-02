@@ -55,18 +55,18 @@ install:
 - python setup.py install --record installed_files.txt
 
 script:
-- flake8 --ignore N802,N806,E731 `find . -name \*.py | grep -v setup.py | grep -v /doc/`
+- flake8 --ignore N802,N806,E731,F401 `find . -name \*.py | grep -v setup.py | grep -v /doc/`
 - nosetests --with-coverage -v
 - travis-sphinx build -s doc
-- for a in examples/*ipynb; do 
-    echo $a;
-    jupyter nbconvert --execute $a >/dev/null;
-    if [ $? -eq 0 ]; then
-      echo "Succesful";
-    else
-      echo "Failed";
-    fi;
-  done
+  #- for a in examples/*ipynb; do 
+  #  echo $a;
+  #  jupyter nbconvert --execute $a >/dev/null;
+  #  if [ $? -eq 0 ]; then
+  #    echo "Succesful";
+  #  else
+  #    echo "Failed";
+  #  fi;
+  #done
   # - mkdir for_test
   # - cd for_test
   #- py.test --pyargs microstruktur --cov-report term-missing --cov=microstruktur
