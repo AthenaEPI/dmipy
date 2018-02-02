@@ -5,6 +5,24 @@ from dipy.utils.optpkg import optional_package
 SPHERE = get_sphere('symmetric362')
 numba, have_numba, _ = optional_package("numba")
 
+__all__ = [
+    'perpendicular_vector',
+    'rotation_matrix_around_100',
+    'rotation_matrix_100_to_theta_phi',
+    'rotation_matrix_100_to_xyz',
+    'rotation_matrix_001_to_xyz',
+    'rotation_matrix_100_to_theta_phi_psi',
+    'T1_tortuosity',
+    'parameter_equality',
+    'define_shell_indices',
+    'cart2sphere',
+    'cart2mu',
+    'R2mu_psi',
+    'sphere2cart',
+    'unitsphere2cart_1d',
+    'unitsphere2cart_Nd'
+]
+
 
 def perpendicular_vector(v):
     """Returns a perpendicular vector to vector "v".

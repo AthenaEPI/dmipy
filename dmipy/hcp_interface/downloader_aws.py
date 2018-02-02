@@ -9,6 +9,10 @@ DATA_PATH = pkg_resources.resource_filename(
     'dmipy', 'data'
 )
 
+__all__ = [
+    'HCPInterface'
+]
+
 
 class HCPInterface:
     """

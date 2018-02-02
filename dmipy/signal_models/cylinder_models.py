@@ -30,6 +30,14 @@ DIAMETER_SCALING = 1e-6
 A_SCALING = 1e-12
 
 
+__all__ = [
+    'C1Stick',
+    'C2CylinderSodermanApproximation',
+    'C3CylinderCallaghanApproximation',
+    'C4CylinderGaussianPhaseApproximation'
+]
+
+
 class C1Stick(ModelProperties):
     r""" The Stick model [1]_ - a cylinder with zero radius - typically used
     for intra-axonal diffusion.

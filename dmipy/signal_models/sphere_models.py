@@ -3,6 +3,11 @@ import numpy as np
 
 DIAMETER_SCALING = 1e-6
 
+__all__ = [
+    'S1Dot',
+    'S2SphereSodermanApproximation'
+]
+
 
 class S1Dot(ModelProperties):
     r"""

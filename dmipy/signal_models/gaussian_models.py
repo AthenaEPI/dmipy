@@ -32,6 +32,12 @@ simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(0., _angles_cart)
 DIFFUSIVITY_SCALING = 1e-9
 A_SCALING = 1e-12
 
+__all__ = [
+    'G1Ball',
+    'G2Zeppelin',
+    'G3RestrictedZeppelin'
+]
+
 
 class G1Ball(ModelProperties):
     r""" The Ball model [1]_ - an isotropic Tensor with one diffusivity.

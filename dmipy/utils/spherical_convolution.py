@@ -4,6 +4,11 @@ from dipy.reconst.shm import real_sph_harm
 from dipy.utils.optpkg import optional_package
 numba, have_numba, _ = optional_package("numba")
 
+__all__ = [
+    'real_sym_rh_basis',
+    'sh_convolution'
+]
+
 
 def real_sym_rh_basis(sh_order, theta, phi):
     r"""Samples a real symmetric rotational harmonic basis at point on the sphere

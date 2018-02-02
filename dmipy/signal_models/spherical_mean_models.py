@@ -10,6 +10,12 @@ from ..core.modeling_framework import ModelProperties
 DIFFUSIVITY_SCALING = 1e-9
 A_SCALING = 1e-12
 
+__all__ = [
+    'C1StickSphericalMean',
+    'G2ZeppelinSphericalMean',
+    'G3RestrictedZeppelinSphericalMean'
+]
+
 
 class C1StickSphericalMean(ModelProperties):
     r"""

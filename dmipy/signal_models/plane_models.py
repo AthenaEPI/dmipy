@@ -6,6 +6,11 @@ from ..core.constants import CONSTANTS
 DIAMETER_SCALING = 1e-6
 
 
+__all__ = [
+    'P3PlaneCallaghanApproximation'
+]
+
+
 class P3PlaneCallaghanApproximation(ModelProperties):
     r"""
     The Callaghan model [1]_ of diffusion between two parallel infinite plates.

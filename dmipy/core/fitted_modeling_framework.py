@@ -6,6 +6,11 @@ from ..utils.spherical_mean import (
     estimate_spherical_mean_multi_shell)
 
 
+__all__ = [
+    'FittedMultiCompartmentModel'
+]
+
+
 class FittedMultiCompartmentModel:
     """
     The FittedMultiCompartmentModel instance contains information about the

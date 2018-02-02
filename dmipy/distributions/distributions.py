@@ -45,6 +45,15 @@ inverse_sh_matrix_kernel = {
 }
 BETA_SCALING = 1e-6
 
+__all__ = [
+    'get_sh_order_from_odi',
+    'SD1Watson',
+    'SD2Bingham',
+    'DD1GammaDistribution',
+    'odi2kappa',
+    'kappa2odi'
+]
+
 
 def get_sh_order_from_odi(odi):
     "Returns minimum sh_order to estimate spherical harmonics for given odi."

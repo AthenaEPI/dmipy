@@ -2,6 +2,11 @@ import numpy as np
 from dipy.reconst.shm import real_sym_sh_mrtrix
 from . import utils
 
+__all__ = [
+    'estimate_spherical_mean_multi_shell',
+    'estimate_spherical_mean_shell'
+]
+
 
 def estimate_spherical_mean_multi_shell(E_attenuation, acquisition_scheme,
                                         sh_order=6):

@@ -4,6 +4,10 @@ from ..core.modeling_framework import ModelProperties
 from ..core.constants import CONSTANTS
 import numpy as np
 
+__all__ = [
+    'CC3CappedCylinderCallaghanApproximation',
+]
+
 
 class CC3CappedCylinderCallaghanApproximation(ModelProperties):
     r""" The Callaghan model [1]_ - a cylinder with finite radius - for

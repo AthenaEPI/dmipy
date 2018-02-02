@@ -9,8 +9,17 @@ DATA_PATH = pkg_resources.resource_filename(
     'dmipy', 'data'
 )
 
+__all__ = [
+    'wu_minn_hcp_coronal_slice',
+    'duval_cat_spinal_cord_2d',
+    'synthetic_camino_data_parallel',
+    'synthetic_camino_data_dispersed',
+    'visualize_correlation_camino_and_estimated_fractions'
+]
+
 
 def wu_minn_hcp_coronal_slice():
+    "Returns example slice of Wu-Minn HCP data subject 100307."
     data_path = join(
         DATA_PATH, 'hcp', 'hcp_example_slice', 'coronal_slice.nii.gz')
     try:
@@ -36,6 +45,7 @@ def wu_minn_hcp_coronal_slice():
 
 
 def duval_cat_spinal_cord_2d():
+    "Returns 2D multi-diffusion time AxCaliber data of cat spinal cord."
     msg = "This data was used by Duval et al. 'Validation of quantitative MRI "
     msg += "metrics using full slice histology with automatic axon "
     msg += "segmentation', ISMRM 2016. Reference at "
@@ -163,6 +173,7 @@ def synthetic_camino_data_dispersed():
 
 def visualize_correlation_camino_and_estimated_fractions(
         estim_fractions_parallel, estim_fractions_dispersed):
+    "Function that visualizes Camino estimated results versus ground truth."
 
     data_parallel = synthetic_camino_data_parallel()
     data_dispersed = synthetic_camino_data_dispersed()

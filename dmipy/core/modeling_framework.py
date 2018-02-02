@@ -31,8 +31,17 @@ SIGNAL_MODELS_PATH = pkg_resources.resource_filename(
     'dmipy', 'signal_models'
 )
 
+__all__ = [
+    'ModelProperties',
+    'MultiCompartmentModelProperties',
+    'MultiCompartmentModel',
+    'homogenize_x0_to_data',
+    'ReturnFixedValue'
+]
+
 
 class ModelProperties:
+    "Contains various properties for CompartmentModels."
     @property
     def parameter_ranges(self):
         """Returns the optimization ranges of the model parameters.
