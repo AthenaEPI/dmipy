@@ -54,17 +54,18 @@ needs_sphinx = '1.0' # numpydoc requires sphinc >= 1.0
 # ones.
 sys.path.append(os.path.abspath('sphinxext'))
 
-extensions = ['sphinx.ext.autodoc',
-              'sphinx.ext.doctest',
-              'sphinx.ext.intersphinx',
-              'sphinx.ext.todo',
-              'sphinx.ext.coverage',
-              'sphinx.ext.ifconfig',
-              'sphinx.ext.autosummary',
+extensions = [
+              'sphinx.ext.autodoc',
+              #'sphinx.ext.doctest',
+              #'sphinx.ext.intersphinx',
+              #'sphinx.ext.todo',
+              #'sphinx.ext.coverage',
+              #'sphinx.ext.ifconfig',
+              #'sphinx.ext.autosummary',
               'sphinx.ext.mathjax',
               'math_dollar',  # has to go before numpydoc
               'numpydoc',
-              'github',
+              #'github',
              # 'sphinx_gallery.gen_gallery'
               ]
 
@@ -302,3 +303,5 @@ texinfo_domain_indices = False
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'http://docs.python.org/': None}
+
+autodoc_default_flags = ['members', 'undoc-members']
