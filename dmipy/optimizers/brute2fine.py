@@ -339,14 +339,6 @@ def normalized_to_nested_fractions_array(normalized_fractions):
     return nested_fractions
 
 
-def find_minimum_argument(data_grid, signal):
-    """
-    Finds the index in the simulated data_grid that has the lowest sum-squared
-    error to the signal.
-    """
-    return np.argmin(np.sum((data_grid - signal) ** 2, axis=-1))
-
-
 if have_numba:
     @numba.njit()
     def find_minimum_argument(data_grid, signal):
@@ -355,3 +347,10 @@ if have_numba:
             diff = data_grid[i] - signal
             cost[i] = np.dot(diff, diff)
         return np.argmin(cost)
+else:
+    def find_minimum_argument(data_grid, signal):
+        """
+        Finds the index in the simulated data_grid that has the
+        lowest sum-squared error to the signal.
+        """
+        return np.argmin(np.sum((data_grid - signal) ** 2, axis=-1))
