@@ -5,7 +5,8 @@ from dmipy.utils.spherical_mean import (
     estimate_spherical_mean_shell,
     estimate_spherical_mean_multi_shell
 )
-from dmipy.signal_models import cylinder_models, spherical_mean_models, gaussian_models
+from dmipy.signal_models import (
+    cylinder_models, spherical_mean_models, gaussian_models)
 from dmipy.core.acquisition_scheme import (
     acquisition_scheme_from_bvalues)
 sphere = get_sphere().subdivide()

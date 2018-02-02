@@ -414,7 +414,7 @@ class DistributedModel:
         certain size in the distribution is sampled for a range of diameters.
         The volume fractions are also converted from nested to regular ones
         (although typically not more than 1 model is used for a Gamma
-        distribution). 
+        distribution).
 
         Then, for every model in the DistributedModel, the signal attenuations
         of the model are are recovered for the sampled diameters and multiplied
@@ -425,7 +425,7 @@ class DistributedModel:
         Parameters
         ----------
         acquisition_scheme : DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using dMipy. 
+            An acquisition scheme that has been instantiated using dMipy.
         kwargs: keyword arguments to the model parameter values,
             Is internally given as **parameter_dictionary.
         """
