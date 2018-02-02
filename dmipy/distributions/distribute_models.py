@@ -14,7 +14,7 @@ class DistributedModel:
 
     def _check_for_double_model_class_instances(self):
         "Checks if there are no models with the same class instantiation."
-        if len(self.models) != len(np.unique(self.models)):
+        if len(self.models) != len(set(self.models)):
             msg = "Each model in the multi-compartment model must be "
             msg += "instantiated separately. For example, to make a model "
             msg += "with two sticks, the models must be given as "

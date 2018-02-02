@@ -307,7 +307,7 @@ class MultiCompartmentModelProperties:
 
     def _check_for_double_model_class_instances(self):
         "Checks all models have unique class instances."
-        if len(self.models) != len(np.unique(self.models)):
+        if len(self.models) != len(set(self.models)):
             msg = "Each model in the multi-compartment model must be "
             msg += "instantiated separately. For example, to make a model "
             msg += "with two sticks, the models must be given as "
@@ -641,8 +641,8 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             if number_of_processors is None:
                 number_of_processors = cpu_count()
             pool = pp.ProcessPool(number_of_processors)
-            print ('Using parallel processing with {} workers.').format(
-                number_of_processors)
+            print ('Using parallel processing with {} workers.'.format(
+                number_of_processors))
         else:
             fitted_parameters_lin = np.empty(
                 np.r_[N_voxels, N_parameters], dtype=float)
@@ -665,12 +665,12 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
                 self, self.scheme,
                 parameter_initial_guess, Ns, N_sphere_samples)
             fit_func = Brute2FineOptimizer(self, self.scheme, Ns)
-            print ('Setup brute2fine optimizer in {} seconds').format(
-                time() - start)
+            print ('Setup brute2fine optimizer in {} seconds'.format(
+                time() - start))
         elif solver == 'mix':
             fit_func = MixOptimizer(self, self.scheme, maxiter)
-            print ('Setup MIX optimizer in {} seconds').format(
-                time() - start)
+            print ('Setup MIX optimizer in {} seconds'.format(
+                time() - start))
 
         start = time()
         for idx, pos in enumerate(zip(*mask_pos)):
@@ -690,10 +690,10 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
                 [p.get() for p in fitted_parameters_lin])
 
         fitting_time = time() - start
-        print ('Fitting of {} voxels complete in {} seconds.').format(
-            len(fitted_parameters_lin), fitting_time)
-        print ('Average of {} seconds per voxel.').format(
-            fitting_time / N_voxels)
+        print ('Fitting of {} voxels complete in {} seconds.'.format(
+            len(fitted_parameters_lin), fitting_time))
+        print ('Average of {} seconds per voxel.'.format(
+            fitting_time / N_voxels))
 
         fitted_parameters = np.zeros_like(x0_, dtype=float)
         fitted_parameters[mask_pos] = (

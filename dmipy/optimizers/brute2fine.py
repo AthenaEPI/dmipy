@@ -81,14 +81,14 @@ class GlobalBruteOptimizer:
         mu = cart2mu(sphere_vertices)
         grids_per_mu = []
         N_model_fracts = 0
-        parameter_cardinality_items = model.parameter_cardinality.items()
+        parameter_cardinality_items = list(model.parameter_cardinality.items())
         if len(model.models) > 1:
             N_model_fracts = len(model.models)
             parameter_cardinality_items = parameter_cardinality_items[
                 :-N_model_fracts
             ]
 
-        max_cardinality = np.max(model.parameter_cardinality.values())
+        max_cardinality = np.max(list(model.parameter_cardinality.values()))
         for card_counter in range(max_cardinality):
             per_parameter_vectors = []
             counter = 0
@@ -143,7 +143,7 @@ class GlobalBruteOptimizer:
                     np.r_[[fract[i] for fract in lin_nested_fractions]])
 
             counter = 0
-            for name, card in model.parameter_cardinality.items()[
+            for name, card in list(model.parameter_cardinality.items())[
                     -N_model_fracts:]:
                 param_dict[name] = lin_fractions[:, counter]
                 counter += 1

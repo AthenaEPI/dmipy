@@ -148,8 +148,8 @@ def test_shell_indices_with_vayring_diffusion_times(Nsamples=10):
     # time are correctly classified in different shells
     bvalues = np.tile(1e9, Nsamples)
     delta = 0.01
-    Delta = np.hstack([np.tile(0.01, len(bvalues) / 2),
-                       np.tile(0.03, len(bvalues) / 2)])
+    Delta = np.hstack([np.tile(0.01, len(bvalues) // 2),
+                       np.tile(0.03, len(bvalues) // 2)])
     gradient_directions = np.tile(np.r_[1., 0., 0.], (Nsamples, 1))
     scheme = acquisition_scheme_from_bvalues(
         bvalues, gradient_directions, delta, Delta)
