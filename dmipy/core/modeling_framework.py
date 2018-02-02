@@ -434,7 +434,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             del self.parameter_cardinality[parameter_name]
             del self.parameter_scales[parameter_name]
         else:
-            print ('"{}" does not exist or has already been fixed.').format(
+            print('"{}" does not exist or has already been fixed.').format(
                 parameter_name)
 
     def set_tortuous_parameter(self, lambda_perp_parameter_name,
@@ -641,7 +641,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             if number_of_processors is None:
                 number_of_processors = cpu_count()
             pool = pp.ProcessPool(number_of_processors)
-            print ('Using parallel processing with {} workers.'.format(
+            print('Using parallel processing with {} workers.'.format(
                 number_of_processors))
         else:
             fitted_parameters_lin = np.empty(
@@ -665,11 +665,11 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
                 self, self.scheme,
                 parameter_initial_guess, Ns, N_sphere_samples)
             fit_func = Brute2FineOptimizer(self, self.scheme, Ns)
-            print ('Setup brute2fine optimizer in {} seconds'.format(
+            print('Setup brute2fine optimizer in {} seconds'.format(
                 time() - start))
         elif solver == 'mix':
             fit_func = MixOptimizer(self, self.scheme, maxiter)
-            print ('Setup MIX optimizer in {} seconds'.format(
+            print('Setup MIX optimizer in {} seconds'.format(
                 time() - start))
 
         start = time()
@@ -690,9 +690,9 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
                 [p.get() for p in fitted_parameters_lin])
 
         fitting_time = time() - start
-        print ('Fitting of {} voxels complete in {} seconds.'.format(
+        print('Fitting of {} voxels complete in {} seconds.'.format(
             len(fitted_parameters_lin), fitting_time))
-        print ('Average of {} seconds per voxel.'.format(
+        print('Average of {} seconds per voxel.'.format(
             fitting_time / N_voxels))
 
         fitted_parameters = np.zeros_like(x0_, dtype=float)

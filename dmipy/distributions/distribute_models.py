@@ -209,7 +209,7 @@ class DistributedModel:
             del self.parameter_ranges[parameter_name]
             del self.parameter_scales[parameter_name]
         else:
-            print ('{} does not exist or has already been fixed.').format(
+            print('{} does not exist or has already been fixed.').format(
                 parameter_name)
 
     def set_tortuous_parameter(self, lambda_perp,

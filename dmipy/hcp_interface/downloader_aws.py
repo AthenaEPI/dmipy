@@ -71,7 +71,7 @@ class HCPInterface:
         if not os.path.exists(hcp_data_path):
             os.makedirs(hcp_data_path)
 
-        print ('Downloading data to {}'.format(hcp_data_path))
+        print('Downloading data to {}'.format(hcp_data_path))
 
         counter = 0
         for key in self.s3_bucket.list("HCP_1200"):
@@ -87,7 +87,7 @@ class HCPInterface:
                     'data' in path.parts[-1] or
                     'nodif' in path.parts[-1]
                 ):
-                    print ('Downloading {}'.format(path.parts[-1]))
+                    print('Downloading {}'.format(path.parts[-1]))
                     filepath = os.path.join(hcp_data_path, path.parts[-1])
                     with open(filepath, 'wb') as f:
                         key.get_contents_to_file(f)
@@ -98,7 +98,7 @@ class HCPInterface:
     def prepare_example_slice(self, subject_ID):
         "Prepares a coronal slice for the dmipy example notebooks."
         msg = "Preparing coronal slice for dmipy examples"
-        print (msg)
+        print(msg)
 
         folder_name = "hcp_example_slice"
         example_directory = os.path.join(self.hcp_directory, folder_name)
@@ -122,4 +122,4 @@ class HCPInterface:
 
         nib.save(nib.Nifti1Image(data_slice, affine), os.path.join(
             example_directory, 'coronal_slice.nii.gz'))
-        print ('Done')
+        print('Done')

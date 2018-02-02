@@ -30,7 +30,7 @@ def wu_minn_hcp_coronal_slice():
     msg += "NIH Institutes and Centers that support the NIH Blueprint for "
     msg += "Neuroscience Research; and by the McDonnell Center for Systems "
     msg += "Neuroscience at Washington University."
-    print (msg)
+    print(msg)
 
     return scheme, data
 
@@ -41,7 +41,7 @@ def duval_cat_spinal_cord_2d():
     msg += "segmentation', ISMRM 2016. Reference at "
     msg += "Cohen-Adad et al. White Matter Microscopy Database."
     msg += " http://doi.org/10.17605/OSF.IO/YP4QG"
-    print (msg)
+    print(msg)
 
     data_folder = DATA_PATH + "tanguy_cat_spinal_cord/"
 
