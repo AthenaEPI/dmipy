@@ -10,6 +10,21 @@ from warnings import warn
 
 sh_order = 14
 
+__all__ = [
+    "get_sh_order_from_bval",
+    "DmipyAcquisitionScheme",
+    "SimpleAcquisitionSchemeRH",
+    "acquisition_scheme_from_bvalues",
+    "acquisition_scheme_from_qvalues",
+    "acquisition_scheme_from_gradient_strengths",
+    "acquisition_scheme_from_schemefile",
+    "unify_length_reference_delta_Delta",
+    "calculate_shell_bvalues_and_indices",
+    "check_acquisition_scheme",
+    "gtab_dipy2mipy",
+    "gtab_mipy2dipy"
+]
+
 
 def get_sh_order_from_bval(bval):
     "Estimates minimum sh_order to represent data of given b-value."
