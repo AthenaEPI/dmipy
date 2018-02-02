@@ -177,8 +177,8 @@ class DmipyAcquisitionScheme:
 
     def to_schemefile(self, filename):
         """
-        Exports acquisition scheme information in schemefile format, which can be
-        used by the Camino Monte-Carlo simulator.
+        Exports acquisition scheme information in schemefile format, which can
+        be used by the Camino Monte-Carlo simulator.
 
         Parameters
         ----------
