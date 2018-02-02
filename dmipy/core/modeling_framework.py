@@ -201,7 +201,7 @@ class MultiCompartmentModelProperties:
             print("All model parameters set.")
         else:
             for parameter, card in parameter_cardinality.items():
-                set_parameters[parameter] = np.tile(None, card)
+                set_parameters[parameter] = np.tile(np.nan, card)
         return self.parameters_to_parameter_vector(**set_parameters)
 
     def _prepare_parameters(self):
@@ -633,13 +633,13 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
 
         # make starting parameters and data the same size
         if parameter_initial_guess is None:
-            x0_ = np.tile(None,
+            x0_ = np.tile(np.nan,
                           np.r_[data_.shape[:-1], N_parameters])
         else:
             x0_ = homogenize_x0_to_data(
                 data_, parameter_initial_guess)
             x0_bool = np.all(
-                x0_ == None, axis=tuple(np.arange(x0_.ndim - 1)))
+                np.isnan(x0_), axis=tuple(np.arange(x0_.ndim - 1)))
             x0_[..., ~x0_bool] /= self.scales_for_optimization[~x0_bool]
 
         if use_parallel_processing and not have_pathos:

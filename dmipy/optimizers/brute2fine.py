@@ -63,7 +63,7 @@ class GlobalBruteOptimizer:
 
         if x0_vector is None:
             self.global_optimization_grid = True
-            x0_vector = np.tile(None, len(model.bounds_for_optimization))
+            x0_vector = np.tile(np.nan, len(model.bounds_for_optimization))
             self.precompute_signal_grid(model, x0_vector, Ns, N_sphere_samples)
         elif x0_vector.squeeze().ndim == 1:
             self.global_optimization_grid = True
@@ -103,7 +103,7 @@ class GlobalBruteOptimizer:
             for name, card in parameter_cardinality_items:
                 par_range = model.parameter_ranges[name]
                 if card == 1:
-                    if x0_vector[counter] is None:
+                    if np.isnan(x0_vector[counter]):
                         per_parameter_vectors.append(np.linspace(
                             par_range[0], par_range[1], Ns) *
                             model.parameter_scales[name])
@@ -111,14 +111,14 @@ class GlobalBruteOptimizer:
                         per_parameter_vectors.append([x0_vector[counter]])
                     counter += 1
                 if card == 2:
-                    if x0_vector[counter] is None:
+                    if np.isnan(x0_vector[counter]):
                         per_parameter_vectors.append(
                             mu[:, card_counter] *
                             model.parameter_scales[name][0])
                     else:
                         per_parameter_vectors.append(
                             [x0_vector[counter + card_counter]])
-                    per_parameter_vectors.append([None])
+                    per_parameter_vectors.append(np.nan)
                     counter += 2
             # append nested volume fractions now.
             if N_model_fracts > 0:
@@ -278,13 +278,13 @@ class Brute2FineOptimizer:
         bounds_brute = []
         bounds_fine = list(bounds)
         for i, x0_ in enumerate(x0_vector):
-            if x0_ is None:
+            if np.isnan(x0_):
                 bounds_brute.append(
                     slice(bounds[i][0], bounds[i][1],
                           (bounds[i][1] - bounds[i][0]) / float(self.Ns)))
-            if x0_ is not None:
+            if not np.isnan(x0_):
                 bounds_brute.append(slice(x0_, x0_ + 1e-2, None))
-            if (x0_ is not None and
+            if (not np.isnan(x0_) and
                     self.model.opt_params_for_optimization[i] is False):
                 bounds_fine[i] = np.r_[x0_, x0_]
 
@@ -293,7 +293,7 @@ class Brute2FineOptimizer:
             bounds_fine = bounds_fine[:-1]
             x0_vector = x0_vector[:-1]
 
-        if np.any(x0_vector == None):
+        if np.any(np.isnan(x0_vector)):
             x0_brute = brute(
                 self.objective_function, ranges=bounds_brute, args=fit_args,
                 finish=None)
