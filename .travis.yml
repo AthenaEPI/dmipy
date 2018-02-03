@@ -9,7 +9,7 @@
 
 env:
   global:
-    - CONDA_DEPS="pip flake8 nose coverage pytest numpy scipy matplotlib seaborn pandas h5py" PIP_DEPS="coveralls pytest-cov codecov pathlib travis-sphinx"
+    - CONDA_DEPS="pip flake8 nose coverage pytest numpy scipy matplotlib seaborn pandas h5py" PIP_DEPS="coveralls pytest-cov codecov pathlib travis-sphinx boto"
 
 matrix:
   include:
