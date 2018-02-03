@@ -57,7 +57,7 @@ install:
 script:
 - flake8 --ignore N802,N806,E731,F401 `find . -name \*.py | grep -v setup.py | grep -v /doc/`
 - nosetests --with-coverage -v
-- travis-sphinx build -s doc
+  #- travis-sphinx build -s doc
   #- for a in examples/*ipynb; do 
   #  echo $a;
   #  jupyter nbconvert --execute $a >/dev/null;
@@ -74,4 +74,6 @@ script:
 after_success:
 - coveralls
 - codecov -t a66df7b8-efce-412e-9ea8-2598b09b186e
-- travis-sphinx deploy
+
+deploy:
+- cd doc; make html && ./push.sh
