@@ -46,7 +46,7 @@ To get a feeling for how to use dmipy, we provide a few tutorial notebooks:
 - [Spherical Mean Models](https://github.com/AthenaEPI/mipy/blob/master/examples/example_spherical_mean_models.ipynb)
 ### Global Optimizers
 - [Brute Force (Brute2Fine)](https://github.com/AthenaEPI/dmipy/blob/master/examples/example_brute_force_optimization.ipynb)
-- Stochastic (MIX) [Farooq et al. 2016]
+- [Stochastic (MIX) [Farooq et al. 2016]](https://github.com/AthenaEPI/dmipy/blob/master/examples/example_stochastic_mix_optimization.ipynb)
 ## dmipy implementations of Microstructure Models in Literature
 dmipy uses HCP data to illustrate microstructure model examples. To reproduce these examples, dmipy provides a direct way to download HCP data (using your own AWS credentials) in the [HCP tutorial](https://github.com/AthenaEPI/mipy/blob/master/examples/tutorial_human_connectome_project_aws.ipynb).
 ### Single Bundle Microstructure Models
@@ -63,7 +63,7 @@ dmipy uses HCP data to illustrate microstructure model examples. To reproduce th
 - [Multi-Compartment Microscopic Diffusion Imaging [Kaden et al. 2016]](https://github.com/AthenaEPI/mipy/blob/master/examples/example_multi_compartment_spherical_mean_technique.ipynb)
 
 ## How to contribute to dmipy
-dmipy's design is completely modular and can easily be extended with new models, distributions or optimizers. To contribute, view our [contribution guidelines](https://github.com/AthenaEPI/dmipy/blob/master/contribution_guidelines.ipynb).
+dmipy's design is completely modular and can easily be extended with new models, distributions or optimizers. To contribute, view our [contribution guidelines](https://github.com/AthenaEPI/dmipy/blob/master/contribution_guidelines.rst).
 ## How to cite dmipy
 Fick, Rutger. *Advanced dMRI signal modeling for tissue microstructure characterization*. Diss. Université Côte d'Azur; Inria Sophia Antipolis, 2017.
 

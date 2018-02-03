@@ -56,7 +56,7 @@ class MixOptimizer:
         self.maxiter = maxiter
         self.Nmodels = len(self.model.models)
 
-    def __call__(self, data, x0_vector):
+    def __call__(self, data, x0_vector=None):
         """ The fitting function of the MIX algorithm. Fits the data in three
         distinct steps, first fitting non-linear parameters using
         differential_evolution, then linear parameters using COBYLA, and
@@ -75,11 +75,14 @@ class MixOptimizer:
             The fitted MC model parameters using MIX.
 
         """
-        bounds = list(self.model.bounds_for_optimization)
-        for i, x0_ in enumerate(x0_vector):
-            if (x0_ is not None and
-                    self.model.opt_params_for_optimization[i] is False):
-                bounds[i] = np.r_[x0_, x0_ + 1e-6]
+        if x0_vector is not None:
+            bounds = list(self.model.bounds_for_optimization)
+            for i, x0_ in enumerate(x0_vector):
+                if (not np.isnan(x0_) and
+                        self.model.opt_params_for_optimization[i] is False):
+                    bounds[i] = np.r_[x0_, x0_ + 1e-6]
+        else:
+            bounds = list(self.model.bounds_for_optimization)
 
         # step 1: Variable separation using differential evolution algorithm
         bounds_de = list(bounds)
