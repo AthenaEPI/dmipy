@@ -1,5 +1,6 @@
-numpy>=1.13
+numpy(>=1.13)
 scipy
 dipy
 matplotlib
+boto
 seaborn

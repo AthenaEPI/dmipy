@@ -7,6 +7,9 @@ ver_file = os.path.join('dmipy', 'version.py')
 with open(ver_file) as f:
     exec(f.read())
 
+with open ('requirements.txt', "r") as f:
+    requirements=f.read().splitlines()[::-1]
+
 opts = dict(name=NAME,
             maintainer=MAINTAINER,
             maintainer_email=MAINTAINER_EMAIL,
@@ -22,8 +25,8 @@ opts = dict(name=NAME,
             version=VERSION,
             packages=PACKAGES,
             package_data=PACKAGE_DATA,
-            install_requires=REQUIRES,
-            requires=REQUIRES)
+            install_requires=requirements,
+            requires=requirements)
 
 
 if __name__ == '__main__':
