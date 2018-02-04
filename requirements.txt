@@ -4,3 +4,4 @@ dipy
 matplotlib
 boto
 seaborn
+pathlib
