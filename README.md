@@ -1,11 +1,10 @@
 # dmipy: Diffusion Microstructure Imaging in Python
-NOTE: PACKAGE NOT FUNCTIONAL YET
 
 The dmipy software package facilitates state-of-the-art diffusion MRI Microstructure Imaging using a "Building Block" philosophy. In this philosophy, any combination of biophysical models, typically representing intra- and/or extra-axonal tissue compartments, can be easy combined into a multi-compartment Microstructure Model in just a few lines of code. The created model can be used to both simulate and fit data for any PGSE-based dMRI acquisition, including single shell, multi-shell and qtau-dMRI acquisition schemes.
 
 Model fitting algorithms are also implemented modularly. Currently, any created model can be fitted using either gradient-descent based fitting, or more recent Microstructure Imaging of Crossings (MIX) fitting.
 
-Mipy stands apart from other packages is the complete freedom the user has to design and use a microstructure model. dmipy allows the user to do Microstructure Imaging research at the highest level, while the package automatically takes care of all the coding architecture that is needed to fit a designed model to a data set.
+Mipy stands apart from other packages is the complete freedom the user has to design and use a microstructure model. dmipy allows the user to do Microstructure Imaging research at the highest level, while the package automatically takes care of all the coding architecture that is needed to fit a designed model to a data set. The dmipy documentation can be found at http://dmipy.readthedocs.io/.
 
 *For Dipy users*: dmipy is completely compatible, complementary and similar in usage to Dipy!
 - Dipy gradient tables can be directly used when setting up dmipy models.
@@ -66,5 +65,3 @@ dmipy uses HCP data to illustrate microstructure model examples. To reproduce th
 dmipy's design is completely modular and can easily be extended with new models, distributions or optimizers. To contribute, view our [contribution guidelines](https://github.com/AthenaEPI/dmipy/blob/master/contribution_guidelines.rst).
 ## How to cite dmipy
 Fick, Rutger. *Advanced dMRI signal modeling for tissue microstructure characterization*. Diss. Université Côte d'Azur; Inria Sophia Antipolis, 2017.
-
-NOTE: PACKAGE NOT FUNCTIONAL YET
