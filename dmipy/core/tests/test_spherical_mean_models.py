@@ -27,7 +27,9 @@ def test_model_spherical_mean():
         for param, card in model.parameter_cardinality.items():
             params[param] = (np.random.rand(card) *
                              model.parameter_scales[param])
-        print model.spherical_mean(scheme, **params)
+        assert_equal(isinstance(
+            model.spherical_mean(scheme, **params), np.ndarray),
+            True)
 
 
 def test_MultiCompartmentSphericalMeanModel():
