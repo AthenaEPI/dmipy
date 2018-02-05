@@ -227,7 +227,7 @@ class G3RestrictedZeppelin(ModelProperties):
     _parameter_scales = {
         'mu': np.r_[1., 1.],
         'lambda_par': DIFFUSIVITY_SCALING,
-        'lambda_perp': DIFFUSIVITY_SCALING,
+        'lambda_inf': DIFFUSIVITY_SCALING,
         'A': A_SCALING
     }
     _spherical_mean = False
@@ -286,7 +286,7 @@ class G3RestrictedZeppelin(ModelProperties):
         return E_zeppelin
 
     def rotational_harmonics_representation(
-            self, bvalue, delta=None, Delta=None, rh_order=14, **kwargs):
+            self, bvalue, delta, Delta, rh_order=14, **kwargs):
         r""" The model in rotational harmonics, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernel for spherical
         convolution.
@@ -296,9 +296,9 @@ class G3RestrictedZeppelin(ModelProperties):
         bval : float,
             b-value in s/m^2.
         delta: float,
-            delta parameter in seconds.
+            pulse length in seconds.
         Delta: float,
-            Delta parameter in seconds.
+            pulse separation in seconds.
         sh_order : int,
             maximum spherical harmonics order to be used in the approximation.
 

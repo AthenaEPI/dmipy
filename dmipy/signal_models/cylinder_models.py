@@ -394,17 +394,17 @@ class C3CylinderCallaghanApproximation(ModelProperties):
         return E_parallel * E_perpendicular
 
     def rotational_harmonics_representation(
-            self, bvalue, delta=None, Delta=None, rh_order=14, **kwargs):
+            self, bvalue, qvalue, Delta, rh_order=14, **kwargs):
         r""" The rotational harmonics of the model, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernel for spherical
         convolution.
 
         Parameters
         ----------
-        bval : float,
+        bvalue : float,
             b-value in s/m^2.
-        delta: float,
-            delta parameter in seconds.
+        qvalue : float,
+            diffusion sensitization in 1/m.
         Delta: float,
             Delta parameter in seconds.
         sh_order : int,
@@ -418,7 +418,7 @@ class C3CylinderCallaghanApproximation(ModelProperties):
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         simple_acq_scheme_rh.bvalues.fill(bvalue)
-        simple_acq_scheme_rh.delta.fill(delta)
+        simple_acq_scheme_rh.qvalues.fill(qvalue)
         simple_acq_scheme_rh.Delta.fill(Delta)
         E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.],
                            diameter=diameter, lambda_par=lambda_par)
