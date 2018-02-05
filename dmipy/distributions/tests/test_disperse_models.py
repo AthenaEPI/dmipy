@@ -56,6 +56,5 @@ def test_all_models_distributable():
             for param, card in dist_mod.parameter_cardinality.items():
                 params[param] = np.random.rand(
                     card) * dist_mod.parameter_scales[param]
-            print dist_mod(scheme, **params)
             assert_equal(isinstance(
                 dist_mod(scheme, **params), np.ndarray), True)
