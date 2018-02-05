@@ -407,7 +407,7 @@ class DistributedModel:
                     qvalue=acquisition_scheme.shell_qvalues[shell_index],
                     gradient_strength=(
                         acquisition_scheme.shell_gradient_strengths[
-                        shell_index]),
+                            shell_index]),
                     delta=acquisition_scheme.shell_delta[shell_index],
                     Delta=acquisition_scheme.shell_Delta[shell_index],
                     rh_order=acquisition_scheme.shell_sh_orders[shell_index],
