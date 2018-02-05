@@ -47,6 +47,24 @@ class S1Dot(ModelProperties):
         E_dot = np.ones(acquisition_scheme.number_of_measurements)
         return E_dot
 
+    def spherical_mean(self, acquisition_scheme, **kwargs):
+        """
+        Estimates spherical mean for every shell in acquisition scheme.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+
+        Returns
+        -------
+        E_mean : float,
+            spherical mean of the model for every acquisition shell.
+        """
+        return self(acquisition_scheme.spherical_mean_scheme, **kwargs)
+
 
 class S2SphereSodermanApproximation(ModelProperties):
     r"""
@@ -114,3 +132,21 @@ class S2SphereSodermanApproximation(ModelProperties):
         E_sphere[q_nonzero] = self.sphere_attenuation(
             q[q_nonzero], diameter)
         return E_sphere
+
+    def spherical_mean(self, acquisition_scheme, **kwargs):
+        """
+        Estimates spherical mean for every shell in acquisition scheme.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+
+        Returns
+        -------
+        E_mean : float,
+            spherical mean of the model for every acquisition shell.
+        """
+        return self(acquisition_scheme.spherical_mean_scheme, **kwargs)

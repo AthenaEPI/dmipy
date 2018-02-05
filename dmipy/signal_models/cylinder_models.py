@@ -3,6 +3,7 @@ from __future__ import division
 import numpy as np
 from scipy import special
 from ..utils.spherical_convolution import real_sym_rh_basis
+from scipy.special import erf
 
 from ..utils import utils
 from ..core.constants import CONSTANTS
@@ -123,6 +124,36 @@ class C1Stick(ModelProperties):
                            mu=[0., 0.], lambda_par=lambda_par)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
+
+    def spherical_mean(self, acquisition_scheme, **kwargs):
+        """
+        Estimates spherical mean for every shell in acquisition scheme for
+        Stick model.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+
+        Returns
+        -------
+        E_mean : array of size (Nshells)
+            spherical mean of the Stick model for every acquisition shell.
+        """
+        bvals = acquisition_scheme.shell_bvalues
+        bvals_ = bvals[~acquisition_scheme.shell_b0_mask]
+
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+
+        E_mean = np.ones_like(bvals)
+        bval_indices_above0 = bvals > 0
+        bvals_ = bvals[bval_indices_above0]
+        E_mean_ = ((np.sqrt(np.pi) * erf(np.sqrt(bvals_ * lambda_par))) /
+                   (2 * np.sqrt(bvals_ * lambda_par)))
+        E_mean[~acquisition_scheme.shell_b0_mask] = E_mean_
+        return E_mean
 
 
 class C2CylinderSodermanApproximation(ModelProperties):
@@ -252,6 +283,32 @@ class C2CylinderSodermanApproximation(ModelProperties):
                            diameter=diameter, lambda_par=lambda_par)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
+
+    def spherical_mean(self, acquisition_scheme, **kwargs):
+        """
+        Estimates spherical mean for every shell in acquisition scheme.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+
+        Returns
+        -------
+        E_mean : float,
+            spherical mean of the model for every acquisition shell.
+        """
+        E_mean = np.ones_like(acquisition_scheme.shell_bvalues)
+        for shell_index in acquisition_scheme.unique_dwi_indices:
+            rh = self.rotational_harmonics_representation(
+                bvalue=acquisition_scheme.shell_bvalues[shell_index],
+                qvalue=acquisition_scheme.shell_qvalues[shell_index],
+                rh_order=acquisition_scheme.shell_sh_orders[shell_index],
+                **kwargs)
+            E_mean[shell_index] = rh[0] / (2 * np.sqrt(np.pi))
+        return E_mean
 
 
 class C3CylinderCallaghanApproximation(ModelProperties):
@@ -425,6 +482,33 @@ class C3CylinderCallaghanApproximation(ModelProperties):
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
 
+    def spherical_mean(self, acquisition_scheme, **kwargs):
+        """
+        Estimates spherical mean for every shell in acquisition scheme.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+
+        Returns
+        -------
+        E_mean : float,
+            spherical mean of the model for every acquisition shell.
+        """
+        E_mean = np.ones_like(acquisition_scheme.shell_bvalues)
+        for shell_index in acquisition_scheme.unique_dwi_indices:
+            rh = self.rotational_harmonics_representation(
+                bvalue=acquisition_scheme.shell_bvalues[shell_index],
+                qvalue=acquisition_scheme.shell_qvalues[shell_index],
+                Delta=acquisition_scheme.shell_Delta[shell_index],
+                rh_order=acquisition_scheme.shell_sh_orders[shell_index],
+                **kwargs)
+            E_mean[shell_index] = rh[0] / (2 * np.sqrt(np.pi))
+        return E_mean
+
 
 class C4CylinderGaussianPhaseApproximation(ModelProperties):
     r""" The Gaussian phase model [1]_ - a cylinder with finite radius -
@@ -570,6 +654,36 @@ class C4CylinderGaussianPhaseApproximation(ModelProperties):
                            diameter=diameter, lambda_par=lambda_par)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
+
+    def spherical_mean(self, acquisition_scheme, **kwargs):
+        """
+        Estimates spherical mean for every shell in acquisition scheme.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+
+        Returns
+        -------
+        E_mean : float,
+            spherical mean of the model for every acquisition shell.
+        """
+        E_mean = np.ones_like(acquisition_scheme.shell_bvalues)
+        for shell_index in acquisition_scheme.unique_dwi_indices:
+            rh = self.rotational_harmonics_representation(
+                bvalue=acquisition_scheme.shell_bvalues[shell_index],
+                gradient_strength=(
+                    acquisition_scheme.shell_gradient_strengths[
+                        shell_index]),
+                delta=acquisition_scheme.shell_delta[shell_index],
+                Delta=acquisition_scheme.shell_Delta[shell_index],
+                rh_order=acquisition_scheme.shell_sh_orders[shell_index],
+                **kwargs)
+            E_mean[shell_index] = rh[0] / (2 * np.sqrt(np.pi))
+        return E_mean
 
 
 def _attenuation_parallel_stick(bvals, lambda_par, n, mu):

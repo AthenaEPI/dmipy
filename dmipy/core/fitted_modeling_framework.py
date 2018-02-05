@@ -221,3 +221,110 @@ class FittedMultiCompartmentModel:
         mse = np.mean((data_ - y_hat) ** 2, axis=-1)
         mse[~self.mask] = 0
         return mse
+
+
+class FittedMultiCompartmentSphericalMeanModel:
+    """
+    The FittedMultiCompartmentModel instance contains information about the
+    original MultiCompartmentModel, the estimated S0 values, the fitting mask
+    and the fitted model parameters.
+
+    Parameters
+    ----------
+    model : MultiCompartmentModel instance,
+        A dmipy MultiCompartmentModel.
+    S0 : array of size (Ndata,) or (N_data, N_DWIs),
+        Array containing the estimated S0 values of the data. If data is 4D,
+        then S0 is 3D if there is only one TE, and the same 4D size of the data
+        if there are multiple TEs.
+    mask : array of size (N_data,),
+        boolean mask of voxels that were fitted.
+    fitted_parameters_vector : array of size (N_data, Nparameters),
+        fitted model parameters array.
+    """
+
+    def __init__(self, model, S0, mask, fitted_parameters_vector):
+        self.model = model
+        self.S0 = S0
+        self.mask = mask
+        self.fitted_parameters_vector = fitted_parameters_vector
+
+    @property
+    def fitted_parameters(self):
+        "Returns the fitted parameters as a dictionary."
+        return self.model.parameter_vector_to_parameters(
+            self.fitted_parameters_vector)
+
+    def predict(self, acquisition_scheme=None, S0=None, mask=None):
+        """
+        simulates the dMRI signal of the fitted MultiCompartmentModel for the
+        estimated model parameters. If no acquisition_scheme is given, then
+        the same acquisition_scheme that was used for the fitting is used. If
+        no S0 is given then it is assumed to be the estimated one. If no mask
+        is given then all voxels are assumed to have been fitted.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        S0 : None or float,
+            Signal intensity without diffusion sensitization. If None, uses
+            estimated SO from fitting process. If float, uses that value.
+        mask : (N-1)-dimensional integer/boolean array of size (N_x, N_y, ...),
+            mask of voxels to simulate data at.
+
+        Returns
+        -------
+        predicted_signal : array of size (Ndata, N_DWIS),
+            predicted DWIs for the given model parameters and acquisition
+            scheme.
+        """
+        if acquisition_scheme is None:
+            acquisition_scheme = self.model.scheme
+        dataset_shape = self.fitted_parameters_vector.shape[:-1]
+        if S0 is None:
+            S0 = self.S0
+        elif isinstance(S0, float):
+            S0 = np.ones(dataset_shape) * S0
+        if mask is None:
+            mask = self.mask
+
+        N_samples = len(acquisition_scheme.shell_bvalues)
+
+        predicted_signal = np.zeros(np.r_[dataset_shape, N_samples])
+        mask_pos = np.where(mask)
+        for pos in zip(*mask_pos):
+            parameters = self.model.parameter_vector_to_parameters(
+                self.fitted_parameters_vector[pos])
+            predicted_signal[pos] = self.model(
+                acquisition_scheme, **parameters) * S0[pos]
+        return predicted_signal
+
+    def R2_coefficient_of_determination(self, data):
+        "Calculates the R-squared of the model fit."
+        Nshells = len(self.model.scheme.shell_bvalues)
+        data_ = np.zeros(np.r_[data.shape[:-1], Nshells])
+        for pos in zip(*np.where(self.mask)):
+            data_[pos] = estimate_spherical_mean_multi_shell(
+                data[pos] / self.S0[pos], self.model.scheme)
+
+        y_hat = self.predict(S0=1.)
+        y_bar = np.mean(data_, axis=-1)
+        SStot = np.sum((data_ - y_bar[..., None]) ** 2, axis=-1)
+        SSres = np.sum((data_ - y_hat) ** 2, axis=-1)
+        R2 = 1 - SSres / SStot
+        R2[~self.mask] = 0
+        return R2
+
+    def mean_squared_error(self, data):
+        "Calculates the mean squared error of the model fit."
+        Nshells = len(self.model.scheme.shell_bvalues)
+        data_ = np.zeros(np.r_[data.shape[:-1], Nshells])
+        for pos in zip(*np.where(self.mask)):
+            data_[pos] = estimate_spherical_mean_multi_shell(
+                data[pos] / self.S0[pos], self.model.scheme)
+
+        y_hat = self.predict(S0=1.)
+        mse = np.mean((data_ - y_hat) ** 2, axis=-1)
+        mse[~self.mask] = 0
+        return mse

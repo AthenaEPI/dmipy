@@ -144,6 +144,13 @@ class DmipyAcquisitionScheme:
             msg += "acquisition design."
             warn(msg)
 
+        self.spherical_mean_scheme = SphericalMeanAcquisitionScheme(
+            self.shell_bvalues,
+            self.shell_qvalues,
+            self.shell_gradient_strengths,
+            self.shell_Delta,
+            self.shell_delta)
+
     @property
     def print_acquisition_info(self):
         """
@@ -296,6 +303,19 @@ class SimpleAcquisitionSchemeRH:
         self.b0_mask = np.tile(False, self.number_of_measurements)
         self.shell_delta = np.zeros(1)
         self.shell_Delta = np.zeros(1)
+
+
+class SphericalMeanAcquisitionScheme:
+    "Acquisition scheme for isotropic spherical mean models."
+
+    def __init__(self, bvalues, qvalues,
+                 gradient_strengths, Deltas, deltas):
+        self.bvalues = bvalues
+        self.qvalues = qvalues
+        self.gradient_strengths = gradient_strengths
+        self.Delta = Deltas
+        self.delta = deltas
+        self.number_of_measurements = len(bvalues)
 
 
 def acquisition_scheme_from_bvalues(

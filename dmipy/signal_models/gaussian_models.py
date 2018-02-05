@@ -5,6 +5,7 @@ Document Module
 from __future__ import division
 
 import numpy as np
+from scipy.special import erf
 
 from ..utils import utils
 from ..core.acquisition_scheme import SimpleAcquisitionSchemeRH
@@ -87,6 +88,24 @@ class G1Ball(ModelProperties):
         lambda_iso = kwargs.get('lambda_iso', self.lambda_iso)
         E_ball = np.exp(-bvals * lambda_iso)
         return E_ball
+
+    def spherical_mean(self, acquisition_scheme, **kwargs):
+        """
+        Estimates spherical mean for every shell in acquisition scheme
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+
+        Returns
+        -------
+        E_mean : float,
+            spherical mean of the model for every acquisition shell.
+        """
+        return self(acquisition_scheme.spherical_mean_scheme, **kwargs)
 
 
 class G2Zeppelin(ModelProperties):
@@ -186,6 +205,44 @@ class G2Zeppelin(ModelProperties):
                            lambda_par=lambda_par, lambda_perp=lambda_perp)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
+
+    def spherical_mean(self, acquisition_scheme, **kwargs):
+        """
+        Estimates spherical mean for every shell in acquisition scheme for
+        Zeppelin model.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+
+        Returns
+        -------
+        E_mean : float,
+            spherical mean of the Zeppelin model for every acquisition shell.
+        """
+        bvals = acquisition_scheme.shell_bvalues[
+            ~acquisition_scheme.shell_b0_mask]
+
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
+
+        E_mean = np.ones_like(acquisition_scheme.shell_bvalues)
+        if lambda_par > lambda_perp:  # use [kaden et al. 2016]
+            exp_bl = np.exp(-bvals * lambda_perp)
+            sqrt_bl = np.sqrt(bvals * (lambda_par - lambda_perp))
+            E_mean_ = exp_bl * np.sqrt(np.pi) * erf(sqrt_bl) / (2 * sqrt_bl)
+            E_mean[~acquisition_scheme.shell_b0_mask] = E_mean_
+        else:  # estimate spherical mean using rotational harmonics
+            for shell_index in acquisition_scheme.unique_dwi_indices:
+                rh = self.rotational_harmonics_representation(
+                    bvalue=acquisition_scheme.shell_bvalues[shell_index],
+                    rh_order=acquisition_scheme.shell_sh_orders[shell_index],
+                    **kwargs)
+                E_mean[shell_index] = rh[0] / (2 * np.sqrt(np.pi))
+        return E_mean
 
 
 class G3RestrictedZeppelin(ModelProperties):
@@ -318,6 +375,55 @@ class G3RestrictedZeppelin(ModelProperties):
                            lambda_par=lambda_par, lambda_inf=lambda_inf, A=A)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
+
+    def spherical_mean(self, acquisition_scheme, **kwargs):
+        """
+        Estimates spherical mean for every shell in acquisition scheme for
+        Restricted Zeppelin model.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+
+        Returns
+        -------
+        E_mean : float,
+            spherical mean of the Restricted Zeppelin model for every
+            acquisition shell.
+        """
+        bvals = acquisition_scheme.shell_bvalues[
+            ~acquisition_scheme.shell_b0_mask]
+        delta = acquisition_scheme.shell_delta[
+            ~acquisition_scheme.shell_b0_mask]
+        Delta = acquisition_scheme.shell_Delta[
+            ~acquisition_scheme.shell_b0_mask]
+        lambda_par = kwargs.get('lambda_par', self.lambda_par)
+        lambda_inf = kwargs.get('lambda_inf', self.lambda_inf)
+        A = kwargs.get('A', self.A)
+        E_mean = np.ones_like(acquisition_scheme.shell_bvalues)
+
+        restricted_term = (
+            A * (np.log(Delta / delta) + 3 / 2.) / (Delta - delta / 3.)
+        )
+        lambda_perp = lambda_inf + restricted_term
+        if lambda_par > lambda_perp.max():  # use modified [kaden et al. 2016]
+            exp_bl = np.exp(-bvals * lambda_perp)
+            sqrt_bl = np.sqrt(bvals * (lambda_par - lambda_perp))
+            E_mean[~acquisition_scheme.shell_b0_mask] = (
+                exp_bl * np.sqrt(np.pi) * erf(sqrt_bl) / (2 * sqrt_bl))
+        else:  # estimate spherical mean using rotational harmonics
+            for shell_index in acquisition_scheme.unique_dwi_indices:
+                rh = self.rotational_harmonics_representation(
+                    bvalue=acquisition_scheme.shell_bvalues[shell_index],
+                    delta=acquisition_scheme.shell_delta[shell_index],
+                    Delta=acquisition_scheme.shell_Delta[shell_index],
+                    rh_order=acquisition_scheme.shell_sh_orders[shell_index],
+                    **kwargs)
+                E_mean[shell_index] = rh[0] / (2 * np.sqrt(np.pi))
+        return E_mean
 
 
 def _attenuation_zeppelin(bvals, lambda_par, lambda_perp, n, mu):
