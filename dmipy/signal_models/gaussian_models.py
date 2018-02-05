@@ -27,7 +27,7 @@ inverse_rh_matrix_kernel = {
         rh_order, _thetas, _phis
     )) for rh_order in np.arange(0, 15, 2)
 }
-simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(0., _angles_cart)
+simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(_angles_cart)
 
 DIFFUSIVITY_SCALING = 1e-9
 A_SCALING = 1e-12

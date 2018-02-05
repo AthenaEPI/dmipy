@@ -24,7 +24,7 @@ inverse_rh_matrix_kernel = {
         rh_order, _thetas, _phis
     )) for rh_order in np.arange(0, 15, 2)
 }
-simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(0., _angles_cart)
+simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(_angles_cart)
 DIFFUSIVITY_SCALING = 1e-9
 DIAMETER_SCALING = 1e-6
 A_SCALING = 1e-12
@@ -224,7 +224,7 @@ class C2CylinderSodermanApproximation(ModelProperties):
         )
         return E_parallel * E_perpendicular
 
-    def rotational_harmonics_representation(self, bvalue, delta, Delta,
+    def rotational_harmonics_representation(self, bvalue, qvalue,
                                             rh_order=14, **kwargs):
         r""" The rotational harmonics of the model, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernelfor spherical
@@ -234,10 +234,8 @@ class C2CylinderSodermanApproximation(ModelProperties):
         ----------
         bval : float,
             b-value in s/m^2.
-        delta: float,
-            pulse duration in seconds.
-        Delta: float,
-            pulse separation in seconds.
+        qvalue: float,
+            diffusion sensitization in 1/m.
         sh_order : int,
             maximum spherical harmonics order to be used in the approximation.
 
@@ -249,8 +247,7 @@ class C2CylinderSodermanApproximation(ModelProperties):
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         simple_acq_scheme_rh.bvalues.fill(bvalue)
-        simple_acq_scheme_rh.delta.fill(delta)
-        simple_acq_scheme_rh.Delta.fill(Delta)
+        simple_acq_scheme_rh.qvalues.fill(qvalue)
         E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.],
                            diameter=diameter, lambda_par=lambda_par)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
@@ -537,7 +534,8 @@ class C4CylinderGaussianPhaseApproximation(ModelProperties):
         return E_parallel * E_perpendicular
 
     def rotational_harmonics_representation(
-            self, bvalue, delta=None, Delta=None, rh_order=14, **kwargs):
+            self, bvalue, gradient_strength, delta, Delta,
+            rh_order=14, **kwargs):
         r""" The rotational harmonics of the mode, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernelfor spherical
         convolution.
@@ -546,6 +544,8 @@ class C4CylinderGaussianPhaseApproximation(ModelProperties):
         ----------
         bval : float,
             b-value in s/m^2.
+        gradient_strength : float,
+            gradient strength in T/m.
         delta: float,
             delta parameter in seconds.
         Delta: float,
@@ -561,8 +561,11 @@ class C4CylinderGaussianPhaseApproximation(ModelProperties):
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
         simple_acq_scheme_rh.bvalues.fill(bvalue)
+        simple_acq_scheme_rh.gradient_strengths.fill(gradient_strength)
         simple_acq_scheme_rh.delta.fill(delta)
         simple_acq_scheme_rh.Delta.fill(Delta)
+        simple_acq_scheme_rh.shell_delta[0] = delta
+        simple_acq_scheme_rh.shell_Delta[0] = Delta
         E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.],
                            diameter=diameter, lambda_par=lambda_par)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)

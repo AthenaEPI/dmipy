@@ -277,45 +277,25 @@ class SimpleAcquisitionSchemeRH:
 
     Parameters
     ----------
-    bvalue : float,
-        b-value of the acquisition shell.
     gradient_directions: array of size (N, 3),
         Array of cartesian unit-vectors at which to sample the sphere.
-    delta : float,
-        pulse duration of the acquisition
-    Delta : float,
-        pulse separation of the acquisition.
     """
 
-    def __init__(self, bvalue, gradient_directions, delta=None, Delta=None):
-        Ndata = len(gradient_directions)
-        self.bvalues = np.tile(bvalue, Ndata)
+    def __init__(self, gradient_directions):
         self.gradient_directions = gradient_directions
-        self.b0_mask = np.tile(False, Ndata)
-        if delta is not None and Delta is not None:
-            self.delta = np.tile(delta, Ndata)
-            self.Delta = np.tile(Delta, Ndata)
-        else:
-            self.delta = delta
-            self.Delta = Delta
+        self.number_of_measurements = len(gradient_directions)
 
-    @property
-    def qvalues(self):
-        "Returns q-values of acquisition scheme."
-        if self.delta is not None and self.Delta is not None:
-            return q_from_b(self.bvalues, self.delta, self.Delta)
-
-    @property
-    def gradient_strengths(self):
-        "Returns gradient strength of acquisition scheme."
-        if self.delta is not None and self.Delta is not None:
-            return g_from_b(self.bvalues, self.delta, self.Delta)
-
-    @property
-    def tau(self):
-        "Returns diffusion time of acquisition scheme."
-        if self.delta is not None and self.Delta is not None:
-            return self.Delta - self.delta / 3.0
+        # creates dummy parameters that will be filled depending on what
+        # model is generating the rotational harmonics.
+        self.bvalues = np.zeros(self.number_of_measurements)
+        self.qvalues = np.zeros(self.number_of_measurements)
+        self.gradient_strengths = np.zeros(self.number_of_measurements)
+        self.tau = np.zeros(self.number_of_measurements)
+        self.delta = np.zeros(self.number_of_measurements)
+        self.Delta = np.zeros(self.number_of_measurements)
+        self.b0_mask = np.tile(False, self.number_of_measurements)
+        self.shell_delta = np.zeros(1)
+        self.shell_Delta = np.zeros(1)
 
 
 def acquisition_scheme_from_bvalues(

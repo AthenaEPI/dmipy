@@ -111,6 +111,11 @@ class DistributedModel:
             v: k for k, v in self._parameter_map.items()
         }
 
+        self.parameter_cardinality = OrderedDict([
+            (k, len(np.atleast_2d(self.parameter_ranges[k])))
+            for k in self.parameter_ranges
+        ])
+
     def _delete_target_parameter_from_parameters(self):
         "Removes the to-be-distributed parameter from the parameter list."
         for model in self.models:
@@ -119,6 +124,7 @@ class DistributedModel:
             ]
             del self.parameter_ranges[parameter_name]
             del self.parameter_scales[parameter_name]
+            del self.parameter_cardinality[parameter_name]
 
     def _prepare_partial_volumes(self):
         "Prepares the partial volumes for the DistributedModel."
@@ -157,6 +163,7 @@ class DistributedModel:
 
             del self.parameter_ranges[parameter_name]
             del self.parameter_scales[parameter_name]
+            del self.parameter_cardinality[parameter_name]
 
     def add_linked_parameters_to_parameters(self, parameters):
         """
@@ -216,6 +223,7 @@ class DistributedModel:
             self.parameter_links.append(parameter_link)
             del self.parameter_ranges[parameter_name]
             del self.parameter_scales[parameter_name]
+            del self.parameter_cardinality[parameter_name]
         else:
             print('{} does not exist or has already been fixed.').format(
                 parameter_name)
@@ -259,6 +267,7 @@ class DistributedModel:
         ])
         del self.parameter_ranges[lambda_perp]
         del self.parameter_scales[lambda_perp]
+        del self.parameter_cardinality[lambda_perp]
 
     def set_equal_parameter(self, parameter_name_in, parameter_name_out):
         """
@@ -290,6 +299,7 @@ class DistributedModel:
             self._parameter_map[parameter_name_in]]])
         del self.parameter_ranges[parameter_name_out]
         del self.parameter_scales[parameter_name_out]
+        del self.parameter_cardinality[parameter_name_out]
 
     def copy(self):
         """
@@ -394,6 +404,12 @@ class DistributedModel:
                 # rotational harmonics of stick
                 rh_stick = model.rotational_harmonics_representation(
                     bvalue=acquisition_scheme.shell_bvalues[shell_index],
+                    qvalue=acquisition_scheme.shell_qvalues[shell_index],
+                    gradient_strength=(
+                        acquisition_scheme.shell_gradient_strengths[
+                        shell_index]),
+                    delta=acquisition_scheme.shell_delta[shell_index],
+                    Delta=acquisition_scheme.shell_Delta[shell_index],
                     rh_order=acquisition_scheme.shell_sh_orders[shell_index],
                     **parameters)
                 # convolving micro-environment with watson distribution
