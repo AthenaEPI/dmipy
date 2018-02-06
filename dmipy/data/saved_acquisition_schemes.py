@@ -38,7 +38,7 @@ def wu_minn_hcp_acquisition_scheme():
 def duval_cat_spinal_cord_2d_acquisition_scheme(bval_shell_distance=1e10):
     "Returns DmipyAcquisitionScheme of cat spinal cord data."
     scheme_name = 'tanguy_cat_spinal_cord/2D_qspace.scheme'
-    scheme = np.loadtxt(DATA_PATH + scheme_name, skiprows=3)
+    scheme = np.loadtxt(join(DATA_PATH, scheme_name), skiprows=3)
 
     bvecs = scheme[:, :3]
     bvecs[np.linalg.norm(bvecs, axis=1) == 0.] = np.r_[1., 0., 0.]
