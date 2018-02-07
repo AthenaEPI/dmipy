@@ -11,7 +11,10 @@ from time import time
 
 from ..utils.spherical_mean import (
     estimate_spherical_mean_multi_shell)
-from ..utils.utils import T1_tortuosity, parameter_equality
+from ..utils.utils import (
+    T1_tortuosity,
+    parameter_equality,
+    fractional_parameter)
 from .fitted_modeling_framework import (
     FittedMultiCompartmentModel,
     FittedMultiCompartmentSphericalMeanModel)
@@ -345,8 +348,7 @@ class MultiCompartmentModelProperties:
                 for argument in arguments:
                     argument_name = self._inverted_parameter_map[argument]
                     argument_values.append(parameters.get(
-                        argument_name  # ,
-                        # self.parameter_defaults[argument_name]
+                        argument_name
                     ))
 
                 parameters[parameter_name] = parameter_function(
@@ -498,6 +500,52 @@ class MultiCompartmentModelProperties:
         del self.parameter_ranges[parameter_name_out]
         del self.parameter_cardinality[parameter_name_out]
         del self.parameter_scales[parameter_name_out]
+
+    def set_fractional_parameter(self,
+                                 parameter1_smaller_equal_than, parameter2):
+        r"""
+        Allows to impose a constraint to make one parameter smaller or equal to
+        another parameter. This is done by replacing parameter1 with a
+        new parameter that is defined as a fraction between 0 and 1 of
+        parameter2. The new parameter will be the same as the old parameter
+        name with "_fraction" appended to it.
+
+        Parameters
+        ----------
+        parameter1_smaller_equal_than: string
+            parameter name to be made a fraction of parameter2
+        parameter2: string
+            the parameter that is larger or equal than parameter1
+        """
+        params = [parameter1_smaller_equal_than, parameter2]
+        for param in params:
+            try:
+                self.parameter_cardinality[param]
+            except KeyError:
+                msg = ("{} does not exist or has already been fixed.").format(
+                    param)
+                raise ValueError(msg)
+        # append new parameter to parameters
+        new_parameter_name = parameter1_smaller_equal_than + '_fraction'
+        self.parameter_ranges.update({new_parameter_name: [0., 1.]})
+        self.parameter_scales.update({new_parameter_name: 1.})
+        self.parameter_cardinality.update({new_parameter_name: 1})
+
+        self._parameter_map.update({new_parameter_name: (None, 'fraction')})
+        self._inverted_parameter_map.update(
+            {(None, 'fraction'): new_parameter_name})
+        self.optimized_parameters.update({new_parameter_name: True})
+
+        # add parmeter link to fractional parameter
+        model, name = self._parameter_map[parameter1_smaller_equal_than]
+        self.parameter_links.append([model, name, fractional_parameter, [
+            self._parameter_map[new_parameter_name],
+            self._parameter_map[parameter2]]])
+
+        # remove old parameter1
+        del self.parameter_ranges[parameter1_smaller_equal_than]
+        del self.parameter_cardinality[parameter1_smaller_equal_than]
+        del self.parameter_scales[parameter1_smaller_equal_than]
 
 
 class MultiCompartmentModel(MultiCompartmentModelProperties):

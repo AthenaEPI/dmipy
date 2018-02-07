@@ -217,6 +217,21 @@ def parameter_equality(param):
     return param
 
 
+def fractional_parameter(fractional_parameter, parameter2):
+    """
+    Defines fractional parameter link where the original parameter ranges
+    between 0-1 of parameter2.
+
+    Parameters
+    ----------
+    fractional_parameter : string
+        new parameter that ranges between 0 and 1.
+    parameter2 : string
+        parameter that is larger or equal than the original parameter
+    """
+    return fractional_parameter * parameter2
+
+
 def define_shell_indices(bvals, b_value_ranges):
     """ Function to facilitate defining shell indices given some manual ranges
     in b-values. This function is useful as in practice the actual b-values may
