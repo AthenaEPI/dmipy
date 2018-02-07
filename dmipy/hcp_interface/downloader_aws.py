@@ -3,6 +3,7 @@ import boto
 import pkg_resources
 import os
 import nibabel as nib
+import numpy as np
 
 
 DATA_PATH = pkg_resources.resource_filename(
@@ -58,6 +59,11 @@ class HCPInterface:
         subject_ID = 100307
         self.download_subject(subject_ID)
         self.prepare_example_slice(subject_ID)
+
+    @property
+    def available_subjects(self):
+        subjects_textfile = os.path.join(DATA_PATH, "wu_minn_hcp_subjects.txt")
+        return np.loadtxt(subjects_textfile, dtype=int)
 
     def download_subject(self, subject_ID):
         """
