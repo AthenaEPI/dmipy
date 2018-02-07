@@ -4,8 +4,14 @@ from dmipy.data.saved_acquisition_schemes import (
     wu_minn_hcp_acquisition_scheme)
 from dmipy.core.modeling_framework import (
     MultiCompartmentSphericalMeanModel)
+from dmipy.core.acquisition_scheme import acquisition_scheme_from_bvalues
 import numpy as np
-from numpy.testing import assert_equal
+from dmipy.utils.spherical_mean import (
+    estimate_spherical_mean_shell)
+from numpy.testing import assert_equal, assert_almost_equal
+from dipy.data import get_sphere
+
+sphere = get_sphere().subdivide()
 
 scheme = wu_minn_hcp_acquisition_scheme()
 
@@ -21,15 +27,39 @@ models = [
 ]
 
 
-def test_model_spherical_mean():
+def test_model_spherical_mean_analytic_vs_numerical(
+        bvalue=1e9, delta=1e-2, Delta=2e-2):
+    bvals = np.tile(bvalue, len(sphere.vertices))
+    scheme = acquisition_scheme_from_bvalues(
+        bvals, sphere.vertices, delta, Delta)
     for model in models:
         params = {}
         for param, card in model.parameter_cardinality.items():
             params[param] = (np.random.rand(card) *
                              model.parameter_scales[param])
-        assert_equal(isinstance(
-            model.spherical_mean(scheme, **params), np.ndarray),
-            True)
+
+        signal_shell = model(scheme, **params)
+        signal_shell_smt = np.mean(signal_shell)
+        signal_smt = model.spherical_mean(scheme, **params)
+        assert_almost_equal(signal_shell_smt, signal_smt, 3)
+
+
+def test_model_spherical_mean_analytic_vs_sh(
+        bvalue=1e9, delta=1e-2, Delta=2e-2):
+    bvals = np.tile(bvalue, len(sphere.vertices))
+    scheme = acquisition_scheme_from_bvalues(
+        bvals, sphere.vertices, delta, Delta)
+    for model in models:
+        params = {}
+        for param, card in model.parameter_cardinality.items():
+            params[param] = (np.random.rand(card) *
+                             model.parameter_scales[param])
+
+        signal_shell = model(scheme, **params)
+        signal_shell_sh = estimate_spherical_mean_shell(
+            signal_shell, sphere.vertices)
+        signal_smt = model.spherical_mean(scheme, **params)
+        assert_almost_equal(signal_shell_sh, signal_smt, 3)
 
 
 def test_MultiCompartmentSphericalMeanModel():
