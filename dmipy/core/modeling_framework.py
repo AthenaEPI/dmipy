@@ -23,6 +23,8 @@ from ..optimizers.brute2fine import (
 from ..optimizers.mix import MixOptimizer
 from dipy.utils.optpkg import optional_package
 pathos, have_pathos, _ = optional_package("pathos")
+numba, have_numba, _ = optional_package("numba")
+
 
 if have_pathos:
     import pathos.pools as pp
@@ -576,6 +578,15 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         self._check_for_double_model_class_instances()
         self._prepare_parameters_to_optimize()
 
+        if not have_numba:
+            msg = "We highly recommend installing numba for faster function "
+            msg += "execution and model fitting."
+            print(msg)
+        if not have_pathos:
+            msg = "We highly recommend installing pathos to take advantage of "
+            msg += "multicore processing."
+            print(msg)
+
     def fit(self, acquisition_scheme, data, parameter_initial_guess=None,
             mask=None, solver='brute2fine', Ns=5, maxiter=300,
             N_sphere_samples=30, use_parallel_processing=have_pathos,
@@ -908,6 +919,15 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         self._prepare_model_properties()
         self._check_for_double_model_class_instances()
         self._prepare_parameters_to_optimize()
+
+        if not have_numba:
+            msg = "We highly recommend installing numba for faster function "
+            msg += "execution and model fitting."
+            print(msg)
+        if not have_pathos:
+            msg = "We highly recommend installing pathos to take advantage of "
+            msg += "multicore processing."
+            print(msg)
 
     def _delete_orientation_parameters(self):
         """
