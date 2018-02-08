@@ -24,15 +24,15 @@ def test_all_fitted_model_properties():
     vertices = np.random.rand(10, 3)
     vertices /= np.linalg.norm(vertices, axis=1)[:, None]
 
-    mcfit.fitted_parameters
-    mcfit.fitted_parameters_vector
-    mcfit.fod(vertices)
-    mcfit.fod_sh()
-    mcfit.peaks_spherical()
-    mcfit.peaks_cartesian()
+    isinstance(mcfit.fitted_parameters, dict)
+    isinstance(mcfit.fitted_parameters_vector, np.ndarray)
+    isinstance(mcfit.fod(vertices), np.ndarray)
+    isinstance(mcfit.fod_sh(), np.ndarray)
+    isinstance(mcfit.peaks_spherical(), np.ndarray)
+    isinstance(mcfit.peaks_cartesian(), np.ndarray)
 
     mcmod_sm = modeling_framework.MultiCompartmentSphericalMeanModel(
         [stick])
     mcfit_sm = mcmod_sm.fit(scheme, data)
-    mcfit_sm.fitted_parameters
-    mcfit_sm.fitted_parameters_vector
+    isinstance(mcfit_sm.fitted_parameters, dict)
+    isinstance(mcfit_sm.fitted_parameters_vector, np.ndarray)
