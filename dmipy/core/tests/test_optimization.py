@@ -201,7 +201,7 @@ def test_fractions_add_up_to_one():
     assert_array_almost_equal(E, np.ones(len(E)))
 
 
-def test_MIX_fitting():
+def test_MIX_fitting_multimodel():
     ball = gaussian_models.G1Ball()
     zeppelin = gaussian_models.G2Zeppelin()
     ball_and_zeppelin = (
@@ -212,6 +212,26 @@ def test_MIX_fitting():
         G1Ball_1_lambda_iso=2.7e-9,
         partial_volume_0=.2,
         partial_volume_1=.8,
+        G2Zeppelin_1_lambda_perp=.5e-9,
+        G2Zeppelin_1_mu=(np.pi / 2., np.pi / 2.),
+        G2Zeppelin_1_lambda_par=1.7e-9
+    )
+
+    E = ball_and_zeppelin.simulate_signal(
+        scheme, parameter_vector)
+    fit = ball_and_zeppelin.fit(
+        scheme,
+        E, solver='mix').fitted_parameters_vector
+    assert_array_almost_equal(abs(fit).squeeze(), parameter_vector, 2)
+
+
+def test_MIX_fitting_singlemodel():
+    zeppelin = gaussian_models.G2Zeppelin()
+    ball_and_zeppelin = (
+        modeling_framework.MultiCompartmentModel(
+            models=[zeppelin]))
+
+    parameter_vector = ball_and_zeppelin.parameters_to_parameter_vector(
         G2Zeppelin_1_lambda_perp=.5e-9,
         G2Zeppelin_1_mu=(np.pi / 2., np.pi / 2.),
         G2Zeppelin_1_lambda_par=1.7e-9

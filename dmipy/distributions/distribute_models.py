@@ -52,16 +52,17 @@ class DistributedModel:
                     self.target_parameter)
                 raise AttributeError(msg)
 
-    def _check_for_same_model_type(self):
+    def _check_for_same_parameter_type(self):
         """
         For gamma distribution, checks if sphere/cylinder models are not
         mixed.
         """
-        model_types = [model._model_type for model in self.models]
-        if len(np.unique(model_types)) > 1:
-            msg = "Cannot mix models of different types. "
-            msg += "Current input model types are {}.".format(
-                model_types)
+        parameter_types = [model._parameter_types[self.target_parameter]
+                           for model in self.models]
+        if len(np.unique(parameter_types)) > 1:
+            msg = "Cannot mix models with different parameter types. "
+            msg += "Current input parameter types are {}.".format(
+                parameter_types)
             raise AttributeError(msg)
 
     def _prepare_parameters(self, models_and_distribution):
@@ -643,7 +644,7 @@ class DD1GammaDistributed(DistributedModel):
         self.target_parameter = target_parameter
         self._check_for_double_model_class_instances()
         self._check_for_distributable_models()
-        self._check_for_same_model_type()
+        self._check_for_same_parameter_type()
 
         self.parameter_links = parameter_links
         if parameter_links is None:

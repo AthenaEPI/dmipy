@@ -590,6 +590,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         self._prepare_model_properties()
         self._check_for_double_model_class_instances()
         self._prepare_parameters_to_optimize()
+        self._check_for_NMR_and_other_models()
 
         if not have_numba:
             msg = "We highly recommend installing numba for faster function "
@@ -599,6 +600,14 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             msg = "We highly recommend installing pathos to take advantage of "
             msg += "multicore processing."
             print(msg)
+
+    def _check_for_NMR_and_other_models(self):
+        model_types = [model._model_type for model in self.models]
+        if "NMRModel" in model_types:
+            if len(np.unique(model_types)) > 1:
+                msg = "Cannot combine 1D-NMR and other 3D model types together"
+                msg += " into a MultiCompartmentModel."
+                raise ValueError(msg)
 
     def fit(self, acquisition_scheme, data, parameter_initial_guess=None,
             mask=None, solver='brute2fine', Ns=5, maxiter=300,
@@ -911,6 +920,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         if parameter_links is None:
             self.parameter_links = []
 
+        self._check_for_dispersed_or_NMR_models()
         self._prepare_parameters()
         self._delete_orientation_parameters()
         self._prepare_partial_volumes()
@@ -927,6 +937,17 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
             msg = "We highly recommend installing pathos to take advantage of "
             msg += "multicore processing."
             print(msg)
+
+    def _check_for_dispersed_or_NMR_models(self):
+        for model in self.models:
+            if model._model_type is 'NMRModel':
+                msg = "Cannot estimate spherical mean of 1D-NMR models."
+                raise ValueError(msg)
+            if model._model_type is 'SphericalDistributedModel':
+                msg = "Cannot estimate spherical mean spherically distributed "
+                msg += "model. Please give the input models to the distributed"
+                msg += " model directly to MultiCompartmentSphericalMeanModel."
+                raise ValueError(msg)
 
     def _delete_orientation_parameters(self):
         """
