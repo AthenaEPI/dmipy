@@ -3,6 +3,11 @@ from collections import OrderedDict
 from itertools import chain
 from ..utils.spherical_convolution import sh_convolution
 from ..utils.utils import T1_tortuosity, parameter_equality
+from ..utils.utils import sphere2cart
+from ..utils.spherical_convolution import real_sym_rh_basis
+from ..core.acquisition_scheme import SimpleAcquisitionSchemeRH
+
+
 import copy
 import numpy as np
 
@@ -13,6 +18,20 @@ __all__ = [
     'DD1GammaDistributed',
     'ReturnFixedValue'
 ]
+
+_samples = 10
+_thetas = np.linspace(0, np.pi / 2, _samples)
+_r = np.ones(_samples)
+_phis = np.zeros(_samples)
+_angles = np.c_[_r, _thetas, _phis]
+_angles_cart = sphere2cart(_angles)
+
+inverse_rh_matrix_kernel = {
+    rh_order: np.linalg.pinv(real_sym_rh_basis(
+        rh_order, _thetas, _phis
+    )) for rh_order in np.arange(0, 15, 2)
+}
+simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(_angles_cart)
 
 
 class DistributedModel:
@@ -45,7 +64,7 @@ class DistributedModel:
     def _check_for_distributable_models(self):
         "Checks if the to-be distributed parameter is in the input models."
         for i, model in enumerate(self.models):
-            if self.target_parameter not in model._parameter_ranges:
+            if self.target_parameter not in model.parameter_ranges:
                 msg = "Cannot distribute models input {}. ".format(i)
                 msg += "It has no {} as parameter.".format(
                     self.target_parameter)
@@ -56,7 +75,7 @@ class DistributedModel:
         For gamma distribution, checks if sphere/cylinder models are not
         mixed.
         """
-        parameter_types = [model._parameter_types[self.target_parameter]
+        parameter_types = [model.parameter_types[self.target_parameter]
                            for model in self.models]
         if len(np.unique(parameter_types)) > 1:
             msg = "Cannot mix models with different parameter types. "
@@ -502,7 +521,7 @@ class DistributedModel:
                 (len(radii),
                  acquisition_scheme.number_of_measurements))
             for i, radius in enumerate(radii):
-                parameters['diameter'] = radius * 2
+                parameters[self.target_parameter] = radius * 2
                 E[i] = (
                     P_radii[i] *
                     model(acquisition_scheme, **parameters)
@@ -559,9 +578,9 @@ class SD1WatsonDistributed(DistributedModel):
     """
     _model_type = 'SphericalDistributedModel'
 
-    def __init__(self, models, parameter_links=None):
+    def __init__(self, models, parameter_links=None, target_parameter='mu'):
         self.models = models
-        self.target_parameter = "mu"
+        self.target_parameter = target_parameter
         self._check_for_double_model_class_instances()
         self._check_for_dispersable_models()
 
@@ -598,9 +617,9 @@ class SD2BinghamDistributed(DistributedModel):
     """
     _model_type = 'SphericalDistributedModel'
 
-    def __init__(self, models, parameter_links=None):
+    def __init__(self, models, parameter_links=None, target_parameter='mu'):
         self.models = models
-        self.target_parameter = "mu"
+        self.target_parameter = target_parameter
         self._check_for_double_model_class_instances()
         self._check_for_dispersable_models()
 
@@ -649,7 +668,7 @@ class DD1GammaDistributed(DistributedModel):
         if parameter_links is None:
             self.parameter_links = []
 
-        self.normalization = models[0]._parameter_types[target_parameter]
+        self.normalization = models[0].parameter_types[target_parameter]
         self.distribution = distributions.DD1Gamma(
             normalization=self.normalization)
 
@@ -659,6 +678,41 @@ class DD1GammaDistributed(DistributedModel):
         self._delete_target_parameter_from_parameters()
         self._prepare_partial_volumes()
         self._prepare_parameter_links()
+        for param in self.parameter_names:
+            if param.endswith('mu'):
+                self.mu_param = param
+
+    def rotational_harmonics_representation(
+            self, bvalue, qvalue, delta, Delta, rh_order=14, **kwargs):
+        r""" The model in rotational harmonics, such that Y_lm = Yl0.
+        Axis aligned with z-axis to be used as kernel for spherical
+        convolution.
+
+        Parameters
+        ----------
+        bval : float,
+            b-value in s/m^2.
+        delta: float,
+            pulse length in seconds.
+        Delta: float,
+            pulse separation in seconds.
+        sh_order : int,
+            maximum spherical harmonics order to be used in the approximation.
+
+        Returns
+        -------
+        rh : array,
+            rotational harmonics of the model aligned with z-axis.
+        """
+        simple_acq_scheme_rh.bvalues.fill(bvalue)
+        simple_acq_scheme_rh.qvalues.fill(delta)
+        simple_acq_scheme_rh.delta.fill(delta)
+        simple_acq_scheme_rh.Delta.fill(Delta)
+        kwargs.update({self.mu_param: [0., 0.]})
+        E_kernel_sf = self(
+            simple_acq_scheme_rh, **kwargs)
+        rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
+        return rh
 
 
 class ReturnFixedValue:
