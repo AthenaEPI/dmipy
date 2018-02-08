@@ -49,7 +49,7 @@ __all__ = [
     'get_sh_order_from_odi',
     'SD1Watson',
     'SD2Bingham',
-    'DD1GammaDistribution',
+    'DD1Gamma',
     'odi2kappa',
     'kappa2odi'
 ]
@@ -335,7 +335,7 @@ class SD2Bingham(ModelProperties):
         return bingham_normalization
 
 
-class DD1GammaDistribution(ModelProperties):
+class DD1Gamma(ModelProperties):
     r"""A Gamma distribution of cylinder diameter for given alpha and beta
     parameters. NOTE: This is a distribution for axon DIAMETER and not SURFACE.
     To simulate the diffusion signal of an ensemble of gamma-distributed

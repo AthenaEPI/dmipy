@@ -1,5 +1,4 @@
-from .distributions import (
-    SD1Watson, SD2Bingham, DD1GammaDistribution)
+from . import distributions
 from collections import OrderedDict
 from itertools import chain
 from ..utils.spherical_convolution import sh_convolution
@@ -340,10 +339,10 @@ class DistributedModel:
         kwargs: keyword arguments to the model parameter values,
             Is internally given as **parameter_dictionary.
         """
-        if (isinstance(self.distribution, SD1Watson) or
-                isinstance(self.distribution, SD2Bingham)):
+        if (isinstance(self.distribution, distributions.SD1Watson) or
+                isinstance(self.distribution, distributions.SD2Bingham)):
             return self.sh_convolved_model(acquisition_scheme, **kwargs)
-        elif isinstance(self.distribution, DD1GammaDistribution):
+        elif isinstance(self.distribution, distributions.DD1Gamma):
             return self.integrated_model(acquisition_scheme, **kwargs)
         else:
             msg = "Unknown distribution."
@@ -569,7 +568,7 @@ class SD1WatsonDistributed(DistributedModel):
         self.parameter_links = parameter_links
         if parameter_links is None:
             self.parameter_links = []
-        self.distribution = SD1Watson()
+        self.distribution = distributions.SD1Watson()
 
         _models_and_distribution = list(self.models)
         _models_and_distribution.append(self.distribution)
@@ -608,7 +607,7 @@ class SD2BinghamDistributed(DistributedModel):
         self.parameter_links = parameter_links
         if parameter_links is None:
             self.parameter_links = []
-        self.distribution = SD2Bingham()
+        self.distribution = distributions.SD2Bingham()
 
         _models_and_distribution = list(self.models)
         _models_and_distribution.append(self.distribution)
@@ -651,7 +650,7 @@ class DD1GammaDistributed(DistributedModel):
             self.parameter_links = []
 
         self.normalization = models[0]._parameter_types[target_parameter]
-        self.distribution = DD1GammaDistribution(
+        self.distribution = distributions.DD1Gamma(
             normalization=self.normalization)
 
         _models_and_distribution = list(self.models)

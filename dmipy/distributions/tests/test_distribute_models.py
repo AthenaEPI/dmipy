@@ -42,7 +42,7 @@ def test_gamma_pdf_unity():
     beta = 3e-6
 
     for normalization in normalizations:
-        gamma = distributions.DD1GammaDistribution(
+        gamma = distributions.DD1Gamma(
             alpha=alpha, beta=beta, normalization=normalization)
         x, Px = gamma()
         assert_almost_equal(np.trapz(Px, x=x), 1.)
