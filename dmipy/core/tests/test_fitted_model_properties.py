@@ -16,7 +16,7 @@ def test_all_fitted_model_properties():
     for parameter, card, in watsonstick.parameter_cardinality.items():
         params[parameter] = (np.random.rand(card) *
                              watsonstick.parameter_scales[parameter])
-    data = watsonstick(scheme, **params)
+    data = np.atleast_2d(watsonstick(scheme, **params))
 
     mcmod = modeling_framework.MultiCompartmentModel([watsonstick])
     mcfit = mcmod.fit(scheme, data)
@@ -30,9 +30,15 @@ def test_all_fitted_model_properties():
     isinstance(mcfit.fod_sh(), np.ndarray)
     isinstance(mcfit.peaks_spherical(), np.ndarray)
     isinstance(mcfit.peaks_cartesian(), np.ndarray)
+    isinstance(mcfit.mean_squared_error(data), np.ndarray)
+    isinstance(mcfit.R2_coefficient_of_determination(data), np.ndarray)
+    isinstance(mcfit.predict(), np.ndarray)
 
     mcmod_sm = modeling_framework.MultiCompartmentSphericalMeanModel(
         [stick])
     mcfit_sm = mcmod_sm.fit(scheme, data)
     isinstance(mcfit_sm.fitted_parameters, dict)
     isinstance(mcfit_sm.fitted_parameters_vector, np.ndarray)
+    isinstance(mcfit.mean_squared_error(data), np.ndarray)
+    isinstance(mcfit.R2_coefficient_of_determination(data), np.ndarray)
+    isinstance(mcfit.predict(), np.ndarray)
