@@ -7,7 +7,8 @@ from ..utils.spherical_mean import (
 
 
 __all__ = [
-    'FittedMultiCompartmentModel'
+    'FittedMultiCompartmentModel',
+    'FittedMultiCompartmentSphericalMeanModel'
 ]
 
 
@@ -170,10 +171,7 @@ class FittedMultiCompartmentModel:
         if mask is None:
             mask = self.mask
 
-        if self.model._spherical_mean:
-            N_samples = len(acquisition_scheme.shell_bvalues)
-        else:
-            N_samples = len(acquisition_scheme.bvalues)
+        N_samples = len(acquisition_scheme.bvalues)
 
         predicted_signal = np.zeros(np.r_[dataset_shape, N_samples])
         mask_pos = np.where(mask)
@@ -186,14 +184,7 @@ class FittedMultiCompartmentModel:
 
     def R2_coefficient_of_determination(self, data):
         "Calculates the R-squared of the model fit."
-        if self.model._spherical_mean:
-            Nshells = len(self.model.scheme.shell_bvalues)
-            data_ = np.zeros(np.r_[data.shape[:-1], Nshells])
-            for pos in zip(*np.where(self.mask)):
-                data_[pos] = estimate_spherical_mean_multi_shell(
-                    data[pos] / self.S0[pos], self.model.scheme)
-        else:
-            data_ = data / self.S0[..., None]
+        data_ = data / self.S0[..., None]
 
         y_hat = self.predict(S0=1.)
         y_bar = np.mean(data_, axis=-1)
@@ -205,17 +196,10 @@ class FittedMultiCompartmentModel:
 
     def mean_squared_error(self, data):
         "Calculates the mean squared error of the model fit."
-        if self.model._spherical_mean:
-            Nshells = len(self.model.scheme.shell_bvalues)
-            data_ = np.zeros(np.r_[data.shape[:-1], Nshells])
-            for pos in zip(*np.where(self.mask)):
-                data_[pos] = estimate_spherical_mean_multi_shell(
-                    data[pos] / self.S0[pos], self.model.scheme)
+        if self.model.scheme.TE is None:
+            data_ = data / self.S0[..., None]
         else:
-            if self.model.scheme.TE is None:
-                data_ = data / self.S0[..., None]
-            else:
-                data_ = data / self.S0
+            data_ = data / self.S0
 
         y_hat = self.predict(S0=1.)
         mse = np.mean((data_ - y_hat) ** 2, axis=-1)
