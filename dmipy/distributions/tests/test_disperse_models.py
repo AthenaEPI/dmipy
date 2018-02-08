@@ -1,8 +1,9 @@
-from dmipy.signal_models import cylinder_models, gaussian_models, sphere_models
-from dmipy.distributions import distribute_models
+from dmipy.signal_models import (
+    cylinder_models, gaussian_models, sphere_models, plane_models)
+from dmipy.distributions import distribute_models, distributions
 from dmipy.data.saved_acquisition_schemes import wu_minn_hcp_acquisition_scheme
 import numpy as np
-from numpy.testing import assert_equal
+from numpy.testing import assert_equal, assert_almost_equal
 
 
 def test_all_models_dispersable():
@@ -34,10 +35,24 @@ def test_all_models_dispersable():
                 dist_mod(scheme, **params), np.ndarray), True)
 
 
+def test_gamma_pdf_unity():
+    normalizations = ['standard', 'plane', 'cylinder', 'sphere']
+
+    alpha = 1.
+    beta = 3e-6
+
+    for normalization in normalizations:
+        gamma = distributions.DD1GammaDistribution(
+            alpha=alpha, beta=beta, normalization=normalization)
+        x, Px = gamma()
+        assert_almost_equal(np.trapz(Px, x=x), 1.)
+
+
 def test_all_models_distributable():
     scheme = wu_minn_hcp_acquisition_scheme()
 
     distributable_models = [
+        plane_models.P3PlaneCallaghanApproximation,
         cylinder_models.C2CylinderSodermanApproximation,
         cylinder_models.C3CylinderCallaghanApproximation,
         cylinder_models.C4CylinderGaussianPhaseApproximation,
