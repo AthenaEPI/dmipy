@@ -46,8 +46,7 @@ class CC3CappedCylinderCallaghanApproximation(ModelProperties):
         53-59.
     """
 
-    _spherical_mean = False
-    _model_type = 'experimental'
+    _model_type = 'CompartmentModel'
 
     def __init__(
         self,
@@ -85,6 +84,9 @@ class CC3CappedCylinderCallaghanApproximation(ModelProperties):
 
         self._parameter_scales = self._cylinder_model._parameter_scales.copy()
         self._parameter_scales.update(self._plane_model._parameter_scales)
+
+        self._parameter_types = self._cylinder_model._parameter_types.copy()
+        self._parameter_types.update(self._plane_model._parameter_types)
 
     def __call__(self, acquisition_scheme, **kwargs):
         r'''

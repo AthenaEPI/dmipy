@@ -68,8 +68,11 @@ class C1Stick(ModelProperties):
         'mu': np.r_[1., 1.],
         'lambda_par': DIFFUSIVITY_SCALING
     }
-    _spherical_mean = False
-    _model_type = 'other'
+    _parameter_types = {
+        'mu': 'orientation',
+        'lambda_par': 'normal'
+    }
+    _model_type = 'CompartmentModel'
 
     def __init__(self, mu=None, lambda_par=None):
         self.mu = mu
@@ -195,8 +198,12 @@ class C2CylinderSodermanApproximation(ModelProperties):
         'lambda_par': DIFFUSIVITY_SCALING,
         'diameter': DIAMETER_SCALING
     }
-    _spherical_mean = False
-    _model_type = 'cylinder'
+    _parameter_types = {
+        'mu': 'orientation',
+        'lambda_par': 'normal',
+        'diameter': 'cylinder'
+    }
+    _model_type = 'CompartmentModel'
 
     def __init__(
         self,
@@ -353,8 +360,12 @@ class C3CylinderCallaghanApproximation(ModelProperties):
         'lambda_par': DIFFUSIVITY_SCALING,
         'diameter': DIAMETER_SCALING
     }
-    _spherical_mean = False
-    _model_type = 'cylinder'
+    _parameter_types = {
+        'mu': 'orientation',
+        'lambda_par': 'normal',
+        'diameter': 'cylinder'
+    }
+    _model_type = 'CompartmentModel'
 
     def __init__(
         self,
@@ -545,8 +556,12 @@ class C4CylinderGaussianPhaseApproximation(ModelProperties):
         'lambda_par': DIFFUSIVITY_SCALING,
         'diameter': DIAMETER_SCALING
     }
-    _spherical_mean = False
-    _model_type = 'cylinder'
+    _parameter_types = {
+        'mu': 'orientation',
+        'lambda_par': 'normal',
+        'diameter': 'cylinder'
+    }
+    _model_type = 'CompartmentModel'
     _CYLINDER_TRASCENDENTAL_ROOTS = np.sort(special.jnp_zeros(1, 100))
 
     def __init__(

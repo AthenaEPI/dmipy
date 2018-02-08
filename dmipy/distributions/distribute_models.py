@@ -63,7 +63,6 @@ class DistributedModel:
             msg += "Current input model types are {}.".format(
                 model_types)
             raise AttributeError(msg)
-        self.normalization = model_types[0]
 
     def _prepare_parameters(self, models_and_distribution):
         """
@@ -100,6 +99,13 @@ class DistributedModel:
             for k, v in model.parameter_scales.items()
         })
 
+        self.parameter_types = OrderedDict({
+            model_name + k: v
+            for model, model_name in zip(models_and_distribution,
+                                         self.model_names)
+            for k, v in model.parameter_types.items()
+        })
+
         self._parameter_map = {
             model_name + k: (model, k)
             for model, model_name in zip(models_and_distribution,
@@ -125,6 +131,7 @@ class DistributedModel:
             del self.parameter_ranges[parameter_name]
             del self.parameter_scales[parameter_name]
             del self.parameter_cardinality[parameter_name]
+            del self.parameter_types[parameter_name]
 
     def _prepare_partial_volumes(self):
         "Prepares the partial volumes for the DistributedModel."
@@ -164,6 +171,7 @@ class DistributedModel:
             del self.parameter_ranges[parameter_name]
             del self.parameter_scales[parameter_name]
             del self.parameter_cardinality[parameter_name]
+            del self.parameter_types[parameter_name]
 
     def add_linked_parameters_to_parameters(self, parameters):
         """
@@ -224,6 +232,7 @@ class DistributedModel:
             del self.parameter_ranges[parameter_name]
             del self.parameter_scales[parameter_name]
             del self.parameter_cardinality[parameter_name]
+            del self.parameter_types[parameter_name]
         else:
             print('{} does not exist or has already been fixed.').format(
                 parameter_name)
@@ -268,6 +277,7 @@ class DistributedModel:
         del self.parameter_ranges[lambda_perp]
         del self.parameter_scales[lambda_perp]
         del self.parameter_cardinality[lambda_perp]
+        del self.parameter_types[lambda_perp]
 
     def set_equal_parameter(self, parameter_name_in, parameter_name_out):
         """
@@ -300,6 +310,7 @@ class DistributedModel:
         del self.parameter_ranges[parameter_name_out]
         del self.parameter_scales[parameter_name_out]
         del self.parameter_cardinality[parameter_name_out]
+        del self.parameter_types[parameter_name_out]
 
     def copy(self):
         """
@@ -546,6 +557,7 @@ class SD1WatsonDistributed(DistributedModel):
     parameters_links: list of length 1 or more,
         deprecated for testing use only.
     """
+    _model_type = 'SphericalDistributedModel'
 
     def __init__(self, models, parameter_links=None):
         self.models = models
@@ -584,6 +596,7 @@ class SD2BinghamDistributed(DistributedModel):
     parameters_links: list of length 1 or more,
         deprecated for testing use only.
     """
+    _model_type = 'SphericalDistributedModel'
 
     def __init__(self, models, parameter_links=None):
         self.models = models
@@ -622,10 +635,12 @@ class DD1GammaDistributed(DistributedModel):
     parameters_links: list of length 1 or more,
         deprecated for testing use only.
     """
+    _model_type = 'SpatialDistributedModel'
 
-    def __init__(self, models, parameter_links=None):
+    def __init__(self, models, parameter_links=None,
+                 target_parameter='diameter'):
         self.models = models
-        self.target_parameter = "diameter"
+        self.target_parameter = target_parameter
         self._check_for_double_model_class_instances()
         self._check_for_distributable_models()
         self._check_for_same_model_type()
@@ -633,6 +648,8 @@ class DD1GammaDistributed(DistributedModel):
         self.parameter_links = parameter_links
         if parameter_links is None:
             self.parameter_links = []
+
+        self.normalization = models[0]._parameter_types[target_parameter]
         self.distribution = DD1GammaDistribution(
             normalization=self.normalization)
 

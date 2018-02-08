@@ -62,8 +62,10 @@ class G1Ball(ModelProperties):
     _parameter_scales = {
         'lambda_iso': DIFFUSIVITY_SCALING
     }
-    _spherical_mean = False
-    _model_type = 'other'
+    _parameter_types = {
+        'lambda_iso': 'normal',
+    }
+    _model_type = 'CompartmentModel'
 
     def __init__(self, lambda_iso=None):
         self.lambda_iso = lambda_iso
@@ -145,8 +147,12 @@ class G2Zeppelin(ModelProperties):
         'lambda_par': DIFFUSIVITY_SCALING,
         'lambda_perp': DIFFUSIVITY_SCALING
     }
-    _spherical_mean = False
-    _model_type = 'other'
+    _parameter_types = {
+        'mu': 'orientation',
+        'lambda_par': 'normal',
+        'lambda_perp': 'normal',
+    }
+    _model_type = 'CompartmentModel'
 
     def __init__(self, mu=None, lambda_par=None, lambda_perp=None):
         self.mu = mu
@@ -287,8 +293,13 @@ class G3RestrictedZeppelin(ModelProperties):
         'lambda_inf': DIFFUSIVITY_SCALING,
         'A': A_SCALING
     }
-    _spherical_mean = False
-    _model_type = 'other'
+    _parameter_types = {
+        'mu': 'orientation',
+        'lambda_par': 'normal',
+        'lambda_perp': 'normal',
+        'A': 'normal'
+    }
+    _model_type = 'CompartmentModel'
 
     def __init__(self, mu=None, lambda_par=None, lambda_inf=None, A=None):
         self.mu = mu

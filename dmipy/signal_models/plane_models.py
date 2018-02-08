@@ -40,8 +40,10 @@ class P3PlaneCallaghanApproximation(ModelProperties):
         'diameter': DIAMETER_SCALING
     }
 
-    _spherical_mean = False
-    _model_type = 'plane'
+    _parameter_types = {
+        'diameter': 'plane'
+    }
+    _model_type = 'NMRModel'
 
     def __init__(
         self,

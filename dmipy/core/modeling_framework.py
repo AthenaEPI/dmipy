@@ -66,6 +66,14 @@ class ModelProperties:
         return OrderedDict(self._parameter_scales.copy())
 
     @property
+    def parameter_types(self):
+        """Returns the optimization scales for the model parameters.
+        The scales scale the parameter_ranges to their actual size inside
+        optimization algorithms.
+        """
+        return OrderedDict(self._parameter_types.copy())
+
+    @property
     def parameter_names(self):
         "Returns the names of model parameters."
         return self._parameter_ranges.keys()
@@ -242,6 +250,12 @@ class MultiCompartmentModelProperties:
             for k, v in model.parameter_scales.items()
         })
 
+        self.parameter_types = OrderedDict({
+            model_name + k: v
+            for model, model_name in zip(self.models, self.model_names)
+            for k, v in model.parameter_types.items()
+        })
+
         self._parameter_map = {
             model_name + k: (model, k)
             for model, model_name in zip(self.models, self.model_names)
@@ -301,18 +315,12 @@ class MultiCompartmentModelProperties:
             del self.parameter_ranges[parameter_name]
             del self.parameter_cardinality[parameter_name]
             del self.parameter_scales[parameter_name]
+            del self.parameter_types[parameter_name]
 
     def _prepare_model_properties(self):
         """Checks that spherical mean and regular models cannot be optimized
         together, and whether the model can estimate a Fiber Orientation
         Distribution (FOD)."""
-        models_spherical_mean = [
-            model._spherical_mean for model in self.models]
-        if len(np.unique(models_spherical_mean)) > 1:
-            msg = "Cannot mix spherical mean and non-spherical mean models. "
-            msg = "Current model selection is {}".format(self.models)
-            raise ValueError(msg)
-        self._spherical_mean = np.all(models_spherical_mean)
         self.fod_available = False
         for model in self.models:
             try:
@@ -419,6 +427,7 @@ class MultiCompartmentModelProperties:
             del self.parameter_ranges[parameter_name]
             del self.parameter_cardinality[parameter_name]
             del self.parameter_scales[parameter_name]
+            del self.parameter_types[parameter_name]
         else:
             print('"{}" does not exist or has already been fixed.').format(
                 parameter_name)
@@ -470,6 +479,7 @@ class MultiCompartmentModelProperties:
         del self.parameter_ranges[lambda_perp_parameter_name]
         del self.parameter_cardinality[lambda_perp_parameter_name]
         del self.parameter_scales[lambda_perp_parameter_name]
+        del self.parameter_types[lambda_perp_parameter_name]
 
     def set_equal_parameter(self, parameter_name_in, parameter_name_out):
         """
@@ -502,6 +512,7 @@ class MultiCompartmentModelProperties:
         del self.parameter_ranges[parameter_name_out]
         del self.parameter_cardinality[parameter_name_out]
         del self.parameter_scales[parameter_name_out]
+        del self.parameter_types[parameter_name_out]
 
     def set_fractional_parameter(self,
                                  parameter1_smaller_equal_than, parameter2):
@@ -532,6 +543,7 @@ class MultiCompartmentModelProperties:
         self.parameter_ranges.update({new_parameter_name: [0., 1.]})
         self.parameter_scales.update({new_parameter_name: 1.})
         self.parameter_cardinality.update({new_parameter_name: 1})
+        self.parameter_types.update({new_parameter_name: 'normal'})
 
         self._parameter_map.update({new_parameter_name: (None, 'fraction')})
         self._inverted_parameter_map.update(
@@ -548,6 +560,7 @@ class MultiCompartmentModelProperties:
         del self.parameter_ranges[parameter1_smaller_equal_than]
         del self.parameter_cardinality[parameter1_smaller_equal_than]
         del self.parameter_scales[parameter1_smaller_equal_than]
+        del self.parameter_types[parameter1_smaller_equal_than]
 
 
 class MultiCompartmentModel(MultiCompartmentModelProperties):
@@ -717,18 +730,6 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             fitted_parameters_lin = np.empty(
                 np.r_[N_voxels, N_parameters], dtype=float)
 
-        # if the models are spherical mean based then estimate the
-        # spherical mean of the data.
-        if self._spherical_mean:
-            data_to_fit = np.zeros(
-                np.r_[data_.shape[:-1],
-                      self.scheme.unique_dwi_indices.max() + 1])
-            for pos in zip(*mask_pos):
-                data_to_fit[pos] = estimate_spherical_mean_multi_shell(
-                    data_[pos], self.scheme)
-        else:
-            data_to_fit = data_
-
         start = time()
         if solver == 'brute2fine':
             global_brute = GlobalBruteOptimizer(
@@ -744,7 +745,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
 
         start = time()
         for idx, pos in enumerate(zip(*mask_pos)):
-            voxel_E = data_to_fit[pos] / S0[pos]
+            voxel_E = data_[pos] / S0[pos]
             voxel_x0_vector = x0_[pos]
             if solver == 'brute2fine':
                 if global_brute.global_optimization_grid is True:
@@ -792,8 +793,6 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             The simulated signal of the microstructure model.
         """
         Ndata = acquisition_scheme.number_of_measurements
-        if self._spherical_mean:
-            Ndata = len(acquisition_scheme.shell_bvalues)
         x0 = model_parameters_array
 
         x0_at_least_2d = np.atleast_2d(x0)

@@ -1,6 +1,5 @@
 from dmipy.data import saved_data
-from dmipy.signal_models import (
-    spherical_mean_models, cylinder_models, gaussian_models)
+from dmipy.signal_models import cylinder_models, gaussian_models
 from dmipy.core import modeling_framework
 from dmipy.distributions import distribute_models
 from numpy.testing import assert_equal
@@ -12,18 +11,18 @@ scheme, camino_dispersed = saved_data.synthetic_camino_data_dispersed()
 
 
 def test_spherical_mean_stick_tortuous_zeppelin():
-    stick_sm = spherical_mean_models.C1StickSphericalMean()
-    zeppelin_sm = spherical_mean_models.G2ZeppelinSphericalMean()
+    stick = cylinder_models.C1Stick()
+    zeppelin = gaussian_models.G2Zeppelin()
 
-    mc_mdi = modeling_framework.MultiCompartmentModel(
-        models=[stick_sm, zeppelin_sm])
+    mc_mdi = modeling_framework.MultiCompartmentSphericalMeanModel(
+        models=[stick, zeppelin])
 
-    mc_mdi.set_tortuous_parameter('G2ZeppelinSphericalMean_1_lambda_perp',
-                                  'C1StickSphericalMean_1_lambda_par',
+    mc_mdi.set_tortuous_parameter('G2Zeppelin_1_lambda_perp',
+                                  'C1Stick_1_lambda_par',
                                   'partial_volume_0',
                                   'partial_volume_1')
-    mc_mdi.set_equal_parameter('G2ZeppelinSphericalMean_1_lambda_par',
-                               'C1StickSphericalMean_1_lambda_par')
+    mc_mdi.set_equal_parameter('G2Zeppelin_1_lambda_par',
+                               'C1Stick_1_lambda_par')
 
     fitted_params_par = (
         mc_mdi.fit(

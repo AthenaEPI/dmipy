@@ -25,8 +25,9 @@ class S1Dot(ModelProperties):
     }
     _parameter_scales = {
     }
-    _spherical_mean = False
-    _model_type = 'other'
+    _parameter_types = {
+    }
+    _model_type = 'CompartmentModel'
 
     def __call__(self, acquisition_scheme, **kwargs):
         r'''
@@ -90,8 +91,10 @@ class S2SphereSodermanApproximation(ModelProperties):
     _parameter_scales = {
         'diameter': DIAMETER_SCALING
     }
-    _spherical_mean = False
-    _model_type = 'sphere'
+    _parameter_types = {
+        'diameter': 'sphere',
+    }
+    _model_type = 'CompartmentModel'
 
     def __init__(self, diameter=None):
         self.diameter = diameter

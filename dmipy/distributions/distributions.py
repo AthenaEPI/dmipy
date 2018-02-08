@@ -93,7 +93,11 @@ class SD1Watson(ModelProperties):
         'mu': np.r_[1., 1.],
         'odi': 1.,
     }
-    _spherical_mean = False
+    _parameter_types = {
+        'mu': 'orientation',
+        'odi': 'normal'
+    }
+    _model_type = 'SphericalDistribution'
 
     def __init__(self, mu=None, odi=None):
         self.mu = mu
@@ -191,7 +195,13 @@ class SD2Bingham(ModelProperties):
         'odi': 1.,
         'beta_fraction': 1.
     }
-    _spherical_mean = False
+    _parameter_types = {
+        'mu': 'orientation',
+        'psi': 'circular',
+        'odi': 'normal',
+        'beta_fraction': 'normal'
+    }
+    _model_type = 'SphericalDistribution'
 
     def __init__(self, mu=None, psi=None, odi=None, beta_fraction=None):
         self.mu = mu
@@ -355,7 +365,11 @@ class DD1GammaDistribution(ModelProperties):
         'alpha': 1.,
         'beta': BETA_SCALING,
     }
-    _spherical_mean = False
+    _parameter_types = {
+        'alpha': 'normal',
+        'beta': 'normal'
+    }
+    _model_type = 'SpatialDistribution'
 
     def __init__(self, alpha=None, beta=None, Nsteps=30,
                  normalization='standard'):
@@ -365,11 +379,20 @@ class DD1GammaDistribution(ModelProperties):
 
         if normalization is 'standard':
             self.norm_func = self.unity
+        elif normalization is 'plane':
+            self.norm_func = self.length_plane
         elif normalization == 'cylinder':
             self.norm_func = self.surface_cylinder
         elif normalization == 'sphere':
             self.norm_func = self.volume_sphere
+        else:
+            msg = "Unknown normalization {}".format(normalization)
+            raise ValueError(msg)
         self.calculate_sampling_start_and_end_points(self.norm_func)
+
+    def length_plane(self, radius):
+        "The distance normalization function for planes."
+        return 2 * radius
 
     def surface_cylinder(self, radius):
         "The surface normalization function for cylinders."

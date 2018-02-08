@@ -1,5 +1,5 @@
 from dmipy.signal_models import (
-    cylinder_models, gaussian_models, sphere_models, spherical_mean_models)
+    cylinder_models, gaussian_models, sphere_models)
 from dmipy.core import modeling_framework
 from numpy.testing import (
     assert_equal, assert_array_almost_equal, assert_array_equal)
@@ -160,22 +160,19 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
 
     # now we make the stick and zeppelin spherical mean model and check if the
     # same lambda_par and volume fraction result as the 3D generated data.
-    stick_sm = spherical_mean_models.C1StickSphericalMean()
-    zeppelin_sm = spherical_mean_models.G2ZeppelinSphericalMean()
-
     stick_and_tortuous_zeppelin_sm = (
-        modeling_framework.MultiCompartmentModel(
-            models=[stick_sm, zeppelin_sm])
+        modeling_framework.MultiCompartmentSphericalMeanModel(
+            models=[stick, zeppelin])
     )
 
     stick_and_tortuous_zeppelin_sm.set_tortuous_parameter(
-        'G2ZeppelinSphericalMean_1_lambda_perp',
-        'C1StickSphericalMean_1_lambda_par',
+        'G2Zeppelin_1_lambda_perp',
+        'C1Stick_1_lambda_par',
         'partial_volume_0',
         'partial_volume_1')
     stick_and_tortuous_zeppelin_sm.set_equal_parameter(
-        'G2ZeppelinSphericalMean_1_lambda_par',
-        'C1StickSphericalMean_1_lambda_par')
+        'G2Zeppelin_1_lambda_par',
+        'C1Stick_1_lambda_par')
 
     res_sm = stick_and_tortuous_zeppelin_sm.fit(scheme, E
                                                 ).fitted_parameters_vector
