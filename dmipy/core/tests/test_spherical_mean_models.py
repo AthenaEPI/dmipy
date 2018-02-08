@@ -41,7 +41,7 @@ def test_model_spherical_mean_analytic_vs_numerical(
         signal_shell = model(scheme, **params)
         signal_shell_smt = np.mean(signal_shell)
         signal_smt = model.spherical_mean(scheme, **params)
-        assert_almost_equal(signal_shell_smt, signal_smt, 3)
+        assert_almost_equal(signal_shell_smt, signal_smt, 2)
 
 
 def test_model_spherical_mean_analytic_vs_sh(
@@ -59,7 +59,7 @@ def test_model_spherical_mean_analytic_vs_sh(
         signal_shell_sh = estimate_spherical_mean_shell(
             signal_shell, sphere.vertices)
         signal_smt = model.spherical_mean(scheme, **params)
-        assert_almost_equal(signal_shell_sh, signal_smt, 3)
+        assert_almost_equal(signal_shell_sh, signal_smt, 2)
 
 
 def test_MultiCompartmentSphericalMeanModel():
