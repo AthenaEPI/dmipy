@@ -1,5 +1,6 @@
 from dmipy.signal_models import (
     cylinder_models, gaussian_models, sphere_models)
+from dmipy.distributions.distribute_models import DD1GammaDistributed
 from dmipy.data.saved_acquisition_schemes import (
     wu_minn_hcp_acquisition_scheme)
 from dmipy.core.modeling_framework import (
@@ -26,6 +27,12 @@ models = [
     sphere_models.S2SphereSodermanApproximation()
 ]
 
+distributable_models = [
+    cylinder_models.C2CylinderSodermanApproximation(),
+    cylinder_models.C3CylinderCallaghanApproximation(),
+    cylinder_models.C4CylinderGaussianPhaseApproximation(),
+]
+
 
 def test_model_spherical_mean_analytic_vs_numerical(
         bvalue=1e9, delta=1e-2, Delta=2e-2):
@@ -41,6 +48,24 @@ def test_model_spherical_mean_analytic_vs_numerical(
         signal_shell = model(scheme, **params)
         signal_shell_smt = np.mean(signal_shell)
         signal_smt = model.spherical_mean(scheme, **params)
+        assert_almost_equal(signal_shell_smt, signal_smt, 2)
+
+
+def test_gamma_distributed_models_spherical_mean_numerical(
+        bvalue=1e9, delta=1e-2, Delta=2e-2):
+    bvals = np.tile(bvalue, len(sphere.vertices))
+    scheme = acquisition_scheme_from_bvalues(
+        bvals, sphere.vertices, delta, Delta)
+    for model in distributable_models:
+        dist_mod = DD1GammaDistributed([model])
+        params = {}
+        for param, card in dist_mod.parameter_cardinality.items():
+            params[param] = (np.random.rand(card) *
+                             dist_mod.parameter_scales[param])
+
+        signal_shell = dist_mod(scheme, **params)
+        signal_shell_smt = np.mean(signal_shell)
+        signal_smt = dist_mod.spherical_mean(scheme, **params)
         assert_almost_equal(signal_shell_smt, signal_smt, 2)
 
 

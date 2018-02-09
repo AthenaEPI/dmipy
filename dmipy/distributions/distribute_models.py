@@ -683,7 +683,8 @@ class DD1GammaDistributed(DistributedModel):
                 self.mu_param = param
 
     def rotational_harmonics_representation(
-            self, bvalue, qvalue, delta, Delta, rh_order=14, **kwargs):
+            self, bvalue, qvalue, gradient_strength, delta, Delta,
+            rh_order=14, **kwargs):
         r""" The model in rotational harmonics, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernel for spherical
         convolution.
@@ -706,6 +707,7 @@ class DD1GammaDistributed(DistributedModel):
         """
         simple_acq_scheme_rh.bvalues.fill(bvalue)
         simple_acq_scheme_rh.qvalues.fill(delta)
+        simple_acq_scheme_rh.gradient_strengths.fill(gradient_strength)
         simple_acq_scheme_rh.delta.fill(delta)
         simple_acq_scheme_rh.Delta.fill(Delta)
         kwargs.update({self.mu_param: [0., 0.]})
@@ -713,6 +715,36 @@ class DD1GammaDistributed(DistributedModel):
             simple_acq_scheme_rh, **kwargs)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
+
+    def spherical_mean(self, acquisition_scheme, **kwargs):
+        """
+        Estimates spherical mean for every shell in acquisition scheme.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+
+        Returns
+        -------
+        E_mean : float,
+            spherical mean of the model for every acquisition shell.
+        """
+        E_mean = np.ones_like(acquisition_scheme.shell_bvalues)
+        for shell_index in acquisition_scheme.unique_dwi_indices:
+            rh = self.rotational_harmonics_representation(
+                bvalue=acquisition_scheme.shell_bvalues[shell_index],
+                qvalue=acquisition_scheme.shell_qvalues[shell_index],
+                gradient_strength=acquisition_scheme.shell_gradient_strengths[
+                    shell_index],
+                delta=acquisition_scheme.shell_delta[shell_index],
+                Delta=acquisition_scheme.shell_Delta[shell_index],
+                rh_order=acquisition_scheme.shell_sh_orders[shell_index],
+                **kwargs)
+            E_mean[shell_index] = rh[0] / (2 * np.sqrt(np.pi))
+        return E_mean
 
 
 class ReturnFixedValue:
