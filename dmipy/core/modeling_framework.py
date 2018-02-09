@@ -407,6 +407,15 @@ class MultiCompartmentModelProperties:
         return np.hstack([scale for parameter, scale in
                           self.parameter_scales.items()])
 
+    def _check_for_tortuosity_constraint(self):
+        for link in self.parameter_links:
+            if link[2] is T1_tortuosity:
+                msg = "Cannot use MIX optimization when the Tortuosity "
+                msg += "constraint is set in the MultiCompartmentModel. To "
+                msg += "use MIX while imposing Tortuosity, set the constraint "
+                msg += "in the DistributedModel step."
+                raise ValueError(msg)
+
     def set_fixed_parameter(self, parameter_name, value):
         """
         Allows the user to fix an optimization parameter to a static value.
@@ -748,6 +757,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             print('Setup brute2fine optimizer in {} seconds'.format(
                 time() - start))
         elif solver == 'mix':
+            self._check_for_tortuosity_constraint()
             fit_func = MixOptimizer(self, self.scheme, maxiter)
             print('Setup MIX optimizer in {} seconds'.format(
                 time() - start))
@@ -1109,6 +1119,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
             print('Setup brute2fine optimizer in {} seconds'.format(
                 time() - start))
         elif solver == 'mix':
+            self._check_for_tortuosity_constraint()
             fit_func = MixOptimizer(self, self.scheme, maxiter)
             print('Setup MIX optimizer in {} seconds'.format(
                 time() - start))
