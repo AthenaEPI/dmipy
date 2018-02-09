@@ -77,3 +77,5 @@ Dmipy's design is completely modular and can easily be extended with new models,
 ## How to cite Dmipy
 Please temporarily cite the following PhD thesis: 
 Fick, Rutger. *Advanced dMRI signal modeling for tissue microstructure characterization*. Diss. Université Côte d'Azur; Inria Sophia Antipolis, 2017.
+
+[Package Acknowledgements](https://github.com/AthenaEPI/dmipy/blob/master/Acknowledgements.md)
