@@ -19,7 +19,7 @@ __all__ = [
     'ReturnFixedValue'
 ]
 
-_samples = 10
+_samples = 15
 _thetas = np.linspace(0, np.pi / 2, _samples)
 _r = np.ones(_samples)
 _phis = np.zeros(_samples)
@@ -706,13 +706,12 @@ class DD1GammaDistributed(DistributedModel):
             rotational harmonics of the model aligned with z-axis.
         """
         simple_acq_scheme_rh.bvalues.fill(bvalue)
-        simple_acq_scheme_rh.qvalues.fill(delta)
+        simple_acq_scheme_rh.qvalues.fill(qvalue)
         simple_acq_scheme_rh.gradient_strengths.fill(gradient_strength)
         simple_acq_scheme_rh.delta.fill(delta)
         simple_acq_scheme_rh.Delta.fill(Delta)
         kwargs.update({self.mu_param: [0., 0.]})
-        E_kernel_sf = self(
-            simple_acq_scheme_rh, **kwargs)
+        E_kernel_sf = self(simple_acq_scheme_rh, **kwargs)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
 

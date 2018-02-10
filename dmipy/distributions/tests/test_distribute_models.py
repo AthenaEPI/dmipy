@@ -3,7 +3,8 @@ from dmipy.signal_models import (
 from dmipy.distributions import distribute_models, distributions
 from dmipy.data.saved_acquisition_schemes import wu_minn_hcp_acquisition_scheme
 import numpy as np
-from numpy.testing import assert_equal, assert_almost_equal
+from numpy.testing import (
+    assert_equal, assert_almost_equal, assert_array_almost_equal)
 
 
 def test_all_models_dispersable():
@@ -73,3 +74,38 @@ def test_all_models_distributable():
                     card) * dist_mod.parameter_scales[param]
             assert_equal(isinstance(
                 dist_mod(scheme, **params), np.ndarray), True)
+
+
+def test_C2_watson_gamma_equals_gamma_watson():
+    scheme = wu_minn_hcp_acquisition_scheme()
+
+    cylinder = cylinder_models.C2CylinderSodermanApproximation()
+    watsoncyl = distribute_models.SD1WatsonDistributed([cylinder])
+
+    gammawatsoncyl = distribute_models.DD1GammaDistributed(
+        [watsoncyl],
+        target_parameter='C2CylinderSodermanApproximation_1_diameter')
+
+    params1 = {
+        'SD1WatsonDistributed_1_C2CylinderSodermanApproximation_1_lambda_par':
+        1.7e-9,
+        'DD1Gamma_1_alpha': 2.,
+        'DD1Gamma_1_beta': 4e-6,
+        'SD1WatsonDistributed_1_SD1Watson_1_odi': 0.4,
+        'SD1WatsonDistributed_1_SD1Watson_1_mu': [0., 0.]
+    }
+    gammacyl = distribute_models.DD1GammaDistributed([cylinder])
+    watsongammacyl = distribute_models.SD1WatsonDistributed(
+        [gammacyl], target_parameter='C2CylinderSodermanApproximation_1_mu')
+
+    params2 = {
+        'DD1GammaDistributed_1_C2CylinderSodermanApproximation_1_lambda_par':
+        1.7e-9,
+        'DD1GammaDistributed_1_DD1Gamma_1_alpha': 2.,
+        'DD1GammaDistributed_1_DD1Gamma_1_beta': 4e-6,
+        'SD1Watson_1_odi': 0.4,
+        'SD1Watson_1_mu': [0., 0.]
+    }
+
+    assert_array_almost_equal(watsongammacyl(scheme, **params2),
+                              gammawatsoncyl(scheme, **params1), 5)
