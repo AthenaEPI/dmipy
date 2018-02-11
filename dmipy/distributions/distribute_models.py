@@ -709,8 +709,8 @@ class DD1GammaDistributed(DistributedModel):
         simple_acq_scheme_rh.gradient_strengths.fill(gradient_strength)
         simple_acq_scheme_rh.delta.fill(delta)
         simple_acq_scheme_rh.Delta.fill(Delta)
-        simple_acq_scheme_rh.shell_Delta = np.array([Delta])
-        simple_acq_scheme_rh.shell_delta = np.array([delta])
+        simple_acq_scheme_rh.shell_Delta[0] = Delta
+        simple_acq_scheme_rh.shell_delta[0] = delta
 
         kwargs.update({self.mu_param: [0., 0.]})
         E_kernel_sf = self(simple_acq_scheme_rh, **kwargs)

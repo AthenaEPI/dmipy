@@ -109,3 +109,78 @@ def test_C2_watson_gamma_equals_gamma_watson():
 
     assert_array_almost_equal(watsongammacyl(scheme, **params2),
                               gammawatsoncyl(scheme, **params1), 5)
+
+
+def test_C3_watson_gamma_equals_gamma_watson():
+    scheme = wu_minn_hcp_acquisition_scheme()
+
+    cylinder = cylinder_models.C3CylinderCallaghanApproximation()
+    watsoncyl = distribute_models.SD1WatsonDistributed([cylinder])
+
+    gammawatsoncyl = distribute_models.DD1GammaDistributed(
+        [watsoncyl],
+        target_parameter='C3CylinderCallaghanApproximation_1_diameter')
+
+    params1 = {
+        'SD1WatsonDistributed_1_C3CylinderCallaghanApproximation_1_lambda_par':
+        1.7e-9,
+        'DD1Gamma_1_alpha': 2.,
+        'DD1Gamma_1_beta': 4e-6,
+        'SD1WatsonDistributed_1_SD1Watson_1_odi': 0.4,
+        'SD1WatsonDistributed_1_SD1Watson_1_mu': [0., 0.]
+    }
+    gammacyl = distribute_models.DD1GammaDistributed([cylinder])
+    watsongammacyl = distribute_models.SD1WatsonDistributed(
+        [gammacyl], target_parameter='C3CylinderCallaghanApproximation_1_mu')
+
+    params2 = {
+        'DD1GammaDistributed_1_C3CylinderCallaghanApproximation_1_lambda_par':
+        1.7e-9,
+        'DD1GammaDistributed_1_DD1Gamma_1_alpha': 2.,
+        'DD1GammaDistributed_1_DD1Gamma_1_beta': 4e-6,
+        'SD1Watson_1_odi': 0.4,
+        'SD1Watson_1_mu': [0., 0.]
+    }
+
+    assert_array_almost_equal(watsongammacyl(scheme, **params2),
+                              gammawatsoncyl(scheme, **params1), 5)
+
+
+def test_C4_watson_gamma_equals_gamma_watson():
+    scheme = wu_minn_hcp_acquisition_scheme()
+
+    cylinder = cylinder_models.C4CylinderGaussianPhaseApproximation()
+    watsoncyl = distribute_models.SD1WatsonDistributed([cylinder])
+
+    gammawatsoncyl = distribute_models.DD1GammaDistributed(
+        [watsoncyl],
+        target_parameter='C4CylinderGaussianPhaseApproximation_1_diameter')
+
+    param = 'SD1WatsonDistributed_1_C4CylinderGaussianPhaseApproximation'
+    param += '_1_lambda_par'
+
+    params1 = {
+        param: 1.7e-9,
+        'DD1Gamma_1_alpha': 2.,
+        'DD1Gamma_1_beta': 4e-6,
+        'SD1WatsonDistributed_1_SD1Watson_1_odi': 0.4,
+        'SD1WatsonDistributed_1_SD1Watson_1_mu': [0., 0.]
+    }
+    gammacyl = distribute_models.DD1GammaDistributed([cylinder])
+    watsongammacyl = distribute_models.SD1WatsonDistributed(
+        [gammacyl],
+        target_parameter='C4CylinderGaussianPhaseApproximation_1_mu')
+
+    param = 'DD1GammaDistributed_1_C4CylinderGaussianPhaseApproximation'
+    param += '_1_lambda_par'
+
+    params2 = {
+        param: 1.7e-9,
+        'DD1GammaDistributed_1_DD1Gamma_1_alpha': 2.,
+        'DD1GammaDistributed_1_DD1Gamma_1_beta': 4e-6,
+        'SD1Watson_1_odi': 0.4,
+        'SD1Watson_1_mu': [0., 0.]
+    }
+
+    assert_array_almost_equal(watsongammacyl(scheme, **params2),
+                              gammawatsoncyl(scheme, **params1), 5)
