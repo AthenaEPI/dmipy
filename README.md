@@ -1,10 +1,10 @@
 # Dmipy: Diffusion Microstructure Imaging in Python
 
-The Dmipy software package facilitates the estimation of diffusion MRI-based microstructure features by taking a completely modular approach to Microstructure Imaging. Using Dmipy you can design, fit, and recover the parameters of any multi-compartment microstructure model in usually less than 10 lines of code. Created models can be used to simulate and fit data for any PGSE-based dMRI acquisition, including including single shell, multi-shell, multi-diffusion time and multi-TE acquisition schemes. Dmipy's main features include the following:
+The Dmipy software package facilitates the **reliable and reproducible estimation of diffusion MRI-based microstructure features**. It does this by taking a **completely modular approach to Microstructure Imaging**. Using Dmipy you can design, fit, and recover the parameters of any multi-compartment microstructure model in usually less than 10 lines of code. Created models can be used to simulate and fit data for any PGSE-based dMRI acquisition, including including single shell, multi-shell, multi-diffusion time and multi-TE acquisition schemes. Dmipy's main features include:
 
 **Complete Freedom in Model Design and Optimization**
-- Any combination of tissue models (e.g. Gaussian, Cylinder, Sphere) can be combined into a multi-compartment model.
-- Any model can be distributed with Watson/Bingham or Gamma distributions.
+- Any combination of tissue models (e.g. Gaussian, Cylinder, Sphere) and axon bundle representation (e.g. orientation-dispersed/diameter-distributed) can be combined into a multi-compartment model.
+- Any appropriate model can be orientation-dispersed and/or axon diameter-distributed.
 - Any predefined or custom parameter constraints or relations can be imposed.
 - Free choice of global optimizer to fit your model to the data (Brute-Force or Stochastic)
 - Ability to also fit the spherical mean of any multi-compartment model to the spherical mean of the data.
@@ -42,7 +42,8 @@ To get a feeling for how to use Dmipy, we provide a few tutorial notebooks:
 - [Setting up an acquisition scheme](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/tutorial_setting_up_acquisition_scheme.ipynb)
 - [Simulating and fitting data using a simple Stick model](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/tutorial_simulating_and_fitting_using_a_simple_model.ipynb)
 - [Combining biophysical models into a Microstructure model](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/tutorial_combining_biophysical_models_into_microstructure_model.ipynb)
-- [Creating a dispersed axon bundle representation and imposing parameter links](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/tutorial_imposing_parameter_links.ipynb)
+- [Creating a dispersed and/or distributed axon bundle representation](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/tutorial_imposing_parameter_links.ipynb)
+- Imposing parameter links and constraints
 - [Parameter Cascading: Using a simple model to initialize a complex one](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/tutorial_parameter_cascading_and_simulating_nd_datasets.ipynb)
 
 ## Explanations and Illustrations of Dmipy Contents
@@ -75,7 +76,7 @@ Dmipy uses HCP data to illustrate microstructure model examples. To reproduce th
 ## How to contribute to Dmipy
 Dmipy's design is completely modular and can easily be extended with new models, distributions or optimizers. To contribute, view our [contribution guidelines](https://github.com/AthenaEPI/dmipy/blob/master/contribution_guidelines.rst).
 ## How to cite Dmipy
-Please temporarily cite the following PhD thesis: 
-Fick, Rutger. *Advanced dMRI signal modeling for tissue microstructure characterization*. Diss. Université Côte d'Azur; Inria Sophia Antipolis, 2017.
+Temporarily reference: 
+Fick, Rutger. *Advanced dMRI signal modeling for tissue microstructure characterization*. PhD Thesis. Université Côte d'Azur; Inria Sophia Antipolis, 2017.
 
 [Package Acknowledgements](https://github.com/AthenaEPI/dmipy/blob/master/Acknowledgements.md)
