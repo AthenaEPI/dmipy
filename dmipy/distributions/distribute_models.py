@@ -19,7 +19,7 @@ __all__ = [
     'ReturnFixedValue'
 ]
 
-_samples = 15
+_samples = 10
 _thetas = np.linspace(0, np.pi / 2, _samples)
 _r = np.ones(_samples)
 _phis = np.zeros(_samples)
@@ -503,7 +503,6 @@ class DistributedModel:
             ]
         else:
             partial_volumes = []
-
         remaining_volume_fraction = 1.
         for model_name, model, partial_volume in zip(
             self.model_names, self.models,
@@ -710,6 +709,9 @@ class DD1GammaDistributed(DistributedModel):
         simple_acq_scheme_rh.gradient_strengths.fill(gradient_strength)
         simple_acq_scheme_rh.delta.fill(delta)
         simple_acq_scheme_rh.Delta.fill(Delta)
+        simple_acq_scheme_rh.shell_Delta = np.array([Delta])
+        simple_acq_scheme_rh.shell_delta = np.array([delta])
+
         kwargs.update({self.mu_param: [0., 0.]})
         E_kernel_sf = self(simple_acq_scheme_rh, **kwargs)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)

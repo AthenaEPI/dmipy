@@ -454,6 +454,7 @@ class DD1Gamma(ModelProperties):
                 inverse_cdf /= inverse_cdf.max()
                 end_grid[i, j] = x_grid[np.argmax(cdf > 0.995)]
                 start_grid[i, j] = x_grid[np.argmax(inverse_cdf < 0.995)]
+        start_grid = np.clip(start_grid, 1e-8, np.inf)
         end_grid = np.clip(end_grid, 1e-7, np.inf)
 
         alpha_grid, beta_grid = np.meshgrid(alpha_linspace, beta_linspace)
@@ -486,6 +487,7 @@ class DD1Gamma(ModelProperties):
         gamma_dist = stats.gamma(alpha, scale=beta)
         start_point = interpolate.bisplev(alpha, beta, self.start_interpolator)
         end_point = interpolate.bisplev(alpha, beta, self.end_interpolator)
+        start_point = max(start_point, 1e-8)
         radii = np.linspace(start_point, end_point, self.Nsteps)
         normalization = self.norm_func(radii)
         radii_pdf = gamma_dist.pdf(radii)
