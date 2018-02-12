@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/AthenaEPI/dmipy.svg?branch=master)](https://travis-ci.org/AthenaEPI/dmipy)
 # Dmipy: Diffusion Microstructure Imaging in Python
 
 The Dmipy software package facilitates the **reproducible estimation of diffusion MRI-based microstructure features**. It does this by taking a completely modular approach to Microstructure Imaging. Using Dmipy you can design, fit, and recover the parameters of any multi-compartment microstructure model in usually less than 10 lines of code. Created models can be used to simulate and fit data for any PGSE-based dMRI acquisition, including including single shell, multi-shell, multi-diffusion time and multi-TE acquisition schemes. Dmipy's main features include:
@@ -9,13 +10,13 @@ The Dmipy software package facilitates the **reproducible estimation of diffusio
 - Free choice of global optimizer to fit your model to the data (Brute-Force or Stochastic)
 - Ability to also fit the spherical mean of any multi-compartment model to the spherical mean of the data.
 
-**Human Connectome Interface**
+**Human Connectome Project Data Interface**
 Dmipy enables you to directly download any HCP subject data using your own credentials.
 
-**Fast, Multi-Core processing**
-Despite its python-based modular design, Dmipy is still reasonably fast by using *pathos* multi-core processing and *numba* function compilation.
+**Numba-Accelerated, Multi-Core processing**
+Dmipy takes heavy advantage of Python's *pathos* multi-core processing and *numba* function compilation.
 
-**Extensive documentation on Tissue and Microstructure Models**
+**Documentation on Tissue and Microstructure Models**
 We include documentation and illustrations of all tissue models and parameter distributions, as well as example implementations and results on HCP data for Ball and Stick, Ball and Racket, NODDI-Watson/Bingham, AxCaliber, Spherical Mean models and more.
 
 **Dipy Compatibility**
