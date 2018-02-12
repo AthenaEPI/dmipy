@@ -226,20 +226,19 @@ def test_MIX_fitting_multimodel():
 
 
 def test_MIX_fitting_singlemodel():
-    zeppelin = gaussian_models.G2Zeppelin()
-    ball_and_zeppelin = (
+    stick = cylinder_models.C1Stick()
+    stick_mod = (
         modeling_framework.MultiCompartmentModel(
-            models=[zeppelin]))
+            models=[stick]))
 
-    parameter_vector = ball_and_zeppelin.parameters_to_parameter_vector(
-        G2Zeppelin_1_lambda_perp=.5e-9,
-        G2Zeppelin_1_mu=(np.pi / 2., np.pi / 2.),
-        G2Zeppelin_1_lambda_par=1.7e-9
+    parameter_vector = stick_mod.parameters_to_parameter_vector(
+        C1Stick_1_mu=(np.pi / 2., np.pi / 2.),
+        C1Stick_1_lambda_par=1.7e-9
     )
 
-    E = ball_and_zeppelin.simulate_signal(
+    E = stick_mod.simulate_signal(
         scheme, parameter_vector)
-    fit = ball_and_zeppelin.fit(
+    fit = stick_mod.fit(
         scheme,
         E, solver='mix').fitted_parameters_vector
     assert_array_almost_equal(abs(fit).squeeze(), parameter_vector, 2)
