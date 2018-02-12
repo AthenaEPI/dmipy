@@ -387,7 +387,7 @@ class C3CylinderCallaghanApproximation(ModelProperties):
         for m in range(1, number_of_functions):
             self.alpha[:, m] = special.jnp_zeros(m, number_of_roots)
 
-    def perpendicular_attenuation(self, q, tau, diameter):
+    def perpendicular_attenuation(self, q, Delta, diameter):
         "Implements the finite time Callaghan model for cylinders"
         radius = diameter / 2.
         alpha = self.alpha
@@ -400,7 +400,7 @@ class C3CylinderCallaghanApproximation(ModelProperties):
             alpha2 = alpha[k, 0] ** 2
             update = (
                 4 * np.exp(-alpha2 * self.diffusion_perpendicular *
-                           tau / radius ** 2) *
+                           Delta / radius ** 2) *
                 q_argument_2 /
                 (q_argument_2 - alpha2) ** 2 * J
             )
@@ -413,7 +413,7 @@ class C3CylinderCallaghanApproximation(ModelProperties):
                 alpha2 = self.alpha[k, m] ** 2
                 update = (
                     8 * np.exp(-alpha2 * self.diffusion_perpendicular *
-                               tau / radius ** 2) *
+                               Delta / radius ** 2) *
                     alpha2 / (alpha2 - m ** 2) *
                     q_argument_J /
                     (q_argument_2 - alpha2) ** 2
@@ -440,7 +440,7 @@ class C3CylinderCallaghanApproximation(ModelProperties):
         bvals = acquisition_scheme.bvalues
         n = acquisition_scheme.gradient_directions
         q = acquisition_scheme.qvalues
-        tau = acquisition_scheme.tau
+        Delta = acquisition_scheme.Delta
 
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
@@ -457,7 +457,7 @@ class C3CylinderCallaghanApproximation(ModelProperties):
 
         q_nonzero = q_perp > 0
         E_perpendicular[q_nonzero] = self.perpendicular_attenuation(
-            q_perp[q_nonzero], tau[q_nonzero], diameter
+            q_perp[q_nonzero], Delta[q_nonzero], diameter
         )
         return E_parallel * E_perpendicular
 
