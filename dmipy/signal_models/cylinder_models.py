@@ -387,7 +387,7 @@ class C3CylinderCallaghanApproximation(ModelProperties):
         for m in range(1, number_of_functions):
             self.alpha[:, m] = special.jnp_zeros(m, number_of_roots)
 
-    def perpendicular_attenuation(self, q, Delta, diameter):
+    def perpendicular_attenuation(self, q, tau, diameter):
         "Implements the finite time Callaghan model for cylinders"
         radius = diameter / 2.
         alpha = self.alpha
@@ -400,7 +400,7 @@ class C3CylinderCallaghanApproximation(ModelProperties):
             alpha2 = alpha[k, 0] ** 2
             update = (
                 4 * np.exp(-alpha2 * self.diffusion_perpendicular *
-                           Delta / radius ** 2) *
+                           tau / radius ** 2) *
                 q_argument_2 /
                 (q_argument_2 - alpha2) ** 2 * J
             )
@@ -413,7 +413,7 @@ class C3CylinderCallaghanApproximation(ModelProperties):
                 alpha2 = self.alpha[k, m] ** 2
                 update = (
                     8 * np.exp(-alpha2 * self.diffusion_perpendicular *
-                               Delta / radius ** 2) *
+                               tau / radius ** 2) *
                     alpha2 / (alpha2 - m ** 2) *
                     q_argument_J /
                     (q_argument_2 - alpha2) ** 2
@@ -441,6 +441,8 @@ class C3CylinderCallaghanApproximation(ModelProperties):
         n = acquisition_scheme.gradient_directions
         q = acquisition_scheme.qvalues
         Delta = acquisition_scheme.Delta
+        delta = acquisition_scheme.delta
+        tau = Delta - delta / 3.0
 
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
@@ -457,12 +459,12 @@ class C3CylinderCallaghanApproximation(ModelProperties):
 
         q_nonzero = q_perp > 0
         E_perpendicular[q_nonzero] = self.perpendicular_attenuation(
-            q_perp[q_nonzero], Delta[q_nonzero], diameter
+            q_perp[q_nonzero], tau[q_nonzero], diameter
         )
         return E_parallel * E_perpendicular
 
     def rotational_harmonics_representation(
-            self, bvalue, qvalue, Delta, rh_order=14, **kwargs):
+            self, bvalue, qvalue, Delta, delta, rh_order=14, **kwargs):
         r""" The rotational harmonics of the model, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernel for spherical
         convolution.
@@ -488,6 +490,7 @@ class C3CylinderCallaghanApproximation(ModelProperties):
         simple_acq_scheme_rh.bvalues.fill(bvalue)
         simple_acq_scheme_rh.qvalues.fill(qvalue)
         simple_acq_scheme_rh.Delta.fill(Delta)
+        simple_acq_scheme_rh.delta.fill(delta)
         E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.],
                            diameter=diameter, lambda_par=lambda_par)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
@@ -515,6 +518,7 @@ class C3CylinderCallaghanApproximation(ModelProperties):
                 bvalue=acquisition_scheme.shell_bvalues[shell_index],
                 qvalue=acquisition_scheme.shell_qvalues[shell_index],
                 Delta=acquisition_scheme.shell_Delta[shell_index],
+                delta=acquisition_scheme.shell_delta[shell_index],
                 rh_order=acquisition_scheme.shell_sh_orders[shell_index],
                 **kwargs)
             E_mean[shell_index] = rh[0] / (2 * np.sqrt(np.pi))
