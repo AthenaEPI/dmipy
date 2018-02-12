@@ -145,6 +145,9 @@ def test_bingham_dispersed_stick_tortuous_zeppelin():
     bingham_bundle.set_fixed_parameter(
         'G2Zeppelin_1_lambda_par', 1.7e-9)
 
+    bingham_bundle.set_fixed_parameter(
+        'SD2Bingham_1_mu', [0., 0.])
+
     mc_bingham = (
         modeling_framework.MultiCompartmentModel(
             models=[bingham_bundle])
