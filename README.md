@@ -1,6 +1,9 @@
 [![Build Status](https://travis-ci.org/AthenaEPI/dmipy.svg?branch=master)](https://travis-ci.org/AthenaEPI/dmipy)
 [![codecov](https://codecov.io/gh/AthenaEPI/dmipy/branch/master/graph/badge.svg)](https://codecov.io/gh/AthenaEPI/dmipy)
 [![Coverage Status](https://coveralls.io/repos/github/AthenaEPI/dmipy/badge.svg)](https://coveralls.io/github/AthenaEPI/dmipy)
+[![Documentation Status](https://readthedocs.org/projects/pip/badge/?version=stable)](http://pip.pypa.io/en/stable/?badge=stable)
+
+
 # Dmipy: Diffusion Microstructure Imaging in Python
 
 The Dmipy software package facilitates the **reproducible estimation of diffusion MRI-based microstructure features**. It does this by taking a completely modular approach to Microstructure Imaging. Using Dmipy you can design, fit, and recover the parameters of any multi-compartment microstructure model in usually less than 10 lines of code. Created models can be used to simulate and fit data for any PGSE-based dMRI acquisition, including including single shell, multi-shell, multi-diffusion time and multi-TE acquisition schemes. Dmipy's main features include:
