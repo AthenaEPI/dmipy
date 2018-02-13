@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.org/AthenaEPI/dmipy.svg?branch=master)](https://travis-ci.org/AthenaEPI/dmipy)
 [![codecov](https://codecov.io/gh/AthenaEPI/dmipy/branch/master/graph/badge.svg)](https://codecov.io/gh/AthenaEPI/dmipy)
 [![Coverage Status](https://coveralls.io/repos/github/AthenaEPI/dmipy/badge.svg)](https://coveralls.io/github/AthenaEPI/dmipy)
-[![Documentation Status](https://readthedocs.org/projects/pip/badge/?version=stable)](http://pip.pypa.io/en/stable/?badge=stable)
+[![Documentation Status](https://readthedocs.org/projects/dmipy/badge/?version=latest)](http://dmipy.readthedocs.io/en/latest/?badge=latest)
 
 
 # Dmipy: Diffusion Microstructure Imaging in Python
