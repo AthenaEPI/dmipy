@@ -1,7 +1,8 @@
 import numpy as np
 from dipy.data import get_sphere
 from dipy.reconst.shm import sh_to_sf_matrix
-from ..utils.utils import unitsphere2cart_Nd, T1_tortuosity
+from ..utils.utils import (
+    unitsphere2cart_Nd, T1_tortuosity, fractional_parameter)
 from ..utils.spherical_mean import (
     estimate_spherical_mean_multi_shell)
 from functools import partial
@@ -380,6 +381,27 @@ class FittedMultiCompartmentSphericalMeanModel:
             if link[2] is T1_tortuosity:
                 bundle.parameter_links.append(
                     [link[0], link[1], link[2], link[3][:-1]])
+            elif link[2] is fractional_parameter:
+                new_parameter_name = param_to_delete + '_fraction'
+                bundle.parameter_ranges.update({new_parameter_name: [0., 1.]})
+                bundle.parameter_scales.update({new_parameter_name: 1.})
+                bundle.parameter_cardinality.update({new_parameter_name: 1})
+                bundle.parameter_types.update({new_parameter_name: 'normal'})
+
+                bundle._parameter_map.update(
+                    {new_parameter_name: (None, 'fraction')})
+                bundle._inverted_parameter_map.update(
+                    {(None, 'fraction'): new_parameter_name})
+
+                # add parmeter link to fractional parameter
+                param_larger_than = self.model._inverted_parameter_map[
+                    link[3][1][0], link[3][1][1]]
+
+                model, name = bundle._parameter_map[param_to_delete]
+                bundle.parameter_links.append(
+                    [model, name, fractional_parameter, [
+                        bundle._parameter_map[new_parameter_name],
+                        bundle._parameter_map[param_larger_than]]])
             else:
                 bundle.parameter_links.append(link)
             del bundle.parameter_ranges[param_to_delete]
