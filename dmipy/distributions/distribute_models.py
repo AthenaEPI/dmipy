@@ -166,6 +166,7 @@ class DistributedModel:
                 self._parameter_map[partial_volume_name] = (
                     None, partial_volume_name
                 )
+                self.parameter_types[partial_volume_name] = 'normal'
                 self._inverted_parameter_map[(None, partial_volume_name)] = \
                     partial_volume_name
 

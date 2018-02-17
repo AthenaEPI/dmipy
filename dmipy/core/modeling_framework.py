@@ -118,12 +118,16 @@ class MultiCompartmentModelProperties:
                 parameters[parameter] = parameter_vector[
                     current_pos: current_pos + card
                 ]
+                if card == 1:
+                    parameters[parameter] = parameters[parameter][0]
                 current_pos += card
         else:
             for parameter, card in self.parameter_cardinality.items():
                 parameters[parameter] = parameter_vector[
                     ..., current_pos: current_pos + card
                 ]
+                if card == 1:
+                    parameters[parameter] = parameters[parameter][..., 0]
                 current_pos += card
         return parameters
 
@@ -286,6 +290,7 @@ class MultiCompartmentModelProperties:
                 self._parameter_map[partial_volume_name] = (
                     None, partial_volume_name
                 )
+                self.parameter_types[partial_volume_name] = 'normal'
                 self._inverted_parameter_map[(None, partial_volume_name)] = \
                     partial_volume_name
                 self.parameter_cardinality[partial_volume_name] = 1
@@ -370,7 +375,7 @@ class MultiCompartmentModelProperties:
 
     def _prepare_parameters_to_optimize(self):
         "Sets up which parmameters to optimize."
-        self.optimized_parameters = OrderedDict({
+        self.parameter_optimization_flags = OrderedDict({
             k: True
             for k, v in self.parameter_cardinality.items()
         })
@@ -393,7 +398,7 @@ class MultiCompartmentModelProperties:
         "Returns the linear bools whether to optimize a model parameter."
         params = []
         for parameter, card in self.parameter_cardinality.items():
-            optimize_param = self.optimized_parameters[parameter]
+            optimize_param = self.parameter_optimization_flags[parameter]
             if card == 1:
                 params.append(optimize_param)
             else:
@@ -557,7 +562,7 @@ class MultiCompartmentModelProperties:
         self._parameter_map.update({new_parameter_name: (None, 'fraction')})
         self._inverted_parameter_map.update(
             {(None, 'fraction'): new_parameter_name})
-        self.optimized_parameters.update({new_parameter_name: True})
+        self.parameter_optimization_flags.update({new_parameter_name: True})
 
         # add parmeter link to fractional parameter
         model, name = self._parameter_map[parameter1_smaller_equal_than]

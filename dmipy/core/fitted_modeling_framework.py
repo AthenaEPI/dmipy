@@ -1,9 +1,10 @@
 import numpy as np
 from dipy.data import get_sphere
 from dipy.reconst.shm import sh_to_sf_matrix
-from ..utils.utils import unitsphere2cart_Nd
+from ..utils.utils import unitsphere2cart_Nd, T1_tortuosity
 from ..utils.spherical_mean import (
     estimate_spherical_mean_multi_shell)
+from functools import partial
 
 
 __all__ = [
@@ -312,3 +313,60 @@ class FittedMultiCompartmentSphericalMeanModel:
         mse = np.mean((data_ - y_hat) ** 2, axis=-1)
         mse[~self.mask] = 0
         return mse
+
+    def return_parametric_fod_optimizer(
+            self, distribution='watson', Ncompartments=1):
+        from .modeling_framework import MultiCompartmentModel
+        from ..distributions import distribute_models
+
+        if distribution is 'watson':
+            bundle = distribute_models.SD1WatsonDistributed(
+                self.model.models)
+            basename = 'SD1WatsonDistributed_'
+        elif distribution is 'bingham':
+            bundle = distribute_models.SD2BinghamDistributed(
+                self.model.models)
+            basename = 'SD2BinghamDistributed_'
+
+        for link in self.model.parameter_links:
+            param_to_delete = self.model._inverted_parameter_map[link[0],
+                                                                 link[1]]
+            if link[2] is T1_tortuosity:
+                bundle.parameter_links.append(
+                    [link[0], link[1], link[2], link[3][:-1]])
+            else:
+                bundle.parameter_links.append(link)
+            del bundle.parameter_ranges[param_to_delete]
+            del bundle.parameter_cardinality[param_to_delete]
+            del bundle.parameter_scales[param_to_delete]
+            del bundle.parameter_types[param_to_delete]
+
+        bundles = [bundle.copy() for i in range(Ncompartments)]
+        mc_bundles = MultiCompartmentModel(bundles)
+        parameter_pairs = []
+        for smt_par_name in self.model.parameter_names:
+            parameters = []
+            parameters.append(smt_par_name)
+            for mc_par_name in mc_bundles.parameter_names:
+                if (mc_par_name.startswith(basename) and
+                        mc_par_name.endswith(smt_par_name)):
+                    parameters.append(mc_par_name)
+            if len(parameters) > 1:
+                parameter_pairs.append(parameters)
+
+        for parameters in parameter_pairs:
+            for i in range(2, Ncompartments + 1):
+                mc_bundles.set_equal_parameter(parameters[1], parameters[i])
+
+        x0_params = {}
+        for parameters in parameter_pairs:
+            smt_parameter_name = parameters[0]
+            mc_parameter_name = parameters[1]
+            x0_params[mc_parameter_name] = self.fitted_parameters[
+                smt_parameter_name]
+            mc_bundles.parameter_optimization_flags[mc_parameter_name] = False
+        x0_vector = mc_bundles.parameter_initial_guess_to_parameter_vector(
+            **x0_params)
+        parametric_fod_optimizer = partial(mc_bundles.fit,
+                                           parameter_initial_guess=x0_vector)
+        return parametric_fod_optimizer
