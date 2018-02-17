@@ -316,6 +316,44 @@ class FittedMultiCompartmentSphericalMeanModel:
 
     def return_parametric_fod_optimizer(
             self, distribution='watson', Ncompartments=1):
+        """
+        Retuns parametric FOD optimizer using the rotational harmonics of the
+        fitted spherical mean model as the convolution kernel. It can be called
+        with any implemented parametric distribution (Watson/Bingham) and for
+        any number of compartments.
+
+        Internally, the input models to the spherical mean model are given to
+        a spherically distributed model where the parameter links are replayed
+        such that the distributed model has the same parameter constraints as
+        the spherical mean model. This distributed model now represents one
+        compartment of "bundle". This bundle representation is copied
+        Ncompartment time and given as input to a MultiCompartmentModel, where
+        now the non-linear are all linked such that each bundle has the same
+        convolution kernel. Finally, the FittedSphericalMeanModel parameters
+        are given as initial condition for the kernel, and the optimization
+        flags for the kernel are turned off (the kernel will not be fitted
+        while the FOD's distribution parameters are being optimized).
+
+        The function returns a partially evaluated MultiCompartmentModel.fit()
+        instance where the initial_parameters have been set as the spherical
+        mean parameters. Any solver options can then be chosen as for a regular
+        optimization.
+
+        Parameters
+        ----------
+        distribution: string,
+            Choice of parametric spherical distribution.
+            Can be 'watson', or 'bingham'.
+        Ncompartments: integer,
+            Number of bundles that will be fitted. Must be larger than zero.
+
+        Returns
+        -------
+        parametric_fod_optimizer: MultiCompartmentModel.fit() instance,
+            Prepared fit instance of a regular MultiCompartmentModel that can
+            be used to estimate parametric FODs using the fitted spherical
+            mean model as a kernel.
+        """
         from .modeling_framework import MultiCompartmentModel
         from ..distributions import distribute_models
 
