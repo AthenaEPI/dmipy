@@ -357,6 +357,10 @@ class FittedMultiCompartmentSphericalMeanModel:
         from .modeling_framework import MultiCompartmentModel
         from ..distributions import distribute_models
 
+        if not isinstance(Ncompartments, int) or Ncompartments < 1:
+            msg = 'Ncompartments must be integer larger or equal to one.'
+            raise ValueError(msg)
+
         if distribution is 'watson':
             bundle = distribute_models.SD1WatsonDistributed(
                 self.model.models)
@@ -365,6 +369,10 @@ class FittedMultiCompartmentSphericalMeanModel:
             bundle = distribute_models.SD2BinghamDistributed(
                 self.model.models)
             basename = 'SD2BinghamDistributed_'
+        else:
+            msg = '{} is not a valid distribution choice'.format(
+                distribute_models)
+            raise ValueError(msg)
 
         for link in self.model.parameter_links:
             param_to_delete = self.model._inverted_parameter_map[link[0],
