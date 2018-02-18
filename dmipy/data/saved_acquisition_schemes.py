@@ -35,7 +35,7 @@ def wu_minn_hcp_acquisition_scheme():
         _bvals, _gradient_directions, _delta, _Delta)
 
 
-def duval_cat_spinal_cord_2d_acquisition_scheme(bval_shell_distance=1e10):
+def duval_cat_spinal_cord_2d_acquisition_scheme():
     "Returns DmipyAcquisitionScheme of cat spinal cord data."
     scheme_name = 'tanguy_cat_spinal_cord/2D_qspace.scheme'
     scheme = np.loadtxt(join(DATA_PATH, scheme_name), skiprows=3)
@@ -48,4 +48,4 @@ def duval_cat_spinal_cord_2d_acquisition_scheme(bval_shell_distance=1e10):
     TE = scheme[:, 6]
 
     return acquisition_scheme_from_gradient_strengths(
-        G, bvecs, delta, Delta, TE, min_b_shell_distance=bval_shell_distance)
+        G, bvecs, delta, Delta, TE)

@@ -121,10 +121,9 @@ class C1Stick(ModelProperties):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
-        lambda_par = kwargs.get('lambda_par', self.lambda_par)
         simple_acq_scheme_rh.bvalues.fill(bvalue)
-        E_kernel_sf = self(simple_acq_scheme_rh,
-                           mu=[0., 0.], lambda_par=lambda_par)
+        kwargs.update({'mu': [0., 0.]})
+        E_kernel_sf = self(simple_acq_scheme_rh, **kwargs)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
 
@@ -282,12 +281,10 @@ class C2CylinderSodermanApproximation(ModelProperties):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
-        diameter = kwargs.get('diameter', self.diameter)
-        lambda_par = kwargs.get('lambda_par', self.lambda_par)
         simple_acq_scheme_rh.bvalues.fill(bvalue)
         simple_acq_scheme_rh.qvalues.fill(qvalue)
-        E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.],
-                           diameter=diameter, lambda_par=lambda_par)
+        kwargs.update({'mu': [0., 0.]})
+        E_kernel_sf = self(simple_acq_scheme_rh, **kwargs)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
 
@@ -485,14 +482,12 @@ class C3CylinderCallaghanApproximation(ModelProperties):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
-        diameter = kwargs.get('diameter', self.diameter)
-        lambda_par = kwargs.get('lambda_par', self.lambda_par)
         simple_acq_scheme_rh.bvalues.fill(bvalue)
         simple_acq_scheme_rh.qvalues.fill(qvalue)
         simple_acq_scheme_rh.Delta.fill(Delta)
         simple_acq_scheme_rh.delta.fill(delta)
-        E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.],
-                           diameter=diameter, lambda_par=lambda_par)
+        kwargs.update({'mu': [0., 0.]})
+        E_kernel_sf = self(simple_acq_scheme_rh, **kwargs)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
 
@@ -661,16 +656,14 @@ class C4CylinderGaussianPhaseApproximation(ModelProperties):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
-        diameter = kwargs.get('diameter', self.diameter)
-        lambda_par = kwargs.get('lambda_par', self.lambda_par)
         simple_acq_scheme_rh.bvalues.fill(bvalue)
         simple_acq_scheme_rh.gradient_strengths.fill(gradient_strength)
         simple_acq_scheme_rh.delta.fill(delta)
         simple_acq_scheme_rh.Delta.fill(Delta)
         simple_acq_scheme_rh.shell_delta[0] = delta
         simple_acq_scheme_rh.shell_Delta[0] = Delta
-        E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.],
-                           diameter=diameter, lambda_par=lambda_par)
+        kwargs.update({'mu': [0., 0.]})
+        E_kernel_sf = self(simple_acq_scheme_rh, **kwargs)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
 

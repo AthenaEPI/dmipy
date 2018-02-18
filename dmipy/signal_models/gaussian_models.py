@@ -228,11 +228,9 @@ class G2Zeppelin(ModelProperties):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
-        lambda_par = kwargs.get('lambda_par', self.lambda_par)
-        lambda_perp = kwargs.get('lambda_perp', self.lambda_perp)
         simple_acq_scheme_rh.bvalues.fill(bvalue)
-        E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.],
-                           lambda_par=lambda_par, lambda_perp=lambda_perp)
+        kwargs.update({'mu': [0., 0.]})
+        E_kernel_sf = self(simple_acq_scheme_rh, **kwargs)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
 
@@ -399,15 +397,11 @@ class G3RestrictedZeppelin(ModelProperties):
         rh : array,
             rotational harmonics of the model aligned with z-axis.
         """
-        lambda_par = kwargs.get('lambda_par', self.lambda_par)
-        lambda_inf = kwargs.get('lambda_inf', self.lambda_inf)
-        A = kwargs.get('A', self.A)
         simple_acq_scheme_rh.bvalues.fill(bvalue)
         simple_acq_scheme_rh.delta.fill(delta)
         simple_acq_scheme_rh.Delta.fill(Delta)
-
-        E_kernel_sf = self(simple_acq_scheme_rh, mu=[0., 0.],
-                           lambda_par=lambda_par, lambda_inf=lambda_inf, A=A)
+        kwargs.update({'mu': [0., 0.]})
+        E_kernel_sf = self(simple_acq_scheme_rh, **kwargs)
         rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
         return rh
 
