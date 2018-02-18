@@ -141,6 +141,24 @@ class DistributedModel:
             for k in self.parameter_ranges
         ])
 
+    def _delete_orientation_from_parameters(self):
+        "Removes orientation parameters from input models."
+        orientation_counter = 0
+        for model in self.models:
+            for param_name, param_type in model.parameter_types.items():
+                if param_type == 'orientation':
+                    appended_param_name = self._inverted_parameter_map[
+                        model, param_name]
+                    del self.parameter_ranges[appended_param_name]
+                    del self.parameter_scales[appended_param_name]
+                    del self.parameter_cardinality[appended_param_name]
+                    del self.parameter_types[appended_param_name]
+                    orientation_counter += 1
+        if orientation_counter == 0:
+            msg = 'At least one input model must have an orientation '
+            msg += 'parameter.'
+            raise ValueError(msg)
+
     def _delete_target_parameter_from_parameters(self):
         "Removes the to-be-distributed parameter from the parameter list."
         for model in self.models:
@@ -169,6 +187,7 @@ class DistributedModel:
                 self.parameter_types[partial_volume_name] = 'normal'
                 self._inverted_parameter_map[(None, partial_volume_name)] = \
                     partial_volume_name
+                self.parameter_cardinality[partial_volume_name] = 1
 
     def _prepare_parameter_links(self):
         "Prepares the parameter links, if they are given."
@@ -578,9 +597,8 @@ class SD1WatsonDistributed(DistributedModel):
     """
     _model_type = 'SphericalDistributedModel'
 
-    def __init__(self, models, parameter_links=None, target_parameter='mu'):
+    def __init__(self, models, parameter_links=None):
         self.models = models
-        self.target_parameter = target_parameter
         self._check_for_double_model_class_instances()
         self._check_for_dispersable_models()
 
@@ -592,7 +610,7 @@ class SD1WatsonDistributed(DistributedModel):
         _models_and_distribution = list(self.models)
         _models_and_distribution.append(self.distribution)
         self._prepare_parameters(_models_and_distribution)
-        self._delete_target_parameter_from_parameters()
+        self._delete_orientation_from_parameters()
         self._prepare_partial_volumes()
         self._prepare_parameter_links()
 
@@ -617,9 +635,8 @@ class SD2BinghamDistributed(DistributedModel):
     """
     _model_type = 'SphericalDistributedModel'
 
-    def __init__(self, models, parameter_links=None, target_parameter='mu'):
+    def __init__(self, models, parameter_links=None):
         self.models = models
-        self.target_parameter = target_parameter
         self._check_for_double_model_class_instances()
         self._check_for_dispersable_models()
 
@@ -631,7 +648,7 @@ class SD2BinghamDistributed(DistributedModel):
         _models_and_distribution = list(self.models)
         _models_and_distribution.append(self.distribution)
         self._prepare_parameters(_models_and_distribution)
-        self._delete_target_parameter_from_parameters()
+        self._delete_orientation_from_parameters()
         self._prepare_partial_volumes()
         self._prepare_parameter_links()
 

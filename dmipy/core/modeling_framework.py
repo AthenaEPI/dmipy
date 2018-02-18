@@ -321,6 +321,7 @@ class MultiCompartmentModelProperties:
             del self.parameter_cardinality[parameter_name]
             del self.parameter_scales[parameter_name]
             del self.parameter_types[parameter_name]
+            del self.parameter_optimization_flags[parameter_name]
 
     def _prepare_model_properties(self):
         """Checks that spherical mean and regular models cannot be optimized
@@ -442,6 +443,7 @@ class MultiCompartmentModelProperties:
             del self.parameter_cardinality[parameter_name]
             del self.parameter_scales[parameter_name]
             del self.parameter_types[parameter_name]
+            del self.parameter_optimization_flags[parameter_name]
         else:
             print('"{}" does not exist or has already been fixed.').format(
                 parameter_name)
@@ -494,6 +496,7 @@ class MultiCompartmentModelProperties:
         del self.parameter_cardinality[lambda_perp_parameter_name]
         del self.parameter_scales[lambda_perp_parameter_name]
         del self.parameter_types[lambda_perp_parameter_name]
+        del self.parameter_optimization_flags[lambda_perp_parameter_name]
 
     def set_equal_parameter(self, parameter_name_in, parameter_name_out):
         """
@@ -527,6 +530,7 @@ class MultiCompartmentModelProperties:
         del self.parameter_cardinality[parameter_name_out]
         del self.parameter_scales[parameter_name_out]
         del self.parameter_types[parameter_name_out]
+        del self.parameter_optimization_flags[parameter_name_out]
 
     def set_fractional_parameter(self,
                                  parameter1_smaller_equal_than, parameter2):
@@ -575,6 +579,7 @@ class MultiCompartmentModelProperties:
         del self.parameter_cardinality[parameter1_smaller_equal_than]
         del self.parameter_scales[parameter1_smaller_equal_than]
         del self.parameter_types[parameter1_smaller_equal_than]
+        del self.parameter_optimization_flags[parameter1_smaller_equal_than]
 
 
 class MultiCompartmentModel(MultiCompartmentModelProperties):

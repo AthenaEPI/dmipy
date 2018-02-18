@@ -91,6 +91,30 @@ class G1Ball(ModelProperties):
         E_ball = np.exp(-bvals * lambda_iso)
         return E_ball
 
+    def rotational_harmonics_representation(self, bvalue, **kwargs):
+        r"""
+        The rotational harmonics of the model, such that Y_lm = Yl0.
+        Axis aligned with z-axis to be used as kernel for spherical
+        convolution.
+
+        Parameters
+        ----------
+        bval : float,
+            b-value in s/m^2.
+        sh_order : int,
+            maximum spherical harmonics order to be used in the approximation.
+
+        Returns
+        -------
+        rh : array,
+            rotational harmonics of stick model aligned with z-axis.
+        """
+        rh_order = 0
+        simple_acq_scheme_rh.bvalues.fill(bvalue)
+        E_kernel_sf = self(simple_acq_scheme_rh, **kwargs)
+        rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
+        return rh
+
     def spherical_mean(self, acquisition_scheme, **kwargs):
         """
         Estimates spherical mean for every shell in acquisition scheme
