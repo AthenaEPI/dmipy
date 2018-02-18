@@ -84,23 +84,31 @@ class MixOptimizer:
         else:
             bounds = list(self.model.bounds_for_optimization)
 
-        # step 1: Variable separation using differential evolution algorithm
-        bounds_de = list(bounds)
-        if self.Nmodels > 1:
-            bounds_de = bounds_de[:-self.Nmodels]
+        # if there is only one model then MIX only uses DE.
+        if self.Nmodels == 1:
+            # step 1: stochastic optimization on non-linear parameters.
+            fitted_parameters = differential_evolution(
+                self.stochastic_objective_function,
+                bounds=bounds,
+                maxiter=self.maxiter,
+                args=(data, self.acquisition_scheme),
+                polish=True).x
+            return fitted_parameters
 
-        res_de = differential_evolution(self.stochastic_objective_function,
-                                        bounds=bounds_de,
-                                        maxiter=self.maxiter,
-                                        args=(data, self.acquisition_scheme))
-        res_de_x = res_de.x
+        # if there is more than 1 model then we do the 3 steps.
         if self.Nmodels > 1:
-            res_de_x = np.r_[res_de_x, np.ones(self.Nmodels)]
-        parameters = self.model.parameter_vector_to_parameters(
-            res_de_x * self.model.scales_for_optimization)
+            # step 1: stochastic optimization on non-linear parameters.
+            bounds_de = bounds[:-self.Nmodels]
+            res_de = differential_evolution(self.stochastic_objective_function,
+                                            bounds=bounds_de,
+                                            maxiter=self.maxiter,
+                                            args=(data,
+                                                  self.acquisition_scheme))
+            res_de_x = np.r_[res_de.x, np.ones(self.Nmodels)]
+            parameters = self.model.parameter_vector_to_parameters(
+                res_de_x * self.model.scales_for_optimization)
 
-        # step 2: Estimating linear variables using COBYLA (if there are any)
-        if self.Nmodels > 1:
+            # step 2: Estimating linear variables using COBYLA
             phi = self.model(self.acquisition_scheme,
                              quantity="stochastic cost function", **parameters)
             phi_inv = np.dot(np.linalg.inv(np.dot(phi.T, phi)), phi.T)
@@ -120,48 +128,42 @@ class MixOptimizer:
             # Convert to nested volume fractions
             x0_refine = np.r_[res_de_x[:-len(vf)], vf_nested]
             bounds_ = bounds[:-1]
-        else:
-            x0_refine = res_de_x
-            bounds_ = bounds
 
-        # step 3: refine using gradient method
-        x_fine_nested = minimize(self.objective_function, x0_refine,
-                                 (data, self.acquisition_scheme),
-                                 bounds=bounds_).x
+            # step 3: refine using gradient method
+            x_fine_nested = minimize(self.objective_function, x0_refine,
+                                     (data, self.acquisition_scheme),
+                                     bounds=bounds_).x
 
-        # Convert back to normal volume fractions
-        if self.Nmodels > 1:
             nested_fractions = x_fine_nested[-(self.Nmodels - 1):]
             normalized_fractions = nested_to_normalized_fractions(
                 nested_fractions)
             fitted_parameters = np.r_[
                 x_fine_nested[:-(self.Nmodels - 1)], normalized_fractions]
-        else:
-            fitted_parameters = x_fine_nested
-        return fitted_parameters
+            return fitted_parameters
 
     def stochastic_objective_function(self, parameter_vector,
                                       data, acquisition_scheme):
         """Objective function for stochastic non-linear parameter estimation
         using differential_evolution
         """
-
-        if self.Nmodels > 1:
+        if self.Nmodels == 1:
+            parameter_vector = (
+                parameter_vector * self.model.scales_for_optimization)
+            parameters = self.model.parameter_vector_to_parameters(
+                parameter_vector)
+            E_hat = self.model(acquisition_scheme, **parameters)
+        elif self.Nmodels > 1:
             parameter_vector = np.r_[parameter_vector, np.ones(self.Nmodels)]
-        parameter_vector = (
-            parameter_vector * self.model.scales_for_optimization)
-
-        parameters = {}
-        parameters.update(
-            self.model.parameter_vector_to_parameters(parameter_vector)
-        )
-
-        phi_x = self.model(acquisition_scheme,
-                           quantity="stochastic cost function", **parameters)
-
-        phi_inv = np.dot(np.linalg.inv(np.dot(phi_x.T, phi_x)), phi_x.T)
-        vf = np.dot(phi_inv, data)
-        E_hat = np.dot(phi_x, vf)
+            parameter_vector = (
+                parameter_vector * self.model.scales_for_optimization)
+            parameters = self.model.parameter_vector_to_parameters(
+                parameter_vector)
+            phi_x = self.model(acquisition_scheme,
+                               quantity="stochastic cost function",
+                               **parameters)
+            phi_inv = np.dot(np.linalg.inv(np.dot(phi_x.T, phi_x)), phi_x.T)
+            vf = np.dot(phi_inv, data)
+            E_hat = np.dot(phi_x, vf)
         objective = np.dot(data - E_hat, data - E_hat).squeeze()
         return objective
 
