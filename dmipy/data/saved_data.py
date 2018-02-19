@@ -1,6 +1,6 @@
 from os.path import join
 import os
-import urllib2
+from urllib import urlopen
 import pkg_resources
 import nibabel as nib
 import numpy as np
@@ -165,7 +165,7 @@ def isbi2015_white_matter_challenge():
     paths = [path_genu, path_fornix]
 
     for filename, path in zip(filenames, paths):
-        response = urllib2.urlopen(path)
+        response = urlopen(path)
         data = response.read()
         file_ = open(join(isbi_data_path, filename), 'w')
         file_.write(data)

@@ -2,7 +2,7 @@ import numpy as np
 from os.path import join
 import os
 import pkg_resources
-import urllib2
+from urllib import urlopen
 from ..core.acquisition_scheme import (
     acquisition_scheme_from_bvalues,
     acquisition_scheme_from_gradient_strengths,
@@ -81,7 +81,7 @@ def isbi2015_white_matter_challenge_scheme():
         "http://cmic.cs.ucl.ac.uk/wmmchallenge/ISBIdata/seenScheme.txt")
     filename = 'isbi_schemefile.txt'
 
-    response = urllib2.urlopen(path_schemefile)
+    response = urlopen(path_schemefile)
     data = response.read()
     file_ = open(join(isbi_data_path, filename), 'w')
     file_.write(data)
