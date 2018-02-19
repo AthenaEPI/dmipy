@@ -176,7 +176,7 @@ def isbi2015_white_matter_challenge():
     scheme = (
         saved_acquisition_schemes.isbi2015_white_matter_challenge_scheme()
     )
-    return scheme, data_genu, data_fornix
+    return scheme, data_genu.T, data_fornix.T
 
 
 def synthetic_camino_data_parallel():
