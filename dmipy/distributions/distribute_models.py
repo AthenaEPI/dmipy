@@ -409,7 +409,6 @@ class DistributedModel:
         kwargs: keyword arguments to the model parameter values,
             Is internally given as **parameter_dictionary.
         """
-        values = 0.
         kwargs = self.add_linked_parameters_to_parameters(
             kwargs
         )
@@ -432,6 +431,7 @@ class DistributedModel:
             partial_volumes = []
 
         remaining_volume_fraction = 1.
+        rh_models = 0.
         for model_name, model, partial_volume in zip(
             self.model_names, self.models,
             chain(partial_volumes, [None])
@@ -445,29 +445,6 @@ class DistributedModel:
                     parameter_name
                 )
 
-            shell_indices = acquisition_scheme.shell_indices
-            unique_dwi_indices = acquisition_scheme.unique_dwi_indices
-            E = np.ones(acquisition_scheme.number_of_measurements)
-            for shell_index in unique_dwi_indices:  # per shell
-                shell_mask = shell_indices == shell_index
-                sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
-                # rotational harmonics of stick
-                rh_stick = model.rotational_harmonics_representation(
-                    bvalue=acquisition_scheme.shell_bvalues[shell_index],
-                    qvalue=acquisition_scheme.shell_qvalues[shell_index],
-                    gradient_strength=(
-                        acquisition_scheme.shell_gradient_strengths[
-                            shell_index]),
-                    delta=acquisition_scheme.shell_delta[shell_index],
-                    Delta=acquisition_scheme.shell_Delta[shell_index],
-                    rh_order=acquisition_scheme.shell_sh_orders[shell_index],
-                    **parameters)
-                # convolving micro-environment with watson distribution
-                E_dispersed_sh = sh_convolution(sh_distribution, rh_stick)
-                # recover signal values from convolved spherical harmonics
-                E[shell_mask] = np.dot(sh_mat[:, :len(E_dispersed_sh)],
-                                       E_dispersed_sh)
-
             if partial_volume is not None:
                 volume_fraction = remaining_volume_fraction * partial_volume
                 remaining_volume_fraction = (
@@ -475,8 +452,20 @@ class DistributedModel:
             else:
                 volume_fraction = remaining_volume_fraction
 
-            values = values + volume_fraction * E
-        return values
+            rh_model = model.rotational_harmonics_representation(
+                acquisition_scheme, **parameters)
+            rh_models = rh_models + volume_fraction * rh_model
+
+        E = np.ones(acquisition_scheme.number_of_measurements)
+        for i, shell_index in enumerate(acquisition_scheme.unique_dwi_indices):
+            shell_mask = acquisition_scheme.shell_indices == shell_index
+            sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
+            sh_order = int(acquisition_scheme.shell_sh_orders[shell_index])
+            E_dispersed_sh = sh_convolution(
+                sh_distribution, rh_models[i, :sh_order / 2 + 1])
+            E[shell_mask] = np.dot(sh_mat[:, :len(E_dispersed_sh)],
+                                   E_dispersed_sh)
+        return E
 
     def integrated_model(self, acquisition_scheme, **kwargs):
         """

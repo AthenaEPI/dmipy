@@ -151,6 +151,9 @@ class DmipyAcquisitionScheme:
             self.shell_gradient_strengths,
             self.shell_Delta,
             self.shell_delta)
+        self.rotational_harmonics_scheme = (
+            RotationalHarmonicsAcquisitionScheme(self)
+        )
 
     @property
     def print_acquisition_info(self):
@@ -344,6 +347,56 @@ class SimpleAcquisitionSchemeRH:
         self.b0_mask = np.tile(False, self.number_of_measurements)
         self.shell_delta = np.zeros(1)
         self.shell_Delta = np.zeros(1)
+
+
+class RotationalHarmonicsAcquisitionScheme:
+    def __init__(self, dmipy_acquisition_scheme, N_angular_samples=10):
+        self.Nsamples = N_angular_samples
+        scheme = dmipy_acquisition_scheme
+
+        thetas = np.linspace(0, np.pi / 2, N_angular_samples)
+        r = np.ones(N_angular_samples)
+        phis = np.zeros(N_angular_samples)
+        angles = np.c_[r, thetas, phis]
+        angles_cart = utils.sphere2cart(angles)
+
+        Gdirs_all_shells = []
+        G_all_shells = []
+        delta_all_shells = []
+        Delta_all_shells = []
+        for shell_index in scheme.unique_dwi_indices:
+            G = scheme.shell_gradient_strengths[shell_index]
+            delta = scheme.shell_delta[shell_index]
+            Delta = scheme.shell_delta[shell_index]
+            Gdirs_all_shells.append(angles_cart)
+            G_all_shells.append(np.tile(G, N_angular_samples))
+            delta_all_shells.append(np.tile(delta, N_angular_samples))
+            Delta_all_shells.append(np.tile(Delta, N_angular_samples))
+
+        self.gradient_directions = np.vstack(Gdirs_all_shells)
+        self.gradient_strengths = np.hstack(G_all_shells)
+        self.delta = np.hstack(delta_all_shells)
+        self.Delta = np.hstack(Delta_all_shells)
+        self.bvalues = b_from_g(
+            self.gradient_strengths,
+            self.delta,
+            self.Delta)
+        self.qvalues = q_from_g(
+            self.gradient_strengths,
+            self.delta)
+        self.tau = self.Delta - self.delta / 3.0
+        self.b0_mask = np.tile(False, len(self.bvalues))
+        self.shell_delta = scheme.shell_delta
+        self.shell_Delta = scheme.shell_Delta
+        self.shell_sh_orders = (
+            np.array(scheme.shell_sh_orders[scheme.unique_dwi_indices],
+                     dtype=int))
+        self.unique_dwi_indices = scheme.unique_dwi_indices
+        self.inverse_rh_matrix = {
+            rh_order: np.linalg.pinv(real_sym_rh_basis(
+                rh_order, thetas, phis
+            )) for rh_order in np.arange(0, 15, 2)
+        }
 
 
 class SphericalMeanAcquisitionScheme:
