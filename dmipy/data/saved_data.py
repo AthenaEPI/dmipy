@@ -86,6 +86,48 @@ def duval_cat_spinal_cord_2d():
     return scheme, data
 
 
+def duval_cat_spinal_cord_3d():
+    "Returns 2D multi-diffusion time AxCaliber data of cat spinal cord."
+    msg = "This data was used by Duval et al. 'Validation of quantitative MRI "
+    msg += "metrics using full slice histology with automatic axon "
+    msg += "segmentation', ISMRM 2016. Reference at "
+    msg += "Cohen-Adad et al. White Matter Microscopy Database."
+    msg += " http://doi.org/10.17605/OSF.IO/YP4QG"
+    print(msg)
+
+    data_folder = join(DATA_PATH, "tanguy_cat_spinal_cord")
+
+    class Histology:
+        def __init__(self):
+            self.h1_axonEquivDiameter = nib.load(
+                join(data_folder, '1_axonEquivDiameter.nii')).get_data()
+            self.h2_axonEquivDiameter_std = nib.load(
+                join(data_folder, '2_axonEquivDiameter_std.nii')).get_data()
+            self.h3_axonEquivDiameter_axonvolumeCorrected = nib.load(
+                join(data_folder, '3_axonEquivDiameter_axonvolumeCorrected.nii'
+                     )).get_data()
+            self.h4_fr = nib.load(join(data_folder, '4_fr.nii')).get_data()
+            self.h5_MyelinVolumeFraction = nib.load(
+                join(data_folder, '5_MyelinVolumeFraction.nii')).get_data()
+            self.h6_gRatio = nib.load(
+                join(data_folder, '6_gRatio.nii')).get_data()
+            self.h7_Number_axons = nib.load(
+                join(data_folder, '7_Number_axons.nii')).get_data()
+
+    class DuvalSpinalCordData3D:
+        def __init__(self):
+            data_name = "tanguy_spinal_cord_3D.nii.gz"
+            self.signal = nib.load(join(data_folder, data_name)).get_data()
+            self.histology = Histology()
+            self.mask = (self.histology.h4_fr > 0)[..., None]
+
+    data = DuvalSpinalCordData3D()
+    scheme = (
+        saved_acquisition_schemes.duval_cat_spinal_cord_3d_acquisition_scheme()
+    )
+    return scheme, data
+
+
 def synthetic_camino_data_parallel():
     """The parallel data was generated using the Camino Monte-Carlo
     Diffusion Simulator. See http://camino.cs.ucl.ac.uk/.

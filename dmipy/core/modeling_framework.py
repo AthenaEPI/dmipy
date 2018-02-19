@@ -1070,10 +1070,12 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         if self.scheme.TE is None:  # if no TE is given
             S0 = np.mean(data_[..., self.scheme.b0_mask], axis=-1)
         else:  # if multiple TE are in the data
-            S0 = np.ones_like(len(acquisition_scheme.shell_TE))
+            S0 = np.ones(np.r_[data_.shape[:-1],
+                               len(acquisition_scheme.shell_TE)])
             for TE_ in self.scheme.shell_TE:
-                TE_mask = self.scheme.TE == TE_
-                TE_b0_mask = np.all([self.scheme.shell_b0_mask, TE_mask],
+                TE_mask = self.scheme.shell_TE == TE_
+                TE_mask_shell = self.scheme.TE == TE_
+                TE_b0_mask = np.all([self.scheme.b0_mask, TE_mask_shell],
                                     axis=0)
                 S0[..., TE_mask] = np.mean(
                     data_[..., TE_b0_mask], axis=-1)[..., None]

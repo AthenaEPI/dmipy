@@ -36,7 +36,7 @@ def wu_minn_hcp_acquisition_scheme():
 
 
 def duval_cat_spinal_cord_2d_acquisition_scheme():
-    "Returns DmipyAcquisitionScheme of cat spinal cord data."
+    "Returns 2D DmipyAcquisitionScheme of cat spinal cord data."
     scheme_name = 'tanguy_cat_spinal_cord/2D_qspace.scheme'
     scheme = np.loadtxt(join(DATA_PATH, scheme_name), skiprows=3)
 
@@ -49,3 +49,20 @@ def duval_cat_spinal_cord_2d_acquisition_scheme():
 
     return acquisition_scheme_from_gradient_strengths(
         G, bvecs, delta, Delta, TE)
+
+
+def duval_cat_spinal_cord_3d_acquisition_scheme():
+    "Returns 3D DmipyAcquisitionScheme of cat spinal cord data."
+    scheme_name = 'tanguy_cat_spinal_cord/3D_qspace.scheme'
+    scheme = np.loadtxt(join(DATA_PATH, scheme_name), skiprows=3)
+
+    bvecs = scheme[:, :3]
+    bvecs[np.linalg.norm(bvecs, axis=1) == 0.] = np.r_[1., 0., 0.]
+    G = scheme[:, 3]
+    Delta = scheme[:, 4]
+    delta = scheme[:, 5]
+    TE = scheme[:, 6]
+    # there's very small differences in TE between shells that we ignore
+    TE[:] = 0.0472
+    return acquisition_scheme_from_gradient_strengths(
+        G, bvecs, delta, Delta, TE, min_b_shell_distance=20e6)
