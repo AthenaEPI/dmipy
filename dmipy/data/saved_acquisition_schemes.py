@@ -2,11 +2,14 @@ import numpy as np
 from os.path import join
 import os
 import pkg_resources
-from urllib import urlopen
 from ..core.acquisition_scheme import (
     acquisition_scheme_from_bvalues,
     acquisition_scheme_from_gradient_strengths,
     acquisition_scheme_from_schemefile)
+try:
+    from urllib2 import urlopen
+except ImportError:
+    from urllib.request import urlopen
 
 _GRADIENT_TABLES_PATH = pkg_resources.resource_filename(
     'dmipy', 'data/gradient_tables'
@@ -83,7 +86,7 @@ def isbi2015_white_matter_challenge_scheme():
 
     response = urlopen(path_schemefile)
     data = response.read()
-    file_ = open(join(isbi_data_path, filename), 'w')
+    file_ = open(join(isbi_data_path, filename), 'wb')
     file_.write(data)
     file_.close()
 

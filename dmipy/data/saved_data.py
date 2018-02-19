@@ -1,12 +1,17 @@
 from os.path import join
 import os
-from urllib import urlopen
 import pkg_resources
 import nibabel as nib
 import numpy as np
 from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
 from . import saved_acquisition_schemes
+
+try:
+    from urllib2 import urlopen
+except ImportError:
+    from urllib.request import urlopen
+
 DATA_PATH = pkg_resources.resource_filename(
     'dmipy', 'data'
 )
@@ -167,7 +172,7 @@ def isbi2015_white_matter_challenge():
     for filename, path in zip(filenames, paths):
         response = urlopen(path)
         data = response.read()
-        file_ = open(join(isbi_data_path, filename), 'w')
+        file_ = open(join(isbi_data_path, filename), 'wb')
         file_.write(data)
         file_.close()
 
