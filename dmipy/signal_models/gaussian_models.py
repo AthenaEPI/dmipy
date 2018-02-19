@@ -318,7 +318,7 @@ class G3RestrictedZeppelin(ModelProperties):
     _parameter_types = {
         'mu': 'orientation',
         'lambda_par': 'normal',
-        'lambda_perp': 'normal',
+        'lambda_inf': 'normal',
         'A': 'normal'
     }
     _model_type = 'CompartmentModel'
