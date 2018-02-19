@@ -2,6 +2,7 @@ import numpy as np
 from .gradient_conversions import (
     g_from_b, q_from_b, b_from_q, g_from_q, b_from_g, q_from_g)
 from ..utils import utils
+from ..utils.spherical_convolution import real_sym_rh_basis
 from dipy.reconst.shm import real_sym_sh_mrtrix
 from scipy.cluster.hierarchy import fcluster, linkage
 from dipy.core.gradients import gradient_table, GradientTable
@@ -209,6 +210,46 @@ class DmipyAcquisitionScheme:
         header += "VERSION: STEJSKALTANNER"
         np.savetxt(filename, schemefile_data,
                    header=header, comments='')
+
+    def _rotational_harmonics_acquisition_scheme(
+            self, angular_samples=10):
+        """
+        Calculates the acquisition scheme to return all the samples required to
+        estimate the rotational harmonics of all the shells at once.
+
+        Parameters
+        ----------
+        angular_samples: integer
+            the number of angular samples that are sampled per shell.
+        """
+        thetas = np.linspace(0, np.pi / 2, angular_samples)
+        r = np.ones(angular_samples)
+        phis = np.zeros(angular_samples)
+        angles = np.c_[r, thetas, phis]
+        angles_cart = utils.sphere2cart(angles)
+
+        Gdirs_all_shells = []
+        G_all_shells = []
+        delta_all_shells = []
+        Delta_all_shells = []
+        for G, delta, Delta in zip(self.shell_gradient_strengths,
+                                   self.shell_delta, self.shell_Delta):
+            Gdirs_all_shells.append(angles_cart)
+            G_all_shells.append(np.tile(G, angular_samples))
+            delta_all_shells.append(np.tile(delta, angular_samples))
+            Delta_all_shells.append(np.tile(Delta, angular_samples))
+        self.rh_acquisition_scheme = (
+            acquisition_scheme_from_gradient_strengths(
+                gradient_strengths=np.hstack(G_all_shells),
+                gradient_directions=np.vstack(Gdirs_all_shells),
+                delta=np.hstack(delta_all_shells),
+                Delta=np.hstack(Delta_all_shells))
+        )
+        self.inverse_rh_matrix = {
+            rh_order: np.linalg.pinv(real_sym_rh_basis(
+                rh_order, thetas, phis
+            )) for rh_order in np.arange(0, 15, 2)
+        }
 
     def visualise_acquisition_G_Delta_rainbow(
             self,
@@ -525,7 +566,7 @@ def unify_length_reference_delta_Delta(reference_array, delta, Delta, TE):
     return delta_, Delta_, TE_
 
 
-def calculate_shell_bvalues_and_indices(bvalues, max_distance=50e6):
+def calculate_shell_bvalues_and_indices(bvalues, max_distance=20e6):
     """
     Calculates which measurements belong to different acquisition shells.
     It uses scipy's linkage clustering algorithm, which uses the max_distance
