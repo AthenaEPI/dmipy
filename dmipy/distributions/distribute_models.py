@@ -689,40 +689,40 @@ class DD1GammaDistributed(DistributedModel):
                 self.mu_param = param
 
     def rotational_harmonics_representation(
-            self, bvalue, qvalue, gradient_strength, delta, Delta,
-            rh_order=14, **kwargs):
-        r""" The model in rotational harmonics, such that Y_lm = Yl0.
+            self, acquisition_scheme, **kwargs):
+        r""" The rotational harmonics of the model, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernel for spherical
         convolution.
 
         Parameters
         ----------
-        bval : float,
+        bvalue : float,
             b-value in s/m^2.
-        delta: float,
-            pulse length in seconds.
+        qvalue : float,
+            diffusion sensitization in 1/m.
         Delta: float,
-            pulse separation in seconds.
+            Delta parameter in seconds.
         sh_order : int,
             maximum spherical harmonics order to be used in the approximation.
 
         Returns
         -------
         rh : array,
-            rotational harmonics of the model aligned with z-axis.
+            rotational harmonics of stick model aligned with z-axis.
         """
-        simple_acq_scheme_rh.bvalues.fill(bvalue)
-        simple_acq_scheme_rh.qvalues.fill(qvalue)
-        simple_acq_scheme_rh.gradient_strengths.fill(gradient_strength)
-        simple_acq_scheme_rh.delta.fill(delta)
-        simple_acq_scheme_rh.Delta.fill(Delta)
-        simple_acq_scheme_rh.shell_Delta[0] = Delta
-        simple_acq_scheme_rh.shell_delta[0] = delta
-
+        rh_scheme = acquisition_scheme.rotational_harmonics_scheme
         kwargs.update({self.mu_param: [0., 0.]})
-        E_kernel_sf = self(simple_acq_scheme_rh, **kwargs)
-        rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
-        return rh
+        E_kernel_sf = self(rh_scheme, **kwargs)
+        E_reshaped = E_kernel_sf.reshape([-1, rh_scheme.Nsamples])
+        rh_array = np.zeros((len(E_reshaped), rh_scheme.Nsamples))
+
+        for i, sh_order in enumerate(rh_scheme.shell_sh_orders):
+            rh_array[i, :sh_order // 2 + 1] = (
+                np.dot(
+                    rh_scheme.inverse_rh_matrix[sh_order],
+                    E_reshaped[i])
+            )
+        return rh_array
 
     def spherical_mean(self, acquisition_scheme, **kwargs):
         """

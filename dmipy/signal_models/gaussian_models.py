@@ -91,16 +91,20 @@ class G1Ball(ModelProperties):
         E_ball = np.exp(-bvals * lambda_iso)
         return E_ball
 
-    def rotational_harmonics_representation(self, bvalue, **kwargs):
-        r"""
-        The rotational harmonics of the model, such that Y_lm = Yl0.
+    def rotational_harmonics_representation(
+            self, acquisition_scheme, **kwargs):
+        r""" The rotational harmonics of the model, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernel for spherical
         convolution.
 
         Parameters
         ----------
-        bval : float,
+        bvalue : float,
             b-value in s/m^2.
+        qvalue : float,
+            diffusion sensitization in 1/m.
+        Delta: float,
+            Delta parameter in seconds.
         sh_order : int,
             maximum spherical harmonics order to be used in the approximation.
 
@@ -109,11 +113,18 @@ class G1Ball(ModelProperties):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
-        rh_order = 0
-        simple_acq_scheme_rh.bvalues.fill(bvalue)
-        E_kernel_sf = self(simple_acq_scheme_rh, **kwargs)
-        rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
-        return rh
+        rh_scheme = acquisition_scheme.rotational_harmonics_scheme
+        E_kernel_sf = self(rh_scheme, **kwargs)
+        E_reshaped = E_kernel_sf.reshape([-1, rh_scheme.Nsamples])
+        rh_array = np.zeros((len(E_reshaped), rh_scheme.Nsamples))
+
+        for i, sh_order in enumerate(rh_scheme.shell_sh_orders):
+            rh_array[i, :1] = (
+                np.dot(
+                    rh_scheme.inverse_rh_matrix[0],
+                    E_reshaped[i])
+            )
+        return rh_array
 
     def spherical_mean(self, acquisition_scheme, **kwargs):
         """
@@ -209,17 +220,20 @@ class G2Zeppelin(ModelProperties):
             bvals, lambda_par, lambda_perp, n, mu)
         return E_zeppelin
 
-    def rotational_harmonics_representation(self, bvalue, rh_order=14,
-                                            **kwargs):
-        r"""
-        The rotational harmonics of the model, such that Y_lm = Yl0.
+    def rotational_harmonics_representation(
+            self, acquisition_scheme, **kwargs):
+        r""" The rotational harmonics of the model, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernel for spherical
         convolution.
 
         Parameters
         ----------
-        bval : float,
+        bvalue : float,
             b-value in s/m^2.
+        qvalue : float,
+            diffusion sensitization in 1/m.
+        Delta: float,
+            Delta parameter in seconds.
         sh_order : int,
             maximum spherical harmonics order to be used in the approximation.
 
@@ -228,11 +242,19 @@ class G2Zeppelin(ModelProperties):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
-        simple_acq_scheme_rh.bvalues.fill(bvalue)
+        rh_scheme = acquisition_scheme.rotational_harmonics_scheme
         kwargs.update({'mu': [0., 0.]})
-        E_kernel_sf = self(simple_acq_scheme_rh, **kwargs)
-        rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
-        return rh
+        E_kernel_sf = self(rh_scheme, **kwargs)
+        E_reshaped = E_kernel_sf.reshape([-1, rh_scheme.Nsamples])
+        rh_array = np.zeros((len(E_reshaped), rh_scheme.Nsamples))
+
+        for i, sh_order in enumerate(rh_scheme.shell_sh_orders):
+            rh_array[i, :sh_order // 2 + 1] = (
+                np.dot(
+                    rh_scheme.inverse_rh_matrix[sh_order],
+                    E_reshaped[i])
+            )
+        return rh_array
 
     def spherical_mean(self, acquisition_scheme, **kwargs):
         """
@@ -264,12 +286,11 @@ class G2Zeppelin(ModelProperties):
             E_mean_ = exp_bl * np.sqrt(np.pi) * erf(sqrt_bl) / (2 * sqrt_bl)
             E_mean[~acquisition_scheme.shell_b0_mask] = E_mean_
         else:  # estimate spherical mean using rotational harmonics
-            for shell_index in acquisition_scheme.unique_dwi_indices:
-                rh = self.rotational_harmonics_representation(
-                    bvalue=acquisition_scheme.shell_bvalues[shell_index],
-                    rh_order=acquisition_scheme.shell_sh_orders[shell_index],
-                    **kwargs)
-                E_mean[shell_index] = rh[0] / (2 * np.sqrt(np.pi))
+            rh_array = self.rotational_harmonics_representation(
+                acquisition_scheme, **kwargs)
+            E_mean[acquisition_scheme.unique_dwi_indices] = (
+                rh_array[:, 0] / (2 * np.sqrt(np.pi))
+            )
         return E_mean
 
 
@@ -376,34 +397,40 @@ class G3RestrictedZeppelin(ModelProperties):
         return E_zeppelin
 
     def rotational_harmonics_representation(
-            self, bvalue, delta, Delta, rh_order=14, **kwargs):
-        r""" The model in rotational harmonics, such that Y_lm = Yl0.
+            self, acquisition_scheme, **kwargs):
+        r""" The rotational harmonics of the model, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernel for spherical
         convolution.
 
         Parameters
         ----------
-        bval : float,
+        bvalue : float,
             b-value in s/m^2.
-        delta: float,
-            pulse length in seconds.
+        qvalue : float,
+            diffusion sensitization in 1/m.
         Delta: float,
-            pulse separation in seconds.
+            Delta parameter in seconds.
         sh_order : int,
             maximum spherical harmonics order to be used in the approximation.
 
         Returns
         -------
         rh : array,
-            rotational harmonics of the model aligned with z-axis.
+            rotational harmonics of stick model aligned with z-axis.
         """
-        simple_acq_scheme_rh.bvalues.fill(bvalue)
-        simple_acq_scheme_rh.delta.fill(delta)
-        simple_acq_scheme_rh.Delta.fill(Delta)
+        rh_scheme = acquisition_scheme.rotational_harmonics_scheme
         kwargs.update({'mu': [0., 0.]})
-        E_kernel_sf = self(simple_acq_scheme_rh, **kwargs)
-        rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
-        return rh
+        E_kernel_sf = self(rh_scheme, **kwargs)
+        E_reshaped = E_kernel_sf.reshape([-1, rh_scheme.Nsamples])
+        rh_array = np.zeros((len(E_reshaped), rh_scheme.Nsamples))
+
+        for i, sh_order in enumerate(rh_scheme.shell_sh_orders):
+            rh_array[i, :sh_order // 2 + 1] = (
+                np.dot(
+                    rh_scheme.inverse_rh_matrix[sh_order],
+                    E_reshaped[i])
+            )
+        return rh_array
 
     def spherical_mean(self, acquisition_scheme, **kwargs):
         """
@@ -444,14 +471,11 @@ class G3RestrictedZeppelin(ModelProperties):
             E_mean[~acquisition_scheme.shell_b0_mask] = (
                 exp_bl * np.sqrt(np.pi) * erf(sqrt_bl) / (2 * sqrt_bl))
         else:  # estimate spherical mean using rotational harmonics
-            for shell_index in acquisition_scheme.unique_dwi_indices:
-                rh = self.rotational_harmonics_representation(
-                    bvalue=acquisition_scheme.shell_bvalues[shell_index],
-                    delta=acquisition_scheme.shell_delta[shell_index],
-                    Delta=acquisition_scheme.shell_Delta[shell_index],
-                    rh_order=acquisition_scheme.shell_sh_orders[shell_index],
-                    **kwargs)
-                E_mean[shell_index] = rh[0] / (2 * np.sqrt(np.pi))
+            rh_array = self.rotational_harmonics_representation(
+                acquisition_scheme, **kwargs)
+            E_mean[acquisition_scheme.unique_dwi_indices] = (
+                rh_array[:, 0] / (2 * np.sqrt(np.pi))
+            )
         return E_mean
 
 

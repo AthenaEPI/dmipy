@@ -392,6 +392,7 @@ class RotationalHarmonicsAcquisitionScheme:
             np.array(scheme.shell_sh_orders[scheme.unique_dwi_indices],
                      dtype=int))
         self.unique_dwi_indices = scheme.unique_dwi_indices
+        self.number_of_measurements = len(self.bvalues)
         self.inverse_rh_matrix = {
             rh_order: np.linalg.pinv(real_sym_rh_basis(
                 rh_order, thetas, phis

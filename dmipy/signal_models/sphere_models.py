@@ -66,16 +66,20 @@ class S1Dot(ModelProperties):
         E_dot = np.ones(acquisition_scheme.number_of_measurements)
         return E_dot
 
-    def rotational_harmonics_representation(self, **kwargs):
-        r"""
-        The rotational harmonics of the model, such that Y_lm = Yl0.
+    def rotational_harmonics_representation(
+            self, acquisition_scheme, **kwargs):
+        r""" The rotational harmonics of the model, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernel for spherical
         convolution.
 
         Parameters
         ----------
-        bval : float,
+        bvalue : float,
             b-value in s/m^2.
+        qvalue : float,
+            diffusion sensitization in 1/m.
+        Delta: float,
+            Delta parameter in seconds.
         sh_order : int,
             maximum spherical harmonics order to be used in the approximation.
 
@@ -84,10 +88,18 @@ class S1Dot(ModelProperties):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
-        rh_order = 0
-        E_kernel_sf = self(simple_acq_scheme_rh)
-        rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
-        return rh
+        rh_scheme = acquisition_scheme.rotational_harmonics_scheme
+        E_kernel_sf = self(rh_scheme, **kwargs)
+        E_reshaped = E_kernel_sf.reshape([-1, rh_scheme.Nsamples])
+        rh_array = np.zeros((len(E_reshaped), rh_scheme.Nsamples))
+
+        for i, sh_order in enumerate(rh_scheme.shell_sh_orders):
+            rh_array[i, :1] = (
+                np.dot(
+                    rh_scheme.inverse_rh_matrix[0],
+                    E_reshaped[i])
+            )
+        return rh_array
 
     def spherical_mean(self, acquisition_scheme, **kwargs):
         """
@@ -105,7 +117,13 @@ class S1Dot(ModelProperties):
         E_mean : float,
             spherical mean of the model for every acquisition shell.
         """
-        return self(acquisition_scheme.spherical_mean_scheme, **kwargs)
+        E_mean = np.ones_like(acquisition_scheme.shell_bvalues)
+        rh_array = self.rotational_harmonics_representation(
+            acquisition_scheme, **kwargs)
+        E_mean[acquisition_scheme.unique_dwi_indices] = (
+            rh_array[:, 0] / (2 * np.sqrt(np.pi))
+        )
+        return E_mean
 
 
 class S2SphereSodermanApproximation(ModelProperties):
@@ -177,16 +195,20 @@ class S2SphereSodermanApproximation(ModelProperties):
             q[q_nonzero], diameter)
         return E_sphere
 
-    def rotational_harmonics_representation(self, qvalue, **kwargs):
-        r"""
-        The rotational harmonics of the model, such that Y_lm = Yl0.
+    def rotational_harmonics_representation(
+            self, acquisition_scheme, **kwargs):
+        r""" The rotational harmonics of the model, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernel for spherical
         convolution.
 
         Parameters
         ----------
-        bval : float,
+        bvalue : float,
             b-value in s/m^2.
+        qvalue : float,
+            diffusion sensitization in 1/m.
+        Delta: float,
+            Delta parameter in seconds.
         sh_order : int,
             maximum spherical harmonics order to be used in the approximation.
 
@@ -195,11 +217,18 @@ class S2SphereSodermanApproximation(ModelProperties):
         rh : array,
             rotational harmonics of stick model aligned with z-axis.
         """
-        rh_order = 0
-        simple_acq_scheme_rh.qvalues.fill(qvalue)
-        E_kernel_sf = self(simple_acq_scheme_rh, **kwargs)
-        rh = np.dot(inverse_rh_matrix_kernel[rh_order], E_kernel_sf)
-        return rh
+        rh_scheme = acquisition_scheme.rotational_harmonics_scheme
+        E_kernel_sf = self(rh_scheme, **kwargs)
+        E_reshaped = E_kernel_sf.reshape([-1, rh_scheme.Nsamples])
+        rh_array = np.zeros((len(E_reshaped), rh_scheme.Nsamples))
+
+        for i, sh_order in enumerate(rh_scheme.shell_sh_orders):
+            rh_array[i, :1] = (
+                np.dot(
+                    rh_scheme.inverse_rh_matrix[0],
+                    E_reshaped[i])
+            )
+        return rh_array
 
     def spherical_mean(self, acquisition_scheme, **kwargs):
         """
@@ -217,4 +246,10 @@ class S2SphereSodermanApproximation(ModelProperties):
         E_mean : float,
             spherical mean of the model for every acquisition shell.
         """
-        return self(acquisition_scheme.spherical_mean_scheme, **kwargs)
+        E_mean = np.ones_like(acquisition_scheme.shell_bvalues)
+        rh_array = self.rotational_harmonics_representation(
+            acquisition_scheme, **kwargs)
+        E_mean[acquisition_scheme.unique_dwi_indices] = (
+            rh_array[:, 0] / (2 * np.sqrt(np.pi))
+        )
+        return E_mean
