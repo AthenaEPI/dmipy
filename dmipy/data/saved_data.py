@@ -1,4 +1,6 @@
 from os.path import join
+import os
+import urllib2
 import pkg_resources
 import nibabel as nib
 import numpy as np
@@ -126,6 +128,55 @@ def duval_cat_spinal_cord_3d():
         saved_acquisition_schemes.duval_cat_spinal_cord_3d_acquisition_scheme()
     )
     return scheme, data
+
+
+def isbi2015_white_matter_challenge():
+    """
+    Downloads and returns the 35-shell multi-delta/Delta/G scheme and data for
+    the fornix and genu data that was used for the ISBI 2015 white matter
+    challenge [1]_.
+
+    Returns
+    -------
+    scheme: DmipyAcquisitionScheme instance,
+        acquisition scheme of the challenge data.
+    data_genu: array of size (3612, 6),
+        contains the DWIs for 6 genu voxels.
+    data_fornix: array of size (3612, 6),
+        contains the DWIs for 6 fornix voxels.
+
+    References
+    ----------
+    .. [1] Ferizi, Uran, et al. "Diffusion MRI microstructure models with in
+        vivo human brain Connectome data: results from a multi-group
+        comparison." NMR in Biomedicine 30.9 (2017)
+    """
+    isbi_data_path = join(DATA_PATH, 'isbi2015_white_matter_challenge')
+
+    if not os.path.exists(isbi_data_path):
+        os.makedirs(isbi_data_path)
+
+    path_genu = (
+        "http://cmic.cs.ucl.ac.uk/wmmchallenge/ISBIdata/seenSignal.txt")
+    path_fornix = (
+        "http://cmic.cs.ucl.ac.uk/wmmchallenge/ISBIdata/seenSignaX.txt")
+
+    filenames = ['genu.txt', 'fornix.txt']
+    paths = [path_genu, path_fornix]
+
+    for filename, path in zip(filenames, paths):
+        response = urllib2.urlopen(path)
+        data = response.read()
+        file_ = open(join(isbi_data_path, filename), 'w')
+        file_.write(data)
+        file_.close()
+
+    data_genu = np.loadtxt(join(isbi_data_path, 'genu.txt'), skiprows=1)
+    data_fornix = np.loadtxt(join(isbi_data_path, 'fornix.txt'), skiprows=1)
+    scheme = (
+        saved_acquisition_schemes.isbi2015_white_matter_challenge_scheme()
+    )
+    return scheme, data_genu, data_fornix
 
 
 def synthetic_camino_data_parallel():

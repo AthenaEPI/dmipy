@@ -1,9 +1,12 @@
 import numpy as np
 from os.path import join
+import os
 import pkg_resources
+import urllib2
 from ..core.acquisition_scheme import (
     acquisition_scheme_from_bvalues,
-    acquisition_scheme_from_gradient_strengths)
+    acquisition_scheme_from_gradient_strengths,
+    acquisition_scheme_from_schemefile)
 
 _GRADIENT_TABLES_PATH = pkg_resources.resource_filename(
     'dmipy', 'data/gradient_tables'
@@ -66,3 +69,22 @@ def duval_cat_spinal_cord_3d_acquisition_scheme():
     TE[:] = 0.0472
     return acquisition_scheme_from_gradient_strengths(
         G, bvecs, delta, Delta, TE, min_b_shell_distance=20e6)
+
+
+def isbi2015_white_matter_challenge_scheme():
+    "Returns 35-shell ISBI 2015 challenge DmipyAcquisitionScheme."
+    isbi_data_path = join(DATA_PATH, 'isbi2015_white_matter_challenge')
+    if not os.path.exists(isbi_data_path):
+        os.makedirs(isbi_data_path)
+
+    path_schemefile = (
+        "http://cmic.cs.ucl.ac.uk/wmmchallenge/ISBIdata/seenScheme.txt")
+    filename = 'isbi_schemefile.txt'
+
+    response = urllib2.urlopen(path_schemefile)
+    data = response.read()
+    file_ = open(join(isbi_data_path, filename), 'w')
+    file_.write(data)
+    file_.close()
+
+    return acquisition_scheme_from_schemefile(join(isbi_data_path, filename))
