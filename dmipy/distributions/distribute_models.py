@@ -443,7 +443,7 @@ class DistributedModel:
             sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
             sh_order = int(acquisition_scheme.shell_sh_orders[shell_index])
             E_dispersed_sh = sh_convolution(
-                sh_distribution, rh_models[i, :sh_order / 2 + 1])
+                sh_distribution, rh_models[i, :sh_order // 2 + 1])
             E[shell_mask] = np.dot(sh_mat[:, :len(E_dispersed_sh)],
                                    E_dispersed_sh)
         return E
