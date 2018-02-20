@@ -2,30 +2,15 @@ from __future__ import division
 
 import numpy as np
 from scipy import special
-from ..utils.spherical_convolution import real_sym_rh_basis
 from scipy.special import erf
 
 from ..utils import utils
 from ..core.constants import CONSTANTS
-from ..core.acquisition_scheme import SimpleAcquisitionSchemeRH
 from ..core.modeling_framework import ModelProperties
 from dipy.utils.optpkg import optional_package
 
 numba, have_numba, _ = optional_package("numba")
 
-_samples = 10
-_thetas = np.linspace(0, np.pi / 2, _samples)
-_r = np.ones(_samples)
-_phis = np.zeros(_samples)
-_angles = np.c_[_r, _thetas, _phis]
-_angles_cart = utils.sphere2cart(_angles)
-
-inverse_rh_matrix_kernel = {
-    rh_order: np.linalg.pinv(real_sym_rh_basis(
-        rh_order, _thetas, _phis
-    )) for rh_order in np.arange(0, 15, 2)
-}
-simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(_angles_cart)
 DIFFUSIVITY_SCALING = 1e-9
 DIAMETER_SCALING = 1e-6
 A_SCALING = 1e-12

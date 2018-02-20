@@ -151,9 +151,10 @@ class DmipyAcquisitionScheme:
             self.shell_gradient_strengths,
             self.shell_Delta,
             self.shell_delta)
-        self.rotational_harmonics_scheme = (
-            RotationalHarmonicsAcquisitionScheme(self)
-        )
+        if len(self.unique_dwi_indices) > 0:
+            self.rotational_harmonics_scheme = (
+                RotationalHarmonicsAcquisitionScheme(self)
+            )
 
     @property
     def print_acquisition_info(self):
@@ -321,34 +322,6 @@ class DmipyAcquisitionScheme:
         plt.ylabel('Gradient Strength [T/m]', fontsize=18)
 
 
-class SimpleAcquisitionSchemeRH:
-    """
-    This is a very simple class that is only used internally to create the
-    rotational harmonics to be used in spherical convolution.
-
-    Parameters
-    ----------
-    gradient_directions: array of size (N, 3),
-        Array of cartesian unit-vectors at which to sample the sphere.
-    """
-
-    def __init__(self, gradient_directions):
-        self.gradient_directions = gradient_directions
-        self.number_of_measurements = len(gradient_directions)
-
-        # creates dummy parameters that will be filled depending on what
-        # model is generating the rotational harmonics.
-        self.bvalues = np.zeros(self.number_of_measurements)
-        self.qvalues = np.zeros(self.number_of_measurements)
-        self.gradient_strengths = np.zeros(self.number_of_measurements)
-        self.tau = np.zeros(self.number_of_measurements)
-        self.delta = np.zeros(self.number_of_measurements)
-        self.Delta = np.zeros(self.number_of_measurements)
-        self.b0_mask = np.tile(False, self.number_of_measurements)
-        self.shell_delta = np.zeros(1)
-        self.shell_Delta = np.zeros(1)
-
-
 class RotationalHarmonicsAcquisitionScheme:
     def __init__(self, dmipy_acquisition_scheme, N_angular_samples=10):
         self.Nsamples = N_angular_samples
@@ -367,7 +340,7 @@ class RotationalHarmonicsAcquisitionScheme:
         for shell_index in scheme.unique_dwi_indices:
             G = scheme.shell_gradient_strengths[shell_index]
             delta = scheme.shell_delta[shell_index]
-            Delta = scheme.shell_delta[shell_index]
+            Delta = scheme.shell_Delta[shell_index]
             Gdirs_all_shells.append(angles_cart)
             G_all_shells.append(np.tile(G, N_angular_samples))
             delta_all_shells.append(np.tile(delta, N_angular_samples))

@@ -1,25 +1,7 @@
 from ..core.modeling_framework import ModelProperties
 import numpy as np
-from ..utils.utils import sphere2cart
-from ..utils.spherical_convolution import real_sym_rh_basis
-from ..core.acquisition_scheme import SimpleAcquisitionSchemeRH
-
 
 DIAMETER_SCALING = 1e-6
-
-_samples = 1
-_thetas = np.linspace(0, np.pi / 2, _samples)
-_r = np.ones(_samples)
-_phis = np.zeros(_samples)
-_angles = np.c_[_r, _thetas, _phis]
-_angles_cart = sphere2cart(_angles)
-
-inverse_rh_matrix_kernel = {
-    rh_order: np.linalg.pinv(real_sym_rh_basis(
-        rh_order, _thetas, _phis
-    )) for rh_order in np.arange(0, 15, 2)
-}
-simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(_angles_cart)
 
 __all__ = [
     'S1Dot',
@@ -117,13 +99,7 @@ class S1Dot(ModelProperties):
         E_mean : float,
             spherical mean of the model for every acquisition shell.
         """
-        E_mean = np.ones_like(acquisition_scheme.shell_bvalues)
-        rh_array = self.rotational_harmonics_representation(
-            acquisition_scheme, **kwargs)
-        E_mean[acquisition_scheme.unique_dwi_indices] = (
-            rh_array[:, 0] / (2 * np.sqrt(np.pi))
-        )
-        return E_mean
+        return self(acquisition_scheme.spherical_mean_scheme, **kwargs)
 
 
 class S2SphereSodermanApproximation(ModelProperties):
@@ -246,10 +222,4 @@ class S2SphereSodermanApproximation(ModelProperties):
         E_mean : float,
             spherical mean of the model for every acquisition shell.
         """
-        E_mean = np.ones_like(acquisition_scheme.shell_bvalues)
-        rh_array = self.rotational_harmonics_representation(
-            acquisition_scheme, **kwargs)
-        E_mean[acquisition_scheme.unique_dwi_indices] = (
-            rh_array[:, 0] / (2 * np.sqrt(np.pi))
-        )
-        return E_mean
+        return self(acquisition_scheme.spherical_mean_scheme, **kwargs)

@@ -3,11 +3,6 @@ from collections import OrderedDict
 from itertools import chain
 from ..utils.spherical_convolution import sh_convolution
 from ..utils.utils import T1_tortuosity, parameter_equality
-from ..utils.utils import sphere2cart
-from ..utils.spherical_convolution import real_sym_rh_basis
-from ..core.acquisition_scheme import SimpleAcquisitionSchemeRH
-
-
 import copy
 import numpy as np
 
@@ -18,20 +13,6 @@ __all__ = [
     'DD1GammaDistributed',
     'ReturnFixedValue'
 ]
-
-_samples = 10
-_thetas = np.linspace(0, np.pi / 2, _samples)
-_r = np.ones(_samples)
-_phis = np.zeros(_samples)
-_angles = np.c_[_r, _thetas, _phis]
-_angles_cart = sphere2cart(_angles)
-
-inverse_rh_matrix_kernel = {
-    rh_order: np.linalg.pinv(real_sym_rh_basis(
-        rh_order, _thetas, _phis
-    )) for rh_order in np.arange(0, 15, 2)
-}
-simple_acq_scheme_rh = SimpleAcquisitionSchemeRH(_angles_cart)
 
 
 class DistributedModel:
@@ -741,17 +722,11 @@ class DD1GammaDistributed(DistributedModel):
             spherical mean of the model for every acquisition shell.
         """
         E_mean = np.ones_like(acquisition_scheme.shell_bvalues)
-        for shell_index in acquisition_scheme.unique_dwi_indices:
-            rh = self.rotational_harmonics_representation(
-                bvalue=acquisition_scheme.shell_bvalues[shell_index],
-                qvalue=acquisition_scheme.shell_qvalues[shell_index],
-                gradient_strength=acquisition_scheme.shell_gradient_strengths[
-                    shell_index],
-                delta=acquisition_scheme.shell_delta[shell_index],
-                Delta=acquisition_scheme.shell_Delta[shell_index],
-                rh_order=acquisition_scheme.shell_sh_orders[shell_index],
-                **kwargs)
-            E_mean[shell_index] = rh[0] / (2 * np.sqrt(np.pi))
+        rh_array = self.rotational_harmonics_representation(
+            acquisition_scheme, **kwargs)
+        E_mean[acquisition_scheme.unique_dwi_indices] = (
+            rh_array[:, 0] / (2 * np.sqrt(np.pi))
+        )
         return E_mean
 
 
