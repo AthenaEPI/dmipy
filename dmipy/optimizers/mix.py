@@ -75,38 +75,59 @@ class MixOptimizer:
             The fitted MC model parameters using MIX.
 
         """
+        bounds = list(self.model.bounds_for_optimization)
+        bounds_de = bounds
+        bounds_minimize = bounds[:-1]  # nested volume fractions
+        opt_flag_array = self.model.opt_params_for_optimization
         if x0_vector is not None:
-            bounds = list(self.model.bounds_for_optimization)
-            for i, x0_ in enumerate(x0_vector):
-                if (not np.isnan(x0_) and
-                        self.model.opt_params_for_optimization[i] is False):
-                    bounds[i] = np.r_[x0_, x0_ + 1e-6]
-        else:
-            bounds = list(self.model.bounds_for_optimization)
+            if not np.all(np.isnan(x0_vector)):
+                bounds_de = []
+                bounds_minimize = []
+                for i, x0_ in enumerate(x0_vector):
+                    if np.isnan(x0_):
+                        bounds_de.append(bounds[i])
+                    if opt_flag_array[i] is True:
+                        bounds_minimize.append(bounds[i])
+                bounds_minimize = bounds_minimize[:-1]
 
         # if there is only one model then MIX only uses DE.
         if self.Nmodels == 1:
             # step 1: stochastic optimization on non-linear parameters.
             fitted_parameters = differential_evolution(
                 self.stochastic_objective_function,
-                bounds=bounds,
+                bounds=bounds_de,
                 maxiter=self.maxiter,
-                args=(data, self.acquisition_scheme),
+                args=(data, self.acquisition_scheme, x0_vector),
                 polish=True).x
             return fitted_parameters
 
         # if there is more than 1 model then we do the 3 steps.
         if self.Nmodels > 1:
             # step 1: stochastic optimization on non-linear parameters.
-            bounds_de = bounds[:-self.Nmodels]
+            bounds_de = bounds_de[:-self.Nmodels]
             res_de = differential_evolution(self.stochastic_objective_function,
                                             bounds=bounds_de,
                                             maxiter=self.maxiter,
                                             args=(data,
-                                                  self.acquisition_scheme))
-            res_de_x = np.r_[res_de.x, np.ones(self.Nmodels)]
+                                                  self.acquisition_scheme,
+                                                  x0_vector))
+            optimized_parameter_vector = res_de.x
+            if np.all(np.isnan(x0_vector)):
+                parameter_vector = np.r_[optimized_parameter_vector,
+                                         np.ones(self.Nmodels)]
+            else:
+                x0_bool_array = ~np.isnan(x0_vector)
+                parameter_vector = np.ones(len(x0_bool_array))
+                x0_bool_n0_vf = x0_bool_array[:-self.Nmodels]
+                parameter_vector_no_vf = np.empty(
+                    len(x0_bool_n0_vf), dtype=float)
+                parameter_vector_no_vf[~x0_bool_n0_vf] = (
+                    optimized_parameter_vector)
+                parameter_vector_no_vf[x0_bool_n0_vf] = x0_vector[
+                    x0_bool_array]
+                parameter_vector[:-self.Nmodels] = parameter_vector_no_vf
             parameters = self.model.parameter_vector_to_parameters(
-                res_de_x * self.model.scales_for_optimization)
+                parameter_vector * self.model.scales_for_optimization)
 
             # step 2: Estimating linear variables using COBYLA
             phi = self.model(self.acquisition_scheme,
@@ -126,34 +147,62 @@ class MixOptimizer:
                 vf_nested[i] = vf[i] / vf[i - 1]
 
             # Convert to nested volume fractions
-            x0_refine = np.r_[res_de_x[:-len(vf)], vf_nested]
-            bounds_ = bounds[:-1]
-
+            x0_refine = np.r_[optimized_parameter_vector, vf_nested]
             # step 3: refine using gradient method
             x_fine_nested = minimize(self.objective_function, x0_refine,
-                                     (data, self.acquisition_scheme),
-                                     bounds=bounds_).x
-
+                                     (data,
+                                      self.acquisition_scheme,
+                                      x0_vector),
+                                     bounds=bounds_minimize).x
             nested_fractions = x_fine_nested[-(self.Nmodels - 1):]
             normalized_fractions = nested_to_normalized_fractions(
                 nested_fractions)
-            fitted_parameters = np.r_[
+            minimize_fitted_parameters = np.r_[
                 x_fine_nested[:-(self.Nmodels - 1)], normalized_fractions]
+
+            if not np.all(self.model.opt_params_for_optimization):
+                x0_bool_array = ~np.isnan(x0_vector)
+                fitted_parameters = np.ones(len(x0_bool_array))
+                fitted_parameters[~x0_bool_array] = minimize_fitted_parameters
+                fitted_parameters[x0_bool_array] = x0_vector[x0_bool_array]
+            else:
+                fitted_parameters = minimize_fitted_parameters
             return fitted_parameters
 
-    def stochastic_objective_function(self, parameter_vector,
-                                      data, acquisition_scheme):
+    def stochastic_objective_function(self, optimized_parameter_vector,
+                                      data, acquisition_scheme, x0_params):
         """Objective function for stochastic non-linear parameter estimation
         using differential_evolution
         """
+        x0_bool_array = ~np.isnan(x0_params)
         if self.Nmodels == 1:
+            # add fixed parameters if given.
+            if np.all(np.isnan(x0_params)):
+                parameter_vector = optimized_parameter_vector
+            else:
+                parameter_vector = np.empty(len(x0_bool_array))
+                parameter_vector[~x0_bool_array] = optimized_parameter_vector
+                parameter_vector[x0_bool_array] = x0_params
+
             parameter_vector = (
                 parameter_vector * self.model.scales_for_optimization)
             parameters = self.model.parameter_vector_to_parameters(
                 parameter_vector)
             E_hat = self.model(acquisition_scheme, **parameters)
         elif self.Nmodels > 1:
-            parameter_vector = np.r_[parameter_vector, np.ones(self.Nmodels)]
+            if np.all(np.isnan(x0_params)):
+                parameter_vector = np.r_[optimized_parameter_vector,
+                                         np.ones(self.Nmodels)]
+            else:
+                parameter_vector = np.ones(len(x0_bool_array))
+                x0_bool_n0_vf = x0_bool_array[:-self.Nmodels]
+                parameter_vector_no_vf = np.empty(
+                    len(x0_bool_n0_vf), dtype=float)
+                parameter_vector_no_vf[~x0_bool_n0_vf] = (
+                    optimized_parameter_vector)
+                parameter_vector_no_vf[x0_bool_n0_vf] = x0_params[
+                    x0_bool_array]
+                parameter_vector[:-self.Nmodels] = parameter_vector_no_vf
             parameter_vector = (
                 parameter_vector * self.model.scales_for_optimization)
             parameters = self.model.parameter_vector_to_parameters(
@@ -174,21 +223,30 @@ class MixOptimizer:
         objective = np.dot(diff, diff)
         return objective
 
-    def objective_function(self, parameter_vector, data, acquisition_scheme):
+    def objective_function(
+            self, optimized_parameter_vector, data, acquisition_scheme,
+            x0_params):
         "Objective function of final refining step using L-BFGS-B"
-        if self.Nmodels > 1:
-            nested_fractions = parameter_vector[-(self.Nmodels - 1):]
-            normalized_fractions = nested_to_normalized_fractions(
-                nested_fractions)
-            parameter_vector_ = np.r_[
-                parameter_vector[:-(self.Nmodels - 1)], normalized_fractions]
+        nested_fractions = optimized_parameter_vector[-(self.Nmodels - 1):]
+        normalized_fractions = nested_to_normalized_fractions(
+            nested_fractions)
+        optimized_parameter_vector = np.r_[
+            optimized_parameter_vector[:-(self.Nmodels - 1)],
+            normalized_fractions]
+        if not np.all(self.model.opt_params_for_optimization):
+            x0_bool_array = ~np.isnan(x0_params)
+            parameter_vector = np.ones(len(x0_bool_array))
+            parameter_vector[~x0_bool_array] = (
+                optimized_parameter_vector)
+            parameter_vector[x0_bool_array] = x0_params[x0_bool_array]
         else:
-            parameter_vector_ = parameter_vector
-        parameter_vector_ = (
-            parameter_vector_ * self.model.scales_for_optimization)
+            parameter_vector = optimized_parameter_vector
+
+        parameter_vector = (
+            parameter_vector * self.model.scales_for_optimization)
         parameters = {}
         parameters.update(
-            self.model.parameter_vector_to_parameters(parameter_vector_)
+            self.model.parameter_vector_to_parameters(parameter_vector)
         )
         E_model = self.model(acquisition_scheme, **parameters)
         E_diff = E_model - data
