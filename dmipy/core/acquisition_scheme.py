@@ -13,7 +13,8 @@ from warnings import warn
 __all__ = [
     'get_sh_order_from_bval',
     'DmipyAcquisitionScheme',
-    'SimpleAcquisitionSchemeRH',
+    'RotationalHarmonicsAcquisitionScheme',
+    'SphericalMeanAcquisitionScheme',
     'acquisition_scheme_from_bvalues',
     'acquisition_scheme_from_qvalues',
     'acquisition_scheme_from_gradient_strengths',
@@ -337,6 +338,7 @@ class RotationalHarmonicsAcquisitionScheme:
     N_angular_samples: int
         Integer representing the number of angular samples per shell.
     """
+
     def __init__(self, dmipy_acquisition_scheme, N_angular_samples=10):
         self.Nsamples = N_angular_samples
         scheme = dmipy_acquisition_scheme
