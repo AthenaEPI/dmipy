@@ -182,7 +182,7 @@ class MixOptimizer:
             else:
                 parameter_vector = np.empty(len(x0_bool_array))
                 parameter_vector[~x0_bool_array] = optimized_parameter_vector
-                parameter_vector[x0_bool_array] = x0_params
+                parameter_vector[x0_bool_array] = x0_params[x0_bool_array]
 
             parameter_vector = (
                 parameter_vector * self.model.scales_for_optimization)
