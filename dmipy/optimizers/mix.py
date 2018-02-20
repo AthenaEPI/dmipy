@@ -56,7 +56,7 @@ class MixOptimizer:
         self.maxiter = maxiter
         self.Nmodels = len(self.model.models)
 
-    def __call__(self, data, x0_vector=None):
+    def __call__(self, data, x0_vector=np.array([np.nan])):
         """ The fitting function of the MIX algorithm. Fits the data in three
         distinct steps, first fitting non-linear parameters using
         differential_evolution, then linear parameters using COBYLA, and
