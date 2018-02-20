@@ -92,29 +92,26 @@ class C1Stick(ModelProperties):
             self, acquisition_scheme, **kwargs):
         r""" The rotational harmonics of the model, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernel for spherical
-        convolution.
+        convolution. Returns an array with rotational harmonics for each shell.
 
         Parameters
         ----------
-        bvalue : float,
-            b-value in s/m^2.
-        qvalue : float,
-            diffusion sensitization in 1/m.
-        Delta: float,
-            Delta parameter in seconds.
-        sh_order : int,
-            maximum spherical harmonics order to be used in the approximation.
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
 
         Returns
         -------
-        rh : array,
-            rotational harmonics of stick model aligned with z-axis.
+        rh_array : array, shape(Nshells, N_rh_coef),
+            Rotational harmonics coefficients for each shell.
         """
         rh_scheme = acquisition_scheme.rotational_harmonics_scheme
         kwargs.update({'mu': [0., 0.]})
         E_kernel_sf = self(rh_scheme, **kwargs)
         E_reshaped = E_kernel_sf.reshape([-1, rh_scheme.Nsamples])
-        rh_array = np.zeros((len(E_reshaped), rh_scheme.Nsamples))
+        rh_array = np.zeros((len(E_reshaped),
+                             rh_scheme.shell_sh_orders.max() // 2 + 1))
 
         for i, sh_order in enumerate(rh_scheme.shell_sh_orders):
             rh_array[i, :sh_order // 2 + 1] = (
@@ -262,29 +259,26 @@ class C2CylinderSodermanApproximation(ModelProperties):
             self, acquisition_scheme, **kwargs):
         r""" The rotational harmonics of the model, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernel for spherical
-        convolution.
+        convolution. Returns an array with rotational harmonics for each shell.
 
         Parameters
         ----------
-        bvalue : float,
-            b-value in s/m^2.
-        qvalue : float,
-            diffusion sensitization in 1/m.
-        Delta: float,
-            Delta parameter in seconds.
-        sh_order : int,
-            maximum spherical harmonics order to be used in the approximation.
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
 
         Returns
         -------
-        rh : array,
-            rotational harmonics of stick model aligned with z-axis.
+        rh_array : array, shape(Nshells, N_rh_coef),
+            Rotational harmonics coefficients for each shell.
         """
         rh_scheme = acquisition_scheme.rotational_harmonics_scheme
         kwargs.update({'mu': [0., 0.]})
         E_kernel_sf = self(rh_scheme, **kwargs)
         E_reshaped = E_kernel_sf.reshape([-1, rh_scheme.Nsamples])
-        rh_array = np.zeros((len(E_reshaped), rh_scheme.Nsamples))
+        rh_array = np.zeros((len(E_reshaped),
+                             rh_scheme.shell_sh_orders.max() // 2 + 1))
 
         for i, sh_order in enumerate(rh_scheme.shell_sh_orders):
             rh_array[i, :sh_order // 2 + 1] = (
@@ -468,29 +462,26 @@ class C3CylinderCallaghanApproximation(ModelProperties):
             self, acquisition_scheme, **kwargs):
         r""" The rotational harmonics of the model, such that Y_lm = Yl0.
         Axis aligned with z-axis to be used as kernel for spherical
-        convolution.
+        convolution. Returns an array with rotational harmonics for each shell.
 
         Parameters
         ----------
-        bvalue : float,
-            b-value in s/m^2.
-        qvalue : float,
-            diffusion sensitization in 1/m.
-        Delta: float,
-            Delta parameter in seconds.
-        sh_order : int,
-            maximum spherical harmonics order to be used in the approximation.
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
 
         Returns
         -------
-        rh : array,
-            rotational harmonics of stick model aligned with z-axis.
+        rh_array : array, shape(Nshells, N_rh_coef),
+            Rotational harmonics coefficients for each shell.
         """
         rh_scheme = acquisition_scheme.rotational_harmonics_scheme
         kwargs.update({'mu': [0., 0.]})
         E_kernel_sf = self(rh_scheme, **kwargs)
         E_reshaped = E_kernel_sf.reshape([-1, rh_scheme.Nsamples])
-        rh_array = np.zeros((len(E_reshaped), rh_scheme.Nsamples))
+        rh_array = np.zeros((len(E_reshaped),
+                             rh_scheme.shell_sh_orders.max() // 2 + 1))
 
         for i, sh_order in enumerate(rh_scheme.shell_sh_orders):
             rh_array[i, :sh_order // 2 + 1] = (
@@ -638,33 +629,28 @@ class C4CylinderGaussianPhaseApproximation(ModelProperties):
 
     def rotational_harmonics_representation(
             self, acquisition_scheme, **kwargs):
-        r""" The rotational harmonics of the mode, such that Y_lm = Yl0.
-        Axis aligned with z-axis to be used as kernelfor spherical
-        convolution.
+        r""" The rotational harmonics of the model, such that Y_lm = Yl0.
+        Axis aligned with z-axis to be used as kernel for spherical
+        convolution. Returns an array with rotational harmonics for each shell.
 
         Parameters
         ----------
-        bval : float,
-            b-value in s/m^2.
-        gradient_strength : float,
-            gradient strength in T/m.
-        delta: float,
-            delta parameter in seconds.
-        Delta: float,
-            Delta parameter in seconds.
-        sh_order : int,
-            maximum spherical harmonics order to be used in the approximation.
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
 
         Returns
         -------
-        rh : array,
-            rotational harmonics of stick model aligned with z-axis.
+        rh_array : array, shape(Nshells, N_rh_coef),
+            Rotational harmonics coefficients for each shell.
         """
         rh_scheme = acquisition_scheme.rotational_harmonics_scheme
         kwargs.update({'mu': [0., 0.]})
         E_kernel_sf = self(rh_scheme, **kwargs)
         E_reshaped = E_kernel_sf.reshape([-1, rh_scheme.Nsamples])
-        rh_array = np.zeros((len(E_reshaped), rh_scheme.Nsamples))
+        rh_array = np.zeros((len(E_reshaped),
+                             rh_scheme.shell_sh_orders.max() // 2 + 1))
 
         for i, sh_order in enumerate(rh_scheme.shell_sh_orders):
             rh_array[i, :sh_order // 2 + 1] = (

@@ -323,6 +323,20 @@ class DmipyAcquisitionScheme:
 
 
 class RotationalHarmonicsAcquisitionScheme:
+    """
+    AcquisitionScheme instance that contains the information necessary to
+    calculate the rotational harmonics for a model for every acquisition shell.
+    It is instantiated using a regular DmipyAcquisitionScheme and
+    N_angular_samples determines how many samples are taken between mu=[0., 0.]
+    and mu=[np.pi/2, 0.].
+
+    Parameters
+    ----------
+    dmipy_acquisition_scheme: DmipyAcquisitionScheme instance
+        An acquisition scheme that has been instantiated using dMipy.
+    N_angular_samples: int
+        Integer representing the number of angular samples per shell.
+    """
     def __init__(self, dmipy_acquisition_scheme, N_angular_samples=10):
         self.Nsamples = N_angular_samples
         scheme = dmipy_acquisition_scheme
