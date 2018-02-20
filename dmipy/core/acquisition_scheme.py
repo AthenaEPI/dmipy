@@ -27,9 +27,6 @@ __all__ = [
 ]
 
 
-sh_order = 14
-
-
 def get_sh_order_from_bval(bval):
     "Estimates minimum sh_order to represent data of given b-value."
     bvals = np.r_[2.02020202e+08, 7.07070707e+08, 1.21212121e+09,
