@@ -618,8 +618,9 @@ class C4CylinderGaussianPhaseApproximation(ModelProperties):
 
         g_nonzero = g_perp > 0
         # for every unique combination get the perpendicular attenuation
-        for delta_, Delta_ in zip(acquisition_scheme.shell_delta,
-                                  acquisition_scheme.shell_Delta):
+        unique_deltas = np.unique([acquisition_scheme.shell_delta,
+                                   acquisition_scheme.shell_Delta], axis=1)
+        for delta_, Delta_ in zip(*unique_deltas):
             mask = np.all([g_nonzero, delta == delta_, Delta == Delta_],
                           axis=0)
             E_perpendicular[mask] = self.perpendicular_attenuation(
