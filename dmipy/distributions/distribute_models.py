@@ -726,6 +726,53 @@ class DD1GammaDistributed(DistributedModel):
         )
         return E_mean
 
+    def set_diameter_constrained_parameter_beta(
+            self, diameter_min, diameter_max):
+        # append new parameter to parameters
+        for parameter in self.parameter_names:
+            if parameter.endswith('beta'):
+                beta_param = parameter
+            if parameter.endswith('alpha'):
+                alpha_param = parameter
+        new_parameter_name = beta_param + '_fraction'
+        parameters = [alpha_param, new_parameter_name]
+        self.parameter_ranges.update({new_parameter_name: [0., 1.]})
+        self.parameter_scales.update({new_parameter_name: 1.})
+        self.parameter_cardinality.update({new_parameter_name: 1})
+        self.parameter_types.update({new_parameter_name: 'normal'})
+
+        self._parameter_map.update({new_parameter_name: (None, 'fraction')})
+        self._inverted_parameter_map.update(
+            {(None, 'fraction'): new_parameter_name})
+
+        # add parmeter link to fractional parameter
+        opt_function = ReturnConstrainedBeta(diameter_min, diameter_max)
+        model, name = self._parameter_map[beta_param]
+        self.parameter_links.append([model, name, opt_function,
+                                     [self._parameter_map[param]
+                                      for param in parameters]])
+        del self.parameter_ranges[beta_param]
+        del self.parameter_scales[beta_param]
+        del self.parameter_cardinality[beta_param]
+        del self.parameter_types[beta_param]
+
+
+class ReturnConstrainedBeta:
+    "Optimization parameter class to constrain gamma distribution mean."
+
+    def __init__(self, diameter_min, diameter_max):
+        self.diameter_min = diameter_min
+        self.diameter_max = diameter_max
+        self.diameter_range = diameter_max - diameter_min
+
+    def __call__(self, alpha, beta_fraction):
+        "Diameter = 2 * alpha * beta"
+        beta_max = self.diameter_max / (2.0 * alpha)
+        beta_min = self.diameter_min / (2.0 * alpha)
+        beta_range = beta_max - beta_min
+        beta = beta_min + beta_fraction * beta_range
+        return beta
+
 
 class ReturnFixedValue:
     "Parameter fixing class for parameter links."
