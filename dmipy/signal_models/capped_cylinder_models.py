@@ -9,6 +9,106 @@ __all__ = [
 ]
 
 
+class CC2CappedCylinderStejskalTannerApproximation(ModelProperties):
+    r""" The Stejskal-Tanner model for intra-cylindrical diffusion inside
+    a capped cylinder with finite radius and length. The perpendicular
+    diffusion is modelled after Soderman's solution for the disk [1]_. The
+    parallel diffusion between planes has been implemented according to
+    Balinov [2]_.
+
+    Parameters
+    ----------
+    mu : array, shape(2),
+        angles [theta, phi] representing main orientation on the sphere.
+        theta is inclination of polar angle of main angle mu [0, pi].
+        phi is polar angle of main angle mu [-pi, pi].
+    diameter : float,
+        capped cylinder (axon) diameter in meters.
+    length : float,
+        capped cylinder length in meters.
+
+    References
+    ----------
+    .. [1] Soderman, Olle, and Bengt Jonsson. "Restricted diffusion in
+        cylindrical geometry." Journal of Magnetic Resonance, Series A 117.1
+        (1995): 94-97.
+    .. [2] Balinov, Balin, et al. "The NMR self-diffusion method applied to
+        restricted diffusion. Simulation of echo attenuation from molecules in
+        spheres and between planes." Journal of Magnetic Resonance, Series A
+        104.1 (1993): 17-25.
+    """
+
+    _model_type = 'CompartmentModel'
+
+    def __init__(
+        self,
+        mu=None,
+        diameter=None,
+        length=None,
+    ):
+        self.mu = mu
+        self.diameter = diameter
+        self.length = length
+
+        self._cylinder_model = cylinder_models.C2CylinderSodermanApproximation(
+            mu=self.mu,
+            diameter=self.diameter)
+        self._plane_model = plane_models.P2PlaneStejskalTannerApproximation(
+            diameter=length)
+
+        self._parameter_ranges = self._cylinder_model._parameter_ranges.copy()
+        self._parameter_ranges.update(self._plane_model._parameter_ranges)
+
+        self._parameter_scales = self._cylinder_model._parameter_scales.copy()
+        self._parameter_scales.update(self._plane_model._parameter_scales)
+
+        self._parameter_types = self._cylinder_model._parameter_types.copy()
+        self._parameter_types.update(self._plane_model._parameter_types)
+
+    def __call__(self, acquisition_scheme, **kwargs):
+        r'''
+        Calculates the signal attenuation.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+
+        Returns
+        -------
+        attenuation : float or array, shape(N),
+            signal attenuation
+        '''
+        n = acquisition_scheme.gradient_directions
+        q = acquisition_scheme.qvalues
+
+        diameter = kwargs.get('diameter', self.diameter)
+        length = kwargs.get('length', self.length)
+        mu = kwargs.get('mu', self.mu)
+        mu = utils.unitsphere2cart_1d(mu)
+        mu_perpendicular_plane = np.eye(3) - np.outer(mu, mu)
+        magnitude_perpendicular = np.linalg.norm(
+            np.dot(mu_perpendicular_plane, n.T),
+            axis=0
+        )
+        q_parallel = q * np.dot(n, mu)
+        E_parallel = np.ones_like(q)
+        q_nonzero = q_parallel > 0
+        E_parallel[q_nonzero] = self._plane_model.plane_attenuation(
+            q_parallel[q_nonzero], length)
+
+        E_perpendicular = np.ones_like(q)
+        q_perp = q * magnitude_perpendicular
+        q_nonzero = q_perp > 0
+        E_perpendicular[q_nonzero] = (
+            self._cylinder_model.perpendicular_attenuation(
+                q_perp[q_nonzero], diameter)
+        )
+        return E_parallel * E_perpendicular
+
+
 class CC3CappedCylinderCallaghanApproximation(ModelProperties):
     r""" The Callaghan model [1]_ - a cylinder with finite radius - for
     intra-axonal diffusion. The perpendicular diffusion is modelled
