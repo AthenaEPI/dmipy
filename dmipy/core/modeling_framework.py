@@ -971,15 +971,19 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
 
     def _delete_orientation_parameters(self):
         """
-        Deletes orientation parameter 'mu' since it's not needed in spherical
-        mean models.
+        Deletes orientation parameters from input models 'mu' since they're not
+        needed in spherical mean models.
         """
+        "Removes orientation parameters from input models."
         for model in self.models:
-            if 'mu' in model.parameter_names:
-                parameter_name = self._inverted_parameter_map[(model, 'mu')]
-                del self.parameter_ranges[parameter_name]
-                del self.parameter_cardinality[parameter_name]
-                del self.parameter_scales[parameter_name]
+            for param_name, param_type in model.parameter_types.items():
+                if param_type == 'orientation':
+                    appended_param_name = self._inverted_parameter_map[
+                        model, param_name]
+                    del self.parameter_ranges[appended_param_name]
+                    del self.parameter_scales[appended_param_name]
+                    del self.parameter_cardinality[appended_param_name]
+                    del self.parameter_types[appended_param_name]
 
     def fit(self, acquisition_scheme, data, parameter_initial_guess=None,
             mask=None, solver='brute2fine', Ns=5, maxiter=300,
