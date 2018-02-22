@@ -11,6 +11,67 @@ __all__ = [
 ]
 
 
+class P2PlaneStejskalTannerApproximation(ModelProperties):
+    r""" Stejskal-Tanner approximation of diffusion between two infinitely
+    large parallel planes. Assumes short-gradient pulse (SGP) approximation
+    (pulse length towards zero) and the long diffusion time limit (pulse
+    separation towards infinity). We follow the notation of Balinov [1]_.
+
+    References
+    ----------
+    .. [1] Balinov, Balin, et al. "The NMR self-diffusion method applied to
+        restricted diffusion. Simulation of echo attenuation from molecules in
+        spheres and between planes." Journal of Magnetic Resonance, Series A
+        104.1 (1993): 17-25.
+    """
+    _parameter_ranges = {
+        'diameter': (1e-2, 20)
+    }
+
+    _parameter_scales = {
+        'diameter': DIAMETER_SCALING
+    }
+
+    _parameter_types = {
+        'diameter': 'plane'
+    }
+    _model_type = 'NMRModel'
+
+    def __init__(self, diameter=None):
+        self.diameter = diameter
+
+    def plane_attenuation(self, q, diameter):
+        "Equation 6 in Balinov et al. (1993)."
+        q_argument = 2 * np.pi * q * diameter
+        return 2 * (1 - np.cos(q_argument)) / q_argument ** 2
+
+    def __call__(self, acquisition_scheme, **kwargs):
+        r'''
+        Calculates the signal attenuation.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+
+        Returns
+        -------
+        attenuation : float or array, shape(N),
+            signal attenuation
+        '''
+        q = acquisition_scheme.qvalues
+        diameter = kwargs.get('diameter', self.diameter)
+
+        E_plane = np.ones_like(q)
+        q_nonzero = q > 0
+        E_plane[q_nonzero] = self.plane_attenuation(
+            q[q_nonzero], diameter
+        )
+        return E_plane
+
+
 class P3PlaneCallaghanApproximation(ModelProperties):
     r"""
     The Callaghan model [1]_ of diffusion between two parallel infinite plates.
