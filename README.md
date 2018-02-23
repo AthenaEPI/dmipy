@@ -75,6 +75,9 @@ Dmipy uses HCP data to illustrate microstructure model examples. To reproduce th
 ### Crossing Bundle Microstructure Models
 - [Ball and Sticks [Behrens et al. 2003]](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_ball_and_sticks.ipynb)
 - [NODDI in Crossings (NODDIx) [Farooq et al. 2016]](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_mix_microstructure_imaging_in_crossings.ipynb)
+
+### Tumor Microstructure Models
+- [VERDICT [Panagiotaki et al. 2014]](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_verdict.ipynb)
 ### Spherical Mean-Based Microstructure Models
 Any Spherical Mean model can also estimate parametric FODs.
 - [Spherical Mean Technique [Kaden et al. 2015]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_spherical_mean_technique.ipynb)
