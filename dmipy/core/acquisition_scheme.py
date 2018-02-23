@@ -529,7 +529,8 @@ def acquisition_scheme_from_gradient_strengths(
                                   min_b_shell_distance, b0_threshold)
 
 
-def acquisition_scheme_from_schemefile(file_path):
+def acquisition_scheme_from_schemefile(
+        file_path, min_b_shell_distance=50e6, b0_threshold=10e6):
     r"""
     Created an acquisition scheme object from a Camino scheme file, containing
     gradient directions, strengths, pulse duration $\delta$ and pulse
@@ -561,7 +562,7 @@ def acquisition_scheme_from_schemefile(file_path):
     delta = scheme[:, 5]
     TE = scheme[:, 6]
     return acquisition_scheme_from_gradient_strengths(
-        G, bvecs, delta, Delta, TE)
+        G, bvecs, delta, Delta, TE, min_b_shell_distance, b0_threshold)
 
 
 def unify_length_reference_delta_Delta(reference_array, delta, Delta, TE):
