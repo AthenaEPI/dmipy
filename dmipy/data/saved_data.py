@@ -5,6 +5,7 @@ import nibabel as nib
 import numpy as np
 from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
+import zipfile
 from . import saved_acquisition_schemes
 
 try:
@@ -182,6 +183,42 @@ def isbi2015_white_matter_challenge():
         saved_acquisition_schemes.isbi2015_white_matter_challenge_scheme()
     )
     return scheme, data_genu.T, data_fornix.T
+
+
+def panagiotaki_verdict():
+    """
+    Downloads and returns the example VERDICT acquisition scheme and data that
+    is available at the UCL website. The data is an example of [1]_.
+
+    Returns
+    -------
+    scheme: DmipyAcquisitionScheme instance,
+        acquisition scheme of the challenge data.
+    data_verdict: array,
+        contains the DWIs for a single tumor voxel.
+
+    References
+    ----------
+    .. [1] Panagiotaki, Eletheria, et al. "Noninvasive quantification of solid
+        tumor microstructure using VERDICT MRI." Cancer research 74.7 (2014):
+        1902-1912.
+    """
+    verdict_data_path = join(DATA_PATH, 'panagiotaki_verdict')
+    if not os.path.exists(verdict_data_path):
+        os.makedirs(verdict_data_path)
+
+    url = "http://camino.cs.ucl.ac.uk/uploads/Tutorials/"
+    filename = "LSDTIDWtut.Bfloat.zip"
+    response = urlopen(join(url, filename))
+    with open(join(verdict_data_path, filename), 'wb') as f:
+        f.write(response.read())
+    with zipfile.ZipFile(join(verdict_data_path, filename)) as zip:
+        zip.extract("LSDTIDWtut.Bfloat", path=verdict_data_path)
+
+    data_verdict = np.fromfile(join(verdict_data_path, "LSDTIDWtut.Bfloat"),
+                               dtype='>f')
+    scheme = saved_acquisition_schemes.panagiotaki_verdict_acquisition_scheme()
+    return scheme, data_verdict
 
 
 def synthetic_camino_data_parallel():

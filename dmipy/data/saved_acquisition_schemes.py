@@ -10,6 +10,7 @@ try:
     from urllib2 import urlopen
 except ImportError:
     from urllib.request import urlopen
+import zipfile
 
 _GRADIENT_TABLES_PATH = pkg_resources.resource_filename(
     'dmipy', 'data/gradient_tables'
@@ -91,3 +92,21 @@ def isbi2015_white_matter_challenge_scheme():
     file_.close()
 
     return acquisition_scheme_from_schemefile(join(isbi_data_path, filename))
+
+
+def panagiotaki_verdict_acquisition_scheme():
+    "Returns acquisition scheme for VERDICT tumor characterization."
+    verdict_data_path = join(DATA_PATH, 'panagiotaki_verdict')
+    if not os.path.exists(verdict_data_path):
+        os.makedirs(verdict_data_path)
+
+    url = "http://camino.cs.ucl.ac.uk/uploads/Tutorials/"
+    schemename = "VC_DTIDW.scheme.zip"
+    response = urlopen(join(url, schemename))
+    with open(join(verdict_data_path, schemename), 'wb') as f:
+        f.write(response.read())
+    with zipfile.ZipFile(join(verdict_data_path, schemename)) as zip:
+        zip.extract("VC_DTIDW.scheme", path=verdict_data_path)
+
+    return acquisition_scheme_from_schemefile(
+        join(verdict_data_path, "VC_DTIDW.scheme"), b0_threshold=5e6)
