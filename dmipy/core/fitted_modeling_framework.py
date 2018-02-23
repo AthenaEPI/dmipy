@@ -46,6 +46,14 @@ class FittedMultiCompartmentModel:
         return self.model.parameter_vector_to_parameters(
             self.fitted_parameters_vector)
 
+    @property
+    def fitted_and_linked_parameters(self):
+        "Returns the fitted and linked parameters as a dictionary."
+        fitted_parameters = self.model.parameter_vector_to_parameters(
+            self.fitted_parameters_vector)
+        return self.model.add_linked_parameters_to_parameters(
+            fitted_parameters)
+
     def fod(self, vertices, visual_odi_lower_bound=0.):
         """
         Returns the Fiber Orientation Distribution if it is available.
@@ -240,6 +248,14 @@ class FittedMultiCompartmentSphericalMeanModel:
         "Returns the fitted parameters as a dictionary."
         return self.model.parameter_vector_to_parameters(
             self.fitted_parameters_vector)
+
+    @property
+    def fitted_and_linked_parameters(self):
+        "Returns the fitted and linked parameters as a dictionary."
+        fitted_parameters = self.model.parameter_vector_to_parameters(
+            self.fitted_parameters_vector)
+        return self.model.add_linked_parameters_to_parameters(
+            fitted_parameters)
 
     def predict(self, acquisition_scheme=None, S0=None, mask=None):
         """

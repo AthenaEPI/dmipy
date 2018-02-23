@@ -558,17 +558,9 @@ class MultiCompartmentModelProperties:
                 raise ValueError(msg)
         # append new parameter to parameters
         new_parameter_name = parameter1_smaller_equal_than + '_fraction'
-        self.parameter_ranges.update({new_parameter_name: [0., 1.]})
-        self.parameter_scales.update({new_parameter_name: 1.})
-        self.parameter_cardinality.update({new_parameter_name: 1})
-        self.parameter_types.update({new_parameter_name: 'normal'})
 
-        self._parameter_map.update({new_parameter_name: (None, 'fraction')})
-        self._inverted_parameter_map.update(
-            {(None, 'fraction'): new_parameter_name})
-        self.parameter_optimization_flags.update({new_parameter_name: True})
-
-        # add parmeter link to fractional parameter
+        self._add_optimization_parameter(
+            new_parameter_name, [0., 1.], 1., 1, 'normal', True)
         model, name = self._parameter_map[parameter1_smaller_equal_than]
         self.parameter_links.append([model, name, fractional_parameter, [
             self._parameter_map[new_parameter_name],
@@ -580,6 +572,45 @@ class MultiCompartmentModelProperties:
         del self.parameter_scales[parameter1_smaller_equal_than]
         del self.parameter_types[parameter1_smaller_equal_than]
         del self.parameter_optimization_flags[parameter1_smaller_equal_than]
+
+    def _add_optimization_parameter(
+            self,
+            parameter_name,
+            parameter_range,
+            parameter_scale,
+            parameter_card,
+            parameter_type,
+            parameter_flag):
+        """
+        Creates new ordered dictionaries for model properties with the
+        optimization parameter on top.
+        """
+        old_parameter_ranges = self.parameter_ranges
+        old_parameter_scales = self.parameter_scales
+        old_parameter_cardinality = self.parameter_cardinality
+        old_parameter_types = self.parameter_types
+        old_optimization_flags = self.parameter_optimization_flags
+
+        self.parameter_ranges = OrderedDict({parameter_name: parameter_range})
+        self.parameter_scales = OrderedDict({parameter_name: parameter_scale})
+        self.parameter_cardinality = OrderedDict(
+            {parameter_name: parameter_card})
+        self.parameter_types = OrderedDict({parameter_name: parameter_type})
+        self.parameter_optimization_flags = OrderedDict(
+            {parameter_name: parameter_flag})
+
+        for name, _ in old_parameter_ranges.items():
+            self.parameter_ranges.update({name: old_parameter_ranges[name]})
+            self.parameter_scales.update({name: old_parameter_scales[name]})
+            self.parameter_cardinality.update(
+                {name: old_parameter_cardinality[name]})
+            self.parameter_types.update({name: old_parameter_types[name]})
+            self.parameter_optimization_flags.update(
+                {name: old_optimization_flags[name]})
+
+        self._parameter_map.update({parameter_name: (None, 'fraction')})
+        self._inverted_parameter_map.update(
+            {(None, 'fraction'): parameter_name})
 
 
 class MultiCompartmentModel(MultiCompartmentModelProperties):
@@ -714,7 +745,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         # estimate S0
         self.scheme = acquisition_scheme
         data_ = np.atleast_2d(data)
-        if self.scheme.TE is None:  # if no TE is given
+        if self.scheme.TE is None or len(np.unique(self.scheme.TE)) == 1:
             S0 = np.mean(data_[..., self.scheme.b0_mask], axis=-1)
         else:  # if multiple TE are in the data
             S0 = np.ones_like(data_)
@@ -1071,7 +1102,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         # estimate S0
         self.scheme = acquisition_scheme
         data_ = np.atleast_2d(data)
-        if self.scheme.TE is None:  # if no TE is given
+        if self.scheme.TE is None or len(np.unique(self.scheme.TE)) == 1:
             S0 = np.mean(data_[..., self.scheme.b0_mask], axis=-1)
         else:  # if multiple TE are in the data
             S0 = np.ones(np.r_[data_.shape[:-1],
