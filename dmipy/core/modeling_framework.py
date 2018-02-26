@@ -436,6 +436,20 @@ class MultiCompartmentModelProperties:
             the value to fix the parameter at in SI units.
         """
         if parameter_name in self.parameter_ranges.keys():
+            card = self.parameter_cardinality[parameter_name]
+            if card == 1:
+                if isinstance(value, int):
+                    value = float(value)
+                if not isinstance(value, float):
+                    msg = '{} can only be fixed to a float value.'.format(
+                        parameter_name)
+                    raise ValueError(msg)
+            elif card == 2:
+                value = np.array(value, dtype=float)
+                if value.shape != (2,):
+                    msg = '{} can only be fixed '.format(parameter_name)
+                    msg += 'to an array or list of length 2.'
+                    raise ValueError(msg)
             model, name = self._parameter_map[parameter_name]
             parameter_link = (model, name, ReturnFixedValue(value), [])
             self.parameter_links.append(parameter_link)
@@ -445,8 +459,9 @@ class MultiCompartmentModelProperties:
             del self.parameter_types[parameter_name]
             del self.parameter_optimization_flags[parameter_name]
         else:
-            print('"{}" does not exist or has already been fixed.').format(
+            msg = '{} does not exist or has already been fixed.'.format(
                 parameter_name)
+            raise ValueError(msg)
 
     def set_tortuous_parameter(self, lambda_perp_parameter_name,
                                lambda_par_parameter_name,

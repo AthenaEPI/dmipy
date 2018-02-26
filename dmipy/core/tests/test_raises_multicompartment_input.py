@@ -65,3 +65,14 @@ def test_raise_mix_with_tortuosity_in_mcmodel():
     data = stick(scheme, lambda_par=1.7e-9, mu=[0., 0.])
 
     assert_raises(ValueError, mc.fit, scheme, data, solver='mix')
+
+
+def test_set_fixed_parameter_raises():
+    cyl = cylinder_models.C1Stick()
+    mod = modeling_framework.MultiCompartmentModel([cyl])
+    assert_raises(ValueError, mod.set_fixed_parameter,
+                  'C1Stick_1_lambda_par', [1])
+    assert_raises(ValueError, mod.set_fixed_parameter,
+                  'C1Stick_1_mu', [1])
+    assert_raises(ValueError, mod.set_fixed_parameter,
+                  'blabla', [1])
