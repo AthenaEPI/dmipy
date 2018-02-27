@@ -214,14 +214,14 @@ class MixOptimizer:
             vf = np.dot(phi_inv, data)
             E_hat = np.dot(phi_x, vf)
         objective = np.dot(data - E_hat, data - E_hat).squeeze()
-        return objective
+        return objective * 1e5
 
     def cobyla_cost_function(self, fractions, phi, data):
         "Objective function of linear parameter estimation using COBYLA."
         E_hat = np.dot(phi, fractions)
         diff = data - E_hat
         objective = np.dot(diff, diff)
-        return objective
+        return objective * 1e5
 
     def objective_function(
             self, optimized_parameter_vector, data, acquisition_scheme,
@@ -251,7 +251,7 @@ class MixOptimizer:
         E_model = self.model(acquisition_scheme, **parameters)
         E_diff = E_model - data
         objective = np.dot(E_diff, E_diff) / len(data)
-        return objective
+        return objective * 1e5
 
 
 def nested_to_normalized_fractions(nested_fractions):
