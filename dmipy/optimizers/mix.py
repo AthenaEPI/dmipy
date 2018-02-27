@@ -218,8 +218,13 @@ class MixOptimizer:
             phi_x = self.model(acquisition_scheme,
                                quantity="stochastic cost function",
                                **parameters)
-            phi_inv = np.dot(np.linalg.inv(np.dot(phi_x.T, phi_x)), phi_x.T)
-            vf = np.dot(phi_inv, data)
+            A = np.dot(phi_x.T, phi_x)
+            try:
+                phi_inv = np.dot(np.linalg.inv(A), phi_x.T)
+                vf = np.dot(phi_inv, data)
+            except np.linalg.linalg.LinAlgError:
+                # happens when models have the same signal attenuations.
+                vf = np.ones(self.Nmodels) / float(self.Nmodels)
             E_hat = np.dot(phi_x, vf)
         objective = np.dot(data - E_hat, data - E_hat).squeeze()
         return objective * 1e5
