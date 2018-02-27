@@ -93,14 +93,22 @@ class MixOptimizer:
         # if there is only one model then MIX only uses DE.
         if self.Nmodels == 1:
             # step 1: stochastic optimization on non-linear parameters.
-            fitted_parameters = differential_evolution(
+            res_de = differential_evolution(
                 self.stochastic_objective_function,
                 bounds=bounds_de,
                 maxiter=self.maxiter,
                 args=(data, self.acquisition_scheme, x0_vector),
                 polish=True).x
-            return fitted_parameters
-
+            if np.all(np.isnan(x0_vector)):
+                fitted_parameters = res_de
+                return fitted_parameters
+            else:
+                x0_bool_array = ~np.isnan(x0_vector)
+                fitted_parameters = np.ones(len(x0_bool_array))
+                fitted_parameters[~x0_bool_array] = res_de
+                fitted_parameters[x0_bool_array] = x0_vector[
+                    x0_bool_array]
+                return fitted_parameters
         # if there is more than 1 model then we do the 3 steps.
         if self.Nmodels > 1:
             # step 1: stochastic optimization on non-linear parameters.
