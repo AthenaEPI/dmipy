@@ -422,6 +422,56 @@ class MultiCompartmentModelProperties:
                 msg += "in the DistributedModel step."
                 raise ValueError(msg)
 
+    def set_initial_guess_parameter(self, parameter_name, value):
+        """
+        Allows the user to fix an optimization parameter to a static value.
+        The fixed parameter will be removed from the optimized parameters and
+        added as a linked parameter.
+
+        Parameters
+        ----------
+        parameter_name: string
+            name of the to-be-fixed parameters, see self.parameter_names.
+        value: float or list of corresponding parameter_cardinality.
+            the value to fix the parameter at in SI units.
+        """
+        if parameter_name in self.parameter_ranges.keys():
+            card = self.parameter_cardinality[parameter_name]
+            if card == 1:
+                if isinstance(value, int) or isinstance(value, float):
+                    self.x0_parameters[parameter_name] = value
+                elif isinstance(value, np.ndarray):
+                    self._add_initial_guess_parameter_array(
+                        parameter_name, value)
+            elif card == 2:
+                value = np.array(value, dtype=float)
+                if value.shape[-1] != 2:
+                    msg = '{} can only be fixed '.format(parameter_name)
+                    msg += 'to an array or list with last dimension 2.'
+                    raise ValueError(msg)
+                if value.ndim == 1:
+                    self.x0_parameters[parameter_name] = value
+                if value.ndim > 1:
+                    self._add_initial_guess_parameter_array(
+                        parameter_name, value)
+        else:
+            msg = '{} does not exist or has already been fixed.'.format(
+                parameter_name)
+            raise ValueError(msg)
+
+    def _add_initial_guess_parameter_array(
+            self, parameter_name, parameter_array):
+        temp_dict = self.x0_parameters.copy()
+        temp_dict[parameter_name] = parameter_array
+        try:
+            self.parameter_initial_guess_to_parameter_vector(
+                **temp_dict)
+            self.x0_parameters = temp_dict
+        except ValueError:
+            msg = '{} does not have the same shape'.format(parameter_name)
+            msg += 'as the previously fixed parameters.'
+            raise ValueError(msg)
+
     def set_fixed_parameter(self, parameter_name, value):
         """
         Allows the user to fix an optimization parameter to a static value.
@@ -438,29 +488,47 @@ class MultiCompartmentModelProperties:
         if parameter_name in self.parameter_ranges.keys():
             card = self.parameter_cardinality[parameter_name]
             if card == 1:
-                if isinstance(value, int):
-                    value = float(value)
-                if not isinstance(value, float):
-                    msg = '{} can only be fixed to a float value.'.format(
-                        parameter_name)
-                    raise ValueError(msg)
+                if isinstance(value, int) or isinstance(value, float):
+                    self._add_fixed_parameter_value(parameter_name,
+                                                    float(value))
+                elif isinstance(value, np.ndarray):
+                    self._add_fixed_parameter_array(parameter_name, value)
             elif card == 2:
                 value = np.array(value, dtype=float)
-                if value.shape != (2,):
+                if value.shape[-1] != 2:
                     msg = '{} can only be fixed '.format(parameter_name)
-                    msg += 'to an array or list of length 2.'
+                    msg += 'to an array or list with last dimension 2.'
                     raise ValueError(msg)
-            model, name = self._parameter_map[parameter_name]
-            parameter_link = (model, name, ReturnFixedValue(value), [])
-            self.parameter_links.append(parameter_link)
-            del self.parameter_ranges[parameter_name]
-            del self.parameter_cardinality[parameter_name]
-            del self.parameter_scales[parameter_name]
-            del self.parameter_types[parameter_name]
-            del self.parameter_optimization_flags[parameter_name]
+                if value.ndim == 1:
+                    self._add_fixed_parameter_value(parameter_name, value)
+                if value.ndim > 1:
+                    self._add_fixed_parameter_array(parameter_name, value)
         else:
             msg = '{} does not exist or has already been fixed.'.format(
                 parameter_name)
+            raise ValueError(msg)
+
+    def _add_fixed_parameter_value(self, parameter_name, value):
+        model, name = self._parameter_map[parameter_name]
+        parameter_link = (model, name, ReturnFixedValue(value), [])
+        self.parameter_links.append(parameter_link)
+        del self.parameter_ranges[parameter_name]
+        del self.parameter_cardinality[parameter_name]
+        del self.parameter_scales[parameter_name]
+        del self.parameter_types[parameter_name]
+        del self.parameter_optimization_flags[parameter_name]
+
+    def _add_fixed_parameter_array(self, parameter_name, parameter_array):
+        temp_dict = self.x0_parameters.copy()
+        temp_dict[parameter_name] = parameter_array
+        try:
+            self.parameter_initial_guess_to_parameter_vector(
+                **temp_dict)
+            self.x0_parameters = temp_dict
+            self.parameter_optimization_flags[parameter_name] = False
+        except ValueError:
+            msg = '{} does not have the same shape'.format(parameter_name)
+            msg += 'as the previously fixed parameters.'
             raise ValueError(msg)
 
     def set_tortuous_parameter(self, lambda_perp_parameter_name,
@@ -656,6 +724,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         self._check_for_double_model_class_instances()
         self._prepare_parameters_to_optimize()
         self._check_for_NMR_and_other_models()
+        self.x0_parameters = {}
 
         if not have_numba:
             msg = "We highly recommend installing numba for faster function "
@@ -674,7 +743,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
                 msg += " into a MultiCompartmentModel."
                 raise ValueError(msg)
 
-    def fit(self, acquisition_scheme, data, parameter_initial_guess=None,
+    def fit(self, acquisition_scheme, data,
             mask=None, solver='brute2fine', Ns=5, maxiter=300,
             N_sphere_samples=30, use_parallel_processing=have_pathos,
             number_of_processors=None):
@@ -727,8 +796,6 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         data : N-dimensional array of size (N_x, N_y, ..., N_dwis),
             The measured DWI signal attenuation array of either a single voxel
             or an N-dimensional dataset.
-        parameter_initial_guess: parameter array,
-            must be of size (Nparameters,) or the same size as the data.
         mask : (N-1)-dimensional integer/boolean array of size (N_x, N_y, ...),
             Optional mask of voxels to be included in the optimization.
         solver : string,
@@ -780,15 +847,13 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         N_voxels = np.sum(mask)
 
         # make starting parameters and data the same size
-        if parameter_initial_guess is None:
-            x0_ = np.tile(np.nan,
-                          np.r_[data_.shape[:-1], N_parameters])
-        else:
-            x0_ = homogenize_x0_to_data(
-                data_, parameter_initial_guess)
-            x0_bool = np.all(
-                np.isnan(x0_), axis=tuple(np.arange(x0_.ndim - 1)))
-            x0_[..., ~x0_bool] /= self.scales_for_optimization[~x0_bool]
+        x0_ = self.parameter_initial_guess_to_parameter_vector(
+            **self.x0_parameters)
+        x0_ = homogenize_x0_to_data(
+            data_, x0_)
+        x0_bool = np.all(
+            np.isnan(x0_), axis=tuple(np.arange(x0_.ndim - 1)))
+        x0_[..., ~x0_bool] /= self.scales_for_optimization[~x0_bool]
 
         if use_parallel_processing and not have_pathos:
             msg = 'Cannot use parallel processing without pathos.'
@@ -807,8 +872,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         start = time()
         if solver == 'brute2fine':
             global_brute = GlobalBruteOptimizer(
-                self, self.scheme,
-                parameter_initial_guess, Ns, N_sphere_samples)
+                self, self.scheme, x0_, Ns, N_sphere_samples)
             fit_func = Brute2FineOptimizer(self, self.scheme, Ns)
             print('Setup brute2fine optimizer in {} seconds'.format(
                 time() - start))
@@ -848,7 +912,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         return FittedMultiCompartmentModel(
             self, S0, mask, fitted_parameters)
 
-    def simulate_signal(self, acquisition_scheme, model_parameters_array):
+    def simulate_signal(self, acquisition_scheme, parameters_array_or_dict):
         """
         Function to simulate diffusion data for a given acquisition_scheme
         and model parameters for the MultiCompartmentModel.
@@ -868,7 +932,11 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             The simulated signal of the microstructure model.
         """
         Ndata = acquisition_scheme.number_of_measurements
-        x0 = model_parameters_array
+        if isinstance(parameters_array_or_dict, np.ndarray):
+            x0 = parameters_array_or_dict
+        elif isinstance(parameters_array_or_dict, dict):
+            x0 = self.parameters_to_parameter_vector(
+                **parameters_array_or_dict)
 
         x0_at_least_2d = np.atleast_2d(x0)
         x0_2d = x0_at_least_2d.reshape(-1, x0_at_least_2d.shape[-1])
@@ -994,6 +1062,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         self._prepare_model_properties()
         self._check_for_double_model_class_instances()
         self._prepare_parameters_to_optimize()
+        self.x0_parameters = {}
 
         if not have_numba:
             msg = "We highly recommend installing numba for faster function "
@@ -1031,7 +1100,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
                     del self.parameter_cardinality[appended_param_name]
                     del self.parameter_types[appended_param_name]
 
-    def fit(self, acquisition_scheme, data, parameter_initial_guess=None,
+    def fit(self, acquisition_scheme, data,
             mask=None, solver='brute2fine', Ns=5, maxiter=300,
             N_sphere_samples=30, use_parallel_processing=have_pathos,
             number_of_processors=None):
@@ -1084,8 +1153,6 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         data : N-dimensional array of size (N_x, N_y, ..., N_dwis),
             The measured DWI signal attenuation array of either a single voxel
             or an N-dimensional dataset.
-        parameter_initial_guess: parameter array,
-            must be of size (Nparameters,) or the same size as the data.
         mask : (N-1)-dimensional integer/boolean array of size (N_x, N_y, ...),
             Optional mask of voxels to be included in the optimization.
         solver : string,
@@ -1140,15 +1207,14 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         N_voxels = np.sum(mask)
 
         # make starting parameters and data the same size
-        if parameter_initial_guess is None:
-            x0_ = np.tile(np.nan,
-                          np.r_[data_.shape[:-1], N_parameters])
-        else:
-            x0_ = homogenize_x0_to_data(
-                data_, parameter_initial_guess)
-            x0_bool = np.all(
-                np.isnan(x0_), axis=tuple(np.arange(x0_.ndim - 1)))
-            x0_[..., ~x0_bool] /= self.scales_for_optimization[~x0_bool]
+        # make starting parameters and data the same size
+        x0_ = self.parameter_initial_guess_to_parameter_vector(
+            **self.x0_parameters)
+        x0_ = homogenize_x0_to_data(
+            data_, x0_)
+        x0_bool = np.all(
+            np.isnan(x0_), axis=tuple(np.arange(x0_.ndim - 1)))
+        x0_[..., ~x0_bool] /= self.scales_for_optimization[~x0_bool]
 
         if use_parallel_processing and not have_pathos:
             msg = 'Cannot use parallel processing without pathos.'
@@ -1176,7 +1242,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         if solver == 'brute2fine':
             global_brute = GlobalBruteOptimizer(
                 self, self.scheme,
-                parameter_initial_guess, Ns, N_sphere_samples)
+                x0_, Ns, N_sphere_samples)
             fit_func = Brute2FineOptimizer(self, self.scheme, Ns)
             print('Setup brute2fine optimizer in {} seconds'.format(
                 time() - start))
@@ -1216,7 +1282,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         return FittedMultiCompartmentSphericalMeanModel(
             self, S0, mask, fitted_parameters)
 
-    def simulate_signal(self, acquisition_scheme, model_parameters_array):
+    def simulate_signal(self, acquisition_scheme, parameters_array_or_dict):
         """
         Function to simulate diffusion data for a given acquisition_scheme
         and model parameters for the MultiCompartmentModel.
@@ -1235,8 +1301,12 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
             array the same size as x0.
             The simulated signal of the microstructure model.
         """
-        Ndata = len(acquisition_scheme.shell_bvalues)
-        x0 = model_parameters_array
+        Ndata = acquisition_scheme.shell_indices.max() + 1
+        if isinstance(parameters_array_or_dict, np.ndarray):
+            x0 = parameters_array_or_dict
+        elif isinstance(parameters_array_or_dict, dict):
+            x0 = self.parameters_to_parameter_vector(
+                **parameters_array_or_dict)
 
         x0_at_least_2d = np.atleast_2d(x0)
         x0_2d = x0_at_least_2d.reshape(-1, x0_at_least_2d.shape[-1])

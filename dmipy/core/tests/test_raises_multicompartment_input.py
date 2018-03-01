@@ -71,8 +71,6 @@ def test_set_fixed_parameter_raises():
     cyl = cylinder_models.C1Stick()
     mod = modeling_framework.MultiCompartmentModel([cyl])
     assert_raises(ValueError, mod.set_fixed_parameter,
-                  'C1Stick_1_lambda_par', [1])
-    assert_raises(ValueError, mod.set_fixed_parameter,
                   'C1Stick_1_mu', [1])
     assert_raises(ValueError, mod.set_fixed_parameter,
                   'blabla', [1])

@@ -22,11 +22,10 @@ def test_simple_stick_optimization():
 
     E = stick_model.simulate_signal(scheme, gt_parameter_vector)
 
-    x0 = stick_model.parameters_to_parameter_vector(
-        C1Stick_1_lambda_par=(np.random.rand() + 1.) * 1e-9,
-        C1Stick_1_mu=np.random.rand(2)
-    )
-    res = stick_model.fit(scheme, E, x0).fitted_parameters_vector
+    stick_model.set_initial_guess_parameter('C1Stick_1_lambda_par',
+                                            (np.random.rand() + 1.) * 1e-9)
+    stick_model.set_initial_guess_parameter('C1Stick_1_mu', np.random.rand(2))
+    res = stick_model.fit(scheme, E).fitted_parameters_vector
     assert_array_almost_equal(gt_parameter_vector, res.squeeze(), 2)
 
 
@@ -55,14 +54,16 @@ def test_simple_ball_and_stick_optimization():
         scheme, gt_parameter_vector)
 
     vf_rand = np.random.rand()
-    x0 = ball_and_stick.parameters_to_parameter_vector(
-        C1Stick_1_lambda_par=(np.random.rand() + 1.) * 1e-9,
-        G1Ball_1_lambda_iso=gt_lambda_par / 2.,
-        C1Stick_1_mu=np.random.rand(2),
-        partial_volume_0=vf_rand,
-        partial_volume_1=1 - vf_rand
-    )
-    res = ball_and_stick.fit(scheme, E, x0).fitted_parameters_vector
+    ball_and_stick.set_initial_guess_parameter(
+        'C1Stick_1_lambda_par', (np.random.rand() + 1.) * 1e-9)
+    ball_and_stick.set_initial_guess_parameter(
+        'G1Ball_1_lambda_iso', gt_lambda_par / 2.)
+    ball_and_stick.set_initial_guess_parameter(
+        'C1Stick_1_mu', np.random.rand(2))
+    ball_and_stick.set_initial_guess_parameter('partial_volume_0', vf_rand)
+    ball_and_stick.set_initial_guess_parameter('partial_volume_1', 1 - vf_rand)
+
+    res = ball_and_stick.fit(scheme, E).fitted_parameters_vector
     assert_array_almost_equal(gt_parameter_vector, res.squeeze(), 2)
 
 
@@ -95,10 +96,18 @@ def test_multi_dimensional_x0():
     E_array = ball_and_stick.simulate_signal(
         scheme, gt_parameter_vector)
 
+    ball_and_stick.set_initial_guess_parameter(
+        'C1Stick_1_lambda_par', gt_lambda_par)
+    ball_and_stick.set_initial_guess_parameter(
+        'G1Ball_1_lambda_iso', gt_lambda_iso)
+    ball_and_stick.set_initial_guess_parameter(
+        'C1Stick_1_mu', gt_mu_array)
+    ball_and_stick.set_initial_guess_parameter(
+        'partial_volume_0', gt_partial_volume)
+    ball_and_stick.set_initial_guess_parameter(
+        'partial_volume_1', 1 - gt_partial_volume)
     # I'm giving a voxel-dependent initial condition with gt_mu_array
-    res = ball_and_stick.fit(scheme,
-                             E_array,
-                             gt_parameter_vector).fitted_parameters_vector
+    res = ball_and_stick.fit(scheme, E_array).fitted_parameters_vector
     # optimization should stop immediately as I'm giving the ground truth.
     assert_equal(np.all(np.ravel(res - gt_parameter_vector) == 0.), True)
     # and the parameter vector dictionaries of the results and x0 should also
