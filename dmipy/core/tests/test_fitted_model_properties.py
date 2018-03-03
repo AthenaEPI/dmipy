@@ -71,22 +71,22 @@ def test_parametric_fod_spherical_mean_model():
     smt_fit = smt.fit(scheme, data)
 
     assert_raises(ValueError,
-                  smt_fit.return_parametric_fod_optimizer, Ncompartments=1.5)
+                  smt_fit.return_parametric_fod_model, Ncompartments=1.5)
 
     assert_raises(ValueError,
-                  smt_fit.return_parametric_fod_optimizer, Ncompartments=0)
+                  smt_fit.return_parametric_fod_model, Ncompartments=0)
 
     assert_raises(ValueError,
-                  smt_fit.return_parametric_fod_optimizer,
+                  smt_fit.return_parametric_fod_model,
                   distribution='bla')
 
     for distribution_name in ['watson', 'bingham']:
-        fod_optimizer = smt_fit.return_parametric_fod_optimizer(
+        fod_model = smt_fit.return_parametric_fod_model(
             distribution=distribution_name, Ncompartments=1)
-        fitted_fod_model = fod_optimizer(scheme, data)
+        fitted_fod_model = fod_model.fit(scheme, data)
         assert_(isinstance(fitted_fod_model.fitted_parameters, dict))
 
-    # fod_optimizer = smt_fit.return_parametric_fod_optimizer(
+    # fod_model = smt_fit.return_parametric_fod_model(
     #     distribution='watson', Ncompartments=2)
-    # fitted_fod_model = fod_optimizer(scheme, data)
+    # fitted_fod_model = fod_model(scheme, data)
     # assert_(isinstance(fitted_fod_model.fitted_parameters, dict))

@@ -331,10 +331,10 @@ class FittedMultiCompartmentSphericalMeanModel:
         mse[~self.mask] = 0
         return mse
 
-    def return_parametric_fod_optimizer(
+    def return_parametric_fod_model(
             self, distribution='watson', Ncompartments=1):
         """
-        Retuns parametric FOD optimizer using the rotational harmonics of the
+        Retuns parametric FOD model using the rotational harmonics of the
         fitted spherical mean model as the convolution kernel. It can be called
         with any implemented parametric distribution (Watson/Bingham) and for
         any number of compartments.
@@ -344,17 +344,14 @@ class FittedMultiCompartmentSphericalMeanModel:
         such that the distributed model has the same parameter constraints as
         the spherical mean model. This distributed model now represents one
         compartment of "bundle". This bundle representation is copied
-        Ncompartment time and given as input to a MultiCompartmentModel, where
+        Ncompartment times and given as input to a MultiCompartmentModel, where
         now the non-linear are all linked such that each bundle has the same
         convolution kernel. Finally, the FittedSphericalMeanModel parameters
-        are given as initial condition for the kernel, and the optimization
-        flags for the kernel are turned off (the kernel will not be fitted
-        while the FOD's distribution parameters are being optimized).
+        are given as fixed parameters for the kernel (the kernel will not be
+        fitted while the FOD's distribution parameters are being optimized).
 
-        The function returns a partially evaluated MultiCompartmentModel.fit()
-        instance where the initial_parameters have been set as the spherical
-        mean parameters. Any solver options can then be chosen as for a regular
-        optimization.
+        The function returns a MultiCompartmentModel instance that can be
+        interacted with as usual to fit dMRI data.
 
         Parameters
         ----------
@@ -366,10 +363,9 @@ class FittedMultiCompartmentSphericalMeanModel:
 
         Returns
         -------
-        parametric_fod_optimizer: MultiCompartmentModel.fit() instance,
-            Prepared fit instance of a regular MultiCompartmentModel that can
-            be used to estimate parametric FODs using the fitted spherical
-            mean model as a kernel.
+        mc_bundles_model: Dmipy MultiCompartmentModel instance,
+            MultiCompartmentModel instance that can be used to estimate
+            parametric FODs using the fitted spherical mean model as a kernel.
         """
         from .modeling_framework import MultiCompartmentModel
         from ..distributions import distribute_models
@@ -426,12 +422,12 @@ class FittedMultiCompartmentSphericalMeanModel:
             del bundle.parameter_types[param_to_delete]
 
         bundles = [bundle.copy() for i in range(Ncompartments)]
-        mc_bundles = MultiCompartmentModel(bundles)
+        mc_bundles_model = MultiCompartmentModel(bundles)
         parameter_pairs = []
         for smt_par_name in self.model.parameter_names:
             parameters = []
             parameters.append(smt_par_name)
-            for mc_par_name in mc_bundles.parameter_names:
+            for mc_par_name in mc_bundles_model.parameter_names:
                 if (mc_par_name.startswith(basename) and
                         mc_par_name.endswith(smt_par_name)):
                     parameters.append(mc_par_name)
@@ -440,17 +436,13 @@ class FittedMultiCompartmentSphericalMeanModel:
 
         for parameters in parameter_pairs:
             for i in range(2, Ncompartments + 1):
-                mc_bundles.set_equal_parameter(parameters[1], parameters[i])
+                mc_bundles_model.set_equal_parameter(parameters[1],
+                                                     parameters[i])
 
-        x0_params = {}
         for parameters in parameter_pairs:
             smt_parameter_name = parameters[0]
             mc_parameter_name = parameters[1]
-            x0_params[mc_parameter_name] = self.fitted_parameters[
-                smt_parameter_name]
-            mc_bundles.parameter_optimization_flags[mc_parameter_name] = False
-        x0_vector = mc_bundles.parameter_initial_guess_to_parameter_vector(
-            **x0_params)
-        parametric_fod_optimizer = partial(mc_bundles.fit,
-                                           parameter_initial_guess=x0_vector)
-        return parametric_fod_optimizer
+            mc_bundles_model.set_fixed_parameter(
+                mc_parameter_name,
+                self.fitted_parameters[smt_parameter_name])
+        return mc_bundles_model
