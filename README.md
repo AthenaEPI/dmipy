@@ -87,6 +87,6 @@ Any Spherical Mean model can also estimate parametric FODs.
 Dmipy's design is completely modular and can easily be extended with new models, distributions or optimizers. To contribute, view our [contribution guidelines](https://github.com/AthenaEPI/dmipy/blob/master/contribution_guidelines.rst).
 ## How to cite Dmipy
 Temporarily reference: 
-Fick, Rutger. *Advanced dMRI signal modeling for tissue microstructure characterization*. PhD Thesis. Université Côte d'Azur; Inria Sophia Antipolis, 2017.
+Rutger Fick, Demian Wassermann and Rachid Deriche *Mipy: An Open-Source Framework to improve reproducibility in Brain Microstructure Imaging*, Human Brain Mapping (2018).
 
 [Package Acknowledgements](https://github.com/AthenaEPI/dmipy/blob/master/Acknowledgements.md)
