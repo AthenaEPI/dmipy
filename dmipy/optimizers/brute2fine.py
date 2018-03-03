@@ -69,6 +69,11 @@ class GlobalBruteOptimizer:
             self.global_optimization_grid = True
             self.precompute_signal_grid(
                 model, x0_vector.squeeze(), Ns, N_sphere_samples)
+        elif np.all(np.isnan(x0_vector.reshape([-1, x0_vector.shape[-1]])[0])):
+            x0_vector_ = np.tile(np.nan, len(model.bounds_for_optimization))
+            self.global_optimization_grid = True
+            self.precompute_signal_grid(
+                model, x0_vector_, Ns, N_sphere_samples)
         else:
             self.global_optimization_grid = False
             msg = "Cannot estimate signal grid with voxel-dependent x0_vector."
