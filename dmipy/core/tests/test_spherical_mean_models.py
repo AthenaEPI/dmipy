@@ -24,7 +24,7 @@ models = [
     gaussian_models.G1Ball(),
     gaussian_models.G2Zeppelin(),
     gaussian_models.G3TemporalZeppelin(),
-    sphere_models.S2SphereSodermanApproximation()
+    sphere_models.S2SphereStejskalTannerApproximation()
 ]
 
 distributable_models = [

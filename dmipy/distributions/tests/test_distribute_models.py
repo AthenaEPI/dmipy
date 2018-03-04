@@ -21,7 +21,7 @@ def test_all_models_dispersable():
         [gaussian_models.G1Ball(), gaussian_models.G2Zeppelin()],
         [gaussian_models.G3TemporalZeppelin()],
         [sphere_models.S1Dot(), gaussian_models.G2Zeppelin()],
-        [sphere_models.S2SphereSodermanApproximation(),
+        [sphere_models.S2SphereStejskalTannerApproximation(),
          gaussian_models.G2Zeppelin()]
     ]
 
@@ -45,7 +45,7 @@ def test_raises_models_with_no_orientation():
     non_dispersable_models = [
         gaussian_models.G1Ball(),
         sphere_models.S1Dot(),
-        sphere_models.S2SphereSodermanApproximation()
+        sphere_models.S2SphereStejskalTannerApproximation()
     ]
 
     spherical_distributions = [
@@ -79,7 +79,7 @@ def test_all_models_distributable():
         cylinder_models.C2CylinderStejskalTannerApproximation,
         cylinder_models.C3CylinderCallaghanApproximation,
         cylinder_models.C4CylinderGaussianPhaseApproximation,
-        sphere_models.S2SphereSodermanApproximation
+        sphere_models.S2SphereStejskalTannerApproximation
     ]
 
     spatial_distributions = [

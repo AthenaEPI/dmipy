@@ -1,13 +1,13 @@
 from ..core.modeling_framework import ModelProperties
 from ..core.constants import CONSTANTS
-
+from scipy import special
 import numpy as np
 
 DIAMETER_SCALING = 1e-6
 
 __all__ = [
     'S1Dot',
-    'S2SphereSodermanApproximation'
+    'S2SphereStejskalTannerApproximation'
 ]
 
 
@@ -101,7 +101,7 @@ class S1Dot(ModelProperties):
         return self(acquisition_scheme.spherical_mean_scheme, **kwargs)
 
 
-class S2SphereSodermanApproximation(ModelProperties):
+class S2SphereStejskalTannerApproximation(ModelProperties):
     r"""
     The Stejskal Tanner signal approximation of a sphere model. It assumes
     that pulse length is infinitessimally small and diffusion time large enough
@@ -219,6 +219,105 @@ class S2SphereSodermanApproximation(ModelProperties):
             spherical mean of the model for every acquisition shell.
         """
         return self(acquisition_scheme.spherical_mean_scheme, **kwargs)
+
+
+class S3SphereCallaghanApproximation(ModelProperties):
+    r"""
+    The Callaghan model [1]_ of diffusion inside a sphere.
+
+    Parameters
+    ----------
+    diameter : float
+        Distance between the two plates in meters.
+    diffusion_constant : float,
+        The diffusion constant of the water particles between the two planes.
+        The default value is the approximate diffusivity of water inside axons
+        as 1.7e-9 m^2/s.
+    number_of_roots : integer,
+        The number of roots for the Callaghan approximation.
+
+    References
+    ----------
+    [1] Callaghan, "Pulsed-Gradient Spin-Echo NMR for Planar, Cylindrical,
+        and Spherical Pores under Conditions of Wall Relaxation", JMR 1995
+    """
+
+    _parameter_ranges = {
+        'diameter': (1e-2, 20)
+    }
+
+    _parameter_scales = {
+        'diameter': DIAMETER_SCALING
+    }
+
+    _parameter_types = {
+        'diameter': 'sphere'
+    }
+    _model_type = 'CompartmentModel'
+
+    def __init__(
+        self,
+        diameter=None,
+        diffusion_constant=CONSTANTS['water_in_axons_diffusion_constant'],
+        number_of_roots=20,
+        number_of_functions=50,
+    ):
+
+        self.diameter = diameter
+        self.Dintra = diffusion_constant
+        self.alpha = np.empty((number_of_roots, number_of_functions))
+        self.alpha[0, 0] = 0
+        if number_of_roots > 1:
+            self.alpha[1:, 0] = special.jnp_zeros(0, number_of_roots - 1)
+        for m in range(1, number_of_functions):
+            self.alpha[:, m] = special.jnp_zeros(m, number_of_roots)
+
+    def sphere_attenuation(self, q, tau, diameter):
+        """Implements the finite time Callaghan model for planes."""
+        radius = diameter / 2.0
+        q_argument = 2 * np.pi * q * radius
+        q_argument_2 = q_argument ** 2
+        res = np.zeros_like(q)
+
+        J = special.spherical_jn(q_argument)
+        Jder = special.spherical_jn(q_argument, derivative=True)
+        for k in range(0, self.alpha.shape[0]):
+            for n in range(0, self.alpha.shape[1]):
+                a_nk2 = self.alpha[k, n] ** 2
+                update = np.exp(-a_nk2 * self.Dintra * tau / radius ** 2)
+                update *= ((2 * n + 1) * a_nk2) / \
+                    (a_nk2 - (n - 0.5) ** 2 + 0.25)
+                update *= q_argument * Jder
+                update /= (q_argument_2 - a_nk2) ** 2
+                res += update
+        return res
+
+    def __call__(self, acquisition_scheme, **kwargs):
+        r'''
+        Calculates the signal attenuation.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+
+        Returns
+        -------
+        attenuation : float or array, shape(N),
+            signal attenuation
+        '''
+        q = acquisition_scheme.qvalues
+        tau = acquisition_scheme.tau
+        diameter = kwargs.get('diameter', self.diameter)
+
+        E_sphere = np.ones_like(q)
+        q_nonzero = q > 0
+        E_sphere[q_nonzero] = self.sphere_attenuation(
+            q[q_nonzero], tau[q_nonzero], diameter
+        )
+        return E_sphere
 
 
 class S4SphereGaussianPhaseApproximation(ModelProperties):

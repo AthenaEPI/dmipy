@@ -4,7 +4,7 @@ from numpy.testing import assert_raises
 
 
 def test_raise_mixed_parameter_types():
-    sphere = sphere_models.S2SphereSodermanApproximation()
+    sphere = sphere_models.S2SphereStejskalTannerApproximation()
     cylinder = cylinder_models.C2CylinderStejskalTannerApproximation()
     assert_raises(AttributeError,
                   distribute_models.DD1GammaDistributed,

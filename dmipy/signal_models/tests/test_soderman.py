@@ -71,7 +71,7 @@ def test_RTOP_to_diameter_soderman(samples=1000):
     scheme = acquisition_scheme_from_qvalues(
         qvals_perp, n_perp, delta, Delta)
 
-    soderman = sphere_models.S2SphereSodermanApproximation(
+    soderman = sphere_models.S2SphereStejskalTannerApproximation(
         diameter=diameter)
 
     E_soderman = soderman(scheme)
