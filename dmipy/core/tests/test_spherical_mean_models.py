@@ -18,7 +18,7 @@ scheme = wu_minn_hcp_acquisition_scheme()
 
 models = [
     cylinder_models.C1Stick(),
-    cylinder_models.C2CylinderSodermanApproximation(),
+    cylinder_models.C2CylinderStejskalTannerApproximation(),
     cylinder_models.C3CylinderCallaghanApproximation(),
     cylinder_models.C4CylinderGaussianPhaseApproximation(),
     gaussian_models.G1Ball(),
@@ -28,7 +28,7 @@ models = [
 ]
 
 distributable_models = [
-    cylinder_models.C2CylinderSodermanApproximation(),
+    cylinder_models.C2CylinderStejskalTannerApproximation(),
     cylinder_models.C3CylinderCallaghanApproximation(),
     cylinder_models.C4CylinderGaussianPhaseApproximation(),
 ]

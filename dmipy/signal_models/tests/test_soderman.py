@@ -45,7 +45,7 @@ def test_RTAP_to_diameter_soderman(samples=1000):
     scheme = acquisition_scheme_from_qvalues(
         qvals_perp, n_perp, delta, Delta)
 
-    soderman = cylinder_models.C2CylinderSodermanApproximation(
+    soderman = cylinder_models.C2CylinderStejskalTannerApproximation(
         mu=mu, lambda_par=lambda_par, diameter=diameter)
 
     E_soderman = soderman(scheme)

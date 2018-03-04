@@ -15,7 +15,7 @@ def test_all_models_dispersable():
 
     dispersable_models = [
         [cylinder_models.C1Stick()],
-        [cylinder_models.C2CylinderSodermanApproximation()],
+        [cylinder_models.C2CylinderStejskalTannerApproximation()],
         [cylinder_models.C3CylinderCallaghanApproximation()],
         [cylinder_models.C4CylinderGaussianPhaseApproximation()],
         [gaussian_models.G1Ball(), gaussian_models.G2Zeppelin()],
@@ -76,7 +76,7 @@ def test_all_models_distributable():
 
     distributable_models = [
         plane_models.P3PlaneCallaghanApproximation,
-        cylinder_models.C2CylinderSodermanApproximation,
+        cylinder_models.C2CylinderStejskalTannerApproximation,
         cylinder_models.C3CylinderCallaghanApproximation,
         cylinder_models.C4CylinderGaussianPhaseApproximation,
         sphere_models.S2SphereSodermanApproximation
@@ -101,15 +101,15 @@ def test_all_models_distributable():
 def test_C2_watson_gamma_equals_gamma_watson():
     scheme = wu_minn_hcp_acquisition_scheme()
 
-    cylinder = cylinder_models.C2CylinderSodermanApproximation()
+    cylinder = cylinder_models.C2CylinderStejskalTannerApproximation()
     watsoncyl = distribute_models.SD1WatsonDistributed([cylinder])
 
     gammawatsoncyl = distribute_models.DD1GammaDistributed(
         [watsoncyl],
-        target_parameter='C2CylinderSodermanApproximation_1_diameter')
+        target_parameter='C2CylinderStejskalTannerApproximation_1_diameter')
 
     params1 = {
-        'SD1WatsonDistributed_1_C2CylinderSodermanApproximation_1_lambda_par':
+        'SD1WatsonDistributed_1_C2CylinderStejskalTannerApproximation_1_lambda_par':
         1.7e-9,
         'DD1Gamma_1_alpha': 2.,
         'DD1Gamma_1_beta': 4e-6,
@@ -121,7 +121,7 @@ def test_C2_watson_gamma_equals_gamma_watson():
         [gammacyl])
 
     params2 = {
-        'DD1GammaDistributed_1_C2CylinderSodermanApproximation_1_lambda_par':
+        'DD1GammaDistributed_1_C2CylinderStejskalTannerApproximation_1_lambda_par':
         1.7e-9,
         'DD1GammaDistributed_1_DD1Gamma_1_alpha': 2.,
         'DD1GammaDistributed_1_DD1Gamma_1_beta': 4e-6,

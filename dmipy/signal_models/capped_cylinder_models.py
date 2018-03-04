@@ -50,9 +50,10 @@ class CC2CappedCylinderStejskalTannerApproximation(ModelProperties):
         self.diameter = diameter
         self.length = length
 
-        self._cylinder_model = cylinder_models.C2CylinderSodermanApproximation(
-            mu=self.mu,
-            diameter=self.diameter)
+        self._cylinder_model = (
+            cylinder_models.C2CylinderStejskalTannerApproximation(
+                mu=self.mu,
+                diameter=self.diameter))
         self._plane_model = plane_models.P2PlaneStejskalTannerApproximation(
             diameter=length)
 

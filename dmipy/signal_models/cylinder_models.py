@@ -18,7 +18,7 @@ A_SCALING = 1e-12
 
 __all__ = [
     'C1Stick',
-    'C2CylinderSodermanApproximation',
+    'C2CylinderStejskalTannerApproximation',
     'C3CylinderCallaghanApproximation',
     'C4CylinderGaussianPhaseApproximation'
 ]
@@ -152,11 +152,12 @@ class C1Stick(ModelProperties):
         return E_mean
 
 
-class C2CylinderSodermanApproximation(ModelProperties):
-    r""" The Soderman model [1]_ - a cylinder with finite radius - typically
-    used for intra-axonal diffusion. Assumes that the pulse length is
-    infinitely short and the diffusion time is infinitely long, and is
-    therefore only dependent on the q-value.
+class C2CylinderStejskalTannerApproximation(ModelProperties):
+    r""" The Stejskal-Tanner approximation of the cylinder model with finite
+    radius, proposed by Soderman and Jonsson [1]_. Assumes that both the short
+    gradient pulse (SGP) approximation is met and long diffusion time limit is
+    reached. The perpendicular cylinder diffusion therefore only depends on the
+    q-value of the acquisition.
 
     Parameters
     ----------
@@ -176,7 +177,7 @@ class C2CylinderSodermanApproximation(ModelProperties):
 
     References
     ----------
-    .. [1]_ Soderman, Olle, and Bengt Jonsson. "Restricted diffusion in
+    .. [1] Soderman, Olle, and Bengt Jonsson. "Restricted diffusion in
             cylindrical geometry." Journal of Magnetic Resonance, Series A
             117.1 (1995): 94-97.
     """

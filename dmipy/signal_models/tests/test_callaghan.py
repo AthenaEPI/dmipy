@@ -71,7 +71,7 @@ def test_soderman_equivalent_to_callaghan_with_one_root_and_function(
     n_perp = np.tile(np.r_[1., 0., 0.], (samples, 1))
     scheme = acquisition_scheme_from_qvalues(qvals_perp, n_perp, delta, Delta)
 
-    soderman = cylinder_models.C2CylinderSodermanApproximation(
+    soderman = cylinder_models.C2CylinderStejskalTannerApproximation(
         mu=mu, lambda_par=lambda_par, diameter=diameter)
     callaghan = cylinder_models.C3CylinderCallaghanApproximation(
         number_of_roots=1, number_of_functions=1,
