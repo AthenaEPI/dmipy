@@ -19,7 +19,7 @@ def test_all_models_dispersable():
         [cylinder_models.C3CylinderCallaghanApproximation()],
         [cylinder_models.C4CylinderGaussianPhaseApproximation()],
         [gaussian_models.G1Ball(), gaussian_models.G2Zeppelin()],
-        [gaussian_models.G3RestrictedZeppelin()],
+        [gaussian_models.G3TemporalZeppelin()],
         [sphere_models.S1Dot(), gaussian_models.G2Zeppelin()],
         [sphere_models.S2SphereSodermanApproximation(),
          gaussian_models.G2Zeppelin()]

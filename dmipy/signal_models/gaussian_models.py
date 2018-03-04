@@ -19,7 +19,7 @@ A_SCALING = 1e-12
 __all__ = [
     'G1Ball',
     'G2Zeppelin',
-    'G3RestrictedZeppelin'
+    'G3TemporalZeppelin'
 ]
 
 
@@ -271,10 +271,14 @@ class G2Zeppelin(ModelProperties):
         return E_mean
 
 
-class G3RestrictedZeppelin(ModelProperties):
+class G3TemporalZeppelin(ModelProperties):
     r"""
-    The restricted Zeppelin model [1]_ - an axially symmetric Tensor - for
-    extra-axonal diffusion.
+    The temporal Zeppelin model [1]_ - an axially symmetric Tensor - typically
+    used to describe extra-axonal diffusion. The G3TemporalZeppelin differs
+    from G2Zeppelin in that it has a time-dependent perpendicular parameter
+    "A", which describe extra-axonal diffusion hindrance due to axon packing,
+    and that lambda_perp is instead called lambda_inf, as it describes the
+    perpendicular diffusivity when diffusion time is infinite.
 
     Parameters
     ----------
@@ -287,7 +291,7 @@ class G3RestrictedZeppelin(ModelProperties):
     lambda_inf : float,
         bulk diffusivity constant 10^9 m^2/s.
     A: float,
-        characteristic coefficient in 10^6 m^2
+        characteristic coefficient in 10^12 m^2
 
     Returns
     -------
