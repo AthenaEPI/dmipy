@@ -93,4 +93,4 @@ def test_bingham_equal_to_watson(beta_fraction=0):
     watson = distributions.SD1Watson(mu=mu_, odi=odi_)
     Bn = bingham(n=n_cart)
     Wn = watson(n=n_cart)
-    assert_almost_equal(Bn, Wn, 4)
+    assert_almost_equal(Bn, Wn, 3)
