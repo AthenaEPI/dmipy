@@ -221,7 +221,7 @@ class S2SphereStejskalTannerApproximation(ModelProperties):
         return self(acquisition_scheme.spherical_mean_scheme, **kwargs)
 
 
-class S3SphereCallaghanApproximation(ModelProperties):
+class _S3SphereCallaghanApproximation(ModelProperties):
     r"""
     The Callaghan model [1]_ of diffusion inside a sphere.
 
@@ -279,7 +279,7 @@ class S3SphereCallaghanApproximation(ModelProperties):
         q_argument_2 = q_argument ** 2
         res = np.zeros_like(q)
 
-        J = special.spherical_jn(q_argument)
+        # J = special.spherical_jn(q_argument)
         Jder = special.spherical_jn(q_argument, derivative=True)
         for k in range(0, self.alpha.shape[0]):
             for n in range(0, self.alpha.shape[1]):
