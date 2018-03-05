@@ -6,7 +6,7 @@
 
 # Dmipy: Diffusion Microstructure Imaging in Python
 
-The Dmipy software package facilitates the **reproducible estimation of diffusion MRI-based microstructure features**. It does this by taking a completely modular approach to Microstructure Imaging. Using Dmipy you can design, fit, and recover the parameters of any multi-compartment microstructure model in usually less than 10 lines of code. Created models can be used to simulate and fit data for any PGSE-based dMRI acquisition, including including single shell, multi-shell, multi-diffusion time and multi-TE acquisition schemes. Dmipy's main features include:
+The Dmipy software package facilitates the **reproducible estimation of diffusion MRI-based microstructure features**. It does this by taking a completely modular approach to Microstructure Imaging. Using Dmipy you can design, fit, and recover the parameters of any multi-compartment microstructure model in usually less than 10 lines of code. Created models can be used to simulate and fit data for any PGSE-based dMRI acquisition, including single shell, multi-shell, multi-diffusion time and multi-TE acquisition schemes. Dmipy's main features include:
 
 **Complete Freedom in Model Design and Optimization**
 - Any combination of tissue models (e.g. Gaussian, Cylinder, Sphere) and axon bundle representation (e.g. orientation-dispersed/diameter-distributed) can be combined into a multi-compartment model.
