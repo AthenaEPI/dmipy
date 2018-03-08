@@ -44,29 +44,40 @@ class CvxpyOptimizer:
         # need to pull out the sh convolution to work with cvxpy variables.
         c = cvxpy.Variable(self.Ncoefficients)
         mse = 0.
-        for i, shell_index in enumerate(
-                self.acquisition_scheme.unique_dwi_indices):
-            shell_mask = self.acquisition_scheme.shell_indices == shell_index
-            shell_data = data[shell_mask]
-            rh_order = int(
-                self.acquisition_scheme.shell_sh_orders[shell_index])
-            sh_mat = self.acquisition_scheme.shell_sh_matrices[shell_index]
 
-            rh_shell_prepared = self.prepare_rotational_harmonics(
-                rh_matrix[i], rh_order)
-            if self.sh_order >= rh_order:
-                sh_shell = (
-                    cvxpy.diag(rh_shell_prepared) * c[:len(rh_shell_prepared)])
-                mse += cvxpy.sum_squares(sh_mat * sh_shell - shell_data)
-            else:
-                sh_shell = (
-                    cvxpy.diag(rh_shell_prepared[:self.Ncoefficients]) * c)
-                mse += cvxpy.sum_squares(
-                    sh_mat[:, :self.Ncoefficients] * sh_shell - shell_data)
+        # if model has mu then it has orientation, use sh_order of input
+        # if model is round (no mu) en use only one coefficient.
+        # the single coefficient doubles as the volume fraction
+        # separate positivity constraint per model
+        # multiple models with mu cannot be dealt with...
+        for j, model in enumerate(self.model.models):
+            for i, shell_index in enumerate(
+                    self.acquisition_scheme.unique_dwi_indices):
+                shell_mask = (
+                    self.acquisition_scheme.shell_indices == shell_index)
+                shell_data = data[shell_mask]
+                rh_order = int(
+                    self.acquisition_scheme.shell_sh_orders[shell_index])
+                sh_mat = self.acquisition_scheme.shell_sh_matrices[shell_index]
+
+                rh_shell_prepared = self.prepare_rotational_harmonics(
+                    rh_matrix[j, i], rh_order)
+                if self.sh_order >= rh_order:
+                    sh_shell = (
+                        cvxpy.diag(
+                            rh_shell_prepared) * c[:len(rh_shell_prepared)])
+                    mse += cvxpy.sum_squares(sh_mat * sh_shell - shell_data)
+                else:
+                    sh_shell = (
+                        cvxpy.diag(rh_shell_prepared[:self.Ncoefficients]) * c)
+                    mse += cvxpy.sum_squares(
+                        sh_mat[:, :self.Ncoefficients] * sh_shell - shell_data)
         objective = cvxpy.Minimize(mse)
         constraints = [self.sh_matrix_positivity * c > 0.]
-        if self.unity_constraint:
-            constraints.append(c[0] == 2 * np.sqrt(np.pi))
+        # c[0] == 1. / (2 * np.sqrt(np.pi))
+        # ]
+        # if self.unity_constraint:
+        #     constraints.append(c[0] == 1. / (2 * np.sqrt(np.pi)))
         problem = cvxpy.Problem(objective, constraints)
         problem.solve()
         sh_coefficients = np.array(c.value).squeeze()
@@ -89,18 +100,9 @@ class CvxpyOptimizer:
         """
         parameters = self.model.parameter_vector_to_parameters(x0_vector)
         parameters = self.model.add_linked_parameters_to_parameters(parameters)
-
-        if self.Nmodels > 1:
-            partial_volumes = [
-                parameters[p] for p in self.model.partial_volume_names
-            ]
-        else:
-            partial_volumes = [1.]
-
-        rh_models = 0.
-        for model_name, model, partial_volume in zip(
-            self.model.model_names, self.model.models,
-            chain(partial_volumes, [None])
+        rh_models = []
+        for model_name, model in zip(
+            self.model.model_names, self.model.models
         ):
             model_parameters = {}
             for parameter in model.parameter_ranges:
@@ -112,9 +114,5 @@ class CvxpyOptimizer:
                 )
             rh_model = model.rotational_harmonics_representation(
                 self.acquisition_scheme, **model_parameters)
-            rh_models = rh_models + partial_volume * rh_model
-        return rh_models
-
-    def recover_rotational_harmonics_opt_fractions(self):
-        # Recover rotational harmonics for
-        pass
+            rh_models.append(rh_model)
+        return np.array(rh_models)

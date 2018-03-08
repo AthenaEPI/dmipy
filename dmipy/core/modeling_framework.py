@@ -11,6 +11,7 @@ from time import time
 
 from ..utils.spherical_mean import (
     estimate_spherical_mean_multi_shell)
+from ..utils.spherical_convolution import sh_convolution
 from ..utils.utils import (
     T1_tortuosity,
     parameter_equality,
@@ -1410,7 +1411,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         the models to combine into the MultiCompartmentModel.
     '''
 
-    def __init__(self, models):
+    def __init__(self, models, sh_order):
         self.models = models
         self.parameter_links = []
 
@@ -1423,6 +1424,8 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         self._check_for_double_model_class_instances()
         self._prepare_parameters_to_optimize()
         self.x0_parameters = {}
+        self.sh_order = sh_order
+        self._add_spherical_harmonics_parameters(sh_order)
 
         if not have_numba:
             msg = "We highly recommend installing numba for faster function "
@@ -1469,7 +1472,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         self.parameter_types['sh_coeff'] = 'sh_coefficients'
 
     def fit(self, acquisition_scheme, data, mask=None,
-            solver='cvxpy', sh_order=8, optimize_volume_fractions=True,
+            solver='cvxpy', optimize_volume_fractions=True,
             unity_constraint=False,
             use_parallel_processing=have_pathos,
             number_of_processors=None):
@@ -1514,10 +1517,6 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             Can be used to recover parameters themselves or other useful
             functions.
         """
-        # add spherical harmonics coefficients
-        self.sh_order = sh_order
-        self._add_spherical_harmonics_parameters(sh_order)
-
         # estimate S0
         self.scheme = acquisition_scheme
         data_ = np.atleast_2d(data)
@@ -1566,7 +1565,8 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         start = time()
         if solver == 'cvxpy':
             fit_func = CvxpyOptimizer(
-                acquisition_scheme, self, sh_order, optimize_volume_fractions,
+                acquisition_scheme, self, self.sh_order,
+                optimize_volume_fractions,
                 unity_constraint)
         start = time()
         for idx, pos in enumerate(zip(*mask_pos)):
@@ -1614,7 +1614,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             array the same size as x0.
             The simulated signal of the microstructure model.
         """
-        Ndata = acquisition_scheme.shell_indices.max() + 1
+        Ndata = acquisition_scheme.number_of_measurements
         if isinstance(parameters_array_or_dict, np.ndarray):
             x0 = parameters_array_or_dict
         elif isinstance(parameters_array_or_dict, dict):
@@ -1635,7 +1635,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         else:
             return E_simulated
 
-    def __call__(self, acquisition_scheme_or_vertices, **kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
         """
         The MultiCompartmentModel function call for to generate signal
         attenuation for a given acquisition scheme and model parameters.
@@ -1661,18 +1661,11 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         kwargs: keyword arguments to the model parameter values,
             Is internally given as **parameter_dictionary.
         """
-        if quantity == "signal":
-            values = 0
-        elif quantity == "stochastic cost function":
-            values = np.empty((
-                len(acquisition_scheme_or_vertices.shell_bvalues),
-                len(self.models)
-            ))
-            counter = 0
-
         kwargs = self.add_linked_parameters_to_parameters(
             kwargs
         )
+        sh_distribution = kwargs['sh_coeff']
+
         if len(self.models) > 1:
             partial_volumes = [
                 kwargs[p] for p in self.partial_volume_names
@@ -1680,8 +1673,11 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         else:
             partial_volumes = [1.]
 
+        remaining_volume_fraction = 1.
+        rh_models = 0.
         for model_name, model, partial_volume in zip(
-            self.model_names, self.models, partial_volumes
+            self.model_names, self.models,
+            partial_volumes
         ):
             parameters = {}
             for parameter in model.parameter_ranges:
@@ -1689,22 +1685,30 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
                     (model, parameter)
                 ]
                 parameters[parameter] = kwargs.get(
-                    # , self.parameter_defaults.get(parameter_name)
                     parameter_name
                 )
 
-            if quantity == "signal":
-                values = (
-                    values +
-                    partial_volume * model.spherical_mean(
-                        acquisition_scheme_or_vertices, **parameters)
-                )
-            elif quantity == "stochastic cost function":
-                values[:, counter] = model.spherical_mean(
-                    acquisition_scheme_or_vertices,
-                    **parameters)
-                counter += 1
-        return values
+            if partial_volume is not None:
+                volume_fraction = remaining_volume_fraction * partial_volume
+                remaining_volume_fraction = (
+                    remaining_volume_fraction - volume_fraction)
+            else:
+                volume_fraction = remaining_volume_fraction
+
+            rh_model = model.rotational_harmonics_representation(
+                acquisition_scheme, **parameters)
+            rh_models = rh_models + volume_fraction * rh_model
+
+        E = np.ones(acquisition_scheme.number_of_measurements)
+        for i, shell_index in enumerate(acquisition_scheme.unique_dwi_indices):
+            shell_mask = acquisition_scheme.shell_indices == shell_index
+            sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
+            sh_order = int(acquisition_scheme.shell_sh_orders[shell_index])
+            E_dispersed_sh = sh_convolution(
+                sh_distribution, rh_models[i, :sh_order // 2 + 1])
+            E[shell_mask] = np.dot(sh_mat[:, :len(E_dispersed_sh)],
+                                   E_dispersed_sh)
+        return E
 
 
 def homogenize_x0_to_data(data, x0):
