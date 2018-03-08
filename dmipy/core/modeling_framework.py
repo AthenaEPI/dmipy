@@ -1411,7 +1411,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         the models to combine into the MultiCompartmentModel.
     '''
 
-    def __init__(self, models, sh_order):
+    def __init__(self, models, sh_order=8):
         self.models = models
         self.parameter_links = []
 
@@ -1472,8 +1472,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         self.parameter_types['sh_coeff'] = 'sh_coefficients'
 
     def fit(self, acquisition_scheme, data, mask=None,
-            solver='cvxpy', optimize_volume_fractions=True,
-            unity_constraint=False,
+            solver='cvxpy', unity_constraint=True,
             use_parallel_processing=have_pathos,
             number_of_processors=None):
         """ The main data fitting function of a MultiCompartmentModel.
@@ -1566,7 +1565,6 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         if solver == 'cvxpy':
             fit_func = CvxpyOptimizer(
                 acquisition_scheme, self, self.sh_order,
-                optimize_volume_fractions,
                 unity_constraint)
         start = time()
         for idx, pos in enumerate(zip(*mask_pos)):
@@ -1673,11 +1671,9 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         else:
             partial_volumes = [1.]
 
-        remaining_volume_fraction = 1.
         rh_models = 0.
         for model_name, model, partial_volume in zip(
-            self.model_names, self.models,
-            partial_volumes
+            self.model_names, self.models, partial_volumes
         ):
             parameters = {}
             for parameter in model.parameter_ranges:
@@ -1688,16 +1684,9 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
                     parameter_name
                 )
 
-            if partial_volume is not None:
-                volume_fraction = remaining_volume_fraction * partial_volume
-                remaining_volume_fraction = (
-                    remaining_volume_fraction - volume_fraction)
-            else:
-                volume_fraction = remaining_volume_fraction
-
             rh_model = model.rotational_harmonics_representation(
                 acquisition_scheme, **parameters)
-            rh_models = rh_models + volume_fraction * rh_model
+            rh_models = rh_models + partial_volume * rh_model
 
         E = np.ones(acquisition_scheme.number_of_measurements)
         for i, shell_index in enumerate(acquisition_scheme.unique_dwi_indices):
