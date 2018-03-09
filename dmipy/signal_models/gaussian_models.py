@@ -153,7 +153,7 @@ class G2Zeppelin(ModelProperties):
     """
 
     _parameter_ranges = {
-        'mu': ([0, -np.pi], [np.pi, np.pi]),
+        'mu': ([0, np.pi], [-np.pi, np.pi]),
         'lambda_par': (.1, 3),
         'lambda_perp': (.1, 3)
     }
@@ -306,7 +306,7 @@ class G3TemporalZeppelin(ModelProperties):
     """
 
     _parameter_ranges = {
-        'mu': ([0, -np.pi], [np.pi, np.pi]),
+        'mu': ([0, np.pi], [-np.pi, np.pi]),
         'lambda_par': (.1, 3),
         'lambda_inf': (.1, 3),
         'A': (0, 10)
