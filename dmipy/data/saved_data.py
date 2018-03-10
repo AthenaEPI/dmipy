@@ -25,6 +25,34 @@ __all__ = [
     'visualize_correlation_camino_and_estimated_fractions'
 ]
 
+def deSantis_camino_data():
+    """
+    Downloads and returns the 4-shell multi-delta/Delta/G scheme based on acquistion scheme defined in [1]_.
+    Note that acquisition parameters in [1]_ used for a STEAM sequence, are used here to generate a PGSE one.
+
+    Returns
+    -------
+    scheme: DmipyAcquisitionScheme instance,
+        acquisition scheme of the generated de Santis data.
+    data_genu: array of size (50, 54),
+        contains 50 repetitions with added rician noise SNR=30.
+
+
+    References
+    ----------
+    .. [1] De Santis, S., Jones, D. K., & Roebroeck, A. (2016). Including 
+	diffusion time dependence in the extra-axonal space improves in vivo 
+	estimates of axonal diameter and density in human white matter. NeuroImage, 130, 91-103.
+    """
+    deSantis_data_path = join(DATA_PATH, 'deSantis_camino')
+
+    data = np.loadtxt(join(deSantis_data_path, 'deSantis_signal.txt'), skiprows=2)
+	
+    scheme = (
+        saved_acquisition_schemes.deSantis_generated_acquisition_scheme()
+    )    
+    return scheme, data
+
 
 def wu_minn_hcp_coronal_slice():
     "Returns example slice of Wu-Minn HCP data subject 100307."

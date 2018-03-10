@@ -74,6 +74,20 @@ def duval_cat_spinal_cord_3d_acquisition_scheme():
     return acquisition_scheme_from_gradient_strengths(
         G, bvecs, delta, Delta, TE, min_b_shell_distance=20e6)
 
+def deSantis_generated_acquisition_scheme():
+    "Returns 2D DmipyAcquisitionScheme of de Santis."
+    scheme_name = 'deSantis_camino/deSantis_scheme.scheme'
+    scheme = np.loadtxt(join(DATA_PATH, scheme_name), skiprows=2)
+
+    bvecs = scheme[:, :3]
+    bvecs[np.linalg.norm(bvecs, axis=1) == 0.] = np.r_[1., 0., 0.]
+    G = scheme[:, 3]
+    Delta = scheme[:, 4]
+    delta = scheme[:, 5]
+    TE = scheme[:, 6]
+
+    return acquisition_scheme_from_gradient_strengths(
+        G, bvecs, delta, Delta, TE)
 
 def isbi2015_white_matter_challenge_scheme():
     "Returns 35-shell ISBI 2015 challenge DmipyAcquisitionScheme."
