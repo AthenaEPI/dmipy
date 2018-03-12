@@ -44,12 +44,12 @@ def de_santis_camino_data():
 	diffusion time dependence in the extra-axonal space improves in vivo 
 	estimates of axonal diameter and density in human white matter. NeuroImage, 130, 91-103.
     """
-    de_santis_data_path = join(DATA_PATH, 'deSantis_camino')
+    de_santis_data_path = join(DATA_PATH, 'de_santis_camino')
 
     data = np.loadtxt(join(de_santis_data_path, 'deSantis_signal.txt'))
 	
     scheme = (
-        saved_acquisition_schemes.deSantis_generated_acquisition_scheme()
+        saved_acquisition_schemes.de_santis_generated_acquisition_scheme()
     )    
     return scheme, data
 
