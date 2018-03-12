@@ -22,7 +22,7 @@ from .fitted_modeling_framework import (
     FittedMultiCompartmentSphericalHarmonicsModel)
 from ..optimizers.brute2fine import (
     GlobalBruteOptimizer, Brute2FineOptimizer)
-from ..optimizers_fod.cvxpy_fod import CvxpyOptimizer
+from ..optimizers_fod.cvxpy_fod import MultiCompartmentCSDOptimizer
 from ..optimizers.mix import MixOptimizer
 from dipy.utils.optpkg import optional_package
 pathos, have_pathos, _ = optional_package("pathos")
@@ -1423,9 +1423,9 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         self._prepare_model_properties()
         self._check_for_double_model_class_instances()
         self._prepare_parameters_to_optimize()
+        self._add_spherical_harmonics_parameters(sh_order)
         self.x0_parameters = {}
         self.sh_order = sh_order
-        self._add_spherical_harmonics_parameters(sh_order)
 
         if not have_numba:
             msg = "We highly recommend installing numba for faster function "
@@ -1471,7 +1471,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         self.parameter_cardinality['sh_coeff'] = N_coef
         self.parameter_types['sh_coeff'] = 'sh_coefficients'
 
-    def fit(self, acquisition_scheme, data, mask=None,
+    def fit(self, acquisition_scheme, data, mask=None, 
             solver='cvxpy', unity_constraint=True,
             use_parallel_processing=have_pathos,
             number_of_processors=None):
@@ -1563,9 +1563,8 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
 
         start = time()
         if solver == 'cvxpy':
-            fit_func = CvxpyOptimizer(
-                acquisition_scheme, self, self.sh_order,
-                unity_constraint)
+            fit_func = MultiCompartmentCSDOptimizer(
+                acquisition_scheme, self, self.sh_order, unity_constraint)
         start = time()
         for idx, pos in enumerate(zip(*mask_pos)):
             voxel_E = data_[pos] / S0[pos]
@@ -1662,7 +1661,6 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         kwargs = self.add_linked_parameters_to_parameters(
             kwargs
         )
-        sh_distribution = kwargs['sh_coeff']
 
         if len(self.models) > 1:
             partial_volumes = [
@@ -1671,10 +1669,9 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         else:
             partial_volumes = [1.]
 
-        rh_models = 0.
-        for model_name, model, partial_volume in zip(
-            self.model_names, self.models, partial_volumes
-        ):
+        rh_models = []
+        sh_coeffs = []
+        for model, partial_volume in zip(self.models, partial_volumes):
             parameters = {}
             for parameter in model.parameter_ranges:
                 parameter_name = self._inverted_parameter_map[
@@ -1683,20 +1680,33 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
                 parameters[parameter] = kwargs.get(
                     parameter_name
                 )
-
             rh_model = model.rotational_harmonics_representation(
                 acquisition_scheme, **parameters)
-            rh_models = rh_models + partial_volume * rh_model
+            rh_models.append(rh_model)
+            if 'orientation' in model.parameter_types.values():
+                sh_coeffs.append(kwargs['sh_coeff'])
+            else:
+                sh_coeffs.append(
+                    np.atleast_1d(partial_volume / (2 * np.sqrt(np.pi))))
 
         E = np.ones(acquisition_scheme.number_of_measurements)
         for i, shell_index in enumerate(acquisition_scheme.unique_dwi_indices):
             shell_mask = acquisition_scheme.shell_indices == shell_index
             sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
             sh_order = int(acquisition_scheme.shell_sh_orders[shell_index])
-            E_dispersed_sh = sh_convolution(
-                sh_distribution, rh_models[i, :sh_order // 2 + 1])
-            E[shell_mask] = np.dot(sh_mat[:, :len(E_dispersed_sh)],
-                                   E_dispersed_sh)
+
+            shell_E = 0.
+            for j, model in enumerate(self.models):
+                if 'orientation' in model.parameter_types.values():
+                    E_dispersed_sh = sh_convolution(
+                        sh_coeffs[j], rh_models[j][i, :sh_order // 2 + 1])
+                    shell_E += np.dot(sh_mat[:, :len(E_dispersed_sh)],
+                                      E_dispersed_sh)
+                else:
+                    E_dispersed_sh = sh_convolution(
+                        sh_coeffs[j], rh_models[j][i])
+                    shell_E += np.dot(sh_mat[0, 0], E_dispersed_sh)
+            E[shell_mask] = shell_E
         return E
 
 
