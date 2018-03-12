@@ -46,7 +46,7 @@ def deSantis_camino_data():
     """
     deSantis_data_path = join(DATA_PATH, 'deSantis_camino')
 
-    data = np.loadtxt(join(deSantis_data_path, 'deSantis_signal.txt'), skiprows=2)
+    data = np.loadtxt(join(deSantis_data_path, 'deSantis_signal.txt'))
 	
     scheme = (
         saved_acquisition_schemes.deSantis_generated_acquisition_scheme()
