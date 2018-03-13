@@ -25,10 +25,12 @@ __all__ = [
     'visualize_correlation_camino_and_estimated_fractions'
 ]
 
+
 def de_santis_camino_data():
     """
-    Downloads and returns the 4-shell multi-delta/Delta/G scheme based on acquistion scheme defined in [1]_.
-    Note that acquisition parameters in [1]_ used for a STEAM sequence, are used here to generate a PGSE one.
+    Downloads and returns the 4-shell multi-delta/Delta/G scheme based on
+    acquistion scheme defined in [1]_. Note that acquisition parameters in [1]_
+    used for a STEAM sequence, are used here to generate a PGSE one.
 
     Returns
     -------
@@ -37,20 +39,19 @@ def de_santis_camino_data():
     data_genu: array of size (50, 54),
         contains 50 repetitions with added rician noise SNR=30.
 
-
     References
     ----------
-    .. [1] De Santis, S., Jones, D. K., & Roebroeck, A. (2016). Including 
-	diffusion time dependence in the extra-axonal space improves in vivo 
-	estimates of axonal diameter and density in human white matter. NeuroImage, 130, 91-103.
+    .. [1] De Santis, S., Jones, D. K., & Roebroeck, A. (2016). Including
+        diffusion time dependence in the extra-axonal space improves in vivo
+        estimates of axonal diameter and density in human white matter.
+        NeuroImage, 130, 91-103.
     """
     de_santis_data_path = join(DATA_PATH, 'de_santis_camino')
 
     data = np.loadtxt(join(de_santis_data_path, 'deSantis_signal.txt'))
-	
+
     scheme = (
-        saved_acquisition_schemes.de_santis_generated_acquisition_scheme()
-    )    
+        saved_acquisition_schemes.de_santis_generated_acquisition_scheme())
     return scheme, data
 
 
