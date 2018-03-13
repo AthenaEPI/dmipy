@@ -68,15 +68,6 @@ class MultiCompartmentCSDOptimizer:
         self.sh_matrix_positivity = real_sym_sh_mrtrix(
             self.sh_order, hemisphere.theta, hemisphere.phi)[0]
 
-        orientation_counter = 0
-        for model in self.model.models:
-            if 'orientation' in model.parameter_types.values():
-                orientation_counter += 1
-        if orientation_counter > 1:
-            msg = 'Cannot optimize the volume fractions of multiple models '
-            msg += 'with an orientation at the same time.'
-            raise ValueError(msg)
-
     def __call__(self, data, x0_vector):
         """
         Estimates the FOD and possible volume fractions given the measured data

@@ -1424,6 +1424,8 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         self._check_for_double_model_class_instances()
         self._prepare_parameters_to_optimize()
         self._add_spherical_harmonics_parameters(sh_order)
+        self._check_that_one_anisotropic_kernel_is_present()
+
         self.x0_parameters = {}
         self.sh_order = sh_order
 
@@ -1471,11 +1473,32 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         self.parameter_cardinality['sh_coeff'] = N_coef
         self.parameter_types['sh_coeff'] = 'sh_coefficients'
 
-    def fit(self, acquisition_scheme, data, mask=None, 
+    def _check_if_kernel_parameters_are_fixed(self):
+        "checks if only volume fraction and sh_coeff parameters are optimized."
+        for name, flag in self.parameter_optimization_flags.items():
+            if flag is True:
+                if (not name == 'sh_coeff' and
+                        not name.startswith('partial_volume')):
+                    msg = 'kernel parameter {} is not fixed.'.format(name)
+                    raise ValueError(msg)
+
+    def _check_that_one_anisotropic_kernel_is_present(self):
+        "checks if one anisotropic kernel is given."
+        orientation_counter = 0
+        for model in self.models:
+            if 'orientation' in model.parameter_types.values():
+                orientation_counter += 1
+        if orientation_counter != 1:
+            msg = 'MultiCompartmentSphericalHarmonicsModel must at least have '
+            msg += 'one anisotropic kernel input model.'
+            raise ValueError(msg)
+
+    def fit(self, acquisition_scheme, data, mask=None,
             solver='cvxpy', unity_constraint=True,
             use_parallel_processing=have_pathos,
             number_of_processors=None):
-        """ The main data fitting function of a MultiCompartmentModel.
+        """ The main data fitting function of a
+        MultiCompartmentSphericalHarmonicsModel.
 
         This function can fit it to an N-dimensional dMRI data set, and returns
         a FittedMultiCompartmentModel instance that contains the fitted
@@ -1504,6 +1527,11 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         mask : (N-1)-dimensional integer/boolean array of size (N_x, N_y, ...),
             Optional mask of voxels to be included in the optimization.
         solver : string,
+            can only be 'cvxpy' at this point for general-purpose csd
+            optimization using cvxpy [1]_.
+        unity_constraint: bool,
+            whether or not to constrain the volume fractions of the FOD to
+            unity.
         use_parallel_processing : bool,
             whether or not to use parallel processing using pathos.
         number_of_processors : integer,
@@ -1515,7 +1543,16 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         FittedCompartmentModel: class instance that contains fitted parameters,
             Can be used to recover parameters themselves or other useful
             functions.
+
+        References
+        ----------
+        .. [1] Diamond, Steven, and Stephen Boyd. "CVXPY: A Python-embedded
+            modeling language for convex optimization." The Journal of Machine
+            Learning Research 17.1 (2016): 2909-2913.
         """
+
+        self._check_if_kernel_parameters_are_fixed()
+
         # estimate S0
         self.scheme = acquisition_scheme
         data_ = np.atleast_2d(data)

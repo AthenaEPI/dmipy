@@ -3,7 +3,8 @@ from dmipy.distributions import distribute_models, distributions
 from dmipy.core import modeling_framework
 from dmipy.data.saved_acquisition_schemes import wu_minn_hcp_acquisition_scheme
 from dipy.data import get_sphere
-from numpy.testing import assert_array_almost_equal, assert_almost_equal
+from numpy.testing import (
+    assert_array_almost_equal, assert_almost_equal, assert_raises)
 
 scheme = wu_minn_hcp_acquisition_scheme()
 sphere = get_sphere('symmetric724')
@@ -67,3 +68,26 @@ def test_multi_compartment_fod_with_parametric_model(
     predicted_signal = sh_fit.predict()
 
     assert_array_almost_equal(data, predicted_signal[0], 4)
+
+
+def test_spherical_harmonics_model_raises(
+        odi=0.15, mu=[0., 0.], lambda_par=1.7e-9):
+    stick = cylinder_models.C1Stick()
+    ball = gaussian_models.G1Ball()
+    watsonstick = distribute_models.SD1WatsonDistributed(
+        [stick])
+
+    params = {'SD1Watson_1_odi': odi,
+              'SD1Watson_1_mu': mu,
+              'C1Stick_1_lambda_par': lambda_par}
+    data = watsonstick(scheme, **params)
+
+    assert_raises(
+        ValueError,
+        modeling_framework.MultiCompartmentSphericalHarmonicsModel,
+        [ball])
+
+    sh_mod = modeling_framework.MultiCompartmentSphericalHarmonicsModel(
+        [stick])
+
+    assert_raises(ValueError, sh_mod.fit, scheme, data)
