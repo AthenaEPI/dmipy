@@ -71,6 +71,7 @@ Dmipy uses HCP data to illustrate microstructure model examples. To reproduce th
 - [NODDI-Watson [Zhang et al. 2012]](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_noddi_watson.ipynb)
 - [NODDI-Bingham [Tariq et al. 2016]](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_noddi_bingham.ipynb)
 - [AxCaliber [Assaf et al. 2008]](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_axcaliber.ipynb)
+- [AxCaliber with Extra-Axonal Diffusion Time-Dependence [De Santis et al. 2016]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_axcaliber_temporal_zeppeline.ipynb)
 
 ### Crossing Bundle Microstructure Models
 - [Ball and Sticks [Behrens et al. 2003]](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_ball_and_sticks.ipynb)
