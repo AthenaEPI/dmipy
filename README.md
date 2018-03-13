@@ -86,8 +86,7 @@ Any Spherical Mean model can also estimate parametric FODs.
 - [Multi-Compartment Microscopic Diffusion Imaging [Kaden et al. 2016]](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_multi_compartment_spherical_mean_technique.ipynb)
 ### Spherical Deconvolution-Based Models
 Constrained spherical deconvolution (CSD) models are primarily used for Fiber Orientation Distribution (FOD) estimation. Multi-compartment CSD models improve FOD estimation by separating the signal contributions of white matter from CSF and grey matter.
-- Constrained Spherical Deconvolution (CSD) [Tournier et al. 2007]
-- Multi-Shell Multi-Compartment CSD [similar to Jeurissen et al. 2014]
+- Multi-Shell Multi-Compartment CSD [model-based version of Jeurissen et al. 2014]
 
 ## How to contribute to Dmipy
 Dmipy's design is completely modular and can easily be extended with new models, distributions or optimizers. To contribute, view our [contribution guidelines](https://github.com/AthenaEPI/dmipy/blob/master/contribution_guidelines.rst).
