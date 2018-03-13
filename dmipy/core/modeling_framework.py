@@ -395,7 +395,7 @@ class MultiCompartmentModelProperties:
                 bounds.append(range_)
             else:
                 for i in range(card):
-                    bounds.append((range_[i][0], range_[i][0]))
+                    bounds.append((range_[i][0], range_[i][1]))
         return bounds
 
     @property
