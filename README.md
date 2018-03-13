@@ -39,6 +39,7 @@ Recommended to use Anaconda Python distribution.
 - numpy >= 1.13
 - scipy
 - [dipy](http://nipy.org/dipy/)
+- [cvxpy](http://www.cvxpy.org/)
 - boto (optional for HCP-AWS interface)
 - [pathos](https://pypi.python.org/pypi/pathos) (optional for multi-core processing)
 - [numba](https://numba.pydata.org/) (optional for faster functions)
