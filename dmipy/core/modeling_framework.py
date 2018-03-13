@@ -11,15 +11,18 @@ from time import time
 
 from ..utils.spherical_mean import (
     estimate_spherical_mean_multi_shell)
+from ..utils.spherical_convolution import sh_convolution
 from ..utils.utils import (
     T1_tortuosity,
     parameter_equality,
     fractional_parameter)
 from .fitted_modeling_framework import (
     FittedMultiCompartmentModel,
-    FittedMultiCompartmentSphericalMeanModel)
+    FittedMultiCompartmentSphericalMeanModel,
+    FittedMultiCompartmentSphericalHarmonicsModel)
 from ..optimizers.brute2fine import (
     GlobalBruteOptimizer, Brute2FineOptimizer)
+from ..optimizers_fod.cvxpy_fod import MultiCompartmentCSDOptimizer
 from ..optimizers.mix import MixOptimizer
 from dipy.utils.optpkg import optional_package
 pathos, have_pathos, _ = optional_package("pathos")
@@ -42,6 +45,7 @@ __all__ = [
     'MultiCompartmentModelProperties',
     'MultiCompartmentModel',
     'MultiCompartmentSphericalMeanModel',
+    'MultiCompartmentSphericalHarmonicsModel',
     'homogenize_x0_to_data',
     'ReturnFixedValue'
 ]
@@ -391,7 +395,7 @@ class MultiCompartmentModelProperties:
                 bounds.append(range_)
             else:
                 for i in range(card):
-                    bounds.append((range_[0][i], range_[1][i]))
+                    bounds.append((range_[i][0], range_[i][0]))
         return bounds
 
     @property
@@ -1393,6 +1397,354 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
                     **parameters)
                 counter += 1
         return values
+
+
+class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
+    r'''
+    The MultiCompartmentModel class allows to combine any number of
+    CompartmentModels and DistributedModels into one combined model that can
+    be used to fit and simulate dMRI data.
+
+    Parameters
+    ----------
+    models : list of N CompartmentModel instances,
+        the models to combine into the MultiCompartmentModel.
+    '''
+
+    def __init__(self, models, sh_order=8):
+        self.models = models
+        self.parameter_links = []
+
+        self._check_for_dispersed_or_NMR_models()
+        self._prepare_parameters()
+        self._delete_orientation_parameters()
+        self._prepare_partial_volumes()
+        self._prepare_parameter_links()
+        self._prepare_model_properties()
+        self._check_for_double_model_class_instances()
+        self._prepare_parameters_to_optimize()
+        self._add_spherical_harmonics_parameters(sh_order)
+        self._check_that_one_anisotropic_kernel_is_present()
+
+        self.x0_parameters = {}
+        self.sh_order = sh_order
+
+        if not have_numba:
+            msg = "We highly recommend installing numba for faster function "
+            msg += "execution and model fitting."
+            print(msg)
+        if not have_pathos:
+            msg = "We highly recommend installing pathos to take advantage of "
+            msg += "multicore processing."
+            print(msg)
+
+    def _check_for_dispersed_or_NMR_models(self):
+        for model in self.models:
+            if model._model_type is 'NMRModel':
+                msg = "Cannot estimate spherical mean of 1D-NMR models."
+                raise ValueError(msg)
+            if model._model_type is 'SphericalDistributedModel':
+                msg = "Cannot estimate spherical mean spherically distributed "
+                msg += "model. Please give the input models to the distributed"
+                msg += " model directly to MultiCompartmentSphericalMeanModel."
+                raise ValueError(msg)
+
+    def _delete_orientation_parameters(self):
+        """
+        Deletes orientation parameters from input models 'mu' since they're not
+        needed in spherical mean models.
+        """
+        "Removes orientation parameters from input models."
+        for model in self.models:
+            for param_name, param_type in model.parameter_types.items():
+                if param_type == 'orientation':
+                    appended_param_name = self._inverted_parameter_map[
+                        model, param_name]
+                    del self.parameter_ranges[appended_param_name]
+                    del self.parameter_scales[appended_param_name]
+                    del self.parameter_cardinality[appended_param_name]
+                    del self.parameter_types[appended_param_name]
+
+    def _add_spherical_harmonics_parameters(self, sh_order):
+        N_coef = int((sh_order + 2) * (sh_order + 1) // 2)
+        self.parameter_ranges['sh_coeff'] = [
+            [-1e3, 1e3] for i in range(N_coef)]
+        self.parameter_scales['sh_coeff'] = np.ones(N_coef, dtype=float)
+        self.parameter_cardinality['sh_coeff'] = N_coef
+        self.parameter_types['sh_coeff'] = 'sh_coefficients'
+
+    def _check_if_kernel_parameters_are_fixed(self):
+        "checks if only volume fraction and sh_coeff parameters are optimized."
+        for name, flag in self.parameter_optimization_flags.items():
+            if flag is True:
+                if (not name == 'sh_coeff' and
+                        not name.startswith('partial_volume')):
+                    msg = 'kernel parameter {} is not fixed.'.format(name)
+                    raise ValueError(msg)
+
+    def _check_that_one_anisotropic_kernel_is_present(self):
+        "checks if one anisotropic kernel is given."
+        orientation_counter = 0
+        for model in self.models:
+            if 'orientation' in model.parameter_types.values():
+                orientation_counter += 1
+        if orientation_counter != 1:
+            msg = 'MultiCompartmentSphericalHarmonicsModel must at least have '
+            msg += 'one anisotropic kernel input model.'
+            raise ValueError(msg)
+
+    def fit(self, acquisition_scheme, data, mask=None,
+            solver='cvxpy', unity_constraint=True,
+            use_parallel_processing=have_pathos,
+            number_of_processors=None):
+        """ The main data fitting function of a
+        MultiCompartmentSphericalHarmonicsModel.
+
+        This function can fit it to an N-dimensional dMRI data set, and returns
+        a FittedMultiCompartmentModel instance that contains the fitted
+        parameters and other useful functions to study the results.
+
+        A mask can also be given to exclude voxels from fitting (e.g. voxels
+        that are outside the brain). If no mask is given then all voxels are
+        included.
+
+        The fitting process can be readily parallelized using the optional
+        "pathos" package. If it is installed then it will automatically use it,
+        but it can be turned off by setting use_parallel_processing=False. The
+        algorithm will automatically use all cores in the machine, unless
+        otherwise specified in number_of_processors.
+
+        Data with multiple TE are normalized in separate segments using the
+        b0-values according that TE.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        data : N-dimensional array of size (N_x, N_y, ..., N_dwis),
+            The measured DWI signal attenuation array of either a single voxel
+            or an N-dimensional dataset.
+        mask : (N-1)-dimensional integer/boolean array of size (N_x, N_y, ...),
+            Optional mask of voxels to be included in the optimization.
+        solver : string,
+            can only be 'cvxpy' at this point for general-purpose csd
+            optimization using cvxpy [1]_.
+        unity_constraint: bool,
+            whether or not to constrain the volume fractions of the FOD to
+            unity.
+        use_parallel_processing : bool,
+            whether or not to use parallel processing using pathos.
+        number_of_processors : integer,
+            number of processors to use for parallel processing. Defaults to
+            the number of processors in the computer according to cpu_count().
+
+        Returns
+        -------
+        FittedCompartmentModel: class instance that contains fitted parameters,
+            Can be used to recover parameters themselves or other useful
+            functions.
+
+        References
+        ----------
+        .. [1] Diamond, Steven, and Stephen Boyd. "CVXPY: A Python-embedded
+            modeling language for convex optimization." The Journal of Machine
+            Learning Research 17.1 (2016): 2909-2913.
+        """
+
+        self._check_if_kernel_parameters_are_fixed()
+
+        # estimate S0
+        self.scheme = acquisition_scheme
+        data_ = np.atleast_2d(data)
+        if self.scheme.TE is None or len(np.unique(self.scheme.TE)) == 1:
+            S0 = np.mean(data_[..., self.scheme.b0_mask], axis=-1)
+        else:  # if multiple TE are in the data
+            S0 = np.ones_like(data_)
+            for TE_ in self.scheme.shell_TE:
+                TE_mask = self.scheme.TE == TE_
+                TE_b0_mask = np.all([self.scheme.b0_mask, TE_mask], axis=0)
+                S0[..., TE_mask] = np.mean(
+                    data_[..., TE_b0_mask], axis=-1)[..., None]
+
+        if mask is None:
+            mask = data_[..., 0] > 0
+        else:
+            mask = np.all([mask, data_[..., 0] > 0], axis=0)
+        mask_pos = np.where(mask)
+
+        N_parameters = len(self.bounds_for_optimization)
+        N_voxels = np.sum(mask)
+
+        # make starting parameters and data the same size
+        x0_ = self.parameter_initial_guess_to_parameter_vector(
+            **self.x0_parameters)
+        x0_ = homogenize_x0_to_data(
+            data_, x0_)
+        x0_bool = np.all(
+            np.isnan(x0_), axis=tuple(np.arange(x0_.ndim - 1)))
+        x0_[..., ~x0_bool] /= self.scales_for_optimization[~x0_bool]
+
+        if use_parallel_processing and not have_pathos:
+            msg = 'Cannot use parallel processing without pathos.'
+            raise ValueError(msg)
+        elif use_parallel_processing and have_pathos:
+            fitted_parameters_lin = [None] * N_voxels
+            if number_of_processors is None:
+                number_of_processors = cpu_count()
+            pool = pp.ProcessPool(number_of_processors)
+            print('Using parallel processing with {} workers.'.format(
+                number_of_processors))
+        else:
+            fitted_parameters_lin = np.empty(
+                np.r_[N_voxels, N_parameters], dtype=float)
+
+        start = time()
+        if solver == 'cvxpy':
+            fit_func = MultiCompartmentCSDOptimizer(
+                acquisition_scheme, self, self.sh_order, unity_constraint)
+        start = time()
+        for idx, pos in enumerate(zip(*mask_pos)):
+            voxel_E = data_[pos] / S0[pos]
+            voxel_x0_vector = x0_[pos]
+            fit_args = (voxel_E, voxel_x0_vector)
+
+            if use_parallel_processing:
+                fitted_parameters_lin[idx] = pool.apipe(fit_func, *fit_args)
+            else:
+                fitted_parameters_lin[idx] = fit_func(*fit_args)
+        if use_parallel_processing:
+            fitted_parameters_lin = np.array(
+                [p.get() for p in fitted_parameters_lin])
+
+        fitting_time = time() - start
+        print('Fitting of {} voxels complete in {} seconds.'.format(
+            len(fitted_parameters_lin), fitting_time))
+        print('Average of {} seconds per voxel.'.format(
+            fitting_time / N_voxels))
+
+        fitted_parameters = np.zeros_like(x0_, dtype=float)
+        fitted_parameters[mask_pos] = (
+            fitted_parameters_lin * self.scales_for_optimization)
+
+        return FittedMultiCompartmentSphericalHarmonicsModel(
+            self, S0, mask, fitted_parameters)
+
+    def simulate_signal(self, acquisition_scheme, parameters_array_or_dict):
+        """
+        Function to simulate diffusion data for a given acquisition_scheme
+        and model parameters for the MultiCompartmentModel.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy
+        model_parameters_array : 1D array of size (N_parameters) or
+            N-dimensional array the same size as the data.
+            The model parameters of the MultiCompartmentModel model.
+
+        Returns
+        -------
+        E_simulated: 1D array of size (N_parameters) or N-dimensional
+            array the same size as x0.
+            The simulated signal of the microstructure model.
+        """
+        Ndata = acquisition_scheme.number_of_measurements
+        if isinstance(parameters_array_or_dict, np.ndarray):
+            x0 = parameters_array_or_dict
+        elif isinstance(parameters_array_or_dict, dict):
+            x0 = self.parameters_to_parameter_vector(
+                **parameters_array_or_dict)
+
+        x0_at_least_2d = np.atleast_2d(x0)
+        x0_2d = x0_at_least_2d.reshape(-1, x0_at_least_2d.shape[-1])
+        E_2d = np.empty(np.r_[x0_2d.shape[:-1], Ndata])
+        for i, x0_ in enumerate(x0_2d):
+            parameters = self.parameter_vector_to_parameters(x0_)
+            E_2d[i] = self(acquisition_scheme, **parameters)
+        E_simulated = E_2d.reshape(
+            np.r_[x0_at_least_2d.shape[:-1], Ndata])
+
+        if x0.ndim == 1:
+            return np.squeeze(E_simulated)
+        else:
+            return E_simulated
+
+    def __call__(self, acquisition_scheme, **kwargs):
+        """
+        The MultiCompartmentModel function call for to generate signal
+        attenuation for a given acquisition scheme and model parameters.
+
+        First, the linked parameters are added to the optimized parameters.
+
+        Then, every model in the MultiCompartmentModel is called with the right
+        parameters to recover the part of the signal attenuation of that model.
+        The resulting values are multiplied with the volume fractions and
+        finally the combined signal attenuation is returned.
+
+        Aside from the signal, the function call can also return the Fiber
+        Orientation Distributions (FODs) when a dispersed model is used, and
+        can also return the stochastic cost function for the MIX algorithm.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        quantity : string
+            can be 'signal', 'FOD' or 'stochastic cost function' depending on
+            the need of the model.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+        """
+        kwargs = self.add_linked_parameters_to_parameters(
+            kwargs
+        )
+
+        if len(self.models) > 1:
+            partial_volumes = [
+                kwargs[p] for p in self.partial_volume_names
+            ]
+        else:
+            partial_volumes = [1.]
+
+        rh_models = []
+        sh_coeffs = []
+        for model, partial_volume in zip(self.models, partial_volumes):
+            parameters = {}
+            for parameter in model.parameter_ranges:
+                parameter_name = self._inverted_parameter_map[
+                    (model, parameter)
+                ]
+                parameters[parameter] = kwargs.get(
+                    parameter_name
+                )
+            rh_model = model.rotational_harmonics_representation(
+                acquisition_scheme, **parameters)
+            rh_models.append(rh_model)
+            if 'orientation' in model.parameter_types.values():
+                sh_coeffs.append(kwargs['sh_coeff'])
+            else:
+                sh_coeffs.append(
+                    np.atleast_1d(partial_volume / (2 * np.sqrt(np.pi))))
+
+        E = np.ones(acquisition_scheme.number_of_measurements)
+        for i, shell_index in enumerate(acquisition_scheme.unique_dwi_indices):
+            shell_mask = acquisition_scheme.shell_indices == shell_index
+            sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
+            sh_order = int(acquisition_scheme.shell_sh_orders[shell_index])
+
+            shell_E = 0.
+            for j, model in enumerate(self.models):
+                if 'orientation' in model.parameter_types.values():
+                    E_dispersed_sh = sh_convolution(
+                        sh_coeffs[j], rh_models[j][i, :sh_order // 2 + 1])
+                    shell_E += np.dot(sh_mat[:, :len(E_dispersed_sh)],
+                                      E_dispersed_sh)
+                else:
+                    E_dispersed_sh = sh_convolution(
+                        sh_coeffs[j], rh_models[j][i])
+                    shell_E += np.dot(sh_mat[0, 0], E_dispersed_sh)
+            E[shell_mask] = shell_E
+        return E
 
 
 def homogenize_x0_to_data(data, x0):

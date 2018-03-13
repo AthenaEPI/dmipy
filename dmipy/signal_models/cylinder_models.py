@@ -46,7 +46,7 @@ class C1Stick(ModelProperties):
     """
 
     _parameter_ranges = {
-        'mu': ([0, -np.pi], [np.pi, np.pi]),
+        'mu': ([0, np.pi], [-np.pi, np.pi]),
         'lambda_par': (.1, 3)
     }
     _parameter_scales = {
@@ -183,7 +183,7 @@ class C2CylinderStejskalTannerApproximation(ModelProperties):
     """
 
     _parameter_ranges = {
-        'mu': ([0, -np.pi], [np.pi, np.pi]),
+        'mu': ([0, np.pi], [-np.pi, np.pi]),
         'lambda_par': (.1, 3),
         'diameter': (1e-2, 20)
     }
@@ -347,7 +347,7 @@ class C3CylinderCallaghanApproximation(ModelProperties):
     """
 
     _parameter_ranges = {
-        'mu': ([0, -np.pi], [np.pi, np.pi]),
+        'mu': ([0, np.pi], [-np.pi, np.pi]),
         'lambda_par': (.1, 3),
         'diameter': (1e-2, 20)
     }
@@ -543,7 +543,7 @@ class C4CylinderGaussianPhaseApproximation(ModelProperties):
     """
 
     _parameter_ranges = {
-        'mu': ([0, -np.pi], [np.pi, np.pi]),
+        'mu': ([0, np.pi], [-np.pi, np.pi]),
         'lambda_par': (.1, 3),
         'diameter': (1e-2, 20)
     }

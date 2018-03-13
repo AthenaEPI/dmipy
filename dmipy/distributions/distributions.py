@@ -86,7 +86,7 @@ class SD1Watson(ModelProperties):
     """
 
     _parameter_ranges = {
-        'mu': ([0, -np.pi], [np.pi, np.pi]),
+        'mu': ([0, np.pi], [-np.pi, np.pi]),
         'odi': (0.02, 0.99),
     }
     _parameter_scales = {
@@ -184,7 +184,7 @@ class SD2Bingham(ModelProperties):
     """
 
     _parameter_ranges = {
-        'mu': ([0, -np.pi], [np.pi, np.pi]),
+        'mu': ([0, np.pi], [-np.pi, np.pi]),
         'psi': (0, np.pi),
         'odi': (0.02, 0.99),
         'beta_fraction': (0, 1)  # beta<=kappa in fact
