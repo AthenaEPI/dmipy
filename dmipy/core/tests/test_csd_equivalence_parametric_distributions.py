@@ -3,13 +3,17 @@ from dmipy.distributions import distribute_models, distributions
 from dmipy.core import modeling_framework
 from dmipy.data.saved_acquisition_schemes import wu_minn_hcp_acquisition_scheme
 from dipy.data import get_sphere
+import numpy as np
 from numpy.testing import (
     assert_array_almost_equal, assert_almost_equal, assert_raises)
+from dipy.utils.optpkg import optional_package
+cvxpy, have_cvxpy, _ = optional_package("cvxpy")
 
 scheme = wu_minn_hcp_acquisition_scheme()
 sphere = get_sphere('symmetric724')
 
 
+@np.testing.dec.skipif(not have_cvxpy)
 def test_equivalence_csd_and_parametric_fod(
         odi=0.15, mu=[0., 0.], lambda_par=1.7e-9):
     stick = cylinder_models.C1Stick()
@@ -37,6 +41,7 @@ def test_equivalence_csd_and_parametric_fod(
     assert_array_almost_equal(data, fitted_signal[0], 4)
 
 
+@np.testing.dec.skipif(not have_cvxpy)
 def test_multi_compartment_fod_with_parametric_model(
         odi=0.15, mu=[0., 0.], lambda_iso=3e-9, lambda_par=1.7e-9,
         vf_intra=0.7):
@@ -70,6 +75,7 @@ def test_multi_compartment_fod_with_parametric_model(
     assert_array_almost_equal(data, predicted_signal[0], 4)
 
 
+@np.testing.dec.skipif(not have_cvxpy)
 def test_spherical_harmonics_model_raises(
         odi=0.15, mu=[0., 0.], lambda_par=1.7e-9):
     stick = cylinder_models.C1Stick()

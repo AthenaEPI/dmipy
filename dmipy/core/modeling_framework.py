@@ -22,7 +22,7 @@ from .fitted_modeling_framework import (
     FittedMultiCompartmentSphericalHarmonicsModel)
 from ..optimizers.brute2fine import (
     GlobalBruteOptimizer, Brute2FineOptimizer)
-from ..optimizers_fod.cvxpy_fod import MultiCompartmentCSDOptimizer
+from ..optimizers_fod.cvxpy_fod import GeneralPurposeCSDOptimizer
 from ..optimizers.mix import MixOptimizer
 from dipy.utils.optpkg import optional_package
 pathos, have_pathos, _ = optional_package("pathos")
@@ -1600,7 +1600,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
 
         start = time()
         if solver == 'cvxpy':
-            fit_func = MultiCompartmentCSDOptimizer(
+            fit_func = GeneralPurposeCSDOptimizer(
                 acquisition_scheme, self, self.sh_order, unity_constraint)
         start = time()
         for idx, pos in enumerate(zip(*mask_pos)):

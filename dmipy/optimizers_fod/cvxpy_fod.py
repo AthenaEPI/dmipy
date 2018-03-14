@@ -1,15 +1,16 @@
 import numpy as np
-import cvxpy
 from dipy.data import get_sphere, HemiSphere
 from dipy.reconst.shm import real_sym_sh_mrtrix
+from dipy.utils.optpkg import optional_package
+cvxpy, have_cvxpy, _ = optional_package("cvxpy")
 
 
 __all__ = [
-    'MultiCompartmentCSDOptimizer'
+    'GeneralPurposeCSDOptimizer'
 ]
 
 
-class MultiCompartmentCSDOptimizer:
+class GeneralPurposeCSDOptimizer:
     """
     General purpose optimizer for multi-compartment constrained spherical
     deconvolution (MC-CSD) to estimate Fiber Orientation Distributions (FODs).
