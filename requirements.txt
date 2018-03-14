@@ -1,6 +1,7 @@
 numpy(>=1.13)
 scipy
 dipy
+cvxpy
 matplotlib
 boto
 seaborn
