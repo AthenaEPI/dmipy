@@ -1601,7 +1601,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         start = time()
         if solver == 'cvxpy':
             fit_func = GeneralPurposeCSDOptimizer(
-                acquisition_scheme, self, self.sh_order, unity_constraint)
+                acquisition_scheme, self, x0_, self.sh_order, unity_constraint)
         start = time()
         for idx, pos in enumerate(zip(*mask_pos)):
             voxel_E = data_[pos] / S0[pos]

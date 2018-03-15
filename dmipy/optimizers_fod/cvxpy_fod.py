@@ -54,7 +54,7 @@ class GeneralPurposeCSDOptimizer:
         NeuroImage 103 (2014): 411-426.
     """
 
-    def __init__(self, acquisition_scheme, model, sh_order=8,
+    def __init__(self, acquisition_scheme, model, x0_vector=None, sh_order=8,
                  unity_constraint=True):
         self.model = model
         self.acquisition_scheme = acquisition_scheme
@@ -63,11 +63,35 @@ class GeneralPurposeCSDOptimizer:
         self.Nmodels = len(self.model.models)
         self.unity_constraint = unity_constraint
 
-        # prepare positivity grid on sphere
+        # step 1: prepare positivity grid on sphere
         sphere = get_sphere('symmetric724')
         hemisphere = HemiSphere(phi=sphere.phi, theta=sphere.theta)
         self.sh_matrix_positivity = real_sym_sh_mrtrix(
             self.sh_order, hemisphere.theta, hemisphere.phi)[0]
+
+        # check if there is only one model. If so, precompute rh array.
+        if self.Nmodels == 1:
+            # also needs to check if x0 is not changing.
+            self.prepared_computation = True
+            x0_shape = x0_vector.shape
+            x0_dummy = np.reshape(x0_vector, (-1, x0_shape[-1]))[0]
+            rh_matrix = self.recover_rotational_harmonics(x0_dummy)[0]
+            self.prepared_rh_coef = np.zeros([rh_matrix.shape[0], self.Ncoef])
+            for i, shell_index in enumerate(
+                    acquisition_scheme.unique_dwi_indices):
+                rh_order = int(acquisition_scheme.shell_sh_orders[shell_index])
+                prepared_rh_shell = self.prepare_rotational_harmonics(
+                    rh_matrix[i], rh_order)
+                if sh_order >= rh_order:
+                    self.prepared_rh_coef[i, :len(prepared_rh_shell)] = (
+                        prepared_rh_shell)
+                else:
+                    self.prepared_rh_coef[i] = prepared_rh_shell[:self.Ncoef]
+        else:
+            self.prepared_computation = False
+        # check if all parameters except for sh_coeff are set.
+        # if so, precompute and fix the rotational harmonics.
+        # to be done
 
     def __call__(self, data, x0_vector):
         """
@@ -88,78 +112,100 @@ class GeneralPurposeCSDOptimizer:
             array of the optimized model parameters.
         """
 
-        # step 1: determine rotational_harmonics of kernel
-        rh_matrix = self.recover_rotational_harmonics(x0_vector)
-
-        # step 2: set up cvxpy problem
-        volume_fraction_sum = 0.
-        volume_fractions = []
-        constraints = []
-        cvxpy_variables = []
+        self.volume_fraction_sum = 0.
+        self.volume_fractions = []
+        self.constraints = []
+        self.cvxpy_variables = []
         for model in self.model.models:
             if 'orientation' in model.parameter_types.values():
                 sh_coef = cvxpy.Variable(self.Ncoef)
-                cvxpy_variables.append(sh_coef)
+                self.cvxpy_variables.append(sh_coef)
                 volume_fraction = sh_coef[0] * (2 * np.sqrt(np.pi))
-                volume_fractions.append(volume_fraction)
-                volume_fraction_sum += volume_fraction
-                constraints.append(self.sh_matrix_positivity * sh_coef > 0.)
+                self.volume_fractions.append(volume_fraction)
+                self.volume_fraction_sum += volume_fraction
+                self.constraints.append(
+                    self.sh_matrix_positivity * sh_coef > 0.)
             else:
                 c00_coef = cvxpy.Variable(1)
-                cvxpy_variables.append(c00_coef)
+                self.cvxpy_variables.append(c00_coef)
                 volume_fraction = c00_coef[0] * (2 * np.sqrt(np.pi))
-                volume_fractions.append(volume_fraction)
-                volume_fraction_sum += volume_fraction
-                constraints.append(c00_coef > 0.)
+                self.volume_fractions.append(volume_fraction)
+                self.volume_fraction_sum += volume_fraction
+                self.constraints.append(c00_coef > 0.)
+        if self.unity_constraint:
+            self.constraints.append(self.volume_fraction_sum == 1.)
 
-        # step 3: for every shell add the sum-squared error of the prediction.
         sse = 0.
         scheme = self.acquisition_scheme
-        for i, shell_index in enumerate(scheme.unique_dwi_indices):
-            shell_mask = scheme.shell_indices == shell_index
-            shell_data = data[shell_mask]
-            rh_order = int(scheme.shell_sh_orders[shell_index])
-            sh_mat = scheme.shell_sh_matrices[shell_index]
 
-            shell_data_predicted = 0.
-            for j, model in enumerate(self.model.models):
-                if 'orientation' in model.parameter_types.values():
-                    sh_coef = cvxpy_variables[j]
-                    rh_shell_prepared = self.prepare_rotational_harmonics(
-                        rh_matrix[j][i], rh_order)
-                    if self.sh_order >= rh_order:
-                        sh_shell = (
-                            cvxpy.diag(rh_shell_prepared) *
-                            sh_coef[:len(rh_shell_prepared)])
-                        shell_data_predicted += sh_mat * sh_shell
-                    else:
-                        sh_shell = (cvxpy.diag(
-                            rh_shell_prepared[:self.Ncoef]) * sh_coef)
-                        shell_data_predicted += sh_mat[:, :self.Ncoef] * \
-                            sh_shell
-                else:
-                    c00_coef = cvxpy_variables[j]
-                    sh_mat = scheme.shell_sh_matrices[shell_index][0, 0]
-                    rh_order = 0
-                    rh_shell_prepared = self.prepare_rotational_harmonics(
-                        rh_matrix[j][i], rh_order)
-                    sh_shell = rh_shell_prepared * c00_coef
+        if self.prepared_computation:
+            for i, shell_index in enumerate(scheme.unique_dwi_indices):
+                shell_mask = scheme.shell_indices == shell_index
+                shell_data = data[shell_mask]
+                rh_order = int(scheme.shell_sh_orders[shell_index])
+                sh_mat = scheme.shell_sh_matrices[shell_index]
+                N_shell_coef = sh_mat.shape[1]
+
+                shell_data_predicted = 0.
+                sh_coef = self.cvxpy_variables[0][:N_shell_coef]
+                rh_shell_prepared = self.prepared_rh_coef[i][:N_shell_coef]
+                if self.sh_order >= rh_order:
+                    sh_shell = (
+                        cvxpy.diag(rh_shell_prepared) *
+                        sh_coef[:len(rh_shell_prepared)])
                     shell_data_predicted += sh_mat * sh_shell
-            sse += cvxpy.sum_squares(shell_data_predicted - shell_data)
+                else:
+                    sh_shell = (cvxpy.diag(
+                        rh_shell_prepared[:self.Ncoef]) * sh_coef)
+                    shell_data_predicted += sh_mat[:, :self.Ncoef] * \
+                        sh_shell
+                sse += cvxpy.sum_squares(shell_data_predicted - shell_data)
 
+        else:
+            # step 1: determine rotational_harmonics of kernel
+            rh_matrix = self.recover_rotational_harmonics(x0_vector)
+
+            # step 3: for every shell sum-squared error of the prediction.
+
+            for i, shell_index in enumerate(scheme.unique_dwi_indices):
+                shell_mask = scheme.shell_indices == shell_index
+                shell_data = data[shell_mask]
+                rh_order = int(scheme.shell_sh_orders[shell_index])
+                sh_mat = scheme.shell_sh_matrices[shell_index]
+
+                shell_data_predicted = 0.
+                for j, model in enumerate(self.model.models):
+                    if 'orientation' in model.parameter_types.values():
+                        sh_coef = self.cvxpy_variables[j]
+                        rh_shell_prepared = self.prepare_rotational_harmonics(
+                            rh_matrix[j][i], rh_order)
+                        if self.sh_order >= rh_order:
+                            sh_shell = (
+                                cvxpy.diag(rh_shell_prepared) *
+                                sh_coef[:len(rh_shell_prepared)])
+                            shell_data_predicted += sh_mat * sh_shell
+                        else:
+                            sh_shell = (cvxpy.diag(
+                                rh_shell_prepared[:self.Ncoef]) * sh_coef)
+                            shell_data_predicted += sh_mat[:, :self.Ncoef] * \
+                                sh_shell
+                    else:
+                        c00_coef = self.cvxpy_variables[j]
+                        sh_mat = scheme.shell_sh_matrices[shell_index][0, 0]
+                        rh_order = 0
+                        rh_shell_prepared = self.prepare_rotational_harmonics(
+                            rh_matrix[j][i], rh_order)
+                        sh_shell = rh_shell_prepared * c00_coef
+                        shell_data_predicted += sh_mat * sh_shell
+                sse += cvxpy.sum_squares(shell_data_predicted - shell_data)
         objective = cvxpy.Minimize(sse)
-        if self.unity_constraint:
-            constraints.append(volume_fraction_sum == 1.)
-        problem = cvxpy.Problem(objective, constraints)
+        problem = cvxpy.Problem(objective, self.constraints)
         problem.solve()
 
         fitted_params = self.model.parameter_vector_to_parameters(x0_vector)
-        try:
-            fitted_params['sh_coeff'] = np.array(sh_coef.value).squeeze()
-        except NameError:
-            pass
+        fitted_params['sh_coeff'] = np.array(sh_coef.value).squeeze()
         if self.Nmodels > 1:
-            fractions = [fraction.value for fraction in volume_fractions]
+            fractions = [fraction.value for fraction in self.volume_fractions]
             fractions_array = np.array(fractions).squeeze()
             for i, name in enumerate(self.model.partial_volume_names):
                 fitted_params[name] = fractions_array[i]
