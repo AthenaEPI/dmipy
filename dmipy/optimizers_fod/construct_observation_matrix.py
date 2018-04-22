@@ -1,5 +1,9 @@
 import numpy as np
 
+__all__ = [
+    'construct_model_based_A_matrix'
+]
+
 
 def construct_model_based_A_matrix(acquisition_scheme, model, lmax):
     """Constructs the multi-shell observation matrix from spherical_harmonics
