@@ -434,7 +434,8 @@ def acquisition_scheme_from_bvalues(
     """
     delta_, Delta_, TE_ = unify_length_reference_delta_Delta(
         bvalues, delta, Delta, TE)
-    check_acquisition_scheme(bvalues, gradient_directions, delta_, Delta_, TE_)
+    check_acquisition_scheme(
+        bvalues, gradient_directions, delta_, Delta_, TE_)
     qvalues = q_from_b(bvalues, delta_, Delta_)
     gradient_strengths = g_from_b(bvalues, delta_, Delta_)
     return DmipyAcquisitionScheme(bvalues, gradient_directions, qvalues,
@@ -477,7 +478,8 @@ def acquisition_scheme_from_qvalues(
     """
     delta_, Delta_, TE_ = unify_length_reference_delta_Delta(
         qvalues, delta, Delta, TE)
-    check_acquisition_scheme(qvalues, gradient_directions, delta_, Delta_, TE_)
+    check_acquisition_scheme(
+        qvalues, gradient_directions, delta_, Delta_, TE_)
     bvalues = b_from_q(qvalues, delta, Delta)
     gradient_strengths = g_from_q(qvalues, delta)
     return DmipyAcquisitionScheme(bvalues, gradient_directions, qvalues,
@@ -690,8 +692,9 @@ def check_acquisition_scheme(
         msg = "b/q/G input must be zero or positive. "
         msg += "Minimum value found is {}.".format(bqg_values.min())
         raise ValueError(msg)
-    if not np.all(
-            abs(np.linalg.norm(gradient_directions, axis=1) - 1.) < 0.001):
+    gradient_norms = np.linalg.norm(gradient_directions, axis=1)
+    zero_norms = gradient_norms == 0.
+    if not np.all(abs(gradient_norms[~zero_norms] - 1.) < 0.001):
         msg = "gradient orientations n are not unit vectors. "
         raise ValueError(msg)
     if TE is not None and len(TE) != len(bqg_values):
