@@ -183,3 +183,14 @@ def test_mipy2dipy_acquisition_converter(Nsamples=10):
     assert_array_equal(gtab_mipy.gradient_directions, gtab_dipy.bvecs)
     assert_equal(gtab_mipy.Delta, gtab_dipy.big_delta)
     assert_equal(gtab_mipy.delta, gtab_dipy.small_delta)
+
+
+def test_acquisition_scheme_summary(Nsamples=10):
+    bvals = np.tile(1e9, Nsamples)
+    bvecs = np.tile(np.r_[1., 0., 0.], (Nsamples, 1))
+    big_delta = 0.03
+    small_delta = 0.01
+    gtab_mipy = acquisition_scheme_from_bvalues(
+        bvalues=bvals, gradient_directions=bvecs,
+        delta=small_delta, Delta=big_delta)
+    gtab_mipy.print_acquisition_info
