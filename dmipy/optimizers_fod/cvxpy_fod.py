@@ -124,14 +124,14 @@ class GeneralPurposeCSDOptimizer:
                 self.volume_fractions.append(volume_fraction)
                 self.volume_fraction_sum += volume_fraction
                 self.constraints.append(
-                    self.sh_matrix_positivity * sh_coef > 0.)
+                    self.sh_matrix_positivity * sh_coef >= 0.)
             else:
                 c00_coef = cvxpy.Variable(1)
                 self.cvxpy_variables.append(c00_coef)
                 volume_fraction = c00_coef[0] * (2 * np.sqrt(np.pi))
                 self.volume_fractions.append(volume_fraction)
                 self.volume_fraction_sum += volume_fraction
-                self.constraints.append(c00_coef > 0.)
+                self.constraints.append(c00_coef >= 0.)
         if self.unity_constraint:
             self.constraints.append(self.volume_fraction_sum == 1.)
 
