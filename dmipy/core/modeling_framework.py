@@ -885,6 +885,9 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             fit_func = MixOptimizer(self, self.scheme, maxiter)
             print('Setup MIX optimizer in {} seconds'.format(
                 time() - start))
+        else:
+            msg = "Unknown solver name {}".format(solver)
+            raise ValueError(msg)
 
         start = time()
         for idx, pos in enumerate(zip(*mask_pos)):
@@ -1255,6 +1258,9 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
             fit_func = MixOptimizer(self, self.scheme, maxiter)
             print('Setup MIX optimizer in {} seconds'.format(
                 time() - start))
+        else:
+            msg = "Unknown solver name {}".format(solver)
+            raise ValueError(msg)
 
         start = time()
         for idx, pos in enumerate(zip(*mask_pos)):
@@ -1602,6 +1608,9 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         if solver == 'cvxpy':
             fit_func = GeneralPurposeCSDOptimizer(
                 acquisition_scheme, self, x0_, self.sh_order, unity_constraint)
+        else:
+            msg = "Unknown solver name {}".format(solver)
+            raise ValueError(msg)
         start = time()
         for idx, pos in enumerate(zip(*mask_pos)):
             voxel_E = data_[pos] / S0[pos]

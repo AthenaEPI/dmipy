@@ -75,23 +75,18 @@ class MixOptimizer:
             The fitted MC model parameters using MIX.
 
         """
-        bounds = list(self.model.bounds_for_optimization)
-        bounds_de = bounds
-        bounds_minimize = bounds[:-1]  # nested volume fractions
-        opt_flag_array = self.model.opt_params_for_optimization
-        if x0_vector is not None:
-            if not np.all(np.isnan(x0_vector)):
-                bounds_de = []
-                bounds_minimize = []
-                for i, x0_ in enumerate(x0_vector):
-                    if np.isnan(x0_):
-                        bounds_de.append(bounds[i])
-                    if opt_flag_array[i] is True:
-                        bounds_minimize.append(bounds[i])
-                bounds_minimize = bounds_minimize[:-1]
-
         # if there is only one model then MIX only uses DE.
+        bounds = list(self.model.bounds_for_optimization)
         if self.Nmodels == 1:
+            bounds_de = bounds
+            opt_flag_array = self.model.opt_params_for_optimization
+            if x0_vector is not None:
+                if not np.all(np.isnan(x0_vector)):
+                    bounds_de = []
+                    for i, x0_ in enumerate(x0_vector):
+                        if np.isnan(x0_):
+                            bounds_de.append(bounds[i])
+
             # step 1: stochastic optimization on non-linear parameters.
             res_de = differential_evolution(
                 self.stochastic_objective_function,
@@ -111,8 +106,23 @@ class MixOptimizer:
                 return fitted_parameters
         # if there is more than 1 model then we do the 3 steps.
         if self.Nmodels > 1:
+            bounds_de = bounds
+            bounds_minimize = bounds[:-1]  # nested volume fractions
+            opt_flag_array = self.model.opt_params_for_optimization
+            if x0_vector is not None:
+                if not np.all(np.isnan(x0_vector)):
+                    bounds_de = []
+                    bounds_minimize = []
+                    for i, x0_ in enumerate(x0_vector[:-self.Nmodels]):
+                        if np.isnan(x0_):
+                            bounds_de.append(bounds[i])
+                    for i, x0_ in enumerate(x0_vector):
+                        if opt_flag_array[i] is True:
+                            bounds_minimize.append(bounds[i])
+                    bounds_minimize = bounds_minimize[:-1]
+                else:
+                    bounds_de = bounds_de[:-self.Nmodels]
             # step 1: stochastic optimization on non-linear parameters.
-            bounds_de = bounds_de[:-self.Nmodels]
             res_de = differential_evolution(self.stochastic_objective_function,
                                             bounds=bounds_de,
                                             maxiter=self.maxiter,
@@ -123,6 +133,12 @@ class MixOptimizer:
             if np.all(np.isnan(x0_vector)):
                 parameter_vector = np.r_[optimized_parameter_vector,
                                          np.ones(self.Nmodels)]
+            elif np.all(~np.isnan(x0_vector[-self.Nmodels:])):
+                x0_bool_array = ~np.isnan(x0_vector)
+                parameter_vector = np.ones(len(x0_bool_array))
+                parameter_vector[~x0_bool_array] = optimized_parameter_vector
+                parameter_vector[x0_bool_array] = x0_vector[x0_bool_array]
+                return parameter_vector
             else:
                 x0_bool_array = ~np.isnan(x0_vector)
                 parameter_vector = np.ones(len(x0_bool_array))
@@ -209,7 +225,7 @@ class MixOptimizer:
                 parameter_vector_no_vf[~x0_bool_n0_vf] = (
                     optimized_parameter_vector)
                 parameter_vector_no_vf[x0_bool_n0_vf] = x0_params[
-                    x0_bool_array]
+                    :-self.Nmodels][x0_bool_n0_vf]
                 parameter_vector[:-self.Nmodels] = parameter_vector_no_vf
             parameter_vector = (
                 parameter_vector * self.model.scales_for_optimization)
@@ -218,13 +234,17 @@ class MixOptimizer:
             phi_x = self.model(acquisition_scheme,
                                quantity="stochastic cost function",
                                **parameters)
-            A = np.dot(phi_x.T, phi_x)
-            try:
-                phi_inv = np.dot(np.linalg.inv(A), phi_x.T)
-                vf = np.dot(phi_inv, data)
-            except np.linalg.linalg.LinAlgError:
-                # happens when models have the same signal attenuations.
-                vf = np.ones(self.Nmodels) / float(self.Nmodels)
+            if np.all(~np.isnan(x0_params[-self.Nmodels:])):
+                # if initial guess is given for volume fractions
+                vf = x0_params[-self.Nmodels:]
+            else:
+                A = np.dot(phi_x.T, phi_x)
+                try:
+                    phi_inv = np.dot(np.linalg.inv(A), phi_x.T)
+                    vf = np.dot(phi_inv, data)
+                except np.linalg.linalg.LinAlgError:
+                    # happens when models have the same signal attenuations.
+                    vf = np.ones(self.Nmodels) / float(self.Nmodels)
             E_hat = np.dot(phi_x, vf)
         objective = np.dot(data - E_hat, data - E_hat).squeeze()
         return objective * 1e5
