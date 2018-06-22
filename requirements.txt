@@ -6,3 +6,4 @@ matplotlib
 boto
 seaborn
 pathlib
+graphviz

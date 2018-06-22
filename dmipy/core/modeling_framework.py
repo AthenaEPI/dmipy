@@ -25,6 +25,8 @@ from ..optimizers.brute2fine import (
 from ..optimizers_fod.cvxpy_fod import GeneralPurposeCSDOptimizer
 from ..optimizers.mix import MixOptimizer
 from dipy.utils.optpkg import optional_package
+from graphviz import Digraph
+from uuid import uuid4
 pathos, have_pathos, _ = optional_package("pathos")
 numba, have_numba, _ = optional_package("numba")
 
@@ -698,6 +700,95 @@ class MultiCompartmentModelProperties:
         self._parameter_map.update({parameter_name: (None, 'fraction')})
         self._inverted_parameter_map.update(
             {(None, 'fraction'): parameter_name})
+
+    def visualize_model_setup(
+            self, view=True, cleanup=True, with_parameters=False):
+        """
+        Visualizes MultiCompartmentModel setup using graphviz module. It uses
+        the uuid module to create a unique identifier for each model in the
+        MultiCompartmentModel to make sure each node is referenced in a unique
+        way.
+
+        If cleanup is set to False it will save the PDF of the graph in the
+        current working directory.
+
+        If with_parameters is set to true, it will include all the parameters
+        of each model in the graph. Note the graph will ignore any parameter
+        links that may have already been imposed (e.g. parameter equality or
+        fixed parameters).
+
+        Parameters
+        ----------
+        view: boolean,
+            Whether or not to visualize the graph in a popup screen.
+        cleanup: boolean,
+            Whether or not to delete the PDF file of the model setup.
+        with_parameters: boolean,
+            Whether or not to also visualize the parameters of each model.
+        """
+        dot = Digraph('Model Setup')
+        base_model = self.__class__.__name__
+        base_uuid = str(uuid4())
+        dot.node(base_uuid, base_model)
+        self._add_recursive_graph_node(dot, base_uuid, self, with_parameters)
+        dot.render('Model Setup', view=view, cleanup=cleanup)
+
+    def _add_recursive_graph_node(
+            self, graph_model, entry_uuid, entry_model, with_parameters):
+        """
+        Recursive function to visualize model setup. For every model in a
+        MultiCompartmentModel or a distributed model it will check if it is
+        a distribution, in which case the function will call itself with the
+        sub-model as input and continue until it has found the bottom of the
+        model setup.
+
+        Parameters
+        ----------
+        graph_model: graphviz model instance,
+            Instantiated model instance to keep growing with nodes.
+        entry_uuid: string,
+            Entry model unique identifier from which to keep growing the graph.
+        entry_model: dmipy model instance,
+            Entry dmipy model from which to keep growing the graph.
+        """
+        for sub_model in entry_model.models:
+            model_name = sub_model.__class__.__name__
+            model_uuid = str(uuid4())
+            graph_model.node(model_uuid, model_name)
+            graph_model.edge(model_uuid, entry_uuid)
+            if (sub_model._model_type == 'SphericalDistributedModel' or
+                    sub_model._model_type == 'SpatialDistributedModel'):
+                self._add_recursive_graph_node(
+                    graph_model, model_uuid, sub_model, with_parameters)
+            elif with_parameters:
+                self._add_parameter_nodes(graph_model, model_uuid, sub_model)
+        if hasattr(entry_model, 'distribution'):
+            dist_name = entry_model.distribution.__class__.__name__
+            dist_uuid = str(uuid4())
+            graph_model.node(dist_uuid, dist_name)
+            graph_model.edge(dist_uuid, entry_uuid)
+            if with_parameters:
+                self._add_parameter_nodes(
+                    graph_model, dist_uuid, entry_model.distribution)
+
+    def _add_parameter_nodes(self, graph_model, entry_uuid, entry_model):
+        """
+        Adds the parameters to the graph truee if with_parameters=True in the
+        visualize_model_setup function.
+
+        Parameters
+        ----------
+        graph_model: graphviz model instance,
+            Instantiated model instance to keep growing with nodes.
+        entry_uuid: string,
+            Entry model unique identifier from which to keep growing the graph.
+        entry_model: dmipy model instance,
+            Entry dmipy model from which to keep growing the graph.
+        """
+        for parameter_name in entry_model.parameter_names:
+            parameter_uuid = str(uuid4())
+            graph_model.node(parameter_uuid, parameter_name)
+            graph_model.edge(parameter_uuid, entry_uuid)
 
 
 class MultiCompartmentModel(MultiCompartmentModelProperties):
