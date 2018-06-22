@@ -23,6 +23,7 @@ from .fitted_modeling_framework import (
 from ..optimizers.brute2fine import (
     GlobalBruteOptimizer, Brute2FineOptimizer)
 from ..optimizers_fod.cvxpy_fod import GeneralPurposeCSDOptimizer
+from ..optimizers_fod.csd_tournier import CsdTournierOptimizer
 from ..optimizers.mix import MixOptimizer
 from dipy.utils.optpkg import optional_package
 from graphviz import Digraph
@@ -979,6 +980,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         else:
             msg = "Unknown solver name {}".format(solver)
             raise ValueError(msg)
+        self.optimizer = fit_func
 
         start = time()
         for idx, pos in enumerate(zip(*mask_pos)):
@@ -1352,6 +1354,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         else:
             msg = "Unknown solver name {}".format(solver)
             raise ValueError(msg)
+        self.optimizer = fit_func
 
         start = time()
         for idx, pos in enumerate(zip(*mask_pos)):
@@ -1699,9 +1702,19 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         if solver == 'cvxpy':
             fit_func = GeneralPurposeCSDOptimizer(
                 acquisition_scheme, self, x0_, self.sh_order, unity_constraint)
+        elif solver == 'tournier07':
+            fit_func = CsdTournierOptimizer(
+                acquisition_scheme, self, x0_, self.sh_order,
+                unity_constraint=unity_constraint)
+            print('Setup Tournier07 FOD optimizer in {} seconds'.format(
+                time() - start))
         else:
             msg = "Unknown solver name {}".format(solver)
             raise ValueError(msg)
+            print('Setup CVXPY FOD optimizer in {} seconds'.format(
+                time() - start))
+        self.optimizer = fit_func
+
         start = time()
         for idx, pos in enumerate(zip(*mask_pos)):
             voxel_E = data_[pos] / S0[pos]
@@ -1721,7 +1734,6 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             len(fitted_parameters_lin), fitting_time))
         print('Average of {} seconds per voxel.'.format(
             fitting_time / N_voxels))
-
         fitted_parameters = np.zeros_like(x0_, dtype=float)
         fitted_parameters[mask_pos] = (
             fitted_parameters_lin * self.scales_for_optimization)

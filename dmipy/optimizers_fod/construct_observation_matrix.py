@@ -5,7 +5,7 @@ __all__ = [
 ]
 
 
-def construct_model_based_A_matrix(acquisition_scheme, model, lmax):
+def construct_model_based_A_matrix(acquisition_scheme, model_rh, lmax):
     """Constructs the multi-shell observation matrix from spherical_harmonics
     to DWIs. Follows the notation of Eq. (2) in [1]_.
 
@@ -21,8 +21,8 @@ def construct_model_based_A_matrix(acquisition_scheme, model, lmax):
     ----------
     acquisition_scheme : DmipyAcquisitionScheme instance,
             An acquisition scheme that has been instantiated using dmipy.
-    model: dmipy signal model,
-        dmipy model with all parameters fixed.
+    model_rh: array of size (N_shells, N_rh_coeffs for that shell),
+        rotational harmonics for every shell.
     lmax: even positive integer,
         even maximum spherical harmonics order of the to-be-estimated FOD.
 
@@ -40,8 +40,6 @@ def construct_model_based_A_matrix(acquisition_scheme, model, lmax):
     Ncoef = int((lmax + 2) * (lmax + 1) // 2)
     Ams = np.zeros([acquisition_scheme.number_of_measurements, Ncoef])
     Ams[acquisition_scheme.b0_mask, 0] = 2 * np.sqrt(np.pi)
-
-    model_rh = model.rotational_harmonics_representation(acquisition_scheme)
 
     sh_eigenvalues = np.zeros([len(model_rh), Ncoef])
 

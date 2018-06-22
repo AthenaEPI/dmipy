@@ -538,7 +538,7 @@ class FittedMultiCompartmentSphericalHarmonicsModel:
             spherical harmonics coefficients of the FODs, scaled by volume
             fraction.
         """
-        return self.fitted_parameter['sh_coeff']
+        return self.fitted_parameters['sh_coeff']
 
     def anisotropy_index(self):
         """

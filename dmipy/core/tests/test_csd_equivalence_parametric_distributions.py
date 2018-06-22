@@ -13,6 +13,33 @@ scheme = wu_minn_hcp_acquisition_scheme()
 sphere = get_sphere('symmetric724')
 
 
+def test_equivalence_csd_and_parametric_fod_tournier07(
+        odi=0.15, mu=[0., 0.], lambda_par=1.7e-9):
+    stick = cylinder_models.C1Stick()
+    watsonstick = distribute_models.SD1WatsonDistributed(
+        [stick])
+
+    params = {'SD1Watson_1_odi': odi,
+              'SD1Watson_1_mu': mu,
+              'C1Stick_1_lambda_par': lambda_par}
+
+    data = watsonstick(scheme, **params)
+
+    sh_mod = modeling_framework.MultiCompartmentSphericalHarmonicsModel(
+        [stick])
+    sh_mod.set_fixed_parameter('C1Stick_1_lambda_par', lambda_par)
+
+    sh_fit = sh_mod.fit(scheme, data, solver='tournier07')
+    fod = sh_fit.fod(sphere.vertices)
+
+    watson = distributions.SD1Watson(mu=[0., 0.], odi=0.15)
+    sf = watson(sphere.vertices)
+    assert_array_almost_equal(fod[0], sf, 1)
+
+    fitted_signal = sh_fit.predict()
+    assert_array_almost_equal(data, fitted_signal[0], 2)
+
+
 @np.testing.dec.skipif(not have_cvxpy)
 def test_equivalence_csd_and_parametric_fod(
         odi=0.15, mu=[0., 0.], lambda_par=1.7e-9):

@@ -24,7 +24,8 @@ def test_construction_observation_matrix(
     watson = distributions.SD1Watson(mu=mu, odi=odi)
     sh_watson = watson.spherical_harmonics_representation(lmax)
 
-    A = construct_model_based_A_matrix(scheme, stick, lmax)
+    stick_rh = stick.rotational_harmonics_representation(scheme)
+    A = construct_model_based_A_matrix(scheme, stick_rh, lmax)
 
     data_approximated = A.dot(sh_watson)
     np.testing.assert_array_almost_equal(data_approximated, data, 4)
