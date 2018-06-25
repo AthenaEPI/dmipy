@@ -3,6 +3,7 @@ from .construct_observation_matrix import construct_model_based_A_matrix
 from dipy.data import get_sphere, HemiSphere
 from dipy.reconst.shm import real_sym_sh_mrtrix
 from dipy.utils.optpkg import optional_package
+from dipy.reconst.shm import sph_harm_ind_list
 sphere = get_sphere('symmetric724')
 numba, have_numba, _ = optional_package("numba")
 
@@ -14,8 +15,8 @@ __all__ = [
 
 class CsdTournierOptimizer:
     def __init__(self, acquisition_scheme, model, x0_vector=None, sh_order=8,
-                 lambda_reg=1., tau=0.1, max_iter=50, unity_constraint=True,
-                 init_sh_order=4):
+                 lambda_pos=1., lambda_lb=5e-4, tau=0.1, max_iter=50,
+                 unity_constraint=True, init_sh_order=4):
         """
         The classical Constrained Spherical Deconvolution (CSD) optimizer as
         proposed by Tournier et al. (2007) [1]_.
@@ -37,8 +38,11 @@ class CsdTournierOptimizer:
             Possible parameters for model kernels.
         sh_order: positive even integer,
             Spherical harmonics order for deconvolution.
-        lambda_reg: positive float,
+        lambda_pos: positive float,
             Positivity regularization parameter.
+        lambda_lb: positive float,
+            Laplace-Belrami regularization weight to impose smoothness in the
+            FOD. Same as is done in [2]_.
         tau: positive float,
             Scales positivity threshold relative to maximum FOD amplitude.
         max_iter: positive integer,
@@ -57,6 +61,9 @@ class CsdTournierOptimizer:
             "Robust determination of the fibre orientation distribution in
             diffusion MRI: non-negativity constrained super-resolved spherical
             deconvolution." Neuroimage 35.4 (2007): 1459-1472.
+        .. [2] Fick, Rutger. "An Optimized Processing Framework for Fiber
+            Tracking on DW-MRI Applied to the Optic Radiation", Master Thesis
+            (2013).
         """
         self.model = model
         self.acquisition_scheme = acquisition_scheme
@@ -64,7 +71,8 @@ class CsdTournierOptimizer:
         self.Ncoef = int((sh_order + 2) * (sh_order + 1) // 2)
         self.Ncoef4 = int((init_sh_order + 2) * (init_sh_order + 1) // 2)
         self.Nmodels = len(self.model.models)
-        self.lambda_reg = lambda_reg
+        self.lambda_pos = lambda_pos
+        self.lambda_lb = lambda_lb
         self.tau = tau
         self.max_iter = max_iter
         self.unity_constraint = unity_constraint
@@ -76,8 +84,11 @@ class CsdTournierOptimizer:
         self.L_positivity = real_sym_sh_mrtrix(
             self.sh_order, hemisphere.theta, hemisphere.phi)[0]
 
+        sh_l = sph_harm_ind_list(sh_order)[1]
+        self.R_smoothness = np.diag(sh_l * (sh_l + 1))
+
         # check if there is only one model. If so, precompute rh array.
-        if self.Nmodels == 1:
+        if self.model.volume_fractions_fixed:
             x0_single_voxel = np.reshape(
                 x0_vector, (-1, x0_vector.shape[-1]))[0]
             if np.all(np.isnan(x0_single_voxel)):
@@ -88,7 +99,7 @@ class CsdTournierOptimizer:
             else:
                 self.single_convolution_kernel = False
         else:
-            msg = "This CSD optimizer does not support multiple models."
+            msg = "This CSD optimizer cannot estimate volume fractions."
             raise ValueError(msg)
 
     def __call__(self, data, x0_vector):
@@ -116,10 +127,10 @@ class CsdTournierOptimizer:
 
         if self.single_convolution_kernel:
             A = self.A
-            AT_A = self.AT_A
+            AT_A = self.AT_A + self.lambda_lb * self.R_smoothness
         else:
             A = self._construct_convolution_kernel(x0_vector)
-            AT_A = np.dot(A.T, A)
+            AT_A = np.dot(A.T, A) + self.lambda_lb * self.R_smoothness
 
         if self.unity_constraint:
             return self._optimize_with_unity_constraint(
@@ -161,7 +172,7 @@ class CsdTournierOptimizer:
 
         for iteration in range(self.max_iter):
             L = self.L_positivity[negative_fod_check]
-            Q = AT_A + self.lambda_reg * np.dot(L.T, L)
+            Q = AT_A + self.lambda_pos * np.dot(L.T, L)
             f_sh = np.dot(np.dot(np.linalg.inv(Q), A.T), data)
             negative_fod_check_old = negative_fod_check
             negative_fod_check = np.dot(self.L_positivity, f_sh) < threshold
@@ -222,7 +233,7 @@ class CsdTournierOptimizer:
 
         for iteration in range(self.max_iter):
             L = self.L_positivity[negative_fod_check]
-            Q = AT_A + self.lambda_reg * np.dot(L.T, L)
+            Q = AT_A + self.lambda_pos * np.dot(L.T, L)
             f_sh[1:] = np.dot(np.dot(np.linalg.inv(Q), A.T), data)[1:]
             negative_fod_check_old = negative_fod_check
             negative_fod_check = np.dot(self.L_positivity, f_sh) < threshold
@@ -262,17 +273,26 @@ class CsdTournierOptimizer:
         parameters_dict = self.model.add_linked_parameters_to_parameters(
             parameters_dict)
 
-        parameters = {}
-        for parameter in self.model.models[0].parameter_ranges:
-            parameter_name = self.model._inverted_parameter_map[
-                (self.model.models[0], parameter)
+        if len(self.model.models) > 1:
+            partial_volumes = [
+                parameters_dict[p] for p in self.model.partial_volume_names
             ]
-            parameters[parameter] = parameters_dict.get(
-                parameter_name
-            )
-        model_rh = (
-            self.model.models[0].rotational_harmonics_representation(
-                self.acquisition_scheme, **parameters))
-        kernel = construct_model_based_A_matrix(
-            self.acquisition_scheme, model_rh, self.sh_order)
+        else:
+            partial_volumes = [1.]
+
+        kernel = 0.
+        for model, partial_volume in zip(self.model.models, partial_volumes):
+            parameters = {}
+            for parameter in model.parameter_ranges:
+                parameter_name = self.model._inverted_parameter_map[
+                    (model, parameter)
+                ]
+                parameters[parameter] = parameters_dict.get(
+                    parameter_name
+                )
+            model_rh = (
+                model.rotational_harmonics_representation(
+                    self.acquisition_scheme, **parameters))
+            kernel += partial_volume * construct_model_based_A_matrix(
+                self.acquisition_scheme, model_rh, self.sh_order)
         return kernel

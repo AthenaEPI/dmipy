@@ -169,7 +169,7 @@ class MultiCompartmentModelProperties:
             value = np.atleast_1d(parameters[parameter])
             if card == 1 and not np.all(value.shape == np.r_[1]):
                 parameter_shapes.append(value.shape)
-            if card == 2 and not np.all(value.shape == np.r_[2]):
+            elif card > 1 and not np.all(value.shape == np.r_[card]):
                 parameter_shapes.append(value.shape[:-1])
 
         if len(set(parameter_shapes)) > 1:
@@ -187,7 +187,7 @@ class MultiCompartmentModelProperties:
                         np.tile(value[0], np.r_[parameter_shapes[0], 1]))
                 elif card == 1 and not np.all(value.shape == np.r_[1]):
                     parameter_vector.append(value[..., None])
-                elif card == 2 and np.all(value.shape == np.r_[2]):
+                elif card > 1 and np.all(value.shape == np.r_[card]):
                     parameter_vector.append(
                         np.tile(value, np.r_[parameter_shapes[0], 1])
                     )
@@ -1572,29 +1572,41 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         self.parameter_scales['sh_coeff'] = np.ones(N_coef, dtype=float)
         self.parameter_cardinality['sh_coeff'] = N_coef
         self.parameter_types['sh_coeff'] = 'sh_coefficients'
+        self.parameter_optimization_flags['sh_coeff'] = True
 
     def _check_if_kernel_parameters_are_fixed(self):
         "checks if only volume fraction and sh_coeff parameters are optimized."
+        self.volume_fractions_fixed = True
         for name, flag in self.parameter_optimization_flags.items():
             if flag is True:
                 if (not name == 'sh_coeff' and
                         not name.startswith('partial_volume')):
-                    msg = 'kernel parameter {} is not fixed.'.format(name)
+                    msg = 'Kernel parameter {} is not fixed.'.format(name)
                     raise ValueError(msg)
+                if name.startswith('partial_volume'):
+                    self.volume_fractions_fixed = False
+        if (not self.volume_fractions_fixed and
+                self.multiple_anisotropic_kernels):
+            msg = 'Cannot have multiple anisotropic kernels without having '
+            msg += 'all volume fractions fixed.'
+            raise ValueError(msg)
 
     def _check_that_one_anisotropic_kernel_is_present(self):
         "checks if one anisotropic kernel is given."
         orientation_counter = 0
+        self.multiple_anisotropic_kernels = False
         for model in self.models:
             if 'orientation' in model.parameter_types.values():
                 orientation_counter += 1
-        if orientation_counter != 1:
+        if orientation_counter == 0:
             msg = 'MultiCompartmentSphericalHarmonicsModel must at least have '
             msg += 'one anisotropic kernel input model.'
             raise ValueError(msg)
+        if orientation_counter > 1:
+            self.multiple_anisotropic_kernels = True
 
     def fit(self, acquisition_scheme, data, mask=None,
-            solver='cvxpy', unity_constraint=True,
+            solver='tournier07', unity_constraint=True,
             use_parallel_processing=have_pathos,
             number_of_processors=None):
         """ The main data fitting function of a
@@ -1680,9 +1692,28 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             **self.x0_parameters)
         x0_ = homogenize_x0_to_data(
             data_, x0_)
-        x0_bool = np.all(
-            np.isnan(x0_), axis=tuple(np.arange(x0_.ndim - 1)))
-        x0_[..., ~x0_bool] /= self.scales_for_optimization[~x0_bool]
+
+        start = time()
+        if solver == 'tournier07':
+            fit_func = CsdTournierOptimizer(
+                acquisition_scheme, self, x0_, self.sh_order,
+                unity_constraint=unity_constraint)
+            if use_parallel_processing:
+                msg = 'Parallel processing turned off for tournier07 optimizer'
+                msg += ' because it does not improve fitting speed.'
+                print(msg)
+                use_parallel_processing = False
+            print('Setup Tournier07 FOD optimizer in {} seconds'.format(
+                time() - start))
+        elif solver == 'cvxpy':
+            fit_func = GeneralPurposeCSDOptimizer(
+                acquisition_scheme, self, x0_, self.sh_order, unity_constraint)
+        else:
+            msg = "Unknown solver name {}".format(solver)
+            raise ValueError(msg)
+            print('Setup CVXPY FOD optimizer in {} seconds'.format(
+                time() - start))
+        self.optimizer = fit_func
 
         if use_parallel_processing and not have_pathos:
             msg = 'Cannot use parallel processing without pathos.'
@@ -1697,23 +1728,6 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         else:
             fitted_parameters_lin = np.empty(
                 np.r_[N_voxels, N_parameters], dtype=float)
-
-        start = time()
-        if solver == 'cvxpy':
-            fit_func = GeneralPurposeCSDOptimizer(
-                acquisition_scheme, self, x0_, self.sh_order, unity_constraint)
-        elif solver == 'tournier07':
-            fit_func = CsdTournierOptimizer(
-                acquisition_scheme, self, x0_, self.sh_order,
-                unity_constraint=unity_constraint)
-            print('Setup Tournier07 FOD optimizer in {} seconds'.format(
-                time() - start))
-        else:
-            msg = "Unknown solver name {}".format(solver)
-            raise ValueError(msg)
-            print('Setup CVXPY FOD optimizer in {} seconds'.format(
-                time() - start))
-        self.optimizer = fit_func
 
         start = time()
         for idx, pos in enumerate(zip(*mask_pos)):
@@ -1735,8 +1749,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         print('Average of {} seconds per voxel.'.format(
             fitting_time / N_voxels))
         fitted_parameters = np.zeros_like(x0_, dtype=float)
-        fitted_parameters[mask_pos] = (
-            fitted_parameters_lin * self.scales_for_optimization)
+        fitted_parameters[mask_pos] = fitted_parameters_lin
 
         return FittedMultiCompartmentSphericalHarmonicsModel(
             self, S0, mask, fitted_parameters)

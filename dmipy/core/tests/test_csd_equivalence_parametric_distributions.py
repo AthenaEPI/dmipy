@@ -57,7 +57,7 @@ def test_equivalence_csd_and_parametric_fod(
         [stick])
     sh_mod.set_fixed_parameter('C1Stick_1_lambda_par', lambda_par)
 
-    sh_fit = sh_mod.fit(scheme, data)
+    sh_fit = sh_mod.fit(scheme, data, solver='cvxpy')
     fod = sh_fit.fod(sphere.vertices)
 
     watson = distributions.SD1Watson(mu=[0., 0.], odi=0.15)
@@ -92,7 +92,7 @@ def test_multi_compartment_fod_with_parametric_model(
         partial_volume_1=1 - vf_intra)
     data = mc_mod.simulate_signal(scheme, simulation_parameters)
 
-    sh_fit = sh_mod.fit(scheme, data)
+    sh_fit = sh_mod.fit(scheme, data, solver='cvxpy')
 
     vf_intra_estimated = sh_fit.fitted_parameters['partial_volume_0']
     assert_almost_equal(vf_intra, vf_intra_estimated)
@@ -123,4 +123,4 @@ def test_spherical_harmonics_model_raises(
     sh_mod = modeling_framework.MultiCompartmentSphericalHarmonicsModel(
         [stick])
 
-    assert_raises(ValueError, sh_mod.fit, scheme, data)
+    assert_raises(ValueError, sh_mod.fit, scheme, data, solver='cvxpy')

@@ -446,6 +446,82 @@ class FittedMultiCompartmentSphericalMeanModel:
                 self.fitted_parameters[smt_parameter_name])
         return mc_bundles_model
 
+    def return_spherical_harmonics_fod_model(self, sh_order=8):
+        """
+        Retuns spherical harmonics FOD model using the rotational harmonics of
+        the fitted spherical mean model as the convolution kernel.
+
+        Internally, the input models to the spherical mean model are given to
+        a MultiCompartmentSphericalHarmonicsModel where the parameter links are
+        replayed such that the new model has the same parameter constraints as
+        the spherical mean model. The FittedSphericalMeanModel parameters
+        are given as fixed parameters for the kernel (the kernel will not be
+        fitted while the FOD's coefficients are being optimized).
+
+        The function returns a MultiCompartmentSphericalHarmonicsModel instance
+        that can be interacted with as usual to fit dMRI data.
+
+        Parameters
+        ----------
+        sh_order: even, positive integer,
+            Spherical harmonics order of the FODs.
+
+        Returns
+        -------
+        mc_bundles_model: Dmipy MultiCompartmentModel instance,
+            MultiCompartmentModel instance that can be used to estimate
+            parametric FODs using the fitted spherical mean model as a kernel.
+        """
+        from .modeling_framework import MultiCompartmentSphericalHarmonicsModel
+
+        if sh_order < 0 or sh_order % 2 != 0:
+            msg = 'sh_order must be an even, positive integer.'
+            raise ValueError(msg)
+
+        sh_model = MultiCompartmentSphericalHarmonicsModel(
+            self.model.models, sh_order=sh_order)
+
+        for link in self.model.parameter_links:
+            param_to_delete = self.model._inverted_parameter_map[link[0],
+                                                                 link[1]]
+            if link[2] is T1_tortuosity:
+                sh_model.parameter_links.append(
+                    [link[0], link[1], link[2], link[3][:-1]])
+            elif link[2] is fractional_parameter:
+                new_parameter_name = param_to_delete + '_fraction'
+                sh_model.parameter_ranges.update(
+                    {new_parameter_name: [0., 1.]})
+                sh_model.parameter_scales.update({new_parameter_name: 1.})
+                sh_model.parameter_cardinality.update({new_parameter_name: 1})
+                sh_model.parameter_types.update({new_parameter_name: 'normal'})
+
+                sh_model._parameter_map.update(
+                    {new_parameter_name: (None, 'fraction')})
+                sh_model._inverted_parameter_map.update(
+                    {(None, 'fraction'): new_parameter_name})
+
+                # add parmeter link to fractional parameter
+                param_larger_than = self.model._inverted_parameter_map[
+                    link[3][1][0], link[3][1][1]]
+
+                model, name = sh_model._parameter_map[param_to_delete]
+                sh_model.parameter_links.append(
+                    [model, name, fractional_parameter, [
+                        sh_model._parameter_map[new_parameter_name],
+                        sh_model._parameter_map[param_larger_than]]])
+            else:
+                sh_model.parameter_links.append(link)
+            del sh_model.parameter_ranges[param_to_delete]
+            del sh_model.parameter_cardinality[param_to_delete]
+            del sh_model.parameter_scales[param_to_delete]
+            del sh_model.parameter_types[param_to_delete]
+            del sh_model.parameter_optimization_flags[param_to_delete]
+
+        for smt_par_name in self.model.parameter_names:
+            sh_model.set_fixed_parameter(
+                smt_par_name, self.fitted_parameters[smt_par_name])
+        return sh_model
+
 
 class FittedMultiCompartmentSphericalHarmonicsModel:
     """
