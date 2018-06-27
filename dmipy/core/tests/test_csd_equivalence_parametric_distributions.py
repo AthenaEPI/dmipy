@@ -29,7 +29,7 @@ def test_equivalence_csd_and_parametric_fod_tournier07(
         [stick])
     sh_mod.set_fixed_parameter('C1Stick_1_lambda_par', lambda_par)
 
-    sh_fit = sh_mod.fit(scheme, data, solver='tournier07')
+    sh_fit = sh_mod.fit(scheme, data, solver='csd_tournier07')
     fod = sh_fit.fod(sphere.vertices)
 
     watson = distributions.SD1Watson(mu=[0., 0.], odi=0.15)
@@ -57,7 +57,7 @@ def test_equivalence_csd_and_parametric_fod(
         [stick])
     sh_mod.set_fixed_parameter('C1Stick_1_lambda_par', lambda_par)
 
-    sh_fit = sh_mod.fit(scheme, data, solver='cvxpy')
+    sh_fit = sh_mod.fit(scheme, data, solver='csd_cvxpy', lambda_lb=0.)
     fod = sh_fit.fod(sphere.vertices)
 
     watson = distributions.SD1Watson(mu=[0., 0.], odi=0.15)
@@ -92,7 +92,7 @@ def test_multi_compartment_fod_with_parametric_model(
         partial_volume_1=1 - vf_intra)
     data = mc_mod.simulate_signal(scheme, simulation_parameters)
 
-    sh_fit = sh_mod.fit(scheme, data, solver='cvxpy')
+    sh_fit = sh_mod.fit(scheme, data, solver='csd_cvxpy', lambda_lb=0.)
 
     vf_intra_estimated = sh_fit.fitted_parameters['partial_volume_0']
     assert_almost_equal(vf_intra, vf_intra_estimated)
@@ -100,6 +100,68 @@ def test_multi_compartment_fod_with_parametric_model(
     predicted_signal = sh_fit.predict()
 
     assert_array_almost_equal(data, predicted_signal[0], 4)
+
+
+def test_multi_voxel_parametric_to_sm_to_sh_fod_watson():
+    stick = cylinder_models.C1Stick()
+    zeppelin = gaussian_models.G2Zeppelin()
+    watsonstick = distribute_models.SD1WatsonDistributed(
+        [stick, zeppelin])
+
+    watsonstick.set_equal_parameter(
+        'G2Zeppelin_1_lambda_par', 'C1Stick_1_lambda_par')
+    watsonstick.set_tortuous_parameter('G2Zeppelin_1_lambda_perp',
+                                       'G2Zeppelin_1_lambda_par',
+                                       'partial_volume_0')
+    mc_mod = modeling_framework.MultiCompartmentModel([watsonstick])
+
+    parameter_dict = {
+        'SD1WatsonDistributed_1_SD1Watson_1_mu': np.random.rand(10, 2),
+        'SD1WatsonDistributed_1_partial_volume_0': np.linspace(0.1, 0.9, 10),
+        'SD1WatsonDistributed_1_G2Zeppelin_1_lambda_par':
+        np.linspace(1.5, 2.5, 10) * 1e-9,
+        'SD1WatsonDistributed_1_SD1Watson_1_odi': np.linspace(0.3, 0.7, 10)
+    }
+
+    data = mc_mod.simulate_signal(scheme, parameter_dict)
+
+    sm_mod = modeling_framework.MultiCompartmentSphericalMeanModel(
+        [stick, zeppelin])
+    sm_mod.set_equal_parameter(
+        'G2Zeppelin_1_lambda_par', 'C1Stick_1_lambda_par')
+    sm_mod.set_tortuous_parameter(
+        'G2Zeppelin_1_lambda_perp', 'G2Zeppelin_1_lambda_par',
+        'partial_volume_0', 'partial_volume_1')
+
+    sf_watson = []
+    for mu, odi in zip(
+            parameter_dict['SD1WatsonDistributed_1_SD1Watson_1_mu'],
+            parameter_dict['SD1WatsonDistributed_1_SD1Watson_1_odi']):
+        watson = distributions.SD1Watson(mu=mu, odi=odi)
+        sf_watson.append(watson(sphere.vertices))
+    sf_watson = np.array(sf_watson)
+
+    sm_fit = sm_mod.fit(scheme, data)
+    sh_mod = sm_fit.return_spherical_harmonics_fod_model()
+
+    sh_fit_auto = sh_mod.fit(scheme, data)  # will pick tournier
+    fod_tournier = sh_fit_auto.fod(sphere.vertices)
+    assert_array_almost_equal(fod_tournier, sf_watson, 1)
+
+    sh_fit_tournier = sh_mod.fit(
+        scheme, data, solver='csd_tournier07', unity_constraint=False)
+    fod_tournier = sh_fit_tournier.fod(sphere.vertices)
+    assert_array_almost_equal(fod_tournier, sf_watson, 1)
+
+    sh_fit_cvxpy = sh_mod.fit(
+        scheme, data, solver='csd_cvxpy', unity_constraint=True, lambda_lb=0.)
+    fod_cvxpy = sh_fit_cvxpy.fod(sphere.vertices)
+    assert_array_almost_equal(fod_cvxpy, sf_watson, 2)
+
+    sh_fit_cvxpy = sh_mod.fit(
+        scheme, data, solver='csd_cvxpy', unity_constraint=False, lambda_lb=0.)
+    fod_cvxpy = sh_fit_cvxpy.fod(sphere.vertices)
+    assert_array_almost_equal(fod_cvxpy, sf_watson, 2)
 
 
 @np.testing.dec.skipif(not have_cvxpy)
@@ -123,4 +185,4 @@ def test_spherical_harmonics_model_raises(
     sh_mod = modeling_framework.MultiCompartmentSphericalHarmonicsModel(
         [stick])
 
-    assert_raises(ValueError, sh_mod.fit, scheme, data, solver='cvxpy')
+    assert_raises(ValueError, sh_mod.fit, scheme, data, solver='csd_cvxpy')

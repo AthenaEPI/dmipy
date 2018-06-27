@@ -14,57 +14,57 @@ __all__ = [
 
 
 class CsdTournierOptimizer:
+    """
+    The classical Constrained Spherical Deconvolution (CSD) optimizer as
+    proposed by Tournier et al. (2007) [1]_.
+
+    It is a bit less accurate than the general CVXPY optimizer, but
+    significantly faster.
+
+    TODO: multicore processing makes this solver MUCH slower for some
+    reason. It is likely the fact that it's copying the kernel and
+    positivity matrices to every process.
+
+    Parameters
+    ----------
+    acquisition_scheme: DmipyAcquisitionScheme instance,
+        An acquisition scheme that has been instantiated using Dmipy.
+    model: Dmipy MultiCompartmentSphericalHarmonicsModel instance,
+        Contains Dmipy multi-compartment model information.
+    x0_vector: Array of size (Nparameters)
+        Possible parameters for model kernels.
+    sh_order: positive even integer,
+        Spherical harmonics order for deconvolution.
+    lambda_pos: positive float,
+        Positivity regularization parameter.
+    lambda_lb: positive float,
+        Laplace-Belrami regularization weight to impose smoothness in the
+        FOD. Same as is done in [2]_.
+    tau: positive float,
+        Scales positivity threshold relative to maximum FOD amplitude.
+    max_iter: positive integer,
+        Maximum number of iterations for optimization.
+    unity_constraint: boolean,
+        whether or not to constrain the volume fractions of the FOD to
+        unity. In the case of one model this means that the SH-coefficients
+        represent a distribution on the sphere.
+    init_sh_order: positive even integer,
+        Spherical harmonics order used to calculate unconstrained initial
+        guess for the FOD coefficients.
+
+    References
+    ----------
+    .. [1] Tournier, J-Donald, Fernando Calamante, and Alan Connelly.
+        "Robust determination of the fibre orientation distribution in
+        diffusion MRI: non-negativity constrained super-resolved spherical
+        deconvolution." Neuroimage 35.4 (2007): 1459-1472.
+    .. [2] Fick, Rutger. "An Optimized Processing Framework for Fiber
+        Tracking on DW-MRI Applied to the Optic Radiation", Master Thesis
+        (2013).
+    """
     def __init__(self, acquisition_scheme, model, x0_vector=None, sh_order=8,
                  lambda_pos=1., lambda_lb=5e-4, tau=0.1, max_iter=50,
                  unity_constraint=True, init_sh_order=4):
-        """
-        The classical Constrained Spherical Deconvolution (CSD) optimizer as
-        proposed by Tournier et al. (2007) [1]_.
-
-        It is a bit less accurate than the general CVXPY optimizer, but
-        significantly faster.
-
-        TODO: multicore processing makes this solver MUCH slower for some
-        reason. It is likely the fact that it's copying the kernel and
-        positivity matrices to every process.
-
-        Parameters
-        ----------
-        acquisition_scheme: DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using Dmipy.
-        model: Dmipy MultiCompartmentSphericalHarmonicsModel instance,
-            Contains Dmipy multi-compartment model information.
-        x0_vector: Array of size (Nparameters)
-            Possible parameters for model kernels.
-        sh_order: positive even integer,
-            Spherical harmonics order for deconvolution.
-        lambda_pos: positive float,
-            Positivity regularization parameter.
-        lambda_lb: positive float,
-            Laplace-Belrami regularization weight to impose smoothness in the
-            FOD. Same as is done in [2]_.
-        tau: positive float,
-            Scales positivity threshold relative to maximum FOD amplitude.
-        max_iter: positive integer,
-            Maximum number of iterations for optimization.
-        unity_constraint: boolean,
-            whether or not to constrain the volume fractions of the FOD to
-            unity. In the case of one model this means that the SH-coefficients
-            represent a distribution on the sphere.
-        init_sh_order: positive even integer,
-            Spherical harmonics order used to calculate unconstrained initial
-            guess for the FOD coefficients.
-
-        References
-        ----------
-        .. [1] Tournier, J-Donald, Fernando Calamante, and Alan Connelly.
-            "Robust determination of the fibre orientation distribution in
-            diffusion MRI: non-negativity constrained super-resolved spherical
-            deconvolution." Neuroimage 35.4 (2007): 1459-1472.
-        .. [2] Fick, Rutger. "An Optimized Processing Framework for Fiber
-            Tracking on DW-MRI Applied to the Optic Radiation", Master Thesis
-            (2013).
-        """
         self.model = model
         self.acquisition_scheme = acquisition_scheme
         self.sh_order = sh_order
@@ -256,6 +256,9 @@ class CsdTournierOptimizer:
         the given ones. Finally, the rotational harmonics of the model is
         passed to the construct_model_based_A_matrix, which constructs the
         kernel for an arbitrary PGSE-acquisition scheme.
+
+        For multiple models with fixed volume fractions, the A-matrices
+        are combined to have a combined convolution kernel.
 
         Parameters
         ----------

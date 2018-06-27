@@ -22,8 +22,8 @@ from .fitted_modeling_framework import (
     FittedMultiCompartmentSphericalHarmonicsModel)
 from ..optimizers.brute2fine import (
     GlobalBruteOptimizer, Brute2FineOptimizer)
-from ..optimizers_fod.cvxpy_fod import GeneralPurposeCSDOptimizer
 from ..optimizers_fod.csd_tournier import CsdTournierOptimizer
+from ..optimizers_fod.csd_cvxpy import CsdCvxpyOptimizer
 from ..optimizers.mix import MixOptimizer
 from dipy.utils.optpkg import optional_package
 from graphviz import Digraph
@@ -1605,10 +1605,9 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         if orientation_counter > 1:
             self.multiple_anisotropic_kernels = True
 
-    def fit(self, acquisition_scheme, data, mask=None,
-            solver='tournier07', unity_constraint=True,
-            use_parallel_processing=have_pathos,
-            number_of_processors=None):
+    def fit(self, acquisition_scheme, data, mask=None, solver='csd',
+            lambda_lb=5e-4, unity_constraint='kernel_dependent',
+            use_parallel_processing=have_pathos, number_of_processors=None):
         """ The main data fitting function of a
         MultiCompartmentSphericalHarmonicsModel.
 
@@ -1639,15 +1638,24 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         mask : (N-1)-dimensional integer/boolean array of size (N_x, N_y, ...),
             Optional mask of voxels to be included in the optimization.
         solver : string,
-            can only be 'cvxpy' at this point for general-purpose csd
-            optimization using cvxpy [1]_.
-        unity_constraint: bool,
-            whether or not to constrain the volume fractions of the FOD to
-            unity.
+            Can be 'csd', 'csd_tounier07' or 'csd_cvxpy', with the default
+            being 'csd'. Using 'csd' will make the algorithm automatically
+            use the 'tournier07' solver [1]_ if there are no volume fractions
+            to fit or they are fixed. Otherwise, the slower but more general
+            cvxpy solver [2]_ is used, which follows the formulation of [3]_.
+        lambda_lb: positive float,
+            Weight for Laplace-Beltrami regularization to impose smoothness
+            into estimated FODs, follows [4]_.
+        unity_constraint: String or bool,
+            Whether or not to constrain the volume fractions of the FOD to
+            unity. The default is set to 'kernel_dependent', meaning it will
+            enforce unity if the kernel is voxel-varying or when volume
+            fractions are estimated. Otherwise unity_constraint is set to
+            False.
         use_parallel_processing : bool,
-            whether or not to use parallel processing using pathos.
+            Whether or not to use parallel processing using pathos.
         number_of_processors : integer,
-            number of processors to use for parallel processing. Defaults to
+            Number of processors to use for parallel processing. Defaults to
             the number of processors in the computer according to cpu_count().
 
         Returns
@@ -1658,12 +1666,33 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
 
         References
         ----------
-        .. [1] Diamond, Steven, and Stephen Boyd. "CVXPY: A Python-embedded
+        .. [1] Tournier, J-Donald, Fernando Calamante, and Alan Connelly.
+            "Robust determination of the fibre orientation distribution in
+            diffusion MRI: non-negativity constrained super-resolved spherical
+            deconvolution." Neuroimage 35.4 (2007): 1459-1472.
+        .. [2] Diamond, Steven, and Stephen Boyd. "CVXPY: A Python-embedded
             modeling language for convex optimization." The Journal of Machine
             Learning Research 17.1 (2016): 2909-2913.
+        .. [3] Jeurissen, Ben, et al. "Multi-tissue constrained spherical
+            deconvolution for improved analysis of multi-shell diffusion MRI
+            data." NeuroImage 103 (2014): 411-426.
+        .. [4] Fick, Rutger. "An Optimized Processing Framework for Fiber
+            Tracking on DW-MRI Applied to the Optic Radiation", Master Thesis
+            (2013).
         """
 
         self._check_if_kernel_parameters_are_fixed()
+
+        self.voxel_varying_kernel = False
+        if bool(self.x0_parameters):  # if the dictionary is not empty
+            self.voxel_varying_kernel = True
+
+        if unity_constraint == 'kernel_dependent':
+            self.unity_constraint = False
+            if not self.volume_fractions_fixed or self.voxel_varying_kernel:
+                self.unity_constraint = True
+        else:
+            self.unity_constraint = unity_constraint
 
         # estimate S0
         self.scheme = acquisition_scheme
@@ -1694,10 +1723,31 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             data_, x0_)
 
         start = time()
-        if solver == 'tournier07':
+        if solver == 'csd':
+            if self.volume_fractions_fixed:
+                fit_func = CsdTournierOptimizer(
+                    acquisition_scheme, self, x0_, self.sh_order,
+                    unity_constraint=self.unity_constraint,
+                    lambda_lb=lambda_lb)
+                if use_parallel_processing:
+                    msg = 'Parallel processing turned off for tournier07'
+                    msg += ' optimizer because it does not improve fitting '
+                    msg += 'speed.'
+                    print(msg)
+                    use_parallel_processing = False
+                print('Setup Tournier07 FOD optimizer in {} seconds'.format(
+                    time() - start))
+            else:
+                fit_func = CsdCvxpyOptimizer(
+                    acquisition_scheme, self, x0_, self.sh_order,
+                    unity_constraint=self.unity_constraint,
+                    lambda_lb=lambda_lb)
+                print('Setup CVXPY FOD optimizer in {} seconds'.format(
+                    time() - start))
+        elif solver == 'csd_tournier07':
             fit_func = CsdTournierOptimizer(
                 acquisition_scheme, self, x0_, self.sh_order,
-                unity_constraint=unity_constraint)
+                unity_constraint=self.unity_constraint, lambda_lb=lambda_lb)
             if use_parallel_processing:
                 msg = 'Parallel processing turned off for tournier07 optimizer'
                 msg += ' because it does not improve fitting speed.'
@@ -1705,14 +1755,16 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
                 use_parallel_processing = False
             print('Setup Tournier07 FOD optimizer in {} seconds'.format(
                 time() - start))
-        elif solver == 'cvxpy':
-            fit_func = GeneralPurposeCSDOptimizer(
-                acquisition_scheme, self, x0_, self.sh_order, unity_constraint)
+        elif solver == 'csd_cvxpy':
+            fit_func = CsdCvxpyOptimizer(
+                acquisition_scheme, self, x0_, self.sh_order,
+                unity_constraint=self.unity_constraint, lambda_lb=lambda_lb)
+            print('Setup CVXPY FOD optimizer in {} seconds'.format(
+                time() - start))
         else:
             msg = "Unknown solver name {}".format(solver)
             raise ValueError(msg)
-            print('Setup CVXPY FOD optimizer in {} seconds'.format(
-                time() - start))
+
         self.optimizer = fit_func
 
         if use_parallel_processing and not have_pathos:
