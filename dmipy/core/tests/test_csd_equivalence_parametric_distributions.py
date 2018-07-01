@@ -5,7 +5,7 @@ from dmipy.data.saved_acquisition_schemes import wu_minn_hcp_acquisition_scheme
 from dipy.data import get_sphere
 import numpy as np
 from numpy.testing import (
-    assert_array_almost_equal, assert_almost_equal, assert_raises)
+    assert_array_almost_equal, assert_almost_equal, assert_raises, assert_)
 from dipy.utils.optpkg import optional_package
 cvxpy, have_cvxpy, _ = optional_package("cvxpy")
 
@@ -165,6 +165,32 @@ def test_multi_voxel_parametric_to_sm_to_sh_fod_watson():
 
 
 @np.testing.dec.skipif(not have_cvxpy)
+def test_laplacian_and_AI_with_regularization(
+        odi=0.15, mu=[0., 0.], lambda_par=1.7e-9):
+    stick = cylinder_models.C1Stick()
+    watsonstick = distribute_models.SD1WatsonDistributed(
+        [stick])
+    params = {'SD1Watson_1_odi': odi,
+              'SD1Watson_1_mu': mu,
+              'C1Stick_1_lambda_par': lambda_par}
+    data = watsonstick(scheme, **params)
+
+    sh_mod = modeling_framework.MultiCompartmentSphericalHarmonicsModel(
+        [stick])
+    sh_mod.set_fixed_parameter('C1Stick_1_lambda_par', lambda_par)
+
+    for solver in ['csd_tournier07', 'csd_cvxpy']:
+        sh_fit = sh_mod.fit(scheme, data, solver=solver, lambda_lb=0.)
+        sh_fit_reg = sh_mod.fit(scheme, data, solver=solver, lambda_lb=1e-3)
+        ai = sh_fit.anisotropy_index()
+        lb = sh_fit.norm_of_laplacian_fod()
+        ai_reg = sh_fit_reg.anisotropy_index()
+        lb_reg = sh_fit_reg.norm_of_laplacian_fod()
+        assert_(ai > ai_reg)
+        assert_(lb > lb_reg)
+
+
+@np.testing.dec.skipif(not have_cvxpy)
 def test_spherical_harmonics_model_raises(
         odi=0.15, mu=[0., 0.], lambda_par=1.7e-9):
     stick = cylinder_models.C1Stick()
@@ -184,5 +210,11 @@ def test_spherical_harmonics_model_raises(
 
     sh_mod = modeling_framework.MultiCompartmentSphericalHarmonicsModel(
         [stick])
-
     assert_raises(ValueError, sh_mod.fit, scheme, data, solver='csd_cvxpy')
+
+    sh_mod = modeling_framework.MultiCompartmentSphericalHarmonicsModel(
+        [stick, ball])
+    sh_mod.set_fixed_parameter('C1Stick_1_lambda_par', lambda_par)
+    sh_mod.set_fixed_parameter('G1Ball_1_lambda_iso', 3e-9)
+    assert_raises(
+        ValueError, sh_mod.fit, scheme, data, solver='csd_tournier07')

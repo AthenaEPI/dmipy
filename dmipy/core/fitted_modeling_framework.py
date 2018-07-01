@@ -5,6 +5,7 @@ from ..utils.utils import (
     unitsphere2cart_Nd, T1_tortuosity, fractional_parameter, cart2mu)
 from ..utils.spherical_mean import (
     estimate_spherical_mean_multi_shell)
+from dipy.reconst.shm import sph_harm_ind_list
 
 
 __all__ = [
@@ -633,6 +634,27 @@ class FittedMultiCompartmentSphericalHarmonicsModel:
         AI = np.sqrt(1 - sh_0 / sh_sum_squared)
         AI[~self.mask] = 0.
         return AI
+
+    def norm_of_laplacian_fod(self):
+        """
+        Estimates the squared norm of the Laplacian of the FOD. Similar to
+        the anisotropy index, a higher norm means there are larger higher-order
+        coefficients in the FOD spherical harmonics expansion. This indicates
+        the FOD is more anisotropic overall. This kind of measure was explored
+        in e.g. [1]_.
+
+        References
+        ----------
+        .. [1] Fick, Rutger. "An Optimized Processing Framework for Fiber
+            Tracking on DW-MRI Applied to the Optic Radiation", Master Thesis
+            (2013).
+
+        """
+        sh_coef = self.fitted_parameters['sh_coeff']
+        sh_l = sph_harm_ind_list(self.model.sh_order)[1]
+        lb_weights = sh_l * (sh_l + 1)  # laplace-beltrami
+        norm_laplacian = np.sum(sh_coef ** 2 * lb_weights, axis=-1)
+        return norm_laplacian
 
     def predict(self, acquisition_scheme=None, S0=None, mask=None):
         """
