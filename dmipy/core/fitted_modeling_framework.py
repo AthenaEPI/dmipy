@@ -647,7 +647,7 @@ class FittedMultiCompartmentSphericalHarmonicsModel:
         References
         ----------
         .. [1] Descoteaux, Maxime, et al. "Regularized, fast, and robust
-            analytical Q‐ball imaging." Magnetic Resonance in Medicine: An
+            analytical Q-ball imaging." Magnetic Resonance in Medicine: An
             Official Journal of the International Society for Magnetic
             Resonance in Medicine 58.3 (2007): 497-510.
         """

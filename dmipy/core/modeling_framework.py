@@ -1677,7 +1677,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             deconvolution for improved analysis of multi-shell diffusion MRI
             data." NeuroImage 103 (2014): 411-426.
         .. [4] Descoteaux, Maxime, et al. "Regularized, fast, and robust
-            analytical Q‐ball imaging." Magnetic Resonance in Medicine: An
+            analytical Q-ball imaging." Magnetic Resonance in Medicine: An
             Official Journal of the International Society for Magnetic
             Resonance in Medicine 58.3 (2007): 497-510.
         """

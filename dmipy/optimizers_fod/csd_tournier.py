@@ -59,7 +59,7 @@ class CsdTournierOptimizer:
         diffusion MRI: non-negativity constrained super-resolved spherical
         deconvolution." Neuroimage 35.4 (2007): 1459-1472.
     .. [2] Descoteaux, Maxime, et al. "Regularized, fast, and robust analytical
-        Q‐ball imaging." Magnetic Resonance in Medicine: An Official Journal of
+        Q-ball imaging." Magnetic Resonance in Medicine: An Official Journal of
         the International Society for Magnetic Resonance in Medicine 58.3
         (2007): 497-510.
     """

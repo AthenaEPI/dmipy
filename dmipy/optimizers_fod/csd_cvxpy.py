@@ -58,7 +58,7 @@ class CsdCvxpyOptimizer:
         modeling language for convex optimization." The Journal of Machine
         Learning Research 17.1 (2016): 2909-2913.
     .. [3] Descoteaux, Maxime, et al. "Regularized, fast, and robust analytical
-        Q‐ball imaging." Magnetic Resonance in Medicine: An Official Journal of
+        Q-ball imaging." Magnetic Resonance in Medicine: An Official Journal of
         the International Society for Magnetic Resonance in Medicine 58.3
         (2007): 497-510.
     """
