@@ -631,8 +631,9 @@ class FittedMultiCompartmentSphericalHarmonicsModel:
         sh_coef = self.fitted_parameters['sh_coeff']
         sh_0 = sh_coef[..., 0] ** 2
         sh_sum_squared = np.sum(sh_coef ** 2, axis=-1)
-        AI = np.sqrt(1 - sh_0 / sh_sum_squared)
-        AI[~self.mask] = 0.
+        AI = np.zeros_like(sh_0)
+        AI[self.mask] = np.sqrt(1 - sh_0[self.mask] /
+                                sh_sum_squared[self.mask])
         return AI
 
     def norm_of_laplacian_fod(self):
