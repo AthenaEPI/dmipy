@@ -12,8 +12,9 @@ The Dmipy software package facilitates the **reproducible estimation of diffusio
 - Any combination of tissue models (e.g. Gaussian, Cylinder, Sphere) and axon bundle representation (e.g. orientation-dispersed/diameter-distributed) can be combined into a multi-compartment model.
 - Any appropriate model can be orientation-dispersed and/or axon diameter-distributed.
 - Any predefined or custom parameter constraints or relations can be imposed.
-- Free choice of global optimizer to fit your model to the data (Brute-Force or Stochastic)
-- Ability to also fit the spherical mean of any multi-compartment model to the spherical mean of the data.
+- Free choice of global optimizer to fit your model to the data (Brute-Force or Stochastic).
+- Fit the spherical mean of any multi-compartment model to the spherical mean of the data.
+- Generalized multi-compartment constrained spherical deconvolution.
 
 **Human Connectome Project Data Interface**
 Dmipy enables you to directly download any HCP subject data using your own credentials.
@@ -65,7 +66,7 @@ To get a feeling for how to use Dmipy, we provide a few tutorial notebooks:
 - [Brute Force to Gradient Descent (Brute2Fine)](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_brute_force_optimization.ipynb)
 - [Stochastic (MIX) [Farooq et al. 2016]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_stochastic_mix_optimization.ipynb)
 ### Constrained Spherical Deconvolution Optimizers
-- General-Purpose Multi-Compartment CSD Optimizer
+- [Generalized Multi-Shell Multi-Compartment CSD [Tournier et al. 2007, Jeurissen et al. 2014]](https://github.com/AthenaEPI/dmipy/blob/refactor_cvxpy_csd/examples/example_generalized_csd_optimizer.ipynb)
 ## Dmipy implementations of Microstructure Models in Literature
 Dmipy uses HCP data to illustrate microstructure model examples. To reproduce these examples, dmipy provides a direct way to download HCP data (using your own AWS credentials) in the [HCP tutorial](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/tutorial_human_connectome_project_aws.ipynb).
 ### Single Bundle Models
