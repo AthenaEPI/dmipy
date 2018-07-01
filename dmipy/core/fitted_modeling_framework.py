@@ -646,14 +646,14 @@ class FittedMultiCompartmentSphericalHarmonicsModel:
 
         References
         ----------
-        .. [1] Fick, Rutger. "An Optimized Processing Framework for Fiber
-            Tracking on DW-MRI Applied to the Optic Radiation", Master Thesis
-            (2013).
-
+        .. [1] Descoteaux, Maxime, et al. "Regularized, fast, and robust
+            analytical Q‐ball imaging." Magnetic Resonance in Medicine: An
+            Official Journal of the International Society for Magnetic
+            Resonance in Medicine 58.3 (2007): 497-510.
         """
         sh_coef = self.fitted_parameters['sh_coeff']
         sh_l = sph_harm_ind_list(self.model.sh_order)[1]
-        lb_weights = sh_l * (sh_l + 1)  # laplace-beltrami
+        lb_weights = sh_l ** 2 * (sh_l + 1) ** 2  # laplace-beltrami
         norm_laplacian = np.sum(sh_coef ** 2 * lb_weights, axis=-1)
         return norm_laplacian
 

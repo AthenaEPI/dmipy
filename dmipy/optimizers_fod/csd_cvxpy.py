@@ -57,8 +57,10 @@ class CsdCvxpyOptimizer:
     .. [2] Diamond, Steven, and Stephen Boyd. "CVXPY: A Python-embedded
         modeling language for convex optimization." The Journal of Machine
         Learning Research 17.1 (2016): 2909-2913.
-    .. [3] Fick, Rutger. "An Optimized Processing Framework for Fiber Tracking
-        on DW-MRI Applied to the Optic Radiation", Master Thesis (2013).
+    .. [3] Descoteaux, Maxime, et al. "Regularized, fast, and robust analytical
+        Q‐ball imaging." Magnetic Resonance in Medicine: An Official Journal of
+        the International Society for Magnetic Resonance in Medicine 58.3
+        (2007): 497-510.
     """
 
     def __init__(self, acquisition_scheme, model, x0_vector=None, sh_order=8,
@@ -107,7 +109,7 @@ class CsdCvxpyOptimizer:
             self.vf_indices = np.where(np.hstack(vf_array))[0]
 
         sh_l = sph_harm_ind_list(sh_order)[1]
-        lb_weights = sh_l * (sh_l + 1)  # laplace-beltrami
+        lb_weights = sh_l ** 2 * (sh_l + 1) ** 2  # laplace-beltrami
         if self.model.volume_fractions_fixed:
             self.R_smoothness = np.diag(lb_weights)
         else:

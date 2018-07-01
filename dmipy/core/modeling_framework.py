@@ -1606,7 +1606,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             self.multiple_anisotropic_kernels = True
 
     def fit(self, acquisition_scheme, data, mask=None, solver='csd',
-            lambda_lb=5e-4, unity_constraint='kernel_dependent',
+            lambda_lb=1e-5, unity_constraint='kernel_dependent',
             use_parallel_processing=have_pathos, number_of_processors=None):
         """ The main data fitting function of a
         MultiCompartmentSphericalHarmonicsModel.
@@ -1676,9 +1676,10 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         .. [3] Jeurissen, Ben, et al. "Multi-tissue constrained spherical
             deconvolution for improved analysis of multi-shell diffusion MRI
             data." NeuroImage 103 (2014): 411-426.
-        .. [4] Fick, Rutger. "An Optimized Processing Framework for Fiber
-            Tracking on DW-MRI Applied to the Optic Radiation", Master Thesis
-            (2013).
+        .. [4] Descoteaux, Maxime, et al. "Regularized, fast, and robust
+            analytical Q‐ball imaging." Magnetic Resonance in Medicine: An
+            Official Journal of the International Society for Magnetic
+            Resonance in Medicine 58.3 (2007): 497-510.
         """
 
         self._check_if_kernel_parameters_are_fixed()

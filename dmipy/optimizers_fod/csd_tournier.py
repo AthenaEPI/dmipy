@@ -58,10 +58,12 @@ class CsdTournierOptimizer:
         "Robust determination of the fibre orientation distribution in
         diffusion MRI: non-negativity constrained super-resolved spherical
         deconvolution." Neuroimage 35.4 (2007): 1459-1472.
-    .. [2] Fick, Rutger. "An Optimized Processing Framework for Fiber
-        Tracking on DW-MRI Applied to the Optic Radiation", Master Thesis
-        (2013).
+    .. [2] Descoteaux, Maxime, et al. "Regularized, fast, and robust analytical
+        Q‐ball imaging." Magnetic Resonance in Medicine: An Official Journal of
+        the International Society for Magnetic Resonance in Medicine 58.3
+        (2007): 497-510.
     """
+
     def __init__(self, acquisition_scheme, model, x0_vector=None, sh_order=8,
                  lambda_pos=1., lambda_lb=5e-4, tau=0.1, max_iter=50,
                  unity_constraint=True, init_sh_order=4):
@@ -85,7 +87,7 @@ class CsdTournierOptimizer:
             self.sh_order, hemisphere.theta, hemisphere.phi)[0]
 
         sh_l = sph_harm_ind_list(sh_order)[1]
-        self.R_smoothness = np.diag(sh_l * (sh_l + 1))
+        self.R_smoothness = np.diag(sh_l ** 2 * (sh_l + 1) ** 2)
 
         # check if there is only one model. If so, precompute rh array.
         if self.model.volume_fractions_fixed:
