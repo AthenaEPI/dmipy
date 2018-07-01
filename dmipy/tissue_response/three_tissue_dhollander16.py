@@ -1,6 +1,10 @@
 from scipy.optimize import minimize
 from scipy.stats import pearsonr
 import numpy as np
+from dipy.reconst import dti
+from dmipy.core.acquisition_scheme import gtab_mipy2dipy
+from dipy.segment.mask import median_otsu
+from .wm_tournier12 import white_matter_response_tournier13
 
 
 def three_tissue_response_dhollander16(acquisition_scheme, data):
@@ -28,12 +32,67 @@ def three_tissue_response_dhollander16(acquisition_scheme, data):
         MR data without a co-registered T1 image. ISMRM Workshop on Breaking
         the Barriers of Diffusion MRI, 2016, 5
     """
-    pass
+    # Create Signal Decay Metric (SDM)
+    mean_b0 = np.mean(data[..., acquisition_scheme.b0_mask], axis=-1)
+    SDM = signal_decay_metric(acquisition_scheme, data)
+
+    # Make Mask
+    b0_mask, mask = median_otsu(data, 2, 1)
+    gtab = gtab_mipy2dipy(acquisition_scheme)
+    tenmod = dti.TensorModel(gtab)
+    tenfit = tenmod.fit(b0_mask)
+    fa = tenfit.fa
+    mask_WM = fa > 0.2
+
+    # Separate grey and CSF based on optimal threshold
+    opt = optimal_threshold(SDM, fa < 0.2)
+    mask_CSF = np.all([mean_b0 > 0, mask, fa < 0.2, SDM > opt], axis=0)
+    mask_GM = np.all([mean_b0 > 0, mask, fa < 0.2, SDM < opt], axis=0)
+
+    # Refine Mask, high WM SDM outliers above Q 3 +(Q 3 -Q 1 ) are removed.
+    median_WM = np.median(SDM[mask_WM])
+    Q1 = (SDM[mask_WM].min() + median_WM) / 2.0
+    Q3 = (SDM[mask_WM].max() + median_WM) / 2.0
+    SDM_upper_threshold = Q3 + (Q3 - Q1)
+    mask_WM_refine = np.all([mask_WM, SDM < SDM_upper_threshold], axis=0)
+    WM_outlier = np.all([mask_WM, SDM > SDM_upper_threshold], axis=0)
+
+    # For both the voxels below and above the GM SDM median, optimal thresholds
+    # [4] are computed and both parts closer to the initial GM median are
+    # retained.
+    SDM_GM = SDM[mask_GM]
+    median_GM = np.median(SDM_GM)
+    optimal_threshold_upper = optimal_threshold(SDM_GM, SDM_GM > median_GM)
+    optimal_threshold_lower = optimal_threshold(SDM_GM, SDM_GM < median_GM)
+    mask_GM_refine = np.all(
+        [mask_GM,
+         SDM > optimal_threshold_lower,
+         SDM < optimal_threshold_upper], axis=0)
+
+    # The high SDM outliers that were removed from the WM are reconsidered for
+    # the CSF if they have higher SDM than the current minimal CSF SDM.
+    SDM_CSF_min = SDM[mask_CSF].min()
+    WM_outlier_to_include = np.all([WM_outlier, SDM > SDM_CSF_min], axis=0)
+    mask_CSF_updated = np.any([mask_CSF, WM_outlier_to_include], axis=0)
+
+    # An optimal threshold [4] is computed for the resulting CSF and only the
+    # higher SDM valued voxels are retained.
+    optimal_threshold_CSF = optimal_threshold(SDM, mask_CSF_updated)
+    mask_CSF_refine = np.all(
+        [mask_CSF_updated, SDM > optimal_threshold_CSF], axis=0)
+
+    data_wm = data[mask_WM_refine]
+    response_wm = white_matter_response_tournier13(acquisition_scheme, data_wm)
+
+    response_csf = isotropic_tissue_response(
+        acquisition_scheme, data[mask_CSF_refine])
+    response_gm = isotropic_tissue_response(
+        acquisition_scheme, data[mask_GM_refine])
 
 
-def create_signal_decay_metric(acquisition_scheme, data):
-	"""
-	Parameters
+def signal_decay_metric(acquisition_scheme, data):
+    """
+    Parameters
     ----------
     acquisition_scheme : DmipyAcquisitionScheme instance,
         An acquisition scheme that has been instantiated using dMipy.
@@ -43,7 +102,7 @@ def create_signal_decay_metric(acquisition_scheme, data):
     Returns
     -------
     SDM : array of size data,
-    	Estimated Signal Decay Metric (SDK)
+        Estimated Signal Decay Metric (SDK)
     """
     mean_b0 = np.mean(data[..., acquisition_scheme.b0_mask], axis=-1)
     data_shape = data.shape[:-1]

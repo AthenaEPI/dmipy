@@ -617,6 +617,10 @@ class FittedMultiCompartmentSphericalHarmonicsModel:
         """
         return self.fitted_parameters['sh_coeff']
 
+    def peaks_from_fod(self):
+        "returns peak orientations"
+        pass
+
     def anisotropy_index(self):
         """
         Estimates anisotropy index of spherical harmonics [1]_.
