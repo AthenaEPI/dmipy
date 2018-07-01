@@ -12,8 +12,9 @@ The Dmipy software package facilitates the **reproducible estimation of diffusio
 - Any combination of tissue models (e.g. Gaussian, Cylinder, Sphere) and axon bundle representation (e.g. orientation-dispersed/diameter-distributed) can be combined into a multi-compartment model.
 - Any appropriate model can be orientation-dispersed and/or axon diameter-distributed.
 - Any predefined or custom parameter constraints or relations can be imposed.
-- Free choice of global optimizer to fit your model to the data (Brute-Force or Stochastic)
-- Ability to also fit the spherical mean of any multi-compartment model to the spherical mean of the data.
+- Free choice of global optimizer to fit your model to the data (Brute-Force or Stochastic).
+- Fit the spherical mean of any multi-compartment model to the spherical mean of the data.
+- Generalized multi-compartment constrained spherical deconvolution.
 
 **Human Connectome Project Data Interface**
 Dmipy enables you to directly download any HCP subject data using your own credentials.
