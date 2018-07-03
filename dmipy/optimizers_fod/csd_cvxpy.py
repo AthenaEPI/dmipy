@@ -97,7 +97,8 @@ class CsdCvxpyOptimizer:
             self.vf_indices = np.array([0])
         else:
             for model in self.model.models:
-                if 'orientation' in model.parameter_types.values():
+                if ('orientation' in model.parameter_types.values() or
+                        model._model_type is "AnisotropicTissueResponse"):
                     self.sh_start = self.Ncoef_total
                     sh_model = np.zeros(self.Ncoef)
                     sh_model[0] = 1

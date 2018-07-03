@@ -1,14 +1,18 @@
-from dti.reconst import dti
+from dipy.reconst import dti
 from dmipy.core.acquisition_scheme import gtab_mipy2dipy
 import numpy as np
 from dmipy.utils.spherical_convolution import real_sym_rh_basis
 from dmipy.utils.utils import cart2mu
-from .tissue_response_models import RF1AnisotropicTissueResponse
+from dipy.segment.mask import median_otsu
+from .tissue_response_models import RF1AnisotropicTissueResponseModel
+from scipy.ndimage import binary_erosion
+from dipy.data import get_sphere
 from dmipy.core.modeling_framework import (
     MultiCompartmentSphericalHarmonicsModel)
 
 
-def white_matter_response_tournier13(acquisition_scheme, data, rh_order=10):
+def white_matter_response_tournier13(
+        acquisition_scheme, data, rh_order=10, max_iter=5, sh_order=10):
     """
     Iterative model-free white matter response function estimation according to
     [1]_. Quoting the paper, the steps are the following:
@@ -50,29 +54,68 @@ def white_matter_response_tournier13(acquisition_scheme, data, rh_order=10):
         directions for high‐angular‐resolution diffusion‐weighted imaging."
         NMR in Biomedicine 26.12 (2013): 1775-1786.
     """
+    data_shape = np.atleast_2d(data).shape
+    N_voxels = int(np.prod(data_shape[:-1]))
+    N_select = 300
+    if N_voxels < 300:
+        msg = "The original algorithm uses 300 candidate voxels to estimate "
+        msg += "the tissue response. Currently only {} ".format(N_voxels)
+        msg += "candidate voxels given."
+        print(msg)
+        N_select = N_voxels
+
+    if data.ndim == 4:
+        # calculate brain mask on 4D data (x, y, z, DWI)
+        b0_mask, mask = median_otsu(data, 2, 1)
+        # needs to be eroded 3 times.
+        mask_eroded = binary_erosion(mask, iterations=3)
+        data_to_fit = data[mask_eroded]
+    else:
+        # can't calculate brain mask on other than 4D data.
+        # assume the data was prepared.
+        data_to_fit = data.reshape([-1, data_shape[-1]])
+
     gtab = gtab_mipy2dipy(acquisition_scheme)
     tenmod = dti.TensorModel(gtab)
-    tenfit = tenmod.fit(data)
+    tenfit = tenmod.fit(data_to_fit)
     fa = tenfit.fa
     evecs = tenfit.evecs
-    largest_fa_indices = np.argsort(fa)[-300:]
-    largest_fa_data = data[largest_fa_indices]
-    largest_fa_evecs = evecs[largest_fa_indices]
+    # selected based on FA
+    selected_indices = np.argsort(fa)[-N_select:]
+    sphere = get_sphere('symmetric724')
+    N_shells = acquisition_scheme.shell_indices.max()
+    # iterate until convergence
+    for it in range(max_iter):
+        print('Tournier13 white matter response iteration {}'.format(it + 1))
+        selected_data = data_to_fit[selected_indices]
+        selected_evecs = evecs[selected_indices]
 
-    rh_matrices = np.zeros((len(largest_fa_data),
-                            acquisition_scheme.N_shells,
-                            rh_order // 2 + 1))
-    for i in range(len(largest_fa_data)):
-        for shell_index in acquisition_scheme.unique_dwi_indices:
-            bvecs_rot = np.dot(acquisition_scheme.gradient_directions,
-                               largest_fa_evecs[i])
-            shell_mask = acquisition_scheme.shell_indices == shell_index
-            shell_bvecs_rot = bvecs_rot[shell_mask]
-            theta, phi = cart2mu(shell_bvecs_rot).T
-            rh_mat = real_sym_rh_basis(10, theta, phi)
-            rh_matrices[i, shell_index - 1] = np.dot(
-                np.linalg.pinv(rh_mat), largest_fa_data[i][shell_mask])
-    kernel_rh_coeff = np.mean(rh_matrices, axis=0)
-    response_model = RF1AnisotropicTissueResponse(kernel_rh_coeff)
-    sh_model = MultiCompartmentSphericalHarmonicsModel([response_model])
-    sh_fit = sh_model.fit(acquisition_scheme, largest_fa_data)
+        rh_matrices = np.zeros((len(selected_data),
+                                N_shells,
+                                rh_order // 2 + 1))
+        for i in range(len(selected_data)):
+            for shell_index in acquisition_scheme.unique_dwi_indices:
+                bvecs_rot = np.dot(acquisition_scheme.gradient_directions,
+                                   selected_evecs[i])
+                shell_mask = acquisition_scheme.shell_indices == shell_index
+                shell_bvecs_rot = bvecs_rot[shell_mask]
+                theta, phi = cart2mu(shell_bvecs_rot).T
+                rh_mat = real_sym_rh_basis(sh_order, theta, phi)
+                rh_matrices[i, shell_index - 1] = np.dot(
+                    np.linalg.pinv(rh_mat), selected_data[i][shell_mask])
+        kernel_rh_coeff = np.mean(rh_matrices, axis=0)
+        wm_model = RF1AnisotropicTissueResponseModel(kernel_rh_coeff)
+        sh_model = MultiCompartmentSphericalHarmonicsModel([wm_model],
+                                                           sh_order=sh_order)
+        sh_fit = sh_model.fit(acquisition_scheme, data_to_fit,
+                              solver='csd_tournier07',
+                              use_parallel_processing=False)
+        peaks, values, indices = sh_fit.peaks_directions(
+            sphere, max_peaks=2, relative_peak_threshold=0.)
+        ratio = values[..., 1] / values[..., 0]
+        selected_indices_old = selected_indices
+        selected_indices = np.argsort(ratio)[-N_select:]
+        if np.array_equal(selected_indices, selected_indices_old):
+            break
+    print('White matter response converged')
+    return wm_model

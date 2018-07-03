@@ -1596,7 +1596,8 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         orientation_counter = 0
         self.multiple_anisotropic_kernels = False
         for model in self.models:
-            if 'orientation' in model.parameter_types.values():
+            if ('orientation' in model.parameter_types.values() or
+                    model._model_type is "AnisotropicTissueResponse"):
                 orientation_counter += 1
         if orientation_counter == 0:
             msg = 'MultiCompartmentSphericalHarmonicsModel must at least have '

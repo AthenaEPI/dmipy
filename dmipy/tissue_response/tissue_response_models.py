@@ -1,7 +1,8 @@
 import numpy as np
+from ..core.modeling_framework import ModelProperties
 
 
-class RF1AnisotropicTissueResponseModel():
+class RF1AnisotropicTissueResponseModel(ModelProperties):
     r""" Anisotropic tissue response kernel.
 
     Parameters
@@ -20,14 +21,21 @@ class RF1AnisotropicTissueResponseModel():
     _parameter_ranges = {}
     _parameter_scales = {}
     _parameter_types = {}
-    _model_type = 'CompartmentModel'
+    _model_type = 'AnisotropicTissueResponse'
 
     def __init__(self, rotational_harmonics):
-        self.rotational_harmonics_representation = rotational_harmonics
-        self.spherical_mean = rotational_harmonics[:, 0] / (2 * np.sqrt(np.pi))
+        self._rotational_harmonics_representation = rotational_harmonics
+        self._spherical_mean = (
+            rotational_harmonics[:, 0] / (2 * np.sqrt(np.pi)))
+
+    def rotational_harmonics_representation(self, *kwargs):
+        return self._rotational_harmonics_representation
+
+    def spherical_mean(self, *kwargs):
+        return self._spherical_mean
 
 
-class RF2IsotropicTissueResponseModel():
+class RF2IsotropicTissueResponseModel(ModelProperties):
     r""" Isotropic tissue response kernel.
 
     Parameters
@@ -46,8 +54,15 @@ class RF2IsotropicTissueResponseModel():
     _parameter_ranges = {}
     _parameter_scales = {}
     _parameter_types = {}
-    _model_type = 'CompartmentModel'
+    _model_type = 'IsotropicTissueResponse'
 
     def __init__(self, rotational_harmonics):
-        self.rotational_harmonics_representation = rotational_harmonics
-        self.spherical_mean = rotational_harmonics[:, 0] / (2 * np.sqrt(np.pi))
+        self._rotational_harmonics_representation = rotational_harmonics
+        self._spherical_mean = (
+            rotational_harmonics[:, 0] / (2 * np.sqrt(np.pi)))
+
+    def rotational_harmonics_representation(self, *kwargs):
+        return self._rotational_harmonics_representation
+
+    def spherical_mean(self, *kwargs):
+        return self._spherical_mean
