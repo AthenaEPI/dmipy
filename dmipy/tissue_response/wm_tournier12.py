@@ -1,10 +1,8 @@
 from dipy.reconst import dti
 from dmipy.core.acquisition_scheme import gtab_mipy2dipy
 import numpy as np
-from dmipy.utils.spherical_convolution import real_sym_rh_basis
-from dmipy.utils.utils import cart2mu
 from dipy.segment.mask import median_otsu
-from .tissue_response_models import RF1AnisotropicTissueResponseModel
+from .tissue_response_models import AnisotropicTissueResponseModel
 from scipy.ndimage import binary_erosion
 from dipy.data import get_sphere
 from dmipy.core.modeling_framework import (
@@ -79,32 +77,17 @@ def white_matter_response_tournier13(
     tenmod = dti.TensorModel(gtab)
     tenfit = tenmod.fit(data_to_fit)
     fa = tenfit.fa
-    evecs = tenfit.evecs
+
     # selected based on FA
     selected_indices = np.argsort(fa)[-N_select:]
     sphere = get_sphere('symmetric724')
-    N_shells = acquisition_scheme.shell_indices.max()
     # iterate until convergence
     for it in range(max_iter):
         print('Tournier13 white matter response iteration {}'.format(it + 1))
         selected_data = data_to_fit[selected_indices]
-        selected_evecs = evecs[selected_indices]
 
-        rh_matrices = np.zeros((len(selected_data),
-                                N_shells,
-                                rh_order // 2 + 1))
-        for i in range(len(selected_data)):
-            for shell_index in acquisition_scheme.unique_dwi_indices:
-                bvecs_rot = np.dot(acquisition_scheme.gradient_directions,
-                                   selected_evecs[i])
-                shell_mask = acquisition_scheme.shell_indices == shell_index
-                shell_bvecs_rot = bvecs_rot[shell_mask]
-                theta, phi = cart2mu(shell_bvecs_rot).T
-                rh_mat = real_sym_rh_basis(sh_order, theta, phi)
-                rh_matrices[i, shell_index - 1] = np.dot(
-                    np.linalg.pinv(rh_mat), selected_data[i][shell_mask])
-        kernel_rh_coeff = np.mean(rh_matrices, axis=0)
-        wm_model = RF1AnisotropicTissueResponseModel(kernel_rh_coeff)
+        wm_model = AnisotropicTissueResponseModel(
+            acquisition_scheme, selected_data)
         sh_model = MultiCompartmentSphericalHarmonicsModel([wm_model],
                                                            sh_order=sh_order)
         sh_fit = sh_model.fit(acquisition_scheme, data_to_fit,

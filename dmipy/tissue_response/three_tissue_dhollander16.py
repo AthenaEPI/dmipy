@@ -5,9 +5,7 @@ from dipy.reconst import dti
 from dmipy.core.acquisition_scheme import gtab_mipy2dipy
 from dipy.segment.mask import median_otsu
 from .wm_tournier12 import white_matter_response_tournier13
-from dmipy.utils.utils import cart2mu
-from dmipy.utils.spherical_convolution import real_sym_rh_basis
-from .tissue_response_models import RF2IsotropicTissueResponseModel
+from .tissue_response_models import IsotropicTissueResponseModel
 
 
 def three_tissue_response_dhollander16(acquisition_scheme, data):
@@ -87,9 +85,9 @@ def three_tissue_response_dhollander16(acquisition_scheme, data):
     data_wm = data[mask_WM_refine]
     response_wm = white_matter_response_tournier13(acquisition_scheme, data_wm)
 
-    response_csf = isotropic_tissue_response(
+    response_csf = IsotropicTissueResponseModel(
         acquisition_scheme, data[mask_CSF_refine])
-    response_gm = isotropic_tissue_response(
+    response_gm = IsotropicTissueResponseModel(
         acquisition_scheme, data[mask_GM_refine])
 
     return response_wm, response_gm, response_csf
@@ -148,25 +146,3 @@ def optimal_threshold(image, mask):
 def _cost_function(threshold, image):
     rho = pearsonr(image, image > threshold)[0]
     return rho
-
-
-def isotropic_tissue_response(acquisition_scheme, data):
-    """
-    calculates the spherical mean and rotational harmonics for isotropic tissue
-    responses like grey matter and CSF.
-    """
-    sh_order = 0  # by definition
-    N_shells = acquisition_scheme.shell_indices.max()
-    rh_matrices = np.zeros((len(data),
-                            N_shells,
-                            sh_order // 2 + 1))
-    for i in range(len(data)):
-        for shell_index in acquisition_scheme.unique_dwi_indices:
-            shell_mask = acquisition_scheme.shell_indices == shell_index
-            shell_bvecs = acquisition_scheme.gradient_directions[shell_mask]
-            theta, phi = cart2mu(shell_bvecs).T
-            rh_mat = real_sym_rh_basis(sh_order, theta, phi)
-            rh_matrices[i, shell_index - 1] = np.dot(
-                np.linalg.pinv(rh_mat), data[i][shell_mask])
-    kernel_rh_coeff = np.mean(rh_matrices, axis=0)
-    return RF2IsotropicTissueResponseModel(kernel_rh_coeff)

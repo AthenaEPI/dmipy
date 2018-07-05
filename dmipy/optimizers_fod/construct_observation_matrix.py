@@ -39,8 +39,6 @@ def construct_model_based_A_matrix(acquisition_scheme, model_rh, lmax):
     """
     Ncoef = int((lmax + 2) * (lmax + 1) // 2)
     Ams = np.zeros([acquisition_scheme.number_of_measurements, Ncoef])
-    Ams[acquisition_scheme.b0_mask, 0] = 2 * np.sqrt(np.pi)
-
     sh_eigenvalues = np.zeros([len(model_rh), Ncoef])
 
     # prepare the rotational harmonics of the kernel
@@ -57,14 +55,19 @@ def construct_model_based_A_matrix(acquisition_scheme, model_rh, lmax):
         counter += coef_in_order
 
     # construct the multi-shell observation matrix.
-    for i, shell_index in enumerate(acquisition_scheme.unique_dwi_indices):
+    for shell_index in range(acquisition_scheme.shell_indices.max() + 1):
         shell_mask = acquisition_scheme.shell_indices == shell_index
-        shell_sh_matrix = acquisition_scheme.shell_sh_matrices[shell_index]
-        if Ncoef < shell_sh_matrix.shape[1]:
-            Ams[shell_mask, :Ncoef] = np.dot(
-                shell_sh_matrix[:, :Ncoef], np.diag(sh_eigenvalues[i]))
+        if acquisition_scheme.b0_mask[shell_mask][0]:
+            Ams[shell_mask, 0] = model_rh[shell_index, 0]
         else:
-            Ams[shell_mask, :shell_sh_matrix.shape[1]] = np.dot(
-                shell_sh_matrix,
-                np.diag(sh_eigenvalues[i, :shell_sh_matrix.shape[1]]))
+            shell_sh_matrix = acquisition_scheme.shell_sh_matrices[shell_index]
+            if Ncoef < shell_sh_matrix.shape[1]:
+                Ams[shell_mask, :Ncoef] = np.dot(
+                    shell_sh_matrix[:, :Ncoef],
+                    np.diag(sh_eigenvalues[shell_index]))
+            else:
+                Ams[shell_mask, :shell_sh_matrix.shape[1]] = np.dot(
+                    shell_sh_matrix,
+                    np.diag(sh_eigenvalues[shell_index,
+                                           :shell_sh_matrix.shape[1]]))
     return Ams

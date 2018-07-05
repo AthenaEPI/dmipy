@@ -127,7 +127,7 @@ class DmipyAcquisitionScheme:
         # coefficients to the positions on the sphere for every shell
         self.unique_dwi_indices = np.unique(self.shell_indices[~self.b0_mask])
         self.shell_sh_matrices = {}
-        self.shell_sh_orders = np.zeros(len(self.shell_bvalues))
+        self.shell_sh_orders = np.zeros(len(self.shell_bvalues), dtype=int)
         for shell_index in self.unique_dwi_indices:
             shell_mask = self.shell_indices == shell_index
             bvecs_shell = self.gradient_directions[shell_mask]
