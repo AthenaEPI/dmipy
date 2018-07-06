@@ -66,7 +66,7 @@ To get a feeling for how to use Dmipy, we provide a few tutorial notebooks:
 - [Brute Force to Gradient Descent (Brute2Fine)](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_brute_force_optimization.ipynb)
 - [Stochastic (MIX) [Farooq et al. 2016]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_stochastic_mix_optimization.ipynb)
 ### Constrained Spherical Deconvolution Optimizers
-- [Generalized Multi-Shell Multi-Compartment CSD [Tournier et al. 2007, Jeurissen et al. 2014]](https://github.com/AthenaEPI/dmipy/blob/refactor_cvxpy_csd/examples/example_generalized_csd_optimizer.ipynb)
+- [Generalized Multi-Shell Multi-Compartment CSD [Tournier et al. 2007, Jeurissen et al. 2014]]http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/example_generalized_csd_optimizer.ipynb)
 ## Dmipy implementations of Microstructure Models in Literature
 Dmipy uses HCP data to illustrate microstructure model examples. To reproduce these examples, dmipy provides a direct way to download HCP data (using your own AWS credentials) in the [HCP tutorial](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/tutorial_human_connectome_project_aws.ipynb).
 ### Single Bundle Models
