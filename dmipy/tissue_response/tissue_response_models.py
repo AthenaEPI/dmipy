@@ -7,12 +7,33 @@ from dipy.reconst import dti
 
 
 class AnisotropicTissueResponseModel(ModelProperties):
-    r""" Isotropic tissue response kernel.
+    r""" Estimates anistropic TissueResponseModel describing the convolution
+    kernel of e.g. anistropic white matter from array of candidate voxels [1]_.
+
+    First, Each candidate voxel is rotated such that the DTI eigenvector with
+    the largest eigenvalue is aligned with the z-axis. The rotational harmonic
+    (RH) coefficients (corresponding to Y_l0 spherical harmonics) are then
+    estimated and saved per acquisition shell. From the estimated
+    RH-coefficients the spherical mean per shell is also estimated.
+
+    Once estimated, this class behaves as a CompartmentModel object (so as if
+    it were e.g. a cylinder or Gaussian compartment), but has no parameters and
+    - if the S0 of the input is not normalized to one - also its S0-value will
+    not be one.
+
+    A TissueResponseModel has a rotational_harmonics_representation and a
+    spherical_mean, but no regular DWI representation. This means a
+    TissueResponseModel can be input to a MultiCompartmentSphericalMeanModel or
+    a MultiCompartmentSphericalHarmonicsModel, but NOT a regular
+    MultiCompartmentModel.
 
     Parameters
     ----------
-    rotational_harmonics : array, shape(Nshells, N_rh_coef),
-        Rotational harmonics coefficients for each shell.
+    acquisition_scheme : DmipyAcquisitionScheme instance,
+        An acquisition scheme that has been instantiated using dMipy.
+    data : 2D array of size (N_voxels, N_DWIs),
+            Candidate diffusion signal array to generate anisotropic tissue
+            response from.
 
     References
     ----------
@@ -21,7 +42,6 @@ class AnisotropicTissueResponseModel(ModelProperties):
         directions for high‐angular‐resolution diffusion‐weighted imaging."
         NMR in Biomedicine 26.12 (2013): 1775-1786.
     """
-
     _parameter_ranges = {}
     _parameter_scales = {}
     _parameter_types = {}
@@ -67,12 +87,32 @@ class AnisotropicTissueResponseModel(ModelProperties):
 
 
 class IsotropicTissueResponseModel(ModelProperties):
-    r""" Isotropic tissue response kernel.
+    r""" Estimates istropic TissueResponseModel describing the convolution
+    kernel of e.g. CSF or grey matter from array of candidate voxels [1]_.
+
+    First, for each acquisition shell, the zeroth order rotational harmonic
+    (RH) coefficient (so actually only the Y00 coefficient) is estimated. From
+    the estimated RH-coefficients the spherical mean per shell is also
+    estimated.
+
+    Once estimated, this class behaves as a CompartmentModel object (so as if
+    it were e.g. a cylinder or Gaussian compartment), but has no parameters and
+    - if the S0 of the input is not normalized to one - also its S0-value will
+    not be one.
+
+    A TissueResponseModel has a rotational_harmonics_representation and a
+    spherical_mean, but no regular DWI representation. This means a
+    TissueResponseModel can be input to a MultiCompartmentSphericalMeanModel or
+    a MultiCompartmentSphericalHarmonicsModel, but NOT a regular
+    MultiCompartmentModel.
 
     Parameters
     ----------
-    rotational_harmonics : array, shape(Nshells, N_rh_coef),
-        Rotational harmonics coefficients for each shell.
+    acquisition_scheme : DmipyAcquisitionScheme instance,
+        An acquisition scheme that has been instantiated using dMipy.
+    data : 2D array of size (N_voxels, N_DWIs),
+            Candidate diffusion signal array to generate anisotropic tissue
+            response from.
 
     References
     ----------

@@ -10,6 +10,13 @@ from .tissue_response_models import IsotropicTissueResponseModel
 
 def three_tissue_response_dhollander16(acquisition_scheme, data):
     """
+    Heuristic approach to estimating the white matter, grey matter and CSF
+    tissue response kernels [1]_, to be used in e.g. Multi-Tissue CSD [2]_. The
+    method makes used of so-called 'optimal' thresholds between grey-scale
+    images and segmentations [3]_, with iteratively refined binary thresholds
+    based on an ad-hoc 'signal decay metric', to finally find candidate voxels
+    to estimate the three tissue response kernels from.
+
     Parameters
     ----------
     acquisition_scheme : DmipyAcquisitionScheme instance,
@@ -32,6 +39,13 @@ def three_tissue_response_dhollander16(acquisition_scheme, data):
         response function estimation from single-shell or multi-shell diffusion
         MR data without a co-registered T1 image. ISMRM Workshop on Breaking
         the Barriers of Diffusion MRI, 2016, 5
+    .. [2] Tournier, J‐Donald, Fernando Calamante, and Alan Connelly.
+        "Determination of the appropriate b value and number of gradient
+        directions for high‐angular‐resolution diffusion‐weighted imaging."
+        NMR in Biomedicine 26.12 (2013): 1775-1786.
+    .. [3] Ridgway, Gerard R., et al. "Issues with threshold masking in
+        voxel-based morphometry of atrophied brains." Neuroimage 44.1 (2009):
+        99-111.
     """
     # Create Signal Decay Metric (SDM)
     mean_b0 = np.mean(data[..., acquisition_scheme.b0_mask], axis=-1)
@@ -95,6 +109,11 @@ def three_tissue_response_dhollander16(acquisition_scheme, data):
 
 def signal_decay_metric(acquisition_scheme, data):
     """
+    Estimation of the Signal Decay Metric (SDM) for the three-tissue tissue
+    response kernel estimation [1]_. The metric is a simple division of the S0
+    signal intensity by the b>0 shell's signal intensity - of the mean of their
+    intensities if there are multiple shells.
+
     Parameters
     ----------
     acquisition_scheme : DmipyAcquisitionScheme instance,
@@ -106,6 +125,13 @@ def signal_decay_metric(acquisition_scheme, data):
     -------
     SDM : array of size data,
         Estimated Signal Decay Metric (SDK)
+
+    References
+    ----------
+    .. [1] Dhollander, T.; Raffelt, D. & Connelly, A. Unsupervised 3-tissue
+        response function estimation from single-shell or multi-shell diffusion
+        MR data without a co-registered T1 image. ISMRM Workshop on Breaking
+        the Barriers of Diffusion MRI, 2016, 5
     """
     mean_b0 = np.mean(data[..., acquisition_scheme.b0_mask], axis=-1)
     data_shape = data.shape[:-1]
@@ -123,7 +149,7 @@ def signal_decay_metric(acquisition_scheme, data):
 
 
 def optimal_threshold(image, mask):
-    """optimal image threshold based on pearson correlation [1]_.
+    """Optimal image threshold based on pearson correlation [1]_.
     T* = argmin_T (\rho(image, image>T))
 
     References
@@ -144,5 +170,6 @@ def optimal_threshold(image, mask):
 
 
 def _cost_function(threshold, image):
+    "The cost function used by the optimal_threshold function."
     rho = pearsonr(image, image > threshold)[0]
     return rho

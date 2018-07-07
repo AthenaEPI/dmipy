@@ -10,7 +10,7 @@ from dmipy.core.modeling_framework import (
 
 
 def white_matter_response_tournier13(
-        acquisition_scheme, data, rh_order=10, max_iter=5, sh_order=10):
+        acquisition_scheme, data, max_iter=5, sh_order=10):
     """
     Iterative model-free white matter response function estimation according to
     [1]_. Quoting the paper, the steps are the following:
@@ -38,12 +38,18 @@ def white_matter_response_tournier13(
     acquisition_scheme : DmipyAcquisitionScheme instance,
         An acquisition scheme that has been instantiated using dMipy.
     data : NDarray,
-            Measured diffusion signal array.
+        Measured diffusion signal array.
+    max_iter : Positive integer,
+        Defines the maximum amount of iterations to be done for the single-
+        fibre response kernel.
+    sh_order : Positive even integer,
+        Maximum spherical harmonics order to be used in the FOD estimation for
+        the single-fibre response kernel.
 
     Returns
     -------
     wm_model : Dmipy Anisotropic ModelFree Model
-            ModelFree representation of white matter response.
+        ModelFree representation of white matter response.
 
     References
     ----------
