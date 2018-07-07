@@ -2,7 +2,8 @@ from dipy.reconst import dti
 from dmipy.core.acquisition_scheme import gtab_mipy2dipy
 import numpy as np
 from dipy.segment.mask import median_otsu
-from .tissue_response_models import AnisotropicTissueResponseModel
+from ..signal_models.tissue_response_models import (
+    AnisotropicTissueResponseModel)
 from scipy.ndimage import binary_erosion
 from dipy.data import get_sphere
 from dmipy.core.modeling_framework import (

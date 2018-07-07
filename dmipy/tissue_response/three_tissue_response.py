@@ -4,8 +4,8 @@ import numpy as np
 from dipy.reconst import dti
 from dmipy.core.acquisition_scheme import gtab_mipy2dipy
 from dipy.segment.mask import median_otsu
-from .wm_tournier12 import white_matter_response_tournier13
-from .tissue_response_models import IsotropicTissueResponseModel
+from .white_matter_response import white_matter_response_tournier13
+from ..signal_models.tissue_response_models import IsotropicTissueResponseModel
 
 
 def three_tissue_response_dhollander16(acquisition_scheme, data):
@@ -15,7 +15,7 @@ def three_tissue_response_dhollander16(acquisition_scheme, data):
     method makes used of so-called 'optimal' thresholds between grey-scale
     images and segmentations [3]_, with iteratively refined binary thresholds
     based on an ad-hoc 'signal decay metric', to finally find candidate voxels
-    to estimate the three tissue response kernels from.
+    from which to estimate the three tissue response kernels.
 
     Parameters
     ----------

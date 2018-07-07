@@ -1,6 +1,6 @@
 from dmipy.signal_models.gaussian_models import G1Ball, G2Zeppelin
 from dmipy.data.saved_acquisition_schemes import wu_minn_hcp_acquisition_scheme
-from dmipy.tissue_response.tissue_response_models import (
+from dmipy.signal_models.tissue_response_models import (
     IsotropicTissueResponseModel,
     AnisotropicTissueResponseModel)
 import numpy as np
