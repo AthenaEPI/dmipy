@@ -59,6 +59,11 @@ class AnisotropicTissueResponseModel(ModelProperties):
              acquisition_scheme.shell_sh_orders.max() // 2 + 1))
 
         for i in range(len(data)):
+            # dipy's evecs are automatically ordered such that
+            # lambda1 > lambda2 > lambda3 in xyz coordinate system. To estimate
+            # rotational harmonics we need the eigenvector corresponding to the
+            # largest lambda1 to be along the z-axis. This is why we rotate
+            # the gradient directions with the reverse of the dti eigenvectors.
             bvecs_rot = np.dot(acquisition_scheme.gradient_directions,
                                evecs[i][:, ::-1])
             for shell_index in range(N_shells + 1):
