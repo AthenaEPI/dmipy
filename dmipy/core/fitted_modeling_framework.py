@@ -658,9 +658,11 @@ class FittedMultiCompartmentSphericalHarmonicsModel:
             fod = fods[pos]
             peaks_, values_, indices_ = peak_directions(
                 fod, sphere, relative_peak_threshold, min_separation_angle)
-            peaks[pos, :max_peaks] = peaks_[:max_peaks]
-            values[pos, :max_peaks] = values_[:max_peaks]
-            indices[pos, :max_peaks] = indices_[:max_peaks]
+            # if less peaks than max_peaks are found, only take those.
+            Npeaks = np.min([len(indices_), max_peaks])
+            peaks[pos, :Npeaks] = peaks_[:Npeaks]
+            values[pos, :Npeaks] = values_[:Npeaks]
+            indices[pos, :Npeaks] = indices_[:Npeaks]
         return peaks, values, indices
 
     def anisotropy_index(self):

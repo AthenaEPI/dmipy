@@ -5,7 +5,7 @@ from dipy.segment.mask import median_otsu
 from ..signal_models.tissue_response_models import (
     AnisotropicTissueResponseModel)
 from scipy.ndimage import binary_erosion
-from dipy.data import get_sphere
+from dipy.data import get_sphere, HemiSphere
 from dmipy.core.modeling_framework import (
     MultiCompartmentSphericalHarmonicsModel)
 
@@ -88,6 +88,7 @@ def white_matter_response_tournier13(
     # selected based on FA
     selected_indices = np.argsort(fa)[-N_select:]
     sphere = get_sphere('symmetric724')
+    hemisphere = HemiSphere(theta=sphere.theta, phi=sphere.phi)
     # iterate until convergence
     for it in range(max_iter):
         print('Tournier13 white matter response iteration {}'.format(it + 1))
@@ -101,7 +102,7 @@ def white_matter_response_tournier13(
                               solver='csd_tournier07',
                               use_parallel_processing=False)
         peaks, values, indices = sh_fit.peaks_directions(
-            sphere, max_peaks=2, relative_peak_threshold=0.)
+            hemisphere, max_peaks=2, relative_peak_threshold=0.)
         ratio = values[..., 1] / values[..., 0]
         selected_indices_old = selected_indices
         selected_indices = np.argsort(ratio)[-N_select:]
