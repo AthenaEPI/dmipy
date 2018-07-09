@@ -57,6 +57,7 @@ class AnisotropicTissueResponseModel(ModelProperties):
             (len(data),
              N_shells + 1,
              acquisition_scheme.shell_sh_orders.max() // 2 + 1))
+        self.S0_response = np.mean(data[:, acquisition_scheme.b0_mask])
 
         for i in range(len(data)):
             # dipy's evecs are automatically ordered such that
@@ -79,7 +80,7 @@ class AnisotropicTissueResponseModel(ModelProperties):
                     rh_matrices[i, shell_index, :shell_sh // 2 + 1] = np.dot(
                         np.linalg.pinv(rh_mat), data[i][shell_mask])
         self._rotational_harmonics_representation = np.mean(
-            rh_matrices, axis=0)
+            rh_matrices, axis=0) / self.S0_response
         self._spherical_mean = (
             self._rotational_harmonics_representation[:, 0] /
             (2 * np.sqrt(np.pi)))
@@ -135,6 +136,7 @@ class IsotropicTissueResponseModel(ModelProperties):
     def __init__(self, acquisition_scheme, data):
         N_shells = acquisition_scheme.shell_indices.max()
         rh_matrices = np.zeros((len(data), N_shells + 1, 1))
+        self.S0_response = np.mean(data[:, acquisition_scheme.b0_mask])
 
         for i in range(len(data)):
             for shell_index in range(N_shells + 1):
@@ -142,7 +144,7 @@ class IsotropicTissueResponseModel(ModelProperties):
                 rh_matrices[i, shell_index, 0] = (
                     np.mean(data[i][shell_mask]) * 2 * np.sqrt(np.pi))
         self._rotational_harmonics_representation = np.mean(
-            rh_matrices, axis=0)
+            rh_matrices, axis=0) / self.S0_response
         self._spherical_mean = (
             self._rotational_harmonics_representation[:, 0] /
             (2 * np.sqrt(np.pi)))
