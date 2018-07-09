@@ -110,7 +110,7 @@ class CsdCvxpyOptimizer:
             self.vf_indices = np.where(np.hstack(vf_array))[0]
 
         sh_l = sph_harm_ind_list(sh_order)[1]
-        lb_weights = sh_l ** 2 * (sh_l + 1) ** 2  # laplace-beltrami
+        lb_weights = sh_l ** 2 * (sh_l + 1) ** 2  # laplace-beltrami [3]
         if self.model.volume_fractions_fixed:
             self.R_smoothness = np.diag(lb_weights)
         else:
