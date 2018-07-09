@@ -4,11 +4,17 @@ import numpy as np
 from dipy.reconst import dti
 from dmipy.core.acquisition_scheme import gtab_mipy2dipy
 from dipy.segment.mask import median_otsu
-from .white_matter_response import white_matter_response_tournier13
+import white_matter_response
 from ..signal_models.tissue_response_models import IsotropicTissueResponseModel
 
+_white_matter_response_algorithms = {
+    'tournier07': white_matter_response.white_matter_response_tournier07,
+    'tournier13': white_matter_response.white_matter_response_tournier13,
+}
 
-def three_tissue_response_dhollander16(acquisition_scheme, data):
+
+def three_tissue_response_dhollander16(
+        acquisition_scheme, data, wm_algorithm='tournier07', **kwargs):
     """
     Heuristic approach to estimating the white matter, grey matter and CSF
     tissue response kernels [1]_, to be used in e.g. Multi-Tissue CSD [2]_. The
@@ -97,7 +103,9 @@ def three_tissue_response_dhollander16(acquisition_scheme, data):
         [mask_CSF_updated, SDM > optimal_threshold_CSF], axis=0)
 
     data_wm = data[mask_WM_refine]
-    response_wm = white_matter_response_tournier13(acquisition_scheme, data_wm)
+
+    response_wm_algorithm = _white_matter_response_algorithms[wm_algorithm]
+    response_wm = response_wm_algorithm(acquisition_scheme, data_wm, **kwargs)
 
     response_csf = IsotropicTissueResponseModel(
         acquisition_scheme, data[mask_CSF_refine])
