@@ -23,8 +23,9 @@ def test_isotropic_response():
         ball.rotational_harmonics_representation(scheme))
 
 
-def test_anisotropic_response():
-    zeppelin = G2Zeppelin(lambda_par=1.7e-9, lambda_perp=1e-9, mu=[.2, .7])
+def test_anisotropic_response_rh_coef_attenuation(mu=[np.pi / 2, np.pi / 2]):
+    zeppelin = G2Zeppelin(
+        lambda_par=1.7e-9, lambda_perp=1e-9, mu=mu)
     data = zeppelin(scheme)
     aniso_model = AnisotropicTissueResponseModel(scheme, np.atleast_2d(data))
 
@@ -34,6 +35,25 @@ def test_anisotropic_response():
     assert_array_almost_equal(
         aniso_model.rotational_harmonics_representation()[1:],
         zeppelin.rotational_harmonics_representation(scheme), 3)
+    assert_array_almost_equal(
+        aniso_model(scheme, mu=mu), data, 3)
+
+
+def test_anisotropic_response_rh_coef_signal(
+        S0=100., mu=[np.pi / 2, np.pi / 2]):
+    zeppelin = G2Zeppelin(
+        lambda_par=1.7e-9, lambda_perp=1e-9, mu=mu)
+    data = zeppelin(scheme) * S0
+    aniso_model = AnisotropicTissueResponseModel(scheme, np.atleast_2d(data))
+
+    assert_array_almost_equal(
+        aniso_model.spherical_mean(),
+        zeppelin.spherical_mean(scheme), 3)
+    assert_array_almost_equal(
+        aniso_model.rotational_harmonics_representation()[1:],
+        zeppelin.rotational_harmonics_representation(scheme), 3)
+    assert_array_almost_equal(
+        aniso_model(scheme, mu=mu), data / S0, 3)
 
 
 def test_isotropic_convolution_kernel():

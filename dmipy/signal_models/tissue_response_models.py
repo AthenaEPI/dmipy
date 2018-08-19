@@ -2,6 +2,7 @@ import numpy as np
 from dmipy.utils.utils import cart2mu
 from dmipy.utils.spherical_convolution import real_sym_rh_basis
 from ..core.modeling_framework import ModelProperties
+from ..utils import utils
 from dmipy.core.acquisition_scheme import gtab_mipy2dipy
 from dipy.reconst import dti
 
@@ -42,12 +43,13 @@ class AnisotropicTissueResponseModel(ModelProperties):
         directions for high‐angular‐resolution diffusion‐weighted imaging."
         NMR in Biomedicine 26.12 (2013): 1775-1786.
     """
-    _parameter_ranges = {}
-    _parameter_scales = {}
-    _parameter_types = {}
+    _parameter_ranges = {'mu': ([0, np.pi], [-np.pi, np.pi])}
+    _parameter_ranges = {'mu': np.r_[1., 1.]}
+    _parameter_types = {'mu': 'orientation'}
     _model_type = 'AnisotropicTissueResponse'
 
-    def __init__(self, acquisition_scheme, data):
+    def __init__(self, acquisition_scheme, data, mu=None):
+        self.mu = mu
         gtab = gtab_mipy2dipy(acquisition_scheme)
         tenmod = dti.TensorModel(gtab)
         tenfit = tenmod.fit(data)
@@ -85,11 +87,38 @@ class AnisotropicTissueResponseModel(ModelProperties):
             self._rotational_harmonics_representation[:, 0] /
             (2 * np.sqrt(np.pi)))
 
-    def rotational_harmonics_representation(self, *kwargs):
+    def __call__(self, acquisition_scheme, **kwargs):
+        # rotate gradient vectors according to orientation parameters
+        mu = kwargs.get('mu', self.mu)
+        mu = utils.unitsphere2cart_1d(mu)
+        R = utils.rotation_matrix_001_to_xyz(*mu)
+        bvecs = acquisition_scheme.gradient_directions
+        bvecs_rot = np.dot(bvecs, R)
+
+        rh_coef = self._rotational_harmonics_representation
+        E = np.ones_like(acquisition_scheme.bvalues)
+        N_shells = acquisition_scheme.shell_indices.max()
+        for shell_index in range(N_shells + 1):
+            shell_sh = acquisition_scheme.shell_sh_orders[shell_index]
+            shell_mask = acquisition_scheme.shell_indices == shell_index
+            if acquisition_scheme.b0_mask[shell_mask][0]:
+                E[shell_mask] = rh_coef[shell_index, 0] / (2 * np.sqrt(np.pi))
+            else:
+                shell_bvecs = bvecs_rot[shell_mask]
+                theta, phi = cart2mu(shell_bvecs).T
+                rh_mat = real_sym_rh_basis(shell_sh, theta, phi)
+                E[shell_mask] = np.dot(
+                    rh_mat, rh_coef[shell_index, :shell_sh // 2 + 1])
+        return E
+
+    def rotational_harmonics_representation(self, **kwargs):
         return self._rotational_harmonics_representation
 
-    def spherical_mean(self, *kwargs):
+    def spherical_mean(self, **kwargs):
         return self._spherical_mean
+
+    def tissue_response(self, **kwargs):
+        return self.S0_response * self._spherical_mean
 
 
 class IsotropicTissueResponseModel(ModelProperties):
@@ -106,11 +135,10 @@ class IsotropicTissueResponseModel(ModelProperties):
     - if the S0 of the input is not normalized to one - also its S0-value will
     not be one.
 
-    A TissueResponseModel has a rotational_harmonics_representation and a
-    spherical_mean, but no regular DWI representation. This means a
-    TissueResponseModel can be input to a MultiCompartmentSphericalMeanModel or
-    a MultiCompartmentSphericalHarmonicsModel, but NOT a regular
-    MultiCompartmentModel.
+    A TissueResponseModel has a standard, rotational_harmonics_representation
+    and a spherical_mean, just like a regular CompartmentModel. As such, a
+    TissueResponseModel can be input to all the usual MultiCompartmentModel
+    representations.
 
     Parameters
     ----------
@@ -149,8 +177,16 @@ class IsotropicTissueResponseModel(ModelProperties):
             self._rotational_harmonics_representation[:, 0] /
             (2 * np.sqrt(np.pi)))
 
-    def rotational_harmonics_representation(self, *kwargs):
+    def __call__(self, **kwargs):
+        """ for isotropic models, the spherical mean is the same as the DWI
+        intensity. """
+        return self._spherical_mean
+
+    def rotational_harmonics_representation(self, **kwargs):
         return self._rotational_harmonics_representation
 
-    def spherical_mean(self, *kwargs):
+    def spherical_mean(self, **kwargs):
         return self._spherical_mean
+
+    def tissue_response(self, **kwargs):
+        return self.S0_response * self._spherical_mean
