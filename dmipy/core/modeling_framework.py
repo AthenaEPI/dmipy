@@ -1525,6 +1525,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         self._prepare_parameters_to_optimize()
         self._add_spherical_harmonics_parameters(sh_order)
         self._check_that_one_anisotropic_kernel_is_present()
+        # self._check_for_tissue_response_models()
 
         self.x0_parameters = {}
         self.sh_order = sh_order
@@ -1596,8 +1597,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         orientation_counter = 0
         self.multiple_anisotropic_kernels = False
         for model in self.models:
-            if ('orientation' in model.parameter_types.values() or
-                    model._model_type is "AnisotropicTissueResponse"):
+            if 'orientation' in model.parameter_types.values():
                 orientation_counter += 1
         if orientation_counter == 0:
             msg = 'MultiCompartmentSphericalHarmonicsModel must at least have '
@@ -1605,6 +1605,14 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             raise ValueError(msg)
         if orientation_counter > 1:
             self.multiple_anisotropic_kernels = True
+
+    # def _check_for_tissue_response_models(self):
+    #     tissue_model_names = ['AnisotropicTissueResponse',
+    #                           'IsotropicTissueResponse']
+    #     self.tissue_response_kernels_present = False
+    #     for model in self.models:
+    #         if model._model_type in tissue_model_names:
+    #             self.tissue_response_kernels_present = True
 
     def fit(self, acquisition_scheme, data, mask=None, solver='csd',
             lambda_lb=1e-5, unity_constraint='kernel_dependent',
@@ -1682,7 +1690,6 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             Official Journal of the International Society for Magnetic
             Resonance in Medicine 58.3 (2007): 497-510.
         """
-
         self._check_if_kernel_parameters_are_fixed()
 
         self.voxel_varying_kernel = False
@@ -1696,9 +1703,14 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         else:
             self.unity_constraint = unity_constraint
 
+        # S0_responses = np.array([model.S0_response for model in self.models])
+        # self.relative_responses = S0_responses / np.max(S0_responses)
+
         # estimate S0
         self.scheme = acquisition_scheme
         data_ = np.atleast_2d(data)
+        # if self.tissue_response_kernels_present:
+        #     S0 = np.ones(data_.shape[:-1], dtype=float) * S0_responses.max()
         if self.scheme.TE is None or len(np.unique(self.scheme.TE)) == 1:
             S0 = np.mean(data_[..., self.scheme.b0_mask], axis=-1)
         else:  # if multiple TE are in the data

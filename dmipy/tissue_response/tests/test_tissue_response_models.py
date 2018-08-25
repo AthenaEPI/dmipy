@@ -19,7 +19,7 @@ def test_isotropic_response():
         iso_model.spherical_mean(),
         ball.spherical_mean(scheme))
     assert_array_almost_equal(
-        iso_model.rotational_harmonics_representation()[1:],
+        iso_model.rotational_harmonics_representation(),
         ball.rotational_harmonics_representation(scheme))
 
 
@@ -33,7 +33,7 @@ def test_anisotropic_response_rh_coef_attenuation(mu=[np.pi / 2, np.pi / 2]):
         aniso_model.spherical_mean(),
         zeppelin.spherical_mean(scheme), 3)
     assert_array_almost_equal(
-        aniso_model.rotational_harmonics_representation()[1:],
+        aniso_model.rotational_harmonics_representation(),
         zeppelin.rotational_harmonics_representation(scheme), 3)
     assert_array_almost_equal(
         aniso_model(scheme, mu=mu), data, 3)
@@ -50,7 +50,7 @@ def test_anisotropic_response_rh_coef_signal(
         aniso_model.spherical_mean(),
         zeppelin.spherical_mean(scheme), 3)
     assert_array_almost_equal(
-        aniso_model.rotational_harmonics_representation()[1:],
+        aniso_model.rotational_harmonics_representation(),
         zeppelin.rotational_harmonics_representation(scheme), 3)
     assert_array_almost_equal(
         aniso_model(scheme, mu=mu), data / S0, 3)

@@ -97,8 +97,7 @@ class CsdCvxpyOptimizer:
             self.vf_indices = np.array([0])
         else:
             for model in self.model.models:
-                if ('orientation' in model.parameter_types.values() or
-                        model._model_type is "AnisotropicTissueResponse"):
+                if 'orientation' in model.parameter_types.values():
                     self.sh_start = self.Ncoef_total
                     sh_model = np.zeros(self.Ncoef)
                     sh_model[0] = 1
@@ -250,8 +249,7 @@ class CsdCvxpyOptimizer:
                 model_rh = (
                     model.rotational_harmonics_representation(
                         self.acquisition_scheme, **parameters))
-                if ('orientation' in model.parameter_types.values() or
-                        model._model_type is "AnisotropicTissueResponse"):
+                if 'orientation' in model.parameter_types.values():
                     kernel.append(construct_model_based_A_matrix(
                         self.acquisition_scheme, model_rh, self.sh_order))
                 else:

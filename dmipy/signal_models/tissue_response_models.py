@@ -44,7 +44,7 @@ class AnisotropicTissueResponseModel(ModelProperties):
         NMR in Biomedicine 26.12 (2013): 1775-1786.
     """
     _parameter_ranges = {'mu': ([0, np.pi], [-np.pi, np.pi])}
-    _parameter_ranges = {'mu': np.r_[1., 1.]}
+    _parameter_scales = {'mu': np.r_[1., 1.]}
     _parameter_types = {'mu': 'orientation'}
     _model_type = 'AnisotropicTissueResponse'
 
@@ -58,7 +58,7 @@ class AnisotropicTissueResponseModel(ModelProperties):
         rh_matrices = np.zeros(
             (len(data),
              N_shells + 1,
-             acquisition_scheme.shell_sh_orders.max() // 2 + 1))
+             int(acquisition_scheme.shell_sh_orders.max() // 2 + 1)))
         self.S0_response = np.mean(data[:, acquisition_scheme.b0_mask])
 
         for i in range(len(data)):
@@ -111,10 +111,11 @@ class AnisotropicTissueResponseModel(ModelProperties):
                     rh_mat, rh_coef[shell_index, :shell_sh // 2 + 1])
         return E
 
-    def rotational_harmonics_representation(self, **kwargs):
-        return self._rotational_harmonics_representation
+    def rotational_harmonics_representation(
+            self, acquisition_scheme=None, **kwargs):
+        return self._rotational_harmonics_representation[1:]
 
-    def spherical_mean(self, **kwargs):
+    def spherical_mean(self, acquisition_scheme=None, **kwargs):
         return self._spherical_mean
 
     def tissue_response(self, **kwargs):
@@ -182,10 +183,11 @@ class IsotropicTissueResponseModel(ModelProperties):
         intensity. """
         return self._spherical_mean
 
-    def rotational_harmonics_representation(self, **kwargs):
-        return self._rotational_harmonics_representation
+    def rotational_harmonics_representation(
+            self, acquisition_scheme=None, **kwargs):
+        return self._rotational_harmonics_representation[1:]
 
-    def spherical_mean(self, **kwargs):
+    def spherical_mean(self, acquisition_scheme=None, **kwargs):
         return self._spherical_mean
 
     def tissue_response(self, **kwargs):
