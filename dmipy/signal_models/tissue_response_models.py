@@ -38,15 +38,15 @@ class AnisotropicTissueResponseModel(ModelProperties):
 
     References
     ----------
-    .. [1] Tournier, J‐Donald, Fernando Calamante, and Alan Connelly.
-        "Determination of the appropriate b value and number of gradient
-        directions for high‐angular‐resolution diffusion‐weighted imaging."
+    .. [1] Tournier, J-Donald, Fernando Calamante, and Alan Connelly.
+        "Determination of the appropriate b-value and number of gradient
+        directions for high-angular-resolution diffusion-weighted imaging."
         NMR in Biomedicine 26.12 (2013): 1775-1786.
     """
     _parameter_ranges = {'mu': ([0, np.pi], [-np.pi, np.pi])}
     _parameter_scales = {'mu': np.r_[1., 1.]}
     _parameter_types = {'mu': 'orientation'}
-    _model_type = 'AnisotropicTissueResponse'
+    _model_type = 'TissueResponseModel'
 
     def __init__(self, acquisition_scheme, data, mu=None):
         self.mu = mu
@@ -151,16 +151,15 @@ class IsotropicTissueResponseModel(ModelProperties):
 
     References
     ----------
-    .. [1] Tournier, J‐Donald, Fernando Calamante, and Alan Connelly.
-        "Determination of the appropriate b value and number of gradient
-        directions for high‐angular‐resolution diffusion‐weighted imaging."
+    .. [1] Tournier, J-Donald, Fernando Calamante, and Alan Connelly.
+        "Determination of the appropriate b-value and number of gradient
+        directions for high-angular-resolution diffusion-weighted imaging."
         NMR in Biomedicine 26.12 (2013): 1775-1786.
     """
-
     _parameter_ranges = {}
     _parameter_scales = {}
     _parameter_types = {}
-    _model_type = 'IsotropicTissueResponse'
+    _model_type = 'TissueResponseModel'
 
     def __init__(self, acquisition_scheme, data):
         N_shells = acquisition_scheme.shell_indices.max()
