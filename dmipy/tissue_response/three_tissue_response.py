@@ -8,8 +8,7 @@ import white_matter_response
 from ..signal_models.tissue_response_models import IsotropicTissueResponseModel
 
 _white_matter_response_algorithms = {
-    'tournier07': white_matter_response.white_matter_response_tournier07,
-    'tournier13': white_matter_response.white_matter_response_tournier13,
+    'tournier07': white_matter_response.white_matter_response_tournier07
 }
 
 
