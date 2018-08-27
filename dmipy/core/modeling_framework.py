@@ -703,7 +703,8 @@ class MultiCompartmentModelProperties:
             {(None, 'fraction'): parameter_name})
 
     def visualize_model_setup(
-            self, view=True, cleanup=True, with_parameters=False):
+            self, view=True, cleanup=True, with_parameters=False,
+            im_format='png'):
         """
         Visualizes MultiCompartmentModel setup using graphviz module. It uses
         the uuid module to create a unique identifier for each model in the
@@ -727,7 +728,7 @@ class MultiCompartmentModelProperties:
         with_parameters: boolean,
             Whether or not to also visualize the parameters of each model.
         """
-        dot = Digraph('Model Setup')
+        dot = Digraph('Model Setup', format=im_format)
         base_model = self.__class__.__name__
         base_uuid = str(uuid4())
         dot.node(base_uuid, base_model)
