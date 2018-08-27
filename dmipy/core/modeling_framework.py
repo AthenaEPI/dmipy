@@ -791,6 +791,35 @@ class MultiCompartmentModelProperties:
             graph_model.node(parameter_uuid, parameter_name)
             graph_model.edge(parameter_uuid, entry_uuid)
 
+    def _check_tissue_model_acquisition_scheme(self, acquisition_scheme):
+        """Tests if acquisition scheme between MC-model and tissue response
+        model are the same.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        """
+        for model in self.models:
+            if model._model_type == 'TissueResponseModel':
+                mc_scheme_params = [
+                    acquisition_scheme.shell_bvalues,
+                    acquisition_scheme.shell_delta,
+                    acquisition_scheme.shell_Delta,
+                    acquisition_scheme.shell_gradient_strengths]
+                tr_scheme_params = [
+                    model.acquisition_scheme.shell_bvalues,
+                    model.acquisition_scheme.shell_delta,
+                    model.acquisition_scheme.shell_Delta,
+                    model.acquisition_scheme.shell_gradient_strengths]
+                try:
+                    np.testing.assert_array_almost_equal(
+                        mc_scheme_params, tr_scheme_params)
+                except AssertionError:
+                    msg = "Acquisition scheme of MC-model and tissue response "
+                    msg += "model are not the same."
+                    raise ValueError(msg)
+
 
 class MultiCompartmentModel(MultiCompartmentModelProperties):
     r'''
@@ -919,6 +948,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             Can be used to recover parameters themselves or other useful
             functions.
         """
+        self._check_tissue_model_acquisition_scheme(acquisition_scheme)
 
         # estimate S0
         self.scheme = acquisition_scheme
@@ -1280,6 +1310,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
             Can be used to recover parameters themselves or other useful
             functions.
         """
+        self._check_tissue_model_acquisition_scheme(acquisition_scheme)
 
         # estimate S0
         self.scheme = acquisition_scheme
@@ -1606,14 +1637,6 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         if orientation_counter > 1:
             self.multiple_anisotropic_kernels = True
 
-    # def _check_for_tissue_response_models(self):
-    #     tissue_model_names = ['AnisotropicTissueResponse',
-    #                           'IsotropicTissueResponse']
-    #     self.tissue_response_kernels_present = False
-    #     for model in self.models:
-    #         if model._model_type in tissue_model_names:
-    #             self.tissue_response_kernels_present = True
-
     def fit(self, acquisition_scheme, data, mask=None, solver='csd',
             lambda_lb=1e-5, unity_constraint='kernel_dependent',
             use_parallel_processing=have_pathos, number_of_processors=None):
@@ -1691,6 +1714,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             Resonance in Medicine 58.3 (2007): 497-510.
         """
         self._check_if_kernel_parameters_are_fixed()
+        self._check_tissue_model_acquisition_scheme(acquisition_scheme)
 
         self.voxel_varying_kernel = False
         if bool(self.x0_parameters):  # if the dictionary is not empty
