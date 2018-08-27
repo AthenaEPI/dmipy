@@ -60,6 +60,7 @@ To get a feeling for how to use Dmipy, we provide a few tutorial notebooks:
 - [Sphere Models (Tumor cells, e.g. [Panagiotaki et al. 2014])](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_sphere_models.ipynb)
 - [Parameter Distribution Models (Axon Diameter Distribution, e.g. [Assaf et al. 2008])](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_diameter_distributions.ipynb)
 - [Gaussian Models (Extra-axonal, e.g. [Behrens et al. 2003])](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_gaussian_models.ipynb)
+- Tissue Response Models (WM/GM/CSF, e.g. [Jeurissen et al. 2014])
 - [Spherical Distribution Models (Axon Dispersion, e.g. [Kaden et al. 2007])](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_watson_bingham.ipynb)
 - [Spherical Mean of any Compartment Model](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_spherical_mean_models.ipynb)
 ### Global Multi-Compartment Optimizers
