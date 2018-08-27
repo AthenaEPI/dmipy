@@ -18,15 +18,14 @@ class AnisotropicTissueResponseModel(ModelProperties):
     RH-coefficients the spherical mean per shell is also estimated.
 
     Once estimated, this class behaves as a CompartmentModel object (so as if
-    it were e.g. a cylinder or Gaussian compartment), but has no parameters and
-    - if the S0 of the input is not normalized to one - also its S0-value will
-    not be one.
+    it were e.g. a cylinder or Gaussian compartment), and only an orientation
+    parameter mu and - if the S0 of the input is not normalized to one - also
+    its S0-value will not be one.
 
-    A TissueResponseModel has a rotational_harmonics_representation and a
-    spherical_mean, but no regular DWI representation. This means a
-    TissueResponseModel can be input to a MultiCompartmentSphericalMeanModel or
-    a MultiCompartmentSphericalHarmonicsModel, but NOT a regular
-    MultiCompartmentModel.
+    A TissueResponseModel has a rotational_harmonics_representation, a
+    spherical_mean, and a regular DWI representation. This means a
+    TissueResponseModel can be input any MultiCompartment model representation
+    in Dmipy, including together with parametric models.
 
     Parameters
     ----------
@@ -49,6 +48,7 @@ class AnisotropicTissueResponseModel(ModelProperties):
     _model_type = 'TissueResponseModel'
 
     def __init__(self, acquisition_scheme, data, mu=None):
+        self.acquisition_scheme = acquisition_scheme
         self.mu = mu
         gtab = gtab_mipy2dipy(acquisition_scheme)
         tenmod = dti.TensorModel(gtab)
@@ -88,13 +88,34 @@ class AnisotropicTissueResponseModel(ModelProperties):
             (2 * np.sqrt(np.pi)))
 
     def __call__(self, acquisition_scheme, **kwargs):
-        # rotate gradient vectors according to orientation parameters
+        r'''
+        Returns the signal attenuation. As a tissue response model, it cannot
+        estimate any signal intensities outside the shells that were in the
+        acquisition scheme that was used to estimate the model. However, it can
+        estimate any gradient directions on the estimated shells as it just
+        maps the rotational harmonics to the shell for each shell.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+
+        Returns
+        -------
+        attenuation : float or array, shape(N),
+            signal attenuation
+        '''
         mu = kwargs.get('mu', self.mu)
         mu = utils.unitsphere2cart_1d(mu)
+
+        # rotate gradient vectors according to orientation parameters
         R = utils.rotation_matrix_001_to_xyz(*mu)
         bvecs = acquisition_scheme.gradient_directions
         bvecs_rot = np.dot(bvecs, R)
 
+        # now map the rotational harmonics to the rotated gradient vectors.
         rh_coef = self._rotational_harmonics_representation
         E = np.ones_like(acquisition_scheme.bvalues)
         N_shells = acquisition_scheme.shell_indices.max()
@@ -113,12 +134,45 @@ class AnisotropicTissueResponseModel(ModelProperties):
 
     def rotational_harmonics_representation(
             self, acquisition_scheme=None, **kwargs):
+        r""" The rotational harmonics of the model, such that Y_lm = Yl0.
+        Axis aligned with z-axis to be used as kernel for spherical
+        convolution. Returns an array with rotational harmonics for each shell.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+
+        Returns
+        -------
+        rh_array : array, shape(Nshells, N_rh_coef),
+            Rotational harmonics coefficients for each shell.
+        """
         return self._rotational_harmonics_representation[1:]
 
     def spherical_mean(self, acquisition_scheme=None, **kwargs):
+        """
+        Estimates spherical mean for every shell in acquisition scheme for
+        Zeppelin model.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+
+        Returns
+        -------
+        E_mean : float,
+            spherical mean of the Zeppelin model for every acquisition shell.
+        """
         return self._spherical_mean
 
     def tissue_response(self, **kwargs):
+        # Returns the tissue response including S0 intensity.
         return self.S0_response * self._spherical_mean
 
 
@@ -136,10 +190,10 @@ class IsotropicTissueResponseModel(ModelProperties):
     - if the S0 of the input is not normalized to one - also its S0-value will
     not be one.
 
-    A TissueResponseModel has a standard, rotational_harmonics_representation
-    and a spherical_mean, just like a regular CompartmentModel. As such, a
-    TissueResponseModel can be input to all the usual MultiCompartmentModel
-    representations.
+    A TissueResponseModel has a rotational_harmonics_representation, a
+    spherical_mean, and a regular DWI representation. This means a
+    TissueResponseModel can be input any MultiCompartment model representation
+    in Dmipy, including together with parametric models.
 
     Parameters
     ----------
@@ -162,6 +216,7 @@ class IsotropicTissueResponseModel(ModelProperties):
     _model_type = 'TissueResponseModel'
 
     def __init__(self, acquisition_scheme, data):
+        self.acquisition_scheme = acquisition_scheme
         N_shells = acquisition_scheme.shell_indices.max()
         rh_matrices = np.zeros((len(data), N_shells + 1, 1))
         self.S0_response = np.mean(data[:, acquisition_scheme.b0_mask])
@@ -177,17 +232,69 @@ class IsotropicTissueResponseModel(ModelProperties):
             self._rotational_harmonics_representation[:, 0] /
             (2 * np.sqrt(np.pi)))
 
-    def __call__(self, **kwargs):
-        """ for isotropic models, the spherical mean is the same as the DWI
-        intensity. """
-        return self._spherical_mean
+    def __call__(self, acquisition_scheme, **kwargs):
+        r'''
+        Returns the signal attenuation. As a tissue response model, it cannot
+        estimate any signal intensities outside the shells that were in the
+        acquisition scheme that was used to estimate the model. However, it can
+        estimate any gradient directions on the estimated shells.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+
+        Returns
+        -------
+        attenuation : float or array, shape(N),
+            signal attenuation
+        '''
+        N_shells = acquisition_scheme.shell_indices.max()
+        E = np.ones_like(acquisition_scheme.bvalues)
+        for shell_index in range(N_shells + 1):
+            shell_mask = acquisition_scheme.shell_indices == shell_index
+            E[shell_mask] = self._spherical_mean[shell_index]
+        return E
 
     def rotational_harmonics_representation(
             self, acquisition_scheme=None, **kwargs):
+        r""" The rotational harmonics of the model, such that Y_lm = Yl0.
+        Axis aligned with z-axis to be used as kernel for spherical
+        convolution. Returns an array with rotational harmonics for each shell.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+
+        Returns
+        -------
+        rh_array : array, shape(Nshells, N_rh_coef),
+            Rotational harmonics coefficients for each shell.
+        """
         return self._rotational_harmonics_representation[1:]
 
     def spherical_mean(self, acquisition_scheme=None, **kwargs):
+        """
+        Estimates spherical mean for every shell in acquisition scheme for
+        Zeppelin model.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+
+        Returns
+        -------
+        E_mean : float,
+            spherical mean of the Zeppelin model for every acquisition shell.
+        """
         return self._spherical_mean
 
     def tissue_response(self, **kwargs):
+        # Returns the tissue response including S0 intensity.
         return self.S0_response * self._spherical_mean
