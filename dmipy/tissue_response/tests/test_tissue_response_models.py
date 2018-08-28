@@ -1,6 +1,10 @@
 from dmipy.signal_models.gaussian_models import G1Ball, G2Zeppelin
+from dmipy.distributions import distribute_models
 from dmipy.data.saved_acquisition_schemes import wu_minn_hcp_acquisition_scheme
-from dmipy.core.modeling_framework import *
+from dmipy.core.modeling_framework import (
+    MultiCompartmentModel,
+    MultiCompartmentSphericalMeanModel,
+    MultiCompartmentSphericalHarmonicsModel)
 from dmipy.signal_models.tissue_response_models import (
     IsotropicTissueResponseModel,
     AnisotropicTissueResponseModel)
@@ -87,7 +91,6 @@ def test_tissue_response_model_multi_compartment_models():
 
     mc = MultiCompartmentModel(models)
     mc_smt = MultiCompartmentSphericalMeanModel(models)
-    # mc_csd = MultiCompartmentSphericalHarmonicsModel(models)
 
     test_mc_data = 0.5 * data_iso + 0.5 * data_aniso
     test_mc_data_sm = 0.5 * data_iso_sm + 0.5 * data_aniso_sm
@@ -104,3 +107,30 @@ def test_tissue_response_model_multi_compartment_models():
     for model, data in zip(mc_models, test_data):
         data_mc = model(scheme, **params)
         assert_array_almost_equal(data, data_mc, 3)
+
+    # csd model with single models
+    mc_csd = MultiCompartmentSphericalHarmonicsModel([aniso_model])
+    watson_mod = distribute_models.SD1WatsonDistributed(
+        [aniso_model])
+    watson_params = {
+        'SD1Watson_1_mu': np.array(
+            [np.pi / 2, np.pi / 2]),
+        'SD1Watson_1_odi': .3
+    }
+    data_watson = watson_mod(scheme, **watson_params)
+    mc_csd_fit = mc_csd.fit(scheme, data_watson)
+    assert_array_almost_equal(mc_csd_fit.predict()[0], data_watson, 2)
+
+    # csd model with multiple models
+    mc_csd = MultiCompartmentSphericalHarmonicsModel(models)
+    watson_mod = distribute_models.SD1WatsonDistributed(
+        [iso_model, aniso_model])
+    watson_params = {
+        'SD1Watson_1_mu': np.array(
+            [np.pi / 2, np.pi / 2]),
+        'SD1Watson_1_odi': .3,
+        'partial_volume_0': 0.5
+    }
+    data_watson = watson_mod(scheme, **watson_params)
+    mc_csd_fit = mc_csd.fit(scheme, data_watson)
+    assert_array_almost_equal(mc_csd_fit.predict()[0], data_watson, 2)

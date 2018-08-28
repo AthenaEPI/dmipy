@@ -5,9 +5,6 @@ from dipy.segment.mask import median_otsu
 from ..signal_models.tissue_response_models import (
     AnisotropicTissueResponseModel)
 from scipy.ndimage import binary_erosion
-from dipy.data import get_sphere, HemiSphere
-from dmipy.core.modeling_framework import (
-    MultiCompartmentSphericalHarmonicsModel)
 
 
 def white_matter_response_tournier07(acquisition_scheme, data, **kwargs):
