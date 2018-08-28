@@ -1,6 +1,7 @@
 from dmipy.signal_models.gaussian_models import G1Ball, G2Zeppelin
 from dmipy.distributions import distribute_models
-from dmipy.data.saved_acquisition_schemes import wu_minn_hcp_acquisition_scheme
+from dmipy.data.saved_acquisition_schemes import (
+    wu_minn_hcp_acquisition_scheme, panagiotaki_verdict_acquisition_scheme)
 from dmipy.core.modeling_framework import (
     MultiCompartmentModel,
     MultiCompartmentSphericalMeanModel,
@@ -9,7 +10,7 @@ from dmipy.signal_models.tissue_response_models import (
     IsotropicTissueResponseModel,
     AnisotropicTissueResponseModel)
 import numpy as np
-from numpy.testing import assert_array_almost_equal
+from numpy.testing import assert_array_almost_equal, assert_raises
 from dmipy.optimizers_fod.construct_observation_matrix import (
     construct_model_based_A_matrix)
 scheme = wu_minn_hcp_acquisition_scheme()
@@ -134,3 +135,7 @@ def test_tissue_response_model_multi_compartment_models():
     data_watson = watson_mod(scheme, **watson_params)
     mc_csd_fit = mc_csd.fit(scheme, data_watson)
     assert_array_almost_equal(mc_csd_fit.predict()[0], data_watson, 2)
+
+    scheme_panagiotaki = panagiotaki_verdict_acquisition_scheme()
+    assert_raises(
+        mc_csd.fit, acquisition_scheme=scheme_panagiotaki, data=data_watson)
