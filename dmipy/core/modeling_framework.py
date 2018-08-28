@@ -20,6 +20,8 @@ from .fitted_modeling_framework import (
     FittedMultiCompartmentModel,
     FittedMultiCompartmentSphericalMeanModel,
     FittedMultiCompartmentSphericalHarmonicsModel)
+from ..optimizers_fod.construct_observation_matrix import (
+    construct_model_based_A_matrix)
 from ..optimizers.brute2fine import (
     GlobalBruteOptimizer, Brute2FineOptimizer)
 from ..optimizers_fod.csd_tournier import CsdTournierOptimizer
@@ -1915,52 +1917,103 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             kwargs
         )
 
-        if len(self.models) > 1:
-            partial_volumes = [
-                kwargs[p] for p in self.partial_volume_names
-            ]
+        A = self._construct_convolution_kernel(
+            self.parameters_to_parameter_vector(**kwargs))
+
+        # if vf fixed then just multiply with sh_coeff
+        if self.volume_fractions_fixed:
+            E = np.dot(A, kwargs['sh_coeff'])
         else:
-            partial_volumes = [1.]
-
-        rh_models = []
-        sh_coeffs = []
-        for model, partial_volume in zip(self.models, partial_volumes):
-            parameters = {}
-            for parameter in model.parameter_ranges:
-                parameter_name = self._inverted_parameter_map[
-                    (model, parameter)
-                ]
-                parameters[parameter] = kwargs.get(
-                    parameter_name
-                )
-            rh_model = model.rotational_harmonics_representation(
-                acquisition_scheme, **parameters)
-            rh_models.append(rh_model)
-            if 'orientation' in model.parameter_types.values():
-                sh_coeffs.append(kwargs['sh_coeff'])
-            else:
-                sh_coeffs.append(
-                    np.atleast_1d(partial_volume / (2 * np.sqrt(np.pi))))
-
-        E = np.ones(acquisition_scheme.number_of_measurements)
-        for i, shell_index in enumerate(acquisition_scheme.unique_dwi_indices):
-            shell_mask = acquisition_scheme.shell_indices == shell_index
-            sh_mat = acquisition_scheme.shell_sh_matrices[shell_index]
-            sh_order = int(acquisition_scheme.shell_sh_orders[shell_index])
-
-            shell_E = 0.
-            for j, model in enumerate(self.models):
-                if 'orientation' in model.parameter_types.values():
-                    E_dispersed_sh = sh_convolution(
-                        sh_coeffs[j], rh_models[j][i, :sh_order // 2 + 1])
-                    shell_E += np.dot(sh_mat[:, :len(E_dispersed_sh)],
-                                      E_dispersed_sh)
-                else:
-                    E_dispersed_sh = sh_convolution(
-                        sh_coeffs[j], rh_models[j][i])
-                    shell_E += np.dot(sh_mat[0, 0], E_dispersed_sh)
-            E[shell_mask] = shell_E
+            sh_coeff = np.zeros(self.optimizer.Ncoef_total)
+            for i, name in enumerate(self.partial_volume_names):
+                sh_coeff[self.optimizer.vf_indices[i]] = (
+                    kwargs[name] / (2 * np.sqrt(np.pi)))
+            sh_coeff[self.optimizer.sh_start:
+                     self.optimizer.Ncoef + self.optimizer.sh_start] = kwargs[
+                'sh_coeff']
+            E = np.dot(A, sh_coeff)
         return E
+
+    def _construct_convolution_kernel(self, x0_vector):
+        """
+        Helper function that constructs the convolution kernel for the given
+        multi-compartment model and the initial condition x0_vector.
+
+        First the parameter vector is converted to a dictionary with the
+        corresponding parameter names. Then, the linked parameters are added to
+        the given ones. Finally, the rotational harmonics of the model is
+        passed to the construct_model_based_A_matrix, which constructs the
+        kernel for an arbitrary PGSE-acquisition scheme.
+
+        For multiple models with fixed volume fractions, the A-matrices
+        are combined to have a combined convolution kernel.
+
+        For multiple models without fixed volume fractions, the convolution
+        kernels for anisotropic and isotropic models are concatenated, with
+        the isotropic kernels always having a spherical harmonics order of 0.
+
+        Parameters
+        ----------
+        x0_vector: array of size (N_parameters),
+            Contains the fixed parameters of the convolution kernel.
+
+        Returns
+        -------
+        kernel: array of size (N_coef, N_data),
+            Observation matrix that maps the FOD spherical harmonics
+            coefficients to the DWI signal values.
+        """
+        parameters_dict = self.parameter_vector_to_parameters(
+            x0_vector)
+        parameters_dict = self.add_linked_parameters_to_parameters(
+            parameters_dict)
+
+        if self.volume_fractions_fixed:
+            if len(self.models) > 1:
+                partial_volumes = [
+                    parameters_dict[p] for p in self.partial_volume_names
+                ]
+            else:
+                partial_volumes = [1.]
+            kernel = 0.
+            for model, partial_volume in zip(self.models,
+                                             partial_volumes):
+                parameters = {}
+                for parameter in model.parameter_ranges:
+                    parameter_name = self._inverted_parameter_map[
+                        (model, parameter)
+                    ]
+                    parameters[parameter] = parameters_dict.get(
+                        parameter_name
+                    )
+                model_rh = (
+                    model.rotational_harmonics_representation(
+                        self.scheme, **parameters))
+                kernel += partial_volume * construct_model_based_A_matrix(
+                    self.scheme, model_rh, self.sh_order)
+        else:
+            kernel = []
+            for model in self.models:
+                parameters = {}
+                for parameter in model.parameter_ranges:
+                    parameter_name = self._inverted_parameter_map[
+                        (model, parameter)
+                    ]
+                    parameters[parameter] = parameters_dict.get(
+                        parameter_name
+                    )
+                model_rh = (
+                    model.rotational_harmonics_representation(
+                        self.scheme, **parameters))
+                if 'orientation' in model.parameter_types.values():
+                    kernel.append(construct_model_based_A_matrix(
+                        self.scheme, model_rh, self.sh_order))
+                else:
+                    kernel.append(construct_model_based_A_matrix(
+                        self.scheme, model_rh, 0))
+
+            kernel = np.hstack(kernel)
+        return kernel
 
 
 def homogenize_x0_to_data(data, x0):

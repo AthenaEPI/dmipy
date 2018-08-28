@@ -95,7 +95,7 @@ class CsdTournierOptimizer:
                 x0_vector, (-1, x0_vector.shape[-1]))[0]
             if np.all(np.isnan(x0_single_voxel)):
                 self.single_convolution_kernel = True
-                self.A = self._construct_convolution_kernel(
+                self.A = self.model._construct_convolution_kernel(
                     x0_single_voxel)
                 self.AT_A = np.dot(self.A.T, self.A)
             else:
@@ -131,7 +131,7 @@ class CsdTournierOptimizer:
             A = self.A
             AT_A = self.AT_A + self.lambda_lb * self.R_smoothness
         else:
-            A = self._construct_convolution_kernel(x0_vector)
+            A = self.model._construct_convolution_kernel(x0_vector)
             AT_A = np.dot(A.T, A) + self.lambda_lb * self.R_smoothness
 
         if self.unity_constraint:
@@ -247,57 +247,3 @@ class CsdTournierOptimizer:
         fitted_parameter_vector = self.model.parameters_to_parameter_vector(
             **fitted_params)
         return fitted_parameter_vector
-
-    def _construct_convolution_kernel(self, x0_vector):
-        """
-        Helper function that constructs the convolution kernel for the given
-        multi-compartment model and the initial condition x0_vector.
-
-        First the parameter vector is converted to a dictionary with the
-        corresponding parameter names. Then, the linked parameters are added to
-        the given ones. Finally, the rotational harmonics of the model is
-        passed to the construct_model_based_A_matrix, which constructs the
-        kernel for an arbitrary PGSE-acquisition scheme.
-
-        For multiple models with fixed volume fractions, the A-matrices
-        are combined to have a combined convolution kernel.
-
-        Parameters
-        ----------
-        x0_vector: array of size (N_parameters),
-            Contains the fixed parameters of the convolution kernel.
-
-        Returns
-        -------
-        kernel: array of size (N_coef, N_data),
-            Observation matrix that maps the FOD spherical harmonics
-            coefficients to the DWI signal values.
-        """
-        parameters_dict = self.model.parameter_vector_to_parameters(
-            x0_vector)
-        parameters_dict = self.model.add_linked_parameters_to_parameters(
-            parameters_dict)
-
-        if len(self.model.models) > 1:
-            partial_volumes = [
-                parameters_dict[p] for p in self.model.partial_volume_names
-            ]
-        else:
-            partial_volumes = [1.]
-
-        kernel = 0.
-        for model, partial_volume in zip(self.model.models, partial_volumes):
-            parameters = {}
-            for parameter in model.parameter_ranges:
-                parameter_name = self.model._inverted_parameter_map[
-                    (model, parameter)
-                ]
-                parameters[parameter] = parameters_dict.get(
-                    parameter_name
-                )
-            model_rh = (
-                model.rotational_harmonics_representation(
-                    self.acquisition_scheme, **parameters))
-            kernel += partial_volume * construct_model_based_A_matrix(
-                self.acquisition_scheme, model_rh, self.sh_order)
-        return kernel
