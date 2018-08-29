@@ -156,7 +156,7 @@ class CsdCvxpyOptimizer:
         vf = sh_coef[self.vf_indices] * self.sphere_jacobian
         constraints.append(vf >= 0)
         if self.unity_constraint:
-            constraints.append(cvxpy.sum_entries(vf) == 1.)
+            constraints.append(cvxpy.sum(vf) == 1.)
 
         cost = cvxpy.sum_squares(A * sh_coef - data)
         if self.lambda_lb > 0:
