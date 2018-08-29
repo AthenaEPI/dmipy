@@ -6,6 +6,7 @@ from ..utils.utils import (
 from ..utils.spherical_mean import (
     estimate_spherical_mean_multi_shell)
 from dipy.reconst.shm import sph_harm_ind_list
+from dipy.direction import peak_directions
 
 
 __all__ = [
