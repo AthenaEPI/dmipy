@@ -137,5 +137,7 @@ def test_tissue_response_model_multi_compartment_models():
     assert_array_almost_equal(mc_csd_fit.predict()[0], data_watson, 2)
 
     scheme_panagiotaki = panagiotaki_verdict_acquisition_scheme()
-    assert_raises(
-        mc_csd.fit, acquisition_scheme=scheme_panagiotaki, data=data_watson)
+    assert_raises(ValueError,
+                  mc_csd.fit,
+                  acquisition_scheme=scheme_panagiotaki,
+                  data=data_watson)
