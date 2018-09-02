@@ -163,7 +163,17 @@ class CsdCvxpyOptimizer:
             cost += (
                 self.lambda_lb * cvxpy.quad_form(sh_coef, self.R_smoothness))
         problem = cvxpy.Problem(cvxpy.Minimize(cost), constraints)
-        problem.solve()
+        try:
+            problem.solve()
+        except cvxpy.error.SolverError:
+            msg = 'cvxpy solver failed'
+            print(msg)
+            return np.zeros_like(x0_vector)
+
+        if problem.status in ["infeasible", "unbounded"]:
+            msg = 'cvxpy found {} problem'.format(problem.status)
+            print(msg)
+            return np.zeros_like(x0_vector)
 
         # return optimized fod sh coefficients
         fitted_params = self.model.parameter_vector_to_parameters(x0_vector)
