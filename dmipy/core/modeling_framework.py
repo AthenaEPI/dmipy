@@ -1642,7 +1642,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
 
     def fit(self, acquisition_scheme, data, mask=None, solver='csd',
             lambda_lb=1e-5, unity_constraint='kernel_dependent',
-            fit_signal_attenuation=True, use_parallel_processing=have_pathos,
+            fit_raw_signal=False, use_parallel_processing=have_pathos,
             number_of_processors=None):
         """ The main data fitting function of a
         MultiCompartmentSphericalHarmonicsModel.
@@ -1688,10 +1688,10 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             enforce unity if the kernel is voxel-varying or when volume
             fractions are estimated. Otherwise unity_constraint is set to
             False.
-        fit_signal_attenuation: bool,
+        fit_raw_signal: bool,
             whether or not to fit the raw signal or signal attenuation.
-            default: True, the signal is automatically divided by S0-value.
-            if False, the raw signal is fitted and the S0 intensities of the
+            default: False, the signal is automatically divided by S0-value.
+            if True, the raw signal is fitted and the S0 intensities of the
             biophysical models are used in the signal generation. This is
             useful when using tissue_response_models for example.
         use_parallel_processing : bool,
@@ -1737,8 +1737,8 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         else:
             self.unity_constraint = unity_constraint
 
-        self.fit_signal_attenuation = fit_signal_attenuation
-        if not self.fit_signal_attenuation:
+        self.fit_raw_signal = fit_raw_signal
+        if self.fit_raw_signal:
             S0_responses = np.r_[[model.S0_response for model in self.models]]
             self.max_S0_response = S0_responses.max()
             self.S0_responses = S0_responses / self.max_S0_response
@@ -1837,10 +1837,10 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
 
         start = time()
         for idx, pos in enumerate(zip(*mask_pos)):
-            if fit_signal_attenuation:
-                data_to_fit = data_[pos] / S0[pos]
-            else:
+            if fit_raw_signal:
                 data_to_fit = data_[pos] / self.max_S0_response
+            else:
+                data_to_fit = data_[pos] / S0[pos]
             voxel_x0_vector = x0_[pos]
             fit_args = (data_to_fit, voxel_x0_vector)
 
