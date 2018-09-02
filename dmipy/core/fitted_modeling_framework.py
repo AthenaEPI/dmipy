@@ -618,6 +618,53 @@ class FittedMultiCompartmentSphericalHarmonicsModel:
         """
         return self.fitted_parameters['sh_coeff']
 
+    def peaks_directions(self, sphere, max_peaks=5,
+                         relative_peak_threshold=0.5,
+                         min_separation_angle=25):
+        """
+        Returns peak directions for estimated FODs. Uses dipy's peak_directions
+        function to get the local maximum on a sphere's tesselation.
+
+        Parameters
+        ----------
+        sphere : Sphere
+            The Sphere providing discrete directions for evaluation.
+        max_peaks : integer
+            The maximum number of peaks that is returned per fod.
+        relative_peak_threshold : float in [0., 1.]
+            Only peaks greater than min + relative_peak_threshold * scale are
+            kept, where min = max(0, odf.min()) and scale = odf.max() - min.
+        min_separation_angle : float in [0, 90]
+            The minimum distance between directions. If two peaks are too close
+            only the larger of the two is returned.
+
+        Returns
+        -------
+        directions : (Ndata, Npeaks, 3,) ndarray
+            N vertices for sphere, one for each peak
+        values : (Ndata, Npeaks,) ndarray
+            peak values
+        indices : (Ndata, Npeaks,) ndarray
+            peak indices of the directions on the sphere
+        """
+        peaks_shape = np.r_[self.mask.shape, max_peaks, 3]
+        peaks = np.zeros(peaks_shape)
+        values = np.zeros(peaks_shape[:-1])
+        indices = np.zeros(peaks_shape[:-1])
+
+        fods = self.fod(sphere.vertices)
+        mask_pos = np.where(self.mask)
+        for pos in zip(*mask_pos):
+            fod = fods[pos]
+            peaks_, values_, indices_ = peak_directions(
+                fod, sphere, relative_peak_threshold, min_separation_angle)
+            # if less peaks than max_peaks are found, only take those.
+            Npeaks = np.min([len(indices_), max_peaks])
+            peaks[pos, :Npeaks] = peaks_[:Npeaks]
+            values[pos, :Npeaks] = values_[:Npeaks]
+            indices[pos, :Npeaks] = indices_[:Npeaks]
+        return peaks, values, indices
+
     def anisotropy_index(self):
         """
         Estimates anisotropy index of spherical harmonics [1]_.
