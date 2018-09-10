@@ -550,6 +550,12 @@ class FittedMultiCompartmentSphericalHarmonicsModel:
         self.S0 = S0
         self.mask = mask
         self.fitted_parameters_vector = fitted_parameters_vector
+        self.S0_responses = model.S0_responses.copy()
+        self.max_S0_response = model.max_S0_response
+        self.fit_S0_response = model.fit_S0_response
+        self._fit_parameters = {
+            'fit_S0_response': self.fit_S0_response,
+            'S0_responses': self.S0_responses}
 
     @property
     def fitted_parameters(self):
@@ -733,9 +739,15 @@ class FittedMultiCompartmentSphericalHarmonicsModel:
             acquisition_scheme = self.model.scheme
         dataset_shape = self.fitted_parameters_vector.shape[:-1]
         if S0 is None:
-            S0 = self.S0
+            if self.fit_S0_response:
+                S0 = np.ones(dataset_shape) * self.max_S0_response
+            else:
+                S0 = self.S0
         elif isinstance(S0, float):
-            S0 = np.ones(dataset_shape) * S0
+            if self.fit_S0_response:
+                S0 =  S0 * self.max_S0_response / self.S0
+            else:
+                S0 = np.ones(dataset_shape) * S0
         if mask is None:
             mask = self.mask
 
@@ -746,13 +758,17 @@ class FittedMultiCompartmentSphericalHarmonicsModel:
         for pos in zip(*mask_pos):
             parameters = self.model.parameter_vector_to_parameters(
                 self.fitted_parameters_vector[pos])
-            predicted_signal[pos] = self.model(
-                acquisition_scheme, **parameters) * S0[pos]
+            predicted_signal[pos] = (
+                self.model(acquisition_scheme,
+                    **dict(parameters, **self._fit_parameters)) * S0[pos])
         return predicted_signal
 
     def R2_coefficient_of_determination(self, data):
         "Calculates the R-squared of the model fit."
-        data_ = data / self.S0[..., None]
+        if self.model.scheme.TE is None:
+            data_ = data / self.S0[..., None]
+        else:
+            data_ = data / self.S0
 
         y_hat = self.predict(S0=1.)
         y_bar = np.mean(data_, axis=-1)
