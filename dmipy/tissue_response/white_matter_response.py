@@ -1,7 +1,10 @@
 from dipy.reconst import dti
 from dmipy.core.acquisition_scheme import gtab_mipy2dipy
+from dmipy.core.modeling_framework import (
+    MultiCompartmentSphericalHarmonicsModel)
 import numpy as np
 from dipy.segment.mask import median_otsu
+from dipy.data import get_sphere, HemiSphere
 from ..signal_models.tissue_response_models import (
     AnisotropicTissueResponseModel)
 from scipy.ndimage import binary_erosion
