@@ -28,9 +28,9 @@ def test_fit_S0_response():
     csd_fit_no_S0 = mtcsd.fit(scheme, data_to_fit, fit_S0_response=False)
     csd_fit_S0 = mtcsd.fit(scheme, data_to_fit, fit_S0_response=True)
     np.testing.assert_almost_equal(
-    	0.3, csd_fit_S0.fitted_parameters['partial_volume_0'], 4)
+        0.3, csd_fit_S0.fitted_parameters['partial_volume_0'], 4)
     np.testing.assert_almost_equal(
-    	0.7, csd_fit_S0.fitted_parameters['partial_volume_1'], 4)
-    
+        0.7, csd_fit_S0.fitted_parameters['partial_volume_1'], 4)
+
     # test iso volume fraction underestimated
     np.testing.assert_(csd_fit_no_S0 < 0.3)
