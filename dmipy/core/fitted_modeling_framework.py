@@ -745,7 +745,7 @@ class FittedMultiCompartmentSphericalHarmonicsModel:
                 S0 = self.S0
         elif isinstance(S0, float):
             if self.fit_S0_response:
-                S0 =  S0 * self.max_S0_response / self.S0
+                S0 = S0 * self.max_S0_response / self.S0
             else:
                 S0 = np.ones(dataset_shape) * S0
         if mask is None:
@@ -760,7 +760,8 @@ class FittedMultiCompartmentSphericalHarmonicsModel:
                 self.fitted_parameters_vector[pos])
             predicted_signal[pos] = (
                 self.model(acquisition_scheme,
-                    **dict(parameters, **self._fit_parameters)) * S0[pos])
+                           **dict(parameters,
+                                  **self._fit_parameters)) * S0[pos])
         return predicted_signal
 
     def R2_coefficient_of_determination(self, data):
