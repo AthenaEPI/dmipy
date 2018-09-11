@@ -70,7 +70,8 @@ def white_matter_response_tournier07(acquisition_scheme, data, **kwargs):
 
 
 def white_matter_response_tournier13(
-        acquisition_scheme, data, max_iter=5, sh_order=10):
+        acquisition_scheme, data, max_iter=5, sh_order=10,
+        N_candidate_voxels=300, peak_ratio_setting='mrtrix'):
     """
     Iterative model-free white matter response function estimation according to
     [1]_. Quoting the paper, the steps are the following:
@@ -105,6 +106,14 @@ def white_matter_response_tournier13(
     sh_order : Positive even integer,
         Maximum spherical harmonics order to be used in the FOD estimation for
         the single-fibre response kernel.
+    N_candidate_voxels : integer,
+        Number of voxels to be included in the final white matter response
+        estimation. Default is 300 following [1]_.
+    peak_ratio_setting : string,
+        Can be either 'ratio' or 'mrtrix', meaning the 'ratio' parameter
+        between two peaks is actually calculated as the ratio, or a more
+        complicated version as 1 / sqrt(peak1 * (1 - peak2 / peak1)) ** 2, to
+        avoid favouring small, yet low SNR FODs [2]_.
 
     Returns
     -------
@@ -117,16 +126,22 @@ def white_matter_response_tournier13(
         "Determination of the appropriate b value and number of gradient
         directions for high‐angular‐resolution diffusion‐weighted imaging."
         NMR in Biomedicine 26.12 (2013): 1775-1786.
+    .. [2] MRtrix 3.0 readthedocs
     """
     data_shape = np.atleast_2d(data).shape
     N_voxels = int(np.prod(data_shape[:-1]))
-    N_select = 300
-    if N_voxels < 300:
-        msg = "The original algorithm uses 300 candidate voxels to estimate "
-        msg += "the tissue response. Currently only {} ".format(N_voxels)
-        msg += "candidate voxels given."
+    if N_voxels < N_candidate_voxels:
+        msg = "The parameter N_candidate voxels is set to {} but only ".format(
+            N_candidate_voxels)
+        msg += "{} voxels are given. N_candidate_voxels".format(N_voxels)
+        msg += " reset to number of voxels given."
         print(msg)
-        N_select = N_voxels
+        N_candidate_voxels = N_voxels
+
+    ratio_settings = ['ratio', 'mrtrix']
+    if peak_ratio_setting not in ratio_settings:
+        msg = 'peak_ratio_setting must be in {}'.format(ratio_settings)
+        raise ValueError(msg)
 
     if data.ndim == 4:
         # calculate brain mask on 4D data (x, y, z, DWI)
@@ -145,11 +160,12 @@ def white_matter_response_tournier13(
     fa = tenfit.fa
 
     # selected based on FA
-    selected_indices = np.argsort(fa)[-N_select:]
+    selected_indices = np.argsort(fa)[-N_candidate_voxels:]
     sphere = get_sphere('symmetric724')
     hemisphere = HemiSphere(theta=sphere.theta, phi=sphere.phi)
     # iterate until convergence
-    for it in range(max_iter):
+    it = 0
+    while True:
         print('Tournier13 white matter response iteration {}'.format(it + 1))
         selected_data = data_to_fit[selected_indices]
 
@@ -162,14 +178,22 @@ def white_matter_response_tournier13(
                               use_parallel_processing=False)
         peaks, values, indices = sh_fit.peaks_directions(
             hemisphere, max_peaks=2, relative_peak_threshold=0.)
-        ratio = values[..., 1] / values[..., 0]
+        if peak_ratio_setting == 'ratio':
+            ratio = values[..., 1] / values[..., 0]
+        elif peak_ratio_setting == 'mrtrix':
+            ratio = 1. / np.sqrt(
+                values[..., 0] * (1 - values[..., 1] / values[..., 0])) ** 2
         selected_indices_old = selected_indices
-        selected_indices = np.argsort(ratio)[:N_select]
+        selected_indices = np.argsort(ratio)[:N_candidate_voxels]
         percentage_overlap = len(np.intersect1d(
-            selected_indices, selected_indices_old)) / N_select * 100.
-        print('{0:.2g} percent candidate voxel overlap.'.format(
+            selected_indices, selected_indices_old)) / N_candidate_voxels * 100
+        print('{:.1f} percent candidate voxel overlap.'.format(
             percentage_overlap))
-        if np.array_equal(selected_indices, selected_indices_old):
+        if percentage_overlap == 100.:
+            print('White matter response converged')
             break
-    print('White matter response converged')
+        it += 1
+        if it > max_iter:
+            print ('Maximum iterations reached without convergence')
+            break
     return wm_model
