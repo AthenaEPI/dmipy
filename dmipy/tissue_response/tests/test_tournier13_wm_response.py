@@ -11,7 +11,7 @@ from numpy.testing import assert_array_almost_equal, assert_raises
 scheme = wu_minn_hcp_acquisition_scheme()
 
 
-def test_peaks_from_fod():
+def test_tournier13_picks_single_peak():
     zeppelin = G2Zeppelin(
         lambda_par=1.7e-9, lambda_perp=1e-9, mu=[0., 0.])
     data_aniso = zeppelin(scheme)
