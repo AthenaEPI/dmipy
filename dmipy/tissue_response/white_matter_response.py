@@ -89,10 +89,10 @@ def white_matter_response_tournier13(
     - 4) The 300 voxels with the lowest second to first peak amplitude ratios
         were identified, and used as the current estimate of the set of
         'single-fibre' voxels. It should be noted that these voxels were not
-        required to be a subset of the original set of ‘single-fibre’ voxels.
-    - 5) To ensure minimal bias from the initial estimate of the ‘response
-        function’, steps (2) to (4) were re-iterated until convergence (no
-        difference in the set of ‘single-fibre’ voxels). It should be noted
+        required to be a subset of the original set of 'single-fibre' voxels.
+    - 5) To ensure minimal bias from the initial estimate of the 'response
+        function', steps (2) to (4) were re-iterated until convergence (no
+        difference in the set of 'single-fibre' voxels). It should be noted
         that, in practice, convergence was achieved within a single iteration
         in all cases.
 
@@ -126,9 +126,9 @@ def white_matter_response_tournier13(
 
     References
     ----------
-    .. [1] Tournier, J‐Donald, Fernando Calamante, and Alan Connelly.
+    .. [1] Tournier, J-Donald, Fernando Calamante, and Alan Connelly.
         "Determination of the appropriate b value and number of gradient
-        directions for high‐angular‐resolution diffusion‐weighted imaging."
+        directions for high-angular-resolution diffusion-weighted imaging."
         NMR in Biomedicine 26.12 (2013): 1775-1786.
     .. [2] MRtrix 3.0 readthedocs
     """
