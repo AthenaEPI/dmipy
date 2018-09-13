@@ -40,7 +40,7 @@ def test_tournier13_picks_single_peak():
                   white_matter_response_tournier13,
                   scheme, data_cross, peak_ratio_setting='bla')
 
-    wm = white_matter_response_tournier13(
+    wm, _ = white_matter_response_tournier13(
         scheme, data_cross, peak_ratio_setting='mrtrix',
         N_candidate_voxels=1)
     assert_array_almost_equal(
