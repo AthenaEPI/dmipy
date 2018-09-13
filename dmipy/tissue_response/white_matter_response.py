@@ -10,7 +10,8 @@ from ..signal_models.tissue_response_models import (
 from scipy.ndimage import binary_erosion
 
 
-def white_matter_response_tournier07(acquisition_scheme, data, **kwargs):
+def white_matter_response_tournier07(
+        acquisition_scheme, data, N_candidate_voxels=300, **kwargs):
     """The original white matter response estimation algorithm according to
     [1]_. In essence, it just takes the 300 voxels with the highest FA, aligns
     them with the z-axis, and estimates the averaged white matter response from
@@ -27,6 +28,8 @@ def white_matter_response_tournier07(acquisition_scheme, data, **kwargs):
     -------
     wm_model : Dmipy Anisotropic ModelFree Model
         ModelFree representation of white matter response.
+    selected_voxel_indices : array of size (N_candidate_voxels,),
+        indices of selected voxels for white matter response.
 
     References
     ----------
@@ -37,13 +40,12 @@ def white_matter_response_tournier07(acquisition_scheme, data, **kwargs):
     """
     data_shape = np.atleast_2d(data).shape
     N_voxels = int(np.prod(data_shape[:-1]))
-    N_select = 300
-    if N_voxels < 300:
+    if N_voxels < N_candidate_voxels:
         msg = "The original algorithm uses 300 candidate voxels to estimate "
         msg += "the tissue response. Currently only {} ".format(N_voxels)
         msg += "candidate voxels given."
         print(msg)
-        N_select = N_voxels
+        N_candidate_voxels = N_voxels
 
     if data.ndim == 4:
         # calculate brain mask on 4D data (x, y, z, DWI)
@@ -62,11 +64,11 @@ def white_matter_response_tournier07(acquisition_scheme, data, **kwargs):
     fa = tenfit.fa
 
     # selected based on FA
-    selected_indices = np.argsort(fa)[-N_select:]
-    selected_data = data_to_fit[selected_indices]
+    selected_voxel_indices = np.argsort(fa)[-N_candidate_voxels:]
+    selected_data = data_to_fit[selected_voxel_indices]
     wm_model = AnisotropicTissueResponseModel(
         acquisition_scheme, selected_data)
-    return wm_model
+    return wm_model, selected_voxel_indices
 
 
 def white_matter_response_tournier13(
@@ -79,14 +81,14 @@ def white_matter_response_tournier13(
     - 1) The 300 brain voxels with the highest FA were identified within a
         brain mask (eroded by three voxels to remove any noisy voxels at the
         brain edges).
-    - 2) The single-fibre ‘response function’ was estimated within these
+    - 2) The single-fibre 'response function' was estimated within these
         voxels, and used to compute the fibre orientation distribution (FOD)
         employing constrained spherical deconvolution (CSD) up to lmax = 10.
     - 3) Within each voxel, a peak-finding procedure was used to identify the
         two largest FOD peaks, and their amplitude ratio was computed.
     - 4) The 300 voxels with the lowest second to first peak amplitude ratios
         were identified, and used as the current estimate of the set of
-        ‘single-fibre’ voxels. It should be noted that these voxels were not
+        'single-fibre' voxels. It should be noted that these voxels were not
         required to be a subset of the original set of ‘single-fibre’ voxels.
     - 5) To ensure minimal bias from the initial estimate of the ‘response
         function’, steps (2) to (4) were re-iterated until convergence (no
@@ -119,6 +121,8 @@ def white_matter_response_tournier13(
     -------
     wm_model : Dmipy Anisotropic ModelFree Model
         ModelFree representation of white matter response.
+    selected_indices : array of size (N_candidate_voxels,),
+        indices of selected voxels for white matter response.
 
     References
     ----------
@@ -175,7 +179,8 @@ def white_matter_response_tournier13(
                                                            sh_order=sh_order)
         sh_fit = sh_model.fit(acquisition_scheme, data_to_fit,
                               solver='csd_tournier07',
-                              use_parallel_processing=False)
+                              use_parallel_processing=False,
+                              lambda_lb=0.)
         peaks, values, indices = sh_fit.peaks_directions(
             hemisphere, max_peaks=2, relative_peak_threshold=0.)
         if peak_ratio_setting == 'ratio':
@@ -196,4 +201,4 @@ def white_matter_response_tournier13(
         if it > max_iter:
             print ('Maximum iterations reached without convergence')
             break
-    return wm_model
+    return wm_model, selected_indices

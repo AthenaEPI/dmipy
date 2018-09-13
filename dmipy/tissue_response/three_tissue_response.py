@@ -104,15 +104,48 @@ def three_tissue_response_dhollander16(
 
     data_wm = data[mask_WM_refine]
 
+    # for WM we use WM response selection algorithm
     response_wm_algorithm = _white_matter_response_algorithms[wm_algorithm]
-    response_wm = response_wm_algorithm(acquisition_scheme, data_wm, **kwargs)
+    response_wm, indices_wm_selected = response_wm_algorithm(
+        acquisition_scheme, data_wm, **kwargs)
 
-    response_csf = IsotropicTissueResponseModel(
-        acquisition_scheme, data[mask_CSF_refine])
+    # for GM, the voxels closest 2% to GM SDM median are selected.
+    median_GM = np.median(SDM[mask_GM_refine])
+    N_threshold = int(np.sum(mask_GM_refine) * 0.02)
+    indices_gm_selected = np.argsort(
+        np.abs(SDM[mask_GM_refine] - median_GM))[:N_threshold]
     response_gm = IsotropicTissueResponseModel(
-        acquisition_scheme, data[mask_GM_refine])
+        acquisition_scheme, data[mask_GM_refine][indices_gm_selected])
 
-    return response_wm, response_gm, response_csf
+    # for GM, the 10% highest SDM valued voxels are selected.
+    N_threshold = int(np.sum(mask_CSF_refine) * 0.1)
+    indices_csf_selected = np.argsort(SDM[mask_CSF_refine])[::-1][:N_threshold]
+    response_csf = IsotropicTissueResponseModel(
+        acquisition_scheme, data[mask_CSF_refine][indices_csf_selected])
+
+    pos_WM_refine = np.c_[np.where(mask_WM_refine)]
+    mask_WM_selected = np.zeros_like(mask_WM_refine)
+    pos_WM_selected = pos_WM_refine[indices_wm_selected]
+    for pos in pos_WM_selected:
+        mask_WM_selected[pos[0], pos[1], pos[2]] = 1
+
+    pos_GM_refine = np.c_[np.where(mask_GM_refine)]
+    mask_GM_selected = np.zeros_like(mask_GM_refine)
+    pos_GM_selected = pos_GM_refine[indices_gm_selected]
+    for pos in pos_GM_selected:
+        mask_GM_selected[pos[0], pos[1], pos[2]] = 1
+
+    pos_CSF_refine = np.c_[np.where(mask_CSF_refine)]
+    mask_CSF_selected = np.zeros_like(mask_CSF_refine)
+    pos_CSF_selected = pos_CSF_refine[indices_csf_selected]
+    for pos in pos_CSF_selected:
+        mask_CSF_selected[pos[0], pos[1], pos[2]] = 1
+
+    three_tissue_selection = np.array(
+        [mask_WM_selected, mask_GM_selected, mask_CSF_selected], dtype=float)
+    three_tissue_selection = np.transpose(three_tissue_selection, (1, 2, 3, 0))
+
+    return response_wm, response_gm, response_csf, three_tissue_selection
 
 
 def signal_decay_metric(acquisition_scheme, data):
