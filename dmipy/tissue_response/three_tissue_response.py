@@ -14,7 +14,8 @@ _white_matter_response_algorithms = {
 
 
 def three_tissue_response_dhollander16(
-        acquisition_scheme, data, wm_algorithm='tournier07', **kwargs):
+        acquisition_scheme, data, wm_algorithm='tournier13',
+        wm_N_candidate_voxels=300, gm_perc=0.02, csf_perc=0.1, **kwargs):
     """
     Heuristic approach to estimating the white matter, grey matter and CSF
     tissue response kernels [1]_, to be used in e.g. Multi-Tissue CSD [2]_. The
@@ -29,15 +30,32 @@ def three_tissue_response_dhollander16(
         An acquisition scheme that has been instantiated using dMipy.
     data : NDarray,
         Measured diffusion signal array.
+    wm_algorithm : string,
+        selection of white matter response estimation algorithm:
+        - 'tournier07': classic FA-based estimation,
+        - 'tournier13': iterative peak-ratio based estimation.
+    wm_N_candidate_voxels : positive integer,
+        number of voxels to be included in the white matter response function.
+        Default: 300 as done in [4]_.
+    gm_perc : positive float between [0, 1],
+        fraction of candidate voxels to use in grey matter response function.
+        Default: 0.02 as done in [1]_.
+    csf_perc : positive float between [0, 1],
+        fraction of candidate voxels to use in CSF response function.
+        Default: 0.1 as done in [1]_.
+    kwargs : optional keyword arguments for WM algorithm,
+        see white matter algorithms themselves for possible arguments.
 
     Returns
     -------
     wm_model : Dmipy Anisotropic ModelFree Model,
-            ModelFree representation of white matter response.
+        ModelFree representation of white matter response.
     gm_model : Dmipy Isotropic ModelFree Model,
         ModelFree representation of grey matter response.
     csf_model : Dmipy Isotropic ModelFree Model,
-            ModelFree representation of csf response.
+        ModelFree representation of csf response.
+    three_tissue_selection: array of size (x, y, z, 3),
+        RGB mask of selected voxels used for white/grey matter and CSD.
 
     References
     ----------
@@ -52,6 +70,10 @@ def three_tissue_response_dhollander16(
     .. [3] Ridgway, Gerard R., et al. "Issues with threshold masking in
         voxel-based morphometry of atrophied brains." Neuroimage 44.1 (2009):
         99-111.
+    .. [4] Tournier, J-Donald, Fernando Calamante, and Alan Connelly.
+        "Determination of the appropriate b value and number of gradient
+        directions for high-angular-resolution diffusion-weighted imaging."
+        NMR in Biomedicine 26.12 (2013): 1775-1786.
     """
     # Create Signal Decay Metric (SDM)
     mean_b0 = np.mean(data[..., acquisition_scheme.b0_mask], axis=-1)
@@ -107,18 +129,19 @@ def three_tissue_response_dhollander16(
     # for WM we use WM response selection algorithm
     response_wm_algorithm = _white_matter_response_algorithms[wm_algorithm]
     response_wm, indices_wm_selected = response_wm_algorithm(
-        acquisition_scheme, data_wm, **kwargs)
+        acquisition_scheme, data_wm, N_candidate_voxels=wm_N_candidate_voxels,
+        **kwargs)
 
     # for GM, the voxels closest 2% to GM SDM median are selected.
     median_GM = np.median(SDM[mask_GM_refine])
-    N_threshold = int(np.sum(mask_GM_refine) * 0.02)
+    N_threshold = int(np.sum(mask_GM_refine) * gm_perc)
     indices_gm_selected = np.argsort(
         np.abs(SDM[mask_GM_refine] - median_GM))[:N_threshold]
     response_gm = IsotropicTissueResponseModel(
         acquisition_scheme, data[mask_GM_refine][indices_gm_selected])
 
     # for GM, the 10% highest SDM valued voxels are selected.
-    N_threshold = int(np.sum(mask_CSF_refine) * 0.1)
+    N_threshold = int(np.sum(mask_CSF_refine) * csf_perc)
     indices_csf_selected = np.argsort(SDM[mask_CSF_refine])[::-1][:N_threshold]
     response_csf = IsotropicTissueResponseModel(
         acquisition_scheme, data[mask_CSF_refine][indices_csf_selected])
