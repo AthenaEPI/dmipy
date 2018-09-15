@@ -1,4 +1,4 @@
-from scipy.optimize import minimize
+from scipy.optimize import brute
 from scipy.stats import pearsonr
 import numpy as np
 from dipy.reconst import dti
@@ -88,7 +88,7 @@ def three_tissue_response_dhollander16(
     mask_WM = fa > 0.2
 
     # Separate grey and CSF based on optimal threshold
-    opt = optimal_threshold(SDM, fa < 0.2)
+    opt = optimal_threshold(SDM[fa < 0.2])
     mask_CSF = np.all([mean_b0 > 0, mask, fa < 0.2, SDM > opt], axis=0)
     mask_GM = np.all([mean_b0 > 0, mask, fa < 0.2, SDM < opt], axis=0)
 
@@ -105,8 +105,8 @@ def three_tissue_response_dhollander16(
     # retained.
     SDM_GM = SDM[mask_GM]
     median_GM = np.median(SDM_GM)
-    optimal_threshold_upper = optimal_threshold(SDM_GM, SDM_GM > median_GM)
-    optimal_threshold_lower = optimal_threshold(SDM_GM, SDM_GM < median_GM)
+    optimal_threshold_upper = optimal_threshold(SDM_GM[SDM_GM > median_GM])
+    optimal_threshold_lower = optimal_threshold(SDM_GM[SDM_GM < median_GM])
     mask_GM_refine = np.all(
         [mask_GM,
          SDM > optimal_threshold_lower,
@@ -120,7 +120,7 @@ def three_tissue_response_dhollander16(
 
     # An optimal threshold [4] is computed for the resulting CSF and only the
     # higher SDM valued voxels are retained.
-    optimal_threshold_CSF = optimal_threshold(SDM, mask_CSF_updated)
+    optimal_threshold_CSF = optimal_threshold(SDM[mask_CSF_updated])
     mask_CSF_refine = np.all(
         [mask_CSF_updated, SDM > optimal_threshold_CSF], axis=0)
 
@@ -146,6 +146,7 @@ def three_tissue_response_dhollander16(
     response_csf = IsotropicTissueResponseModel(
         acquisition_scheme, data[mask_CSF_refine][indices_csf_selected])
 
+    # generate selected WM/GM/CSF response function voxels masks.
     pos_WM_refine = np.c_[np.where(mask_WM_refine)]
     mask_WM_selected = np.zeros_like(mask_WM_refine)
     pos_WM_selected = pos_WM_refine[indices_wm_selected]
@@ -212,9 +213,26 @@ def signal_decay_metric(acquisition_scheme, data):
     return SDM
 
 
-def optimal_threshold(image, mask):
-    """Optimal image threshold based on pearson correlation [1]_.
-    T* = argmin_T (\rho(image, image>T))
+def optimal_threshold(data):
+    """Optimal image threshold based on pearson correlation [1]_. The idea is
+    that an 'optimal' mask of some arbitrary image data should be found by
+    thresholding at a value that maximizes the pearson correlation between the
+    original image and the mask, i.e:
+
+    T* = argmax_T (\rho(data, data>T))
+
+    This function estimates T* based on some arbitrary input data.
+
+    Parameters
+    ----------
+    scalar_data: 1D array,
+        scalar array to estimate an 'optimal' threshold on.
+
+    Returns
+    -------
+    optimal_threshold: float,
+        optimal threshold value that maximizes correlation between the original
+        and masked data.
 
     References
     ----------
@@ -222,18 +240,18 @@ def optimal_threshold(image, mask):
         voxel-based morphometry of atrophied brains." Neuroimage 44.1 (2009):
         99-111.
     """
-    masked_voxels = image[mask]
-    min_bound = masked_voxels.min()
-    max_bound = masked_voxels.max()
-    optimal_threshold = minimize(
-        fun=_cost_function,
-        x0=(min_bound + max_bound) / 2.0,
-        args=(masked_voxels,),
-        bounds=([min_bound, max_bound],)).x
-    return optimal_threshold[0]
+    min_bound = data.min()
+    max_bound = data.max()
+    eps = 1e-10
+    optimal_threshold = brute(
+        func=_cost_function,
+        Ns=100,
+        args=(data,),
+        ranges=([min_bound + eps, max_bound - eps],))[0]
+    return optimal_threshold
 
 
 def _cost_function(threshold, image):
     "The cost function used by the optimal_threshold function."
-    rho = pearsonr(image, image > threshold)[0]
+    rho = -pearsonr(image, image > threshold)[0]
     return rho
