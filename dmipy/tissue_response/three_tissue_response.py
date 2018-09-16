@@ -63,9 +63,9 @@ def three_tissue_response_dhollander16(
         response function estimation from single-shell or multi-shell diffusion
         MR data without a co-registered T1 image. ISMRM Workshop on Breaking
         the Barriers of Diffusion MRI, 2016, 5
-    .. [2] Tournier, J‐Donald, Fernando Calamante, and Alan Connelly.
+    .. [2] Tournier, J-Donald, Fernando Calamante, and Alan Connelly.
         "Determination of the appropriate b value and number of gradient
-        directions for high‐angular‐resolution diffusion‐weighted imaging."
+        directions for high-angular-resolution diffusion-weighted imaging."
         NMR in Biomedicine 26.12 (2013): 1775-1786.
     .. [3] Ridgway, Gerard R., et al. "Issues with threshold masking in
         voxel-based morphometry of atrophied brains." Neuroimage 44.1 (2009):
@@ -88,7 +88,8 @@ def three_tissue_response_dhollander16(
     mask_WM = fa > 0.2
 
     # Separate grey and CSF based on optimal threshold
-    opt = optimal_threshold(SDM[fa < 0.2])
+    # take FA < 0.2 but inside brain mask.
+    opt = optimal_threshold(SDM[np.all([fa < 0.2, mean_b0 > 0], axis=0)])
     mask_CSF = np.all([mean_b0 > 0, mask, fa < 0.2, SDM > opt], axis=0)
     mask_GM = np.all([mean_b0 > 0, mask, fa < 0.2, SDM < opt], axis=0)
 
@@ -220,8 +221,10 @@ def optimal_threshold(data):
     original image and the mask, i.e:
 
     T* = argmax_T (\rho(data, data>T))
+       = argmin_T -(\rho(data, data>T))
 
-    This function estimates T* based on some arbitrary input data.
+    This function estimates T* based on the second equation on arbitrary input
+    arrays.
 
     Parameters
     ----------
