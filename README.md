@@ -60,13 +60,14 @@ To get a feeling for how to use Dmipy, we provide a few tutorial notebooks:
 - [Sphere Models (Tumor cells, e.g. [Panagiotaki et al. 2014])](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_sphere_models.ipynb)
 - [Parameter Distribution Models (Axon Diameter Distribution, e.g. [Assaf et al. 2008])](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_diameter_distributions.ipynb)
 - [Gaussian Models (Extra-axonal, e.g. [Behrens et al. 2003])](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_gaussian_models.ipynb)
+- Tissue Response Function Models and Estimation (WM/GM/CSF, e.g. [Jeurissen et al. 2014])
 - [Spherical Distribution Models (Axon Dispersion, e.g. [Kaden et al. 2007])](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_watson_bingham.ipynb)
 - [Spherical Mean of any Compartment Model](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_spherical_mean_models.ipynb)
 ### Global Multi-Compartment Optimizers
 - [Brute Force to Gradient Descent (Brute2Fine)](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_brute_force_optimization.ipynb)
 - [Stochastic (MIX) [Farooq et al. 2016]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_stochastic_mix_optimization.ipynb)
 ### Constrained Spherical Deconvolution Optimizers
-- [Generalized Multi-Shell Multi-Compartment CSD [Tournier et al. 2007, Jeurissen et al. 2014]](https://github.com/AthenaEPI/dmipy/blob/refactor_cvxpy_csd/examples/example_generalized_csd_optimizer.ipynb)
+- [Generalized Multi-Shell Multi-Compartment CSD [Tournier et al. 2007, Jeurissen et al. 2014]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_generalized_csd_optimizer.ipynb)
 ## Dmipy implementations of Microstructure Models in Literature
 Dmipy uses HCP data to illustrate microstructure model examples. To reproduce these examples, dmipy provides a direct way to download HCP data (using your own AWS credentials) in the [HCP tutorial](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/tutorial_human_connectome_project_aws.ipynb).
 ### Single Bundle Models
@@ -90,6 +91,7 @@ Any Spherical Mean model can also estimate parametric FODs.
 ### Spherical Deconvolution-Based Models
 Constrained spherical deconvolution (CSD) models are primarily used for Fiber Orientation Distribution (FOD) estimation. Multi-compartment CSD models improve FOD estimation by separating the signal contributions of white matter from CSF and grey matter.
 - [Multi-Shell Multi-Compartment CSD [model-based version of Jeurissen et al. 2014]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_multi_compartment_constrained_spherical_deconvolution.ipynb)
+- [Multi-Tissue CSD with Unsupervised 3-Tissue Response Function Estimation [Jeurissen 2014, Dhollander 2016]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_multi_tissue_constrained_spherical_deconvolution.ipynb)
 
 ## How to contribute to Dmipy
 Dmipy's design is completely modular and can easily be extended with new models, distributions or optimizers. To contribute, view our [contribution guidelines](https://github.com/AthenaEPI/dmipy/blob/master/contribution_guidelines.rst).

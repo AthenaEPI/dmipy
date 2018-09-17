@@ -46,7 +46,7 @@ def construct_model_based_A_matrix(acquisition_scheme, model_rh, lmax):
     # prepare the rotational harmonics of the kernel
     counter = 0
     for n_ in range(0, lmax + 1, 2):
-        if n_ // 2 > model_rh.shape[1]:
+        if n_ // 2 >= model_rh.shape[1]:
             # in case an isotropic kernel is given
             break
         coef_in_order = 2 * n_ + 1

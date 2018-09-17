@@ -83,7 +83,7 @@ class CsdCvxpyOptimizer:
             x0_vector, (-1, x0_vector.shape[-1]))[0]
         if np.all(np.isnan(x0_single_voxel)):
             self.single_convolution_kernel = True
-            self.A = self._construct_convolution_kernel(
+            self.A = self.model._construct_convolution_kernel(
                 x0_single_voxel)
         else:
             self.single_convolution_kernel = False
@@ -109,7 +109,7 @@ class CsdCvxpyOptimizer:
             self.vf_indices = np.where(np.hstack(vf_array))[0]
 
         sh_l = sph_harm_ind_list(sh_order)[1]
-        lb_weights = sh_l ** 2 * (sh_l + 1) ** 2  # laplace-beltrami
+        lb_weights = sh_l ** 2 * (sh_l + 1) ** 2  # laplace-beltrami [3]
         if self.model.volume_fractions_fixed:
             self.R_smoothness = np.diag(lb_weights)
         else:
@@ -145,7 +145,7 @@ class CsdCvxpyOptimizer:
         if self.single_convolution_kernel:
             A = self.A
         else:
-            A = self._construct_convolution_kernel(x0_vector)
+            A = self.model._construct_convolution_kernel(x0_vector)
 
         sh_coef = cvxpy.Variable(self.Ncoef_total)
         sh_fod = sh_coef[self.sh_start: self.Ncoef + self.sh_start]
@@ -163,7 +163,17 @@ class CsdCvxpyOptimizer:
             cost += (
                 self.lambda_lb * cvxpy.quad_form(sh_coef, self.R_smoothness))
         problem = cvxpy.Problem(cvxpy.Minimize(cost), constraints)
-        problem.solve()
+        try:
+            problem.solve()
+        except cvxpy.error.SolverError:
+            msg = 'cvxpy solver failed'
+            print(msg)
+            return np.zeros_like(x0_vector)
+
+        if problem.status in ["infeasible", "unbounded"]:
+            msg = 'cvxpy found {} problem'.format(problem.status)
+            print(msg)
+            return np.zeros_like(x0_vector)
 
         # return optimized fod sh coefficients
         fitted_params = self.model.parameter_vector_to_parameters(x0_vector)
@@ -172,88 +182,9 @@ class CsdCvxpyOptimizer:
         if not self.model.volume_fractions_fixed:  # if vf was estimated
             fractions_array = np.array(
                 sh_coef[self.vf_indices].value).squeeze() * 2 * np.sqrt(np.pi)
+            fractions_array /= np.sum(fractions_array)  # for small deviations
             for i, name in enumerate(self.model.partial_volume_names):
                 fitted_params[name] = fractions_array[i]
         fitted_parameter_vector = self.model.parameters_to_parameter_vector(
             **fitted_params)
         return fitted_parameter_vector
-
-    def _construct_convolution_kernel(self, x0_vector):
-        """
-        Helper function that constructs the convolution kernel for the given
-        multi-compartment model and the initial condition x0_vector.
-
-        First the parameter vector is converted to a dictionary with the
-        corresponding parameter names. Then, the linked parameters are added to
-        the given ones. Finally, the rotational harmonics of the model is
-        passed to the construct_model_based_A_matrix, which constructs the
-        kernel for an arbitrary PGSE-acquisition scheme.
-
-        For multiple models with fixed volume fractions, the A-matrices
-        are combined to have a combined convolution kernel.
-
-        For multiple models without fixed volume fractions, the convolution
-        kernels for anisotropic and isotropic models are concatenated, with
-        the isotropic kernels always having a spherical harmonics order of 0.
-
-        Parameters
-        ----------
-        x0_vector: array of size (N_parameters),
-            Contains the fixed parameters of the convolution kernel.
-
-        Returns
-        -------
-        kernel: array of size (N_coef, N_data),
-            Observation matrix that maps the FOD spherical harmonics
-            coefficients to the DWI signal values.
-        """
-        parameters_dict = self.model.parameter_vector_to_parameters(
-            x0_vector)
-        parameters_dict = self.model.add_linked_parameters_to_parameters(
-            parameters_dict)
-
-        if self.model.volume_fractions_fixed:
-            if len(self.model.models) > 1:
-                partial_volumes = [
-                    parameters_dict[p] for p in self.model.partial_volume_names
-                ]
-            else:
-                partial_volumes = [1.]
-            kernel = 0.
-            for model, partial_volume in zip(self.model.models,
-                                             partial_volumes):
-                parameters = {}
-                for parameter in model.parameter_ranges:
-                    parameter_name = self.model._inverted_parameter_map[
-                        (model, parameter)
-                    ]
-                    parameters[parameter] = parameters_dict.get(
-                        parameter_name
-                    )
-                model_rh = (
-                    model.rotational_harmonics_representation(
-                        self.acquisition_scheme, **parameters))
-                kernel += partial_volume * construct_model_based_A_matrix(
-                    self.acquisition_scheme, model_rh, self.sh_order)
-        else:
-            kernel = []
-            for model in self.model.models:
-                parameters = {}
-                for parameter in model.parameter_ranges:
-                    parameter_name = self.model._inverted_parameter_map[
-                        (model, parameter)
-                    ]
-                    parameters[parameter] = parameters_dict.get(
-                        parameter_name
-                    )
-                model_rh = (
-                    model.rotational_harmonics_representation(
-                        self.acquisition_scheme, **parameters))
-                if 'orientation' in model.parameter_types.values():
-                    kernel.append(construct_model_based_A_matrix(
-                        self.acquisition_scheme, model_rh, self.sh_order))
-                else:
-                    kernel.append(construct_model_based_A_matrix(
-                        self.acquisition_scheme, model_rh, 0))
-            kernel = np.hstack(kernel)
-        return kernel
