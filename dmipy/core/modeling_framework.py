@@ -58,6 +58,9 @@ __all__ = [
 
 class ModelProperties:
     "Contains various properties for CompartmentModels."
+
+    S0_response = 1.
+
     @property
     def parameter_ranges(self):
         """Returns the optimization ranges of the model parameters.
@@ -1642,7 +1645,8 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
 
     def fit(self, acquisition_scheme, data, mask=None, solver='csd',
             lambda_lb=1e-5, unity_constraint='kernel_dependent',
-            use_parallel_processing=have_pathos, number_of_processors=None):
+            fit_S0_response=False, use_parallel_processing=have_pathos,
+            number_of_processors=None):
         """ The main data fitting function of a
         MultiCompartmentSphericalHarmonicsModel.
 
@@ -1687,6 +1691,12 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             enforce unity if the kernel is voxel-varying or when volume
             fractions are estimated. Otherwise unity_constraint is set to
             False.
+        fit_S0_response: bool,
+            whether or not to fit the raw signal or signal attenuation.
+            default: False, the signal is automatically divided by S0-value.
+            if True, the raw signal is fitted and the S0 intensities of the
+            biophysical models are used in the signal generation. This is
+            useful when using tissue_response_models for example.
         use_parallel_processing : bool,
             Whether or not to use parallel processing using pathos.
         number_of_processors : integer,
@@ -1730,8 +1740,14 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         else:
             self.unity_constraint = unity_constraint
 
-        # S0_responses = np.array([model.S0_response for model in self.models])
-        # self.relative_responses = S0_responses / np.max(S0_responses)
+        self.fit_S0_response = fit_S0_response
+        if self.fit_S0_response:
+            S0_responses = np.r_[[model.S0_response for model in self.models]]
+            self.max_S0_response = S0_responses.max()
+            self.S0_responses = S0_responses / self.max_S0_response
+        else:
+            self.S0_responses = np.ones(len(self.models), dtype=float)
+            self.max_S0_response = 1.
 
         # estimate S0
         self.scheme = acquisition_scheme
@@ -1824,9 +1840,12 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
 
         start = time()
         for idx, pos in enumerate(zip(*mask_pos)):
-            voxel_E = data_[pos] / S0[pos]
+            if fit_S0_response:
+                data_to_fit = data_[pos] / self.max_S0_response
+            else:
+                data_to_fit = data_[pos] / S0[pos]
             voxel_x0_vector = x0_[pos]
-            fit_args = (voxel_E, voxel_x0_vector)
+            fit_args = (data_to_fit, voxel_x0_vector)
 
             if use_parallel_processing:
                 fitted_parameters_lin[idx] = pool.apipe(fit_func, *fit_args)
@@ -1916,6 +1935,9 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         kwargs = self.add_linked_parameters_to_parameters(
             kwargs
         )
+        self.S0_responses = kwargs.get('S0_responses', self.S0_responses)
+        self.fit_S0_response = kwargs.get(
+            'fit_S0_response', self.fit_S0_response)
 
         A = self._construct_convolution_kernel(
             self.parameters_to_parameter_vector(**kwargs))
@@ -1976,8 +1998,9 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             else:
                 partial_volumes = [1.]
             kernel = 0.
-            for model, partial_volume in zip(self.models,
-                                             partial_volumes):
+            for model, partial_volume, S0 in zip(self.models,
+                                                 partial_volumes,
+                                                 self.S0_responses):
                 parameters = {}
                 for parameter in model.parameter_ranges:
                     parameter_name = self._inverted_parameter_map[
@@ -1989,11 +2012,11 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
                 model_rh = (
                     model.rotational_harmonics_representation(
                         self.scheme, **parameters))
-                kernel += partial_volume * construct_model_based_A_matrix(
+                kernel += S0 * partial_volume * construct_model_based_A_matrix(
                     self.scheme, model_rh, self.sh_order)
         else:
             kernel = []
-            for model in self.models:
+            for model, S0 in zip(self.models, self.S0_responses):
                 parameters = {}
                 for parameter in model.parameter_ranges:
                     parameter_name = self._inverted_parameter_map[
@@ -2006,10 +2029,10 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
                     model.rotational_harmonics_representation(
                         self.scheme, **parameters))
                 if 'orientation' in model.parameter_types.values():
-                    kernel.append(construct_model_based_A_matrix(
+                    kernel.append(S0 * construct_model_based_A_matrix(
                         self.scheme, model_rh, self.sh_order))
                 else:
-                    kernel.append(construct_model_based_A_matrix(
+                    kernel.append(S0 * construct_model_based_A_matrix(
                         self.scheme, model_rh, 0))
 
             kernel = np.hstack(kernel)
