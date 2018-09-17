@@ -1,6 +1,6 @@
 from dipy.reconst import dti
-from dmipy.core.acquisition_scheme import gtab_mipy2dipy
-from dmipy.core.modeling_framework import (
+from ..core.acquisition_scheme import gtab_mipy2dipy
+from ..core.modeling_framework import (
     MultiCompartmentSphericalHarmonicsModel)
 import numpy as np
 from dipy.segment.mask import median_otsu

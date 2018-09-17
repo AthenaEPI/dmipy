@@ -2,7 +2,7 @@ from scipy.optimize import brute
 from scipy.stats import pearsonr
 import numpy as np
 from dipy.reconst import dti
-from dmipy.core.acquisition_scheme import gtab_mipy2dipy
+from ..core.acquisition_scheme import gtab_mipy2dipy
 from dipy.segment.mask import median_otsu
 from . import white_matter_response
 from ..signal_models.tissue_response_models import IsotropicTissueResponseModel
