@@ -4,7 +4,7 @@ import numpy as np
 from dipy.reconst import dti
 from dmipy.core.acquisition_scheme import gtab_mipy2dipy
 from dipy.segment.mask import median_otsu
-import white_matter_response
+from . import white_matter_response
 from ..signal_models.tissue_response_models import IsotropicTissueResponseModel
 
 _white_matter_response_algorithms = {
