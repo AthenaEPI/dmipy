@@ -158,6 +158,12 @@ class CsdCvxpyOptimizer:
         if self.unity_constraint:
             constraints.append(cvxpy.sum(vf) == 1.)
 
+        # fixes volume fractions if they are given
+        params = self.model.parameter_vector_to_parameters(x0_vector)
+        for i, vf_name in enumerate(self.model.partial_volume_names):
+            if not self.model.parameter_optimization_flags[vf_name]:
+                constraints.append(vf[i] == params[vf_name])
+
         cost = cvxpy.sum_squares(A * sh_coef - data)
         if self.lambda_lb > 0:
             cost += (
