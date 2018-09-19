@@ -11,7 +11,6 @@ from time import time
 
 from ..utils.spherical_mean import (
     estimate_spherical_mean_multi_shell)
-from ..utils.spherical_convolution import sh_convolution
 from ..utils.utils import (
     T1_tortuosity,
     parameter_equality,
@@ -306,6 +305,8 @@ class MultiCompartmentModelProperties:
                 self._inverted_parameter_map[(None, partial_volume_name)] = \
                     partial_volume_name
                 self.parameter_cardinality[partial_volume_name] = 1
+        else:
+            self.partial_volume_names = []
 
     def _prepare_parameter_links(self):
         """Prepares parameter links if given as input to MultiCompartmentModel.
