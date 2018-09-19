@@ -160,6 +160,7 @@ class CsdCvxpyOptimizer:
 
         # fixes volume fractions if they are given
         params = self.model.parameter_vector_to_parameters(x0_vector)
+        params = self.model.add_linked_parameters_to_parameters(params)
         for i, vf_name in enumerate(self.model.partial_volume_names):
             if not self.model.parameter_optimization_flags[vf_name]:
                 constraints.append(vf[i] == params[vf_name])
