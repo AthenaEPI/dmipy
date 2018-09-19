@@ -45,7 +45,11 @@ class HCPInterface:
             aws_access_key_id=self.public_key,
             aws_secret_access_key=self.secret_key,
         )
-        self.s3_bucket = s3.get_all_buckets()[1]
+
+        for key in s3.get_all_buckets():
+            if key.name == 'hcp-openaccess':
+                self.s3_bucket = key
+                break
 
         self.hcp_directory = os.path.join(DATA_PATH, 'hcp')
         if not os.path.exists(self.hcp_directory):
