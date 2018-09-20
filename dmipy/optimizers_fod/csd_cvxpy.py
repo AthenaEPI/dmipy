@@ -157,12 +157,15 @@ class CsdCvxpyOptimizer:
         if self.unity_constraint:
             constraints.append(cvxpy.sum(vf) == 1.)
 
-        # fixes volume fractions if they are given
-        params = self.model.parameter_vector_to_parameters(x0_vector)
-        params = self.model.add_linked_parameters_to_parameters(params)
-        for i, vf_name in enumerate(self.model.partial_volume_names):
-            if not self.model.parameter_optimization_flags[vf_name]:
-                constraints.append(vf[i] == params[vf_name])
+        # fix volume fractions if only some of them are fixed.
+        # not if all of them are fixed - in that case the convolution
+        # matrix is joined into a single composite response function.
+        if not self.model.volume_fractions_fixed:
+            params = self.model.parameter_vector_to_parameters(x0_vector)
+            params = self.model.add_linked_parameters_to_parameters(params)
+            for i, vf_name in enumerate(self.model.partial_volume_names):
+                if not self.model.parameter_optimization_flags[vf_name]:
+                    constraints.append(vf[i] == params[vf_name])
 
         cost = cvxpy.sum_squares(A * sh_coef - data)
         if self.lambda_lb > 0:
