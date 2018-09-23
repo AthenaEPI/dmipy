@@ -191,7 +191,6 @@ class CsdCvxpyOptimizer:
         if not self.model.volume_fractions_fixed:  # if vf was estimated
             fractions_array = np.array(
                 sh_coef[self.vf_indices].value).squeeze() * 2 * np.sqrt(np.pi)
-            fractions_array /= np.sum(fractions_array)  # for small deviations
             for i, name in enumerate(self.model.partial_volume_names):
                 fitted_params[name] = fractions_array[i]
         fitted_parameter_vector = self.model.parameters_to_parameter_vector(
