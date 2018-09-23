@@ -319,6 +319,29 @@ class DmipyAcquisitionScheme:
         plt.xlabel('Pulse Separation $\Delta$ [sec]', fontsize=18)
         plt.ylabel('Gradient Strength [T/m]', fontsize=18)
 
+    def return_pruned_acquisition_scheme(self, shell_indices, data=None):
+        "Returns pruned acquisition scheme and optionally also prunes data."
+        booleans = []
+        for index in shell_indices:
+            booleans.append(self.shell_indices == index)
+        mask = np.any(booleans, axis=0)
+
+        bvals = self.bvalues[mask]
+        gradient_directions = self.gradient_directions[mask]
+        delta = self.delta[mask]
+        Delta = self.Delta[mask]
+        if self.TE is not None:
+            TE = self.TE[mask]
+        else:
+            TE = None
+
+        pruned_scheme = acquisition_scheme_from_bvalues(
+            bvals, gradient_directions, delta, Delta, TE)
+        if data is None:
+            return pruned_scheme
+        else:
+            return pruned_scheme, data[..., mask]
+
 
 class RotationalHarmonicsAcquisitionScheme:
     """
