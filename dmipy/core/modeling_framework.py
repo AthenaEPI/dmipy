@@ -1736,7 +1736,9 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
 
         if unity_constraint == 'kernel_dependent':
             self.unity_constraint = False
-            if not self.volume_fractions_fixed or self.voxel_varying_kernel:
+            if fit_S0_response:
+                self.unity_constraint = False
+            elif not self.volume_fractions_fixed or self.voxel_varying_kernel:
                 self.unity_constraint = True
         else:
             self.unity_constraint = unity_constraint
