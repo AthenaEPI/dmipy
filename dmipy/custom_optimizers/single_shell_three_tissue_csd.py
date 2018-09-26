@@ -45,10 +45,10 @@ def single_shell_three_tissue_csd(
         assumed to be in the same order as they are generated using the
         dhollander16 tissue response estimation, i.e. [wm, gm, csf].
         if not given it is estimated from the data using the Dhollander16
-        heuristic three-tissue estimation algorithm [1]_.
+        heuristic three-tissue estimation algorithm [2]_.
     N_iterations: positive integer,
         number of biconvex optimization steps to do in the algorithm.
-        default is 4 according to [2]_.
+        default is 4 according to [1]_.
     return_all_csd_fits: bool,
         whether to return all csd fits of all iterations or just the last one.
     csd_fit_verbose: bool,
