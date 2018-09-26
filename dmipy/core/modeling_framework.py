@@ -1647,7 +1647,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
     def fit(self, acquisition_scheme, data, mask=None, solver='csd',
             lambda_lb=1e-5, unity_constraint='kernel_dependent',
             fit_S0_response=False, use_parallel_processing=have_pathos,
-            number_of_processors=None):
+            number_of_processors=None, verbose=True):
         """ The main data fitting function of a
         MultiCompartmentSphericalHarmonicsModel.
 
@@ -1793,17 +1793,21 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
                     msg = 'Parallel processing turned off for tournier07'
                     msg += ' optimizer because it does not improve fitting '
                     msg += 'speed.'
-                    print(msg)
+                    if verbose:
+                        print(msg)
                     use_parallel_processing = False
-                print('Setup Tournier07 FOD optimizer in {} seconds'.format(
-                    time() - start))
+                if verbose:
+                    print(
+                        'Setup Tournier07 FOD optimizer in {} seconds'.format(
+                            time() - start))
             else:
                 fit_func = CsdCvxpyOptimizer(
                     acquisition_scheme, self, x0_, self.sh_order,
                     unity_constraint=self.unity_constraint,
                     lambda_lb=lambda_lb)
-                print('Setup CVXPY FOD optimizer in {} seconds'.format(
-                    time() - start))
+                if verbose:
+                    print('Setup CVXPY FOD optimizer in {} seconds'.format(
+                        time() - start))
         elif solver == 'csd_tournier07':
             fit_func = CsdTournierOptimizer(
                 acquisition_scheme, self, x0_, self.sh_order,
@@ -1811,16 +1815,19 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             if use_parallel_processing:
                 msg = 'Parallel processing turned off for tournier07 optimizer'
                 msg += ' because it does not improve fitting speed.'
-                print(msg)
+                if verbose:
+                    print(msg)
                 use_parallel_processing = False
-            print('Setup Tournier07 FOD optimizer in {} seconds'.format(
-                time() - start))
+            if verbose:
+                print('Setup Tournier07 FOD optimizer in {} seconds'.format(
+                    time() - start))
         elif solver == 'csd_cvxpy':
             fit_func = CsdCvxpyOptimizer(
                 acquisition_scheme, self, x0_, self.sh_order,
                 unity_constraint=self.unity_constraint, lambda_lb=lambda_lb)
-            print('Setup CVXPY FOD optimizer in {} seconds'.format(
-                time() - start))
+            if verbose:
+                print('Setup CVXPY FOD optimizer in {} seconds'.format(
+                    time() - start))
         else:
             msg = "Unknown solver name {}".format(solver)
             raise ValueError(msg)
@@ -1835,8 +1842,9 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             if number_of_processors is None:
                 number_of_processors = cpu_count()
             pool = pp.ProcessPool(number_of_processors)
-            print('Using parallel processing with {} workers.'.format(
-                number_of_processors))
+            if verbose:
+                print('Using parallel processing with {} workers.'.format(
+                    number_of_processors))
         else:
             fitted_parameters_lin = np.empty(
                 np.r_[N_voxels, N_parameters], dtype=float)
@@ -1859,10 +1867,11 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
                 [p.get() for p in fitted_parameters_lin])
 
         fitting_time = time() - start
-        print('Fitting of {} voxels complete in {} seconds.'.format(
-            len(fitted_parameters_lin), fitting_time))
-        print('Average of {} seconds per voxel.'.format(
-            fitting_time / N_voxels))
+        if verbose:
+            print('Fitting of {} voxels complete in {} seconds.'.format(
+                len(fitted_parameters_lin), fitting_time))
+            print('Average of {} seconds per voxel.'.format(
+                fitting_time / N_voxels))
         fitted_parameters = np.zeros_like(x0_, dtype=float)
         fitted_parameters[mask_pos] = fitted_parameters_lin
 
