@@ -97,7 +97,7 @@ def single_shell_three_tissue_csd(
         else:
             mt_csd_mod.set_fixed_parameter(
                 'partial_volume_0',
-                mt_csd_fit.fitted_parameters['partial_volume_0'])
+                mt_csd_fit.fitted_parameters['partial_volume_0'])  # noqa: F821
         mt_csd_fit = mt_csd_mod.fit(**fit_args)
         if return_all_csd_fits:
             mt_csd_fits.append(mt_csd_fit)
