@@ -92,7 +92,7 @@ Any Spherical Mean model can also estimate parametric FODs.
 Constrained spherical deconvolution (CSD) models are primarily used for Fiber Orientation Distribution (FOD) estimation. Multi-Tissue CSD models improve FOD estimation by separating WM/GM/CSF signal contributions using multiple tissue response functions.
 - [Multi-Shell Multi-Compartment CSD [model-based version of Jeurissen et al. 2014]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_multi_compartment_constrained_spherical_deconvolution.ipynb)
 - [Multi-Shell Multi-Tissue CSD with Unsupervised 3-Tissue Response Function Estimation [Jeurissen 2014, Dhollander 2016a]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_multi_tissue_constrained_spherical_deconvolution.ipynb)
-- [Single-Shell (1 shell + b0) Multi-Tissue CSD [Dhollander et al. 2016b]](https://github.com/AthenaEPI/dmipy/blob/master/examples/example_single_shell_three_tissue_csd.ipynb)
+- [Single-Shell (1 shell + b0) Multi-Tissue CSD [Dhollander et al. 2016b]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_single_shell_three_tissue_csd.ipynb)
 
 ## How to contribute to Dmipy
 Dmipy's design is completely modular and can easily be extended with new models, distributions or optimizers. To contribute, view our [contribution guidelines](https://github.com/AthenaEPI/dmipy/blob/master/contribution_guidelines.rst).
