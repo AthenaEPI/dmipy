@@ -175,7 +175,10 @@ class CsdTournierOptimizer:
         for iteration in range(self.max_iter):
             L = self.L_positivity[negative_fod_check]
             Q = AT_A + self.lambda_pos * np.dot(L.T, L)
-            f_sh = np.dot(np.dot(np.linalg.inv(Q), A.T), data)
+            try:
+                f_sh = np.dot(np.dot(np.linalg.inv(Q), A.T), data)
+            except np.linalg.LinAlgError:
+                Q += 1e-5 * np.eye(Q.shape[0])
             negative_fod_check_old = negative_fod_check
             negative_fod_check = np.dot(self.L_positivity, f_sh) < threshold
             if np.array_equal(negative_fod_check, negative_fod_check_old):

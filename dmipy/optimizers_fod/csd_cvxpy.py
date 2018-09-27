@@ -1,5 +1,4 @@
 import numpy as np
-from .construct_observation_matrix import construct_model_based_A_matrix
 from dipy.data import get_sphere, HemiSphere
 from dipy.reconst.shm import real_sym_sh_mrtrix
 from dipy.utils.optpkg import optional_package
@@ -158,6 +157,16 @@ class CsdCvxpyOptimizer:
         if self.unity_constraint:
             constraints.append(cvxpy.sum(vf) == 1.)
 
+        # fix volume fractions if only some of them are fixed.
+        # not if all of them are fixed - in that case the convolution
+        # matrix is joined into a single composite response function.
+        if not self.model.volume_fractions_fixed:
+            params = self.model.parameter_vector_to_parameters(x0_vector)
+            params = self.model.add_linked_parameters_to_parameters(params)
+            for i, vf_name in enumerate(self.model.partial_volume_names):
+                if not self.model.parameter_optimization_flags[vf_name]:
+                    constraints.append(vf[i] == params[vf_name])
+
         cost = cvxpy.sum_squares(A * sh_coef - data)
         if self.lambda_lb > 0:
             cost += (
@@ -182,7 +191,6 @@ class CsdCvxpyOptimizer:
         if not self.model.volume_fractions_fixed:  # if vf was estimated
             fractions_array = np.array(
                 sh_coef[self.vf_indices].value).squeeze() * 2 * np.sqrt(np.pi)
-            fractions_array /= np.sum(fractions_array)  # for small deviations
             for i, name in enumerate(self.model.partial_volume_names):
                 fitted_params[name] = fractions_array[i]
         fitted_parameter_vector = self.model.parameters_to_parameter_vector(
