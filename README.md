@@ -51,7 +51,7 @@ To get a feeling for how to use Dmipy, we provide a few tutorial notebooks:
 - [Simulating and fitting data using a simple Stick model](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/tutorial_simulating_and_fitting_using_a_simple_model.ipynb)
 - [Combining biophysical models into a Microstructure model](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/tutorial_combining_biophysical_models_into_microstructure_model.ipynb)
 - [Creating a dispersed and/or distributed axon bundle representation](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/tutorial_distributed_model_representations.ipynb)
-- [Imposing parameter links and constraints](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/tutorial_imposing_parameter_links.ipynb)
+- [Adding parameter links and optimization constraints](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/tutorial_imposing_parameter_links.ipynb)
 - [Parameter Cascading: Using a simple model to initialize a complex one](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/tutorial_parameter_cascading_and_simulating_nd_datasets.ipynb)
 
 ## Explanations and Illustrations of Dmipy Contents
