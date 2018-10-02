@@ -86,7 +86,7 @@ def test_bingham_equal_to_watson(beta_fraction=0):
     mu_ = np.random.rand(2)
     n_cart = utils.sphere2cart(np.r_[1., mu_])
     psi_ = np.random.rand() * np.pi
-    odi_ = np.random.rand()
+    odi_ = np.max([0.1, np.random.rand()])
     bingham = distributions.SD2Bingham(mu=mu_, psi=psi_,
                                        odi=odi_,
                                        beta_fraction=beta_fraction)
