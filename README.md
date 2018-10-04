@@ -97,7 +97,6 @@ Constrained spherical deconvolution (CSD) models are primarily used for Fiber Or
 ### Free Water Elimination
 Removing free water signal contributions can be useful for studying WM properties on the interface between WM and CSF.
 - Multi-Shell Free Water Elimination using MSMT-CSD (applied to MAP-MRI)
-- Single-Shell Free Water Elimination using SSMT-CSD (applied to DTI)
 
 ## How to contribute to Dmipy
 Dmipy's design is completely modular and can easily be extended with new models, distributions or optimizers. To contribute, view our [contribution guidelines](https://github.com/AthenaEPI/dmipy/blob/master/contribution_guidelines.rst).
