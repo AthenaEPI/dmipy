@@ -156,7 +156,11 @@ class MixOptimizer:
             # step 2: Estimating linear variables using COBYLA
             phi = self.model(self.acquisition_scheme,
                              quantity="stochastic cost function", **parameters)
-            phi_inv = np.dot(np.linalg.inv(np.dot(phi.T, phi)), phi.T)
+            try:
+                phi_inv = np.dot(np.linalg.inv(np.dot(phi.T, phi)), phi.T)
+            except np.linalg.linalg.LinAlgError:
+                    # happens when models have the same signal attenuations.
+                vf = np.ones(self.Nmodels) / float(self.Nmodels)
             vf_x0 = np.dot(phi_inv, data)
             vf_x0 /= np.sum(np.clip(vf_x0, 0, np.inf))
             vf = fmin_cobyla(self.cobyla_cost_function, x0=vf_x0,
