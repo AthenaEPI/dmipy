@@ -83,6 +83,7 @@ Dmipy uses HCP data to illustrate microstructure model examples. To reproduce th
 - [NODDI in Crossings (NODDIx) [Farooq et al. 2016]](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_mix_microstructure_imaging_in_crossings.ipynb)
 
 ### Tumor Models
+- Anisotropic IVIM [Slator et al. 2017]
 - [VERDICT [Panagiotaki et al. 2014]](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_verdict.ipynb)
 ### Spherical Mean-Based Models
 Any Spherical Mean model can also estimate parametric FODs.
