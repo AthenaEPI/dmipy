@@ -727,7 +727,7 @@ def check_acquisition_scheme(
         )
 
 
-def gtab_dipy2dmipy(dipy_gradient_table, dummy_deltas=False):
+def gtab_dipy2dmipy(dipy_gradient_table, dummy_deltas=False, **kwargs):
     "Converts a dipy gradient_table to a dmipy acquisition_scheme."
     if not isinstance(dipy_gradient_table, GradientTable):
         msg = "Input must be a dipy GradientTable object. "
@@ -751,7 +751,8 @@ def gtab_dipy2dmipy(dipy_gradient_table, dummy_deltas=False):
         delta = 0.01  # 10ms
         Delta = 0.03  # 30ms
     gtab_dmipy = acquisition_scheme_from_bvalues(
-        bvalues=bvals, gradient_directions=bvecs, delta=delta, Delta=Delta)
+        bvalues=bvals, gradient_directions=bvecs, delta=delta, Delta=Delta,
+        **kwargs)
     return gtab_dmipy
 
 
