@@ -793,8 +793,7 @@ class FittedMultiCompartmentSphericalHarmonicsModel:
                 raise ValueError(msg)
             fractions_tmp[fraction_name] = self.fitted_parameters[
                 fraction_name].copy()
-            self.fitted_parameters[fraction_name] = np.zeros_like(
-                self.fitted_parameters[fraction_name])
+            self.fitted_parameters[fraction_name] *= 0.
         self.fitted_parameters_vector = (
             self.model.parameters_to_parameter_vector(
                 **self.fitted_parameters))
@@ -804,7 +803,7 @@ class FittedMultiCompartmentSphericalHarmonicsModel:
 
         # return original volume fractions
         for fraction_name in filtered_partial_fraction_names:
-            self.fitted_parameters[fraction_name] = fractions_tmp[
+            self.fitted_parameters[fraction_name] += fractions_tmp[
                 fraction_name]
         self.fitted_parameters_vector = (
             self.model.parameters_to_parameter_vector(
