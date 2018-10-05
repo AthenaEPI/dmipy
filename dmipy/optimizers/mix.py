@@ -158,17 +158,16 @@ class MixOptimizer:
                              quantity="stochastic cost function", **parameters)
             try:
                 phi_inv = np.dot(np.linalg.inv(np.dot(phi.T, phi)), phi.T)
+                vf_x0 = np.dot(phi_inv, data)
+                vf_x0 /= np.sum(np.clip(vf_x0, 0, np.inf))
+                vf = fmin_cobyla(self.cobyla_cost_function, x0=vf_x0,
+                                 cons=[cobyla_positivity_constraint,
+                                       cobyla_unity_constraint],
+                                 args=(phi, data),
+                                 maxfun=2000)
             except np.linalg.linalg.LinAlgError:
-                    # happens when models have the same signal attenuations.
+                # happens when models have the same signal attenuations.
                 vf = np.ones(self.Nmodels) / float(self.Nmodels)
-            vf_x0 = np.dot(phi_inv, data)
-            vf_x0 /= np.sum(np.clip(vf_x0, 0, np.inf))
-            vf = fmin_cobyla(self.cobyla_cost_function, x0=vf_x0,
-                             cons=[cobyla_positivity_constraint,
-                                   cobyla_unity_constraint],
-                             args=(phi, data),
-                             maxfun=2000)
-
             vf_nested = np.ones(len(vf) - 1)
             vf_nested[0] = vf[0]
             for i in np.arange(1, len(vf_nested)):
