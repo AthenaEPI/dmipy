@@ -1,4 +1,6 @@
 import numpy as np
+from dmipy.data.saved_acquisition_schemes import (
+    duval_cat_spinal_cord_2d_acquisition_scheme)
 from dmipy.core.acquisition_scheme import (
     acquisition_scheme_from_bvalues,
     acquisition_scheme_from_qvalues,
@@ -143,7 +145,7 @@ def test_estimate_shell_indices():
     assert_array_equal(shell_indices, bvalues)
 
 
-def test_shell_indices_with_vayring_diffusion_times(Nsamples=10):
+def test_shell_indices_with_varying_diffusion_times(Nsamples=10):
     # tests whether measurements with the same bvalue but different diffusion
     # time are correctly classified in different shells
     bvalues = np.tile(1e9, Nsamples)
@@ -156,7 +158,7 @@ def test_shell_indices_with_vayring_diffusion_times(Nsamples=10):
     assert_equal(len(np.unique(scheme.shell_indices)), 2)
 
 
-def test_dipy2mipy_acquisition_converter(Nsamples=10):
+def test_dipy2dmipy_acquisition_converter(Nsamples=10):
     bvals = np.tile(1e3, Nsamples)
     bvecs = np.tile(np.r_[1., 0., 0.], (Nsamples, 1))
     big_delta = 0.03
@@ -170,7 +172,7 @@ def test_dipy2mipy_acquisition_converter(Nsamples=10):
     assert_equal(np.unique(gtab_mipy.delta), gtab_dipy.small_delta)
 
 
-def test_mipy2dipy_acquisition_converter(Nsamples=10):
+def test_dmipy2dipy_acquisition_converter(Nsamples=10):
     bvals = np.tile(1e9, Nsamples)
     bvecs = np.tile(np.r_[1., 0., 0.], (Nsamples, 1))
     big_delta = 0.03
@@ -194,3 +196,8 @@ def test_acquisition_scheme_summary(Nsamples=10):
         bvalues=bvals, gradient_directions=bvecs,
         delta=small_delta, Delta=big_delta)
     gtab_mipy.print_acquisition_info
+
+
+def test_raise_dmipy2dmipy_multiple_delta_Delta():
+    scheme = duval_cat_spinal_cord_2d_acquisition_scheme()
+    assert_raises(ValueError, gtab_dmipy2dipy, scheme)

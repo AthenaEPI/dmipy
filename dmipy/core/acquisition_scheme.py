@@ -117,7 +117,7 @@ class DmipyAcquisitionScheme:
             if self.qvalues is not None:
                 self.shell_qvalues = self.qvalues[first_indices]
             self.shell_gradient_strengths = None
-            if self.shell_gradient_strengths is not None:
+            if self.gradient_strengths is not None:
                 self.shell_gradient_strengths = (
                     self.gradient_strengths[first_indices])
             self.shell_delta = None
@@ -895,18 +895,22 @@ def gtab_dmipy2dipy(dmipy_gradient_table):
     delta = dmipy_gradient_table.delta
     Delta = dmipy_gradient_table.Delta
 
-    if len(np.unique(delta)) == 1:
-        delta = delta[0]
-    elif len(np.unique(delta)) > 1:
+    if len(np.unique(delta)) > 1:
         msg = "Cannot create Dipy GradientTable for Acquisition schemes with "
         msg += "multiple delta (pulse duration) values, due to current "
         msg += "limitations of Dipy GradientTables."
-    if len(np.unique(Delta)) == 1:
-        Delta = Delta[0]
-    elif len(np.unique(Delta)) > 1:
+        raise ValueError(msg)
+    elif len(np.unique(delta)) == 1:
+        delta = delta[0]
+
+    if len(np.unique(Delta)) > 1:
         msg = "Cannot create Dipy GradientTable for Acquisition schemes with "
         msg += "multiple Delta (pulse sepration) values, due to current "
         msg += "limitations of Dipy GradientTables."
+        raise ValueError(msg)
+    elif len(np.unique(Delta)) == 1:
+        Delta = Delta[0]
+
     dipy_gradient_table = gradient_table(
         bvals=bvals, bvecs=bvecs, small_delta=delta, big_delta=Delta)
     return dipy_gradient_table
