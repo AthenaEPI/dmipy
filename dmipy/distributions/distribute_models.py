@@ -356,6 +356,14 @@ class DistributedModel:
         """
         return copy.copy(self)
 
+    def _set_required_acquisition_parameters(self):
+        self._required_acquisition_parameters = []
+        for model in self.models:
+            self._required_acquisition_parameters += (
+                model._required_acquisition_parameters)
+        self._required_acquisition_parameters = np.unique(
+            self._required_acquisition_parameters)
+
     @property
     def parameter_names(self):
         "Retuns the DistributedModel parameter names."
@@ -584,6 +592,7 @@ class SD1WatsonDistributed(DistributedModel):
 
     def __init__(self, models, parameter_links=None):
         self.models = models
+        self._set_required_acquisition_parameters()
         self._check_for_double_model_class_instances()
         self._check_for_dispersable_models()
 
@@ -622,6 +631,7 @@ class SD2BinghamDistributed(DistributedModel):
 
     def __init__(self, models, parameter_links=None):
         self.models = models
+        self._set_required_acquisition_parameters()
         self._check_for_double_model_class_instances()
         self._check_for_dispersable_models()
 
@@ -661,6 +671,7 @@ class DD1GammaDistributed(DistributedModel):
     def __init__(self, models, parameter_links=None,
                  target_parameter='diameter'):
         self.models = models
+        self._set_required_acquisition_parameters()
         self.target_parameter = target_parameter
         self._check_for_double_model_class_instances()
         self._check_for_distributable_models()

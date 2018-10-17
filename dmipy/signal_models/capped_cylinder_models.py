@@ -37,7 +37,7 @@ class CC2CappedCylinderStejskalTannerApproximation(ModelProperties):
         spheres and between planes." Journal of Magnetic Resonance, Series A
         104.1 (1993): 17-25.
     """
-
+    _required_acquisition_parameters = ['gradient_directions', 'qvalues']
     _model_type = 'CompartmentModel'
 
     def __init__(
@@ -146,7 +146,8 @@ class CC3CappedCylinderCallaghanApproximation(ModelProperties):
         relaxation." Journal of magnetic resonance, Series A 113.1 (1995):
         53-59.
     """
-
+    _required_acquisition_parameters = [
+        'gradient_directions', 'qvalues', 'tau']
     _model_type = 'CompartmentModel'
 
     def __init__(

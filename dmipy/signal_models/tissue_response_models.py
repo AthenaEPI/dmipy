@@ -42,6 +42,7 @@ class AnisotropicTissueResponseModel(ModelProperties):
         directions for high-angular-resolution diffusion-weighted imaging."
         NMR in Biomedicine 26.12 (2013): 1775-1786.
     """
+    _required_acquisition_parameters = []
     _parameter_ranges = {'mu': ([0, np.pi], [-np.pi, np.pi])}
     _parameter_scales = {'mu': np.r_[1., 1.]}
     _parameter_types = {'mu': 'orientation'}
@@ -210,6 +211,7 @@ class IsotropicTissueResponseModel(ModelProperties):
         directions for high-angular-resolution diffusion-weighted imaging."
         NMR in Biomedicine 26.12 (2013): 1775-1786.
     """
+    _required_acquisition_parameters = []
     _parameter_ranges = {}
     _parameter_scales = {}
     _parameter_types = {}
