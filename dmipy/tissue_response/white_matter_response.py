@@ -1,5 +1,5 @@
 from dipy.reconst import dti
-from ..core.acquisition_scheme import gtab_mipy2dipy
+from ..core.acquisition_scheme import gtab_dmipy2dipy
 from ..core.modeling_framework import (
     MultiCompartmentSphericalHarmonicsModel)
 import numpy as np
@@ -58,7 +58,7 @@ def white_matter_response_tournier07(
         # assume the data was prepared.
         data_to_fit = data.reshape([-1, data_shape[-1]])
 
-    gtab = gtab_mipy2dipy(acquisition_scheme)
+    gtab = gtab_dmipy2dipy(acquisition_scheme)
     tenmod = dti.TensorModel(gtab)
     tenfit = tenmod.fit(data_to_fit)
     fa = tenfit.fa
@@ -158,7 +158,7 @@ def white_matter_response_tournier13(
         # assume the data was prepared.
         data_to_fit = data.reshape([-1, data_shape[-1]])
 
-    gtab = gtab_mipy2dipy(acquisition_scheme)
+    gtab = gtab_dmipy2dipy(acquisition_scheme)
     tenmod = dti.TensorModel(gtab)
     tenfit = tenmod.fit(data_to_fit)
     fa = tenfit.fa

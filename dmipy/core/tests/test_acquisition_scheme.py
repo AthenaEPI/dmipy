@@ -4,7 +4,7 @@ from dmipy.core.acquisition_scheme import (
     acquisition_scheme_from_qvalues,
     acquisition_scheme_from_gradient_strengths,
     calculate_shell_bvalues_and_indices,
-    gtab_dipy2mipy, gtab_mipy2dipy)
+    gtab_dipy2dmipy, gtab_dmipy2dipy)
 from dipy.core.gradients import gradient_table
 from numpy.testing import (
     assert_raises, assert_equal, assert_array_equal)
@@ -163,7 +163,7 @@ def test_dipy2mipy_acquisition_converter(Nsamples=10):
     small_delta = 0.01
     gtab_dipy = gradient_table(
         bvals=bvals, bvecs=bvecs, small_delta=small_delta, big_delta=big_delta)
-    gtab_mipy = gtab_dipy2mipy(gtab_dipy)
+    gtab_mipy = gtab_dipy2dmipy(gtab_dipy)
     assert_array_equal(gtab_mipy.bvalues / 1e6, gtab_dipy.bvals)
     assert_array_equal(gtab_mipy.gradient_directions, gtab_dipy.bvecs)
     assert_equal(np.unique(gtab_mipy.Delta), gtab_dipy.big_delta)
@@ -178,7 +178,7 @@ def test_mipy2dipy_acquisition_converter(Nsamples=10):
     gtab_mipy = acquisition_scheme_from_bvalues(
         bvalues=bvals, gradient_directions=bvecs,
         delta=small_delta, Delta=big_delta)
-    gtab_dipy = gtab_mipy2dipy(gtab_mipy)
+    gtab_dipy = gtab_dmipy2dipy(gtab_mipy)
     assert_array_equal(gtab_mipy.bvalues / 1e6, gtab_dipy.bvals)
     assert_array_equal(gtab_mipy.gradient_directions, gtab_dipy.bvecs)
     assert_equal(gtab_mipy.Delta, gtab_dipy.big_delta)
