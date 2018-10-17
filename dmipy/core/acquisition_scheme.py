@@ -727,21 +727,36 @@ def check_acquisition_scheme(
         )
 
 
-def gtab_dipy2mipy(dipy_gradient_table):
+def gtab_dipy2dmipy(dipy_gradient_table, dummy_deltas=False, **kwargs):
     "Converts a dipy gradient_table to a dmipy acquisition_scheme."
     if not isinstance(dipy_gradient_table, GradientTable):
         msg = "Input must be a dipy GradientTable object. "
         raise ValueError(msg)
     bvals = dipy_gradient_table.bvals * 1e6
     bvecs = dipy_gradient_table.bvecs
-    delta = dipy_gradient_table.small_delta
-    Delta = dipy_gradient_table.big_delta
+    if not dummy_deltas:
+        if (dipy_gradient_table.small_delta is None or
+                dipy_gradient_table.big_delta is None):
+            msg = "Dmipy acquisition schemes need non-None pulse duration and "
+            msg += "separation (small- and big Delta). If these are not known "
+            msg += "for your acquisition, set `dummy_deltas=True` to assume "
+            msg += "these are typical values Delta=30ms and delta=10ms.\n\n"
+            msg += "But BE AWARE, this this will bias estimation with "
+            msg += "models that use delta/Delta for signal generation."
+            raise ValueError(msg)
+        else:
+            delta = dipy_gradient_table.small_delta
+            Delta = dipy_gradient_table.big_delta
+    else:
+        delta = 0.01  # 10ms
+        Delta = 0.03  # 30ms
     gtab_dmipy = acquisition_scheme_from_bvalues(
-        bvalues=bvals, gradient_directions=bvecs, delta=delta, Delta=Delta)
+        bvalues=bvals, gradient_directions=bvecs, delta=delta, Delta=Delta,
+        **kwargs)
     return gtab_dmipy
 
 
-def gtab_mipy2dipy(dmipy_gradient_table):
+def gtab_dmipy2dipy(dmipy_gradient_table):
     "Converts a dmipy acquisition scheme to a dipy gradient_table."
     if not isinstance(dmipy_gradient_table, DmipyAcquisitionScheme):
         msg = "Input must be a DmipyAcquisitionScheme object. "
