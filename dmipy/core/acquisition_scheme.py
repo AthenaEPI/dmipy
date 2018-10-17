@@ -375,7 +375,26 @@ class DmipyAcquisitionScheme:
         plt.ylabel('Gradient Strength [T/m]', fontsize=18)
 
     def return_pruned_acquisition_scheme(self, shell_indices, data=None):
-        "Returns pruned acquisition scheme and optionally also prunes data."
+        """Returns pruned acquisition scheme and optionally also prunes data.
+
+        Parameters
+        ----------
+        shell_indices: list of integers,
+            the shell indices that correspond with the shells that should be
+            returned. For the zeroth and second shell this is e.g. [0, 2]
+        data: NDarray,
+            DW-data that corresponds with the acquisition scheme. If it is
+            given, then the data is pruned the same way as the acquisition
+            scheme, meaning the pruned scheme and data can be used and fitted
+            together again.
+
+        Returns
+        -------
+        pruned_scheme: DmipyAcquisitionScheme object,
+            the pruned acquisition scheme
+        pruned_data: NDarray,
+            the pruned data corresponding to the acquisition scheme.
+        """
         booleans = []
         for index in shell_indices:
             booleans.append(self.shell_indices == index)
@@ -391,11 +410,13 @@ class DmipyAcquisitionScheme:
             TE = None
 
         pruned_scheme = acquisition_scheme_from_bvalues(
-            bvals, gradient_directions, delta, Delta, TE)
+            bvals, gradient_directions, delta, Delta, TE,
+            self.min_b_shell_distance, self.b0_threshold)
         if data is None:
             return pruned_scheme
         else:
-            return pruned_scheme, data[..., mask]
+            pruned_data = data[..., mask]
+            return pruned_scheme, pruned_data
 
 
 class RotationalHarmonicsAcquisitionScheme:
