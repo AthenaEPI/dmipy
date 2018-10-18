@@ -712,7 +712,8 @@ class MultiCompartmentModelProperties:
         for model in self.models:
             for parameter in model._required_acquisition_parameters:
                 if getattr(acquisition_scheme, parameter) is None:
-                    msg = "{} is not compatible with ".format(model.__name__)
+                    msg = "{} is not compatible with ".format(
+                        model.__class__.__name__)
                     msg += "given acquisition scheme because it needs "
                     msg += "{} as an acquisition parameter.".format(parameter)
                     raise ValueError(msg)
