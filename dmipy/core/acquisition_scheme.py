@@ -468,7 +468,7 @@ class SphericalMeanAcquisitionScheme:
 
 
 def acquisition_scheme_from_bvalues(
-        bvalues, gradient_directions, delta, Delta, TE=None,
+        bvalues, gradient_directions, delta=None, Delta=None, TE=None,
         min_b_shell_distance=50e6, b0_threshold=10e6):
     r"""
     Creates an acquisition scheme object from bvalues, gradient directions,
