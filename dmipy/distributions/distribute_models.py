@@ -362,7 +362,7 @@ class DistributedModel:
             self._required_acquisition_parameters += (
                 model._required_acquisition_parameters)
         self._required_acquisition_parameters = np.unique(
-            self._required_acquisition_parameters)
+            self._required_acquisition_parameters).tolist()
 
     @property
     def parameter_names(self):
