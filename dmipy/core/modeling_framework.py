@@ -1743,6 +1743,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             Resonance in Medicine 58.3 (2007): 497-510.
         """
         self._check_if_kernel_parameters_are_fixed()
+        self._check_tissue_model_acquisition_scheme(acquisition_scheme)
         self._check_model_params_with_acquisition_params(acquisition_scheme)
 
         self.voxel_varying_kernel = False
