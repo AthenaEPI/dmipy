@@ -24,6 +24,7 @@ class P2PlaneStejskalTannerApproximation(ModelProperties):
         spheres and between planes." Journal of Magnetic Resonance, Series A
         104.1 (1993): 17-25.
     """
+    _required_acquisition_parameters = ['qvalues']
     _parameter_ranges = {
         'diameter': (1e-2, 20)
     }
@@ -92,6 +93,7 @@ class P3PlaneCallaghanApproximation(ModelProperties):
     [1] Callaghan, "Pulsed-Gradient Spin-Echo NMR for Planar, Cylindrical,
         and Spherical Pores under Conditions of Wall Relaxation", JMR 1995
     """
+    _required_acquisition_parameters = ['qvalues', 'tau']
 
     _parameter_ranges = {
         'diameter': (1e-2, 20)

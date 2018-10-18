@@ -1,10 +1,17 @@
 import numpy as np
+from dmipy.data.saved_acquisition_schemes import (
+    duval_cat_spinal_cord_2d_acquisition_scheme,
+    wu_minn_hcp_acquisition_scheme)
 from dmipy.core.acquisition_scheme import (
     acquisition_scheme_from_bvalues,
     acquisition_scheme_from_qvalues,
     acquisition_scheme_from_gradient_strengths,
     calculate_shell_bvalues_and_indices,
     gtab_dipy2dmipy, gtab_dmipy2dipy)
+from dmipy.core.modeling_framework import (
+    MultiCompartmentModel)
+from dmipy.signal_models.cylinder_models import (
+    C4CylinderGaussianPhaseApproximation)
 from dipy.core.gradients import gradient_table
 from numpy.testing import (
     assert_raises, assert_equal, assert_array_equal)
@@ -143,7 +150,7 @@ def test_estimate_shell_indices():
     assert_array_equal(shell_indices, bvalues)
 
 
-def test_shell_indices_with_vayring_diffusion_times(Nsamples=10):
+def test_shell_indices_with_varying_diffusion_times(Nsamples=10):
     # tests whether measurements with the same bvalue but different diffusion
     # time are correctly classified in different shells
     bvalues = np.tile(1e9, Nsamples)
@@ -156,7 +163,7 @@ def test_shell_indices_with_vayring_diffusion_times(Nsamples=10):
     assert_equal(len(np.unique(scheme.shell_indices)), 2)
 
 
-def test_dipy2mipy_acquisition_converter(Nsamples=10):
+def test_dipy2dmipy_acquisition_converter(Nsamples=10):
     bvals = np.tile(1e3, Nsamples)
     bvecs = np.tile(np.r_[1., 0., 0.], (Nsamples, 1))
     big_delta = 0.03
@@ -170,7 +177,7 @@ def test_dipy2mipy_acquisition_converter(Nsamples=10):
     assert_equal(np.unique(gtab_mipy.delta), gtab_dipy.small_delta)
 
 
-def test_mipy2dipy_acquisition_converter(Nsamples=10):
+def test_dmipy2dipy_acquisition_converter(Nsamples=10):
     bvals = np.tile(1e9, Nsamples)
     bvecs = np.tile(np.r_[1., 0., 0.], (Nsamples, 1))
     big_delta = 0.03
@@ -194,3 +201,32 @@ def test_acquisition_scheme_summary(Nsamples=10):
         bvalues=bvals, gradient_directions=bvecs,
         delta=small_delta, Delta=big_delta)
     gtab_mipy.print_acquisition_info
+
+
+def test_raise_dmipy2dmipy_multiple_delta_Delta():
+    scheme = duval_cat_spinal_cord_2d_acquisition_scheme()
+    assert_raises(ValueError, gtab_dmipy2dipy, scheme)
+
+
+def test_acquisition_scheme_pruning():
+    scheme = wu_minn_hcp_acquisition_scheme()
+    test_data = np.random.rand(len(scheme.bvalues))
+
+    scheme_pr, data_pr = scheme.return_pruned_acquisition_scheme(
+        [2], test_data)
+    assert_array_equal(
+        scheme_pr.bvalues,
+        scheme.bvalues[scheme.shell_indices == 2])
+    assert_array_equal(
+        data_pr,
+        test_data[scheme.shell_indices == 2])
+
+
+def test_acq_scheme_without_deltas_model_catch():
+    scheme = wu_minn_hcp_acquisition_scheme()
+    test_data = np.random.rand(len(scheme.bvalues))
+    scheme_clinical = acquisition_scheme_from_bvalues(
+        scheme.bvalues, scheme.gradient_directions)
+    mc_model = MultiCompartmentModel(
+        [C4CylinderGaussianPhaseApproximation()])
+    assert_raises(ValueError, mc_model.fit, scheme_clinical, test_data)

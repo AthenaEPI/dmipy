@@ -55,7 +55,7 @@ install:
 - python setup.py install --record installed_files.txt
 
 script:
-- flake8 --ignore N802,N806,E731,F401 `find . -name \*.py | grep -v setup.py | grep -v /doc/`
+- flake8 --ignore N802,N806,E731,F401,W504 `find . -name \*.py | grep -v setup.py | grep -v /doc/`
 - nosetests --with-coverage -v
   #- travis-sphinx build -s doc
   #- for a in examples/*ipynb; do 

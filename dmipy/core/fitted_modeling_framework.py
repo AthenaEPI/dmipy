@@ -174,6 +174,9 @@ class FittedMultiCompartmentModel:
         """
         if acquisition_scheme is None:
             acquisition_scheme = self.model.scheme
+        self.model._check_model_params_with_acquisition_params(
+            acquisition_scheme)
+
         dataset_shape = self.fitted_parameters_vector.shape[:-1]
         if S0 is None:
             S0 = self.S0
@@ -284,6 +287,9 @@ class FittedMultiCompartmentSphericalMeanModel:
         """
         if acquisition_scheme is None:
             acquisition_scheme = self.model.scheme
+        self.model._check_model_params_with_acquisition_params(
+            acquisition_scheme)
+
         dataset_shape = self.fitted_parameters_vector.shape[:-1]
         if S0 is None:
             S0 = self.S0
@@ -737,6 +743,9 @@ class FittedMultiCompartmentSphericalHarmonicsModel:
         """
         if acquisition_scheme is None:
             acquisition_scheme = self.model.scheme
+        self.model._check_model_params_with_acquisition_params(
+            acquisition_scheme)
+
         dataset_shape = self.fitted_parameters_vector.shape[:-1]
         if S0 is None:
             if self.fit_S0_response:
