@@ -22,6 +22,7 @@ class S1Dot(ModelProperties):
            "Compartment models of the diffusion MR signal in brain white
             matter: a taxonomy and comparison". NeuroImage (2012)
     """
+    _required_acquisition_parameters = []
 
     _parameter_ranges = {
     }
@@ -119,6 +120,8 @@ class S2SphereStejskalTannerApproximation(ModelProperties):
         spheres and between planes." Journal of Magnetic Resonance, Series A
         104.1 (1993): 17-25.
     """
+    _required_acquisition_parameters = ['qvalues']
+
     _parameter_ranges = {
         'diameter': (1e-2, 20)
     }
@@ -241,6 +244,7 @@ class _S3SphereCallaghanApproximation(ModelProperties):
     [1] Callaghan, "Pulsed-Gradient Spin-Echo NMR for Planar, Cylindrical,
         and Spherical Pores under Conditions of Wall Relaxation", JMR 1995
     """
+    _required_acquisition_parameters = ['qvalues', 'tau']
 
     _parameter_ranges = {
         'diameter': (1e-2, 20)
@@ -333,6 +337,8 @@ class S4SphereGaussianPhaseApproximation(ModelProperties):
         spheres and between planes." Journal of Magnetic Resonance, Series A
         104.1 (1993): 17-25.
     """
+    _required_acquisition_parameters = ['gradient_strengths', 'delta', 'Delta']
+
     _parameter_ranges = {
         'diameter': (1e-2, 20)
     }

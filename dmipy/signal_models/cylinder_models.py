@@ -45,6 +45,8 @@ class C1Stick(ModelProperties):
            Magnetic Resonance in Medicine (2003)
     """
 
+    _required_acquisition_parameters = ['bvalues', 'gradient_directions']
+
     _parameter_ranges = {
         'mu': ([0, np.pi], [-np.pi, np.pi]),
         'lambda_par': (.1, 3)
@@ -181,6 +183,9 @@ class C2CylinderStejskalTannerApproximation(ModelProperties):
             cylindrical geometry." Journal of Magnetic Resonance, Series A
             117.1 (1995): 94-97.
     """
+
+    _required_acquisition_parameters = [
+        'bvalues', 'gradient_directions', 'qvalues']
 
     _parameter_ranges = {
         'mu': ([0, np.pi], [-np.pi, np.pi]),
@@ -346,6 +351,9 @@ class C3CylinderCallaghanApproximation(ModelProperties):
             53-59.
     """
 
+    _required_acquisition_parameters = [
+        'bvalues', 'gradient_directions', 'qvalues', 'tau']
+
     _parameter_ranges = {
         'mu': ([0, np.pi], [-np.pi, np.pi]),
         'lambda_par': (.1, 3),
@@ -436,9 +444,7 @@ class C3CylinderCallaghanApproximation(ModelProperties):
         bvals = acquisition_scheme.bvalues
         n = acquisition_scheme.gradient_directions
         q = acquisition_scheme.qvalues
-        Delta = acquisition_scheme.Delta
-        delta = acquisition_scheme.delta
-        tau = Delta - delta / 3.0
+        tau = acquisition_scheme.tau
 
         diameter = kwargs.get('diameter', self.diameter)
         lambda_par = kwargs.get('lambda_par', self.lambda_par)
@@ -541,6 +547,10 @@ class C4CylinderGaussianPhaseApproximation(ModelProperties):
             Cylinders. Phosphocreatine in Rabbit Leg Muscle"
             Journal of Magnetic Resonance Series B (1994)
     """
+
+    _required_acquisition_parameters = [
+        'bvalues', 'gradient_directions',
+        'gradient_strengths', 'delta', 'Delta']
 
     _parameter_ranges = {
         'mu': ([0, np.pi], [-np.pi, np.pi]),

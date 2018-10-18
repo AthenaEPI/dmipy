@@ -708,6 +708,16 @@ class MultiCompartmentModelProperties:
         self._inverted_parameter_map.update(
             {(None, 'fraction'): parameter_name})
 
+    def _check_model_params_with_acquisition_params(self, acquisition_scheme):
+        for model in self.models:
+            for parameter in model._required_acquisition_parameters:
+                if getattr(acquisition_scheme, parameter) is None:
+                    msg = "{} is not compatible with ".format(
+                        model.__class__.__name__)
+                    msg += "given acquisition scheme because it needs "
+                    msg += "{} as an acquisition parameter.".format(parameter)
+                    raise ValueError(msg)
+
     def visualize_model_setup(
             self, view=True, cleanup=True, with_parameters=False,
             im_format='png'):
@@ -956,6 +966,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             functions.
         """
         self._check_tissue_model_acquisition_scheme(acquisition_scheme)
+        self._check_model_params_with_acquisition_params(acquisition_scheme)
 
         # estimate S0
         self.scheme = acquisition_scheme
@@ -1068,6 +1079,8 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             array the same size as x0.
             The simulated signal of the microstructure model.
         """
+        self._check_model_params_with_acquisition_params(acquisition_scheme)
+
         Ndata = acquisition_scheme.number_of_measurements
         if isinstance(parameters_array_or_dict, np.ndarray):
             x0 = parameters_array_or_dict
@@ -1318,6 +1331,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
             functions.
         """
         self._check_tissue_model_acquisition_scheme(acquisition_scheme)
+        self._check_model_params_with_acquisition_params(acquisition_scheme)
 
         # estimate S0
         self.scheme = acquisition_scheme
@@ -1443,6 +1457,8 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
             array the same size as x0.
             The simulated signal of the microstructure model.
         """
+        self._check_model_params_with_acquisition_params(acquisition_scheme)
+
         Ndata = acquisition_scheme.shell_indices.max() + 1
         if isinstance(parameters_array_or_dict, np.ndarray):
             x0 = parameters_array_or_dict
@@ -1729,6 +1745,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         """
         self._check_if_kernel_parameters_are_fixed()
         self._check_tissue_model_acquisition_scheme(acquisition_scheme)
+        self._check_model_params_with_acquisition_params(acquisition_scheme)
 
         self.voxel_varying_kernel = False
         if bool(self.x0_parameters):  # if the dictionary is not empty
@@ -1897,6 +1914,8 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             array the same size as x0.
             The simulated signal of the microstructure model.
         """
+        self._check_model_params_with_acquisition_params(acquisition_scheme)
+
         Ndata = acquisition_scheme.number_of_measurements
         if isinstance(parameters_array_or_dict, np.ndarray):
             x0 = parameters_array_or_dict

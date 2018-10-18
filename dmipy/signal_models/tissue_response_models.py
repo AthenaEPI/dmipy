@@ -3,7 +3,7 @@ from dmipy.utils.utils import cart2mu
 from dmipy.utils.spherical_convolution import real_sym_rh_basis
 from ..core.modeling_framework import ModelProperties
 from ..utils import utils
-from dmipy.core.acquisition_scheme import gtab_mipy2dipy
+from dmipy.core.acquisition_scheme import gtab_dmipy2dipy
 from dipy.reconst import dti
 
 
@@ -42,6 +42,7 @@ class AnisotropicTissueResponseModel(ModelProperties):
         directions for high-angular-resolution diffusion-weighted imaging."
         NMR in Biomedicine 26.12 (2013): 1775-1786.
     """
+    _required_acquisition_parameters = []
     _parameter_ranges = {'mu': ([0, np.pi], [-np.pi, np.pi])}
     _parameter_scales = {'mu': np.r_[1., 1.]}
     _parameter_types = {'mu': 'orientation'}
@@ -50,7 +51,7 @@ class AnisotropicTissueResponseModel(ModelProperties):
     def __init__(self, acquisition_scheme, data, mu=None):
         self.acquisition_scheme = acquisition_scheme
         self.mu = mu
-        gtab = gtab_mipy2dipy(acquisition_scheme)
+        gtab = gtab_dmipy2dipy(acquisition_scheme)
         tenmod = dti.TensorModel(gtab)
         tenfit = tenmod.fit(data)
         evecs = tenfit.evecs
@@ -210,6 +211,7 @@ class IsotropicTissueResponseModel(ModelProperties):
         directions for high-angular-resolution diffusion-weighted imaging."
         NMR in Biomedicine 26.12 (2013): 1775-1786.
     """
+    _required_acquisition_parameters = []
     _parameter_ranges = {}
     _parameter_scales = {}
     _parameter_types = {}

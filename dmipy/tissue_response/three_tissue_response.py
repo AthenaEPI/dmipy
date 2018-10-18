@@ -2,7 +2,7 @@ from scipy.optimize import brute
 from scipy.stats import pearsonr
 import numpy as np
 from dipy.reconst import dti
-from ..core.acquisition_scheme import gtab_mipy2dipy
+from ..core.acquisition_scheme import gtab_dmipy2dipy
 from dipy.segment.mask import median_otsu
 from . import white_matter_response
 from ..signal_models.tissue_response_models import IsotropicTissueResponseModel
@@ -81,7 +81,7 @@ def three_tissue_response_dhollander16(
 
     # Make Mask
     b0_mask, mask = median_otsu(data, 2, 1)
-    gtab = gtab_mipy2dipy(acquisition_scheme)
+    gtab = gtab_dmipy2dipy(acquisition_scheme)
     tenmod = dti.TensorModel(gtab)
     tenfit = tenmod.fit(b0_mask)
     fa = tenfit.fa

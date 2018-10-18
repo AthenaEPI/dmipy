@@ -38,6 +38,7 @@ class G1Ball(ModelProperties):
             diffusion-weighted MR imaging"
            Magnetic Resonance in Medicine (2003)
     """
+    _required_acquisition_parameters = ['bvalues']
 
     _parameter_ranges = {
         'lambda_iso': (.1, 3)
@@ -151,6 +152,7 @@ class G2Zeppelin(ModelProperties):
            "Compartment models of the diffusion MR signal in brain white
             matter: a taxonomy and comparison". NeuroImage (2012)
     """
+    _required_acquisition_parameters = ['bvalues', 'gradient_directions']
 
     _parameter_ranges = {
         'mu': ([0, np.pi], [-np.pi, np.pi]),
@@ -304,6 +306,8 @@ class G3TemporalZeppelin(ModelProperties):
         structure of neuronal tracts from time-dependent diffusion.
         NeuroImage 114, 18.
     """
+    _required_acquisition_parameters = [
+        'bvalues', 'gradient_directions', 'delta', 'Delta']
 
     _parameter_ranges = {
         'mu': ([0, np.pi], [-np.pi, np.pi]),

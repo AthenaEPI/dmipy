@@ -22,8 +22,8 @@ __all__ = [
     'unify_length_reference_delta_Delta',
     'calculate_shell_bvalues_and_indices',
     'check_acquisition_scheme',
-    'gtab_dipy2mipy',
-    'gtab_mipy2dipy'
+    'gtab_dipy2dmipy',
+    'gtab_dmipy2dipy'
 ]
 
 
@@ -52,21 +52,40 @@ class DmipyAcquisitionScheme:
         self.number_of_b0s = np.sum(self.b0_mask)
         self.number_of_measurements = len(self.bvalues)
         self.gradient_directions = gradient_directions.astype(float)
-        self.qvalues = qvalues.astype(float)
-        self.gradient_strengths = gradient_strengths.astype(float)
-        self.delta = delta.astype(float)
-        self.Delta = Delta.astype(float)
-        self.TE = TE
+        self.qvalues = None
+        if qvalues is not None:
+            self.qvalues = qvalues.astype(float)
+        self.gradient_strengths = None
+        if gradient_strengths is not None:
+            self.gradient_strengths = gradient_strengths.astype(float)
+        self.delta = None
+        if delta is not None:
+            self.delta = delta.astype(float)
+        self.Delta = None
+        if Delta is not None:
+            self.Delta = Delta.astype(float)
+        self.TE = None
         if TE is not None:
             self.TE = TE.astype(float)
-        self.tau = Delta - delta / 3.
+        self.tau = None
+        if self.delta is not None and self.Delta is not None:
+            self.tau = Delta - delta / 3.
         # if there are more then 1 measurement
         if self.number_of_measurements > 1:
             # we check if there are multiple unique delta-Delta combinations
             if self.TE is not None:
                 deltas = np.c_[self.delta, self.Delta, self.TE]
-            else:
+            elif self.delta is not None and self.Delta is not None:
                 deltas = np.c_[self.delta, self.Delta]
+            elif self.delta is None and self.Delta is not None:
+                deltas = np.c_[self.Delta]
+            elif self.delta is not None and self.Delta is None:
+                deltas = np.c_[self.delta]
+            else:
+                deltas = []
+
+            if deltas == []:
+                deltas = np.c_[np.zeros(len(self.bvalues))]
             unique_deltas = np.unique(deltas, axis=0)
             self.shell_indices = np.zeros(len(bvalues), dtype=int)
             self.shell_bvalues = []
@@ -94,12 +113,20 @@ class DmipyAcquisitionScheme:
             first_indices = [
                 np.argmax(self.shell_indices == ind)
                 for ind in np.arange(self.shell_indices.max() + 1)]
-            self.shell_qvalues = self.qvalues[first_indices]
-            self.shell_gradient_strengths = (
-                self.gradient_strengths[first_indices])
-            self.shell_delta = self.delta[first_indices]
-            self.shell_Delta = self.Delta[first_indices]
-            self.shell_TE = self.TE
+            self.shell_qvalues = None
+            if self.qvalues is not None:
+                self.shell_qvalues = self.qvalues[first_indices]
+            self.shell_gradient_strengths = None
+            if self.gradient_strengths is not None:
+                self.shell_gradient_strengths = (
+                    self.gradient_strengths[first_indices])
+            self.shell_delta = None
+            if self.delta is not None:
+                self.shell_delta = self.delta[first_indices]
+            self.shell_Delta = None
+            if self.Delta is not None:
+                self.shell_Delta = self.Delta[first_indices]
+            self.shell_TE = None
             if self.TE is not None:
                 self.shell_TE = self.TE[first_indices]
                 if (len(np.unique(self.TE)) != len(np.unique(
@@ -172,15 +199,9 @@ class DmipyAcquisitionScheme:
         upper_line += " |TE[ms]"
         print(upper_line)
         for ind in np.arange(max(self.shell_indices) + 1):
-            if self.shell_TE is None:
-                print(
-                    "{:<12}|{:<10}|{:<16}|{:<25}|{:<11}|{:<10}|{:<5}".format(
-                        str(ind), sum(self.shell_indices == ind),
-                        int(self.shell_bvalues[ind] / 1e6),
-                        int(1e3 * self.shell_gradient_strengths[ind]),
-                        self.shell_delta[ind] * 1e3,
-                        self.shell_Delta[ind] * 1e3, 'N/A'))
-            else:
+            if (self.shell_TE is not None and
+                self.shell_delta is not None and
+                    self.shell_Delta is not None):
                 print(
                     "{:<12}|{:<10}|{:<16}|{:<25}|{:<11}|{:<10}|{:<5}".format(
                         str(ind), sum(self.shell_indices == ind),
@@ -188,6 +209,40 @@ class DmipyAcquisitionScheme:
                         int(1e3 * self.shell_gradient_strengths[ind]),
                         self.shell_delta[ind] * 1e3,
                         self.shell_Delta[ind] * 1e3, self.shell_TE[ind] * 1e3))
+            elif (self.shell_TE is None and
+                  self.shell_delta is not None and
+                    self.shell_Delta is not None):
+                print(
+                    "{:<12}|{:<10}|{:<16}|{:<25}|{:<11}|{:<10}|{:<5}".format(
+                        str(ind), sum(self.shell_indices == ind),
+                        int(self.shell_bvalues[ind] / 1e6),
+                        int(1e3 * self.shell_gradient_strengths[ind]),
+                        self.shell_delta[ind] * 1e3,
+                        self.shell_Delta[ind] * 1e3, 'N/A'))
+            elif (self.shell_TE is None and
+                  self.shell_delta is None and
+                    self.shell_Delta is not None):
+                print(
+                    "{:<12}|{:<10}|{:<16}|{:<25}|{:<11}|{:<10}|{:<5}".format(
+                        str(ind), sum(self.shell_indices == ind),
+                        int(self.shell_bvalues[ind] / 1e6),
+                        'N/A', 'N/A', self.shell_Delta[ind] * 1e3, 'N/A'))
+            elif (self.shell_TE is None and
+                  self.shell_delta is not None and
+                    self.shell_Delta is None):
+                print(
+                    "{:<12}|{:<10}|{:<16}|{:<25}|{:<11}|{:<10}|{:<5}".format(
+                        str(ind), sum(self.shell_indices == ind),
+                        int(self.shell_bvalues[ind] / 1e6),
+                        'N/A', self.shell_delta[ind] * 1e3, 'N/A', 'N/A'))
+            elif (self.shell_TE is None and
+                  self.shell_delta is None and
+                    self.shell_Delta is None):
+                print(
+                    "{:<12}|{:<10}|{:<16}|{:<25}|{:<11}|{:<10}|{:<5}".format(
+                        str(ind), sum(self.shell_indices == ind),
+                        int(self.shell_bvalues[ind] / 1e6),
+                        'N/A', 'N/A', 'N/A', 'N/A'))
 
     def to_schemefile(self, filename):
         """
@@ -212,46 +267,6 @@ class DmipyAcquisitionScheme:
         header += "VERSION: STEJSKALTANNER"
         np.savetxt(filename, schemefile_data,
                    header=header, comments='')
-
-    def _rotational_harmonics_acquisition_scheme(
-            self, angular_samples=10):
-        """
-        Calculates the acquisition scheme to return all the samples required to
-        estimate the rotational harmonics of all the shells at once.
-
-        Parameters
-        ----------
-        angular_samples: integer
-            the number of angular samples that are sampled per shell.
-        """
-        thetas = np.linspace(0, np.pi / 2, angular_samples)
-        r = np.ones(angular_samples)
-        phis = np.zeros(angular_samples)
-        angles = np.c_[r, thetas, phis]
-        angles_cart = utils.sphere2cart(angles)
-
-        Gdirs_all_shells = []
-        G_all_shells = []
-        delta_all_shells = []
-        Delta_all_shells = []
-        for G, delta, Delta in zip(self.shell_gradient_strengths,
-                                   self.shell_delta, self.shell_Delta):
-            Gdirs_all_shells.append(angles_cart)
-            G_all_shells.append(np.tile(G, angular_samples))
-            delta_all_shells.append(np.tile(delta, angular_samples))
-            Delta_all_shells.append(np.tile(Delta, angular_samples))
-        self.rh_acquisition_scheme = (
-            acquisition_scheme_from_gradient_strengths(
-                gradient_strengths=np.hstack(G_all_shells),
-                gradient_directions=np.vstack(Gdirs_all_shells),
-                delta=np.hstack(delta_all_shells),
-                Delta=np.hstack(Delta_all_shells))
-        )
-        self.inverse_rh_matrix = {
-            rh_order: np.linalg.pinv(real_sym_rh_basis(
-                rh_order, thetas, phis
-            )) for rh_order in np.arange(0, 15, 2)
-        }
 
     def visualise_acquisition_G_Delta_rainbow(
             self,
@@ -320,7 +335,26 @@ class DmipyAcquisitionScheme:
         plt.ylabel('Gradient Strength [T/m]', fontsize=18)
 
     def return_pruned_acquisition_scheme(self, shell_indices, data=None):
-        "Returns pruned acquisition scheme and optionally also prunes data."
+        """Returns pruned acquisition scheme and optionally also prunes data.
+
+        Parameters
+        ----------
+        shell_indices: list of integers,
+            the shell indices that correspond with the shells that should be
+            returned. For the zeroth and second shell this is e.g. [0, 2]
+        data: NDarray,
+            DW-data that corresponds with the acquisition scheme. If it is
+            given, then the data is pruned the same way as the acquisition
+            scheme, meaning the pruned scheme and data can be used and fitted
+            together again.
+
+        Returns
+        -------
+        pruned_scheme: DmipyAcquisitionScheme object,
+            the pruned acquisition scheme
+        pruned_data: NDarray,
+            the pruned data corresponding to the acquisition scheme.
+        """
         booleans = []
         for index in shell_indices:
             booleans.append(self.shell_indices == index)
@@ -336,11 +370,13 @@ class DmipyAcquisitionScheme:
             TE = None
 
         pruned_scheme = acquisition_scheme_from_bvalues(
-            bvals, gradient_directions, delta, Delta, TE)
+            bvals, gradient_directions, delta, Delta, TE,
+            self.min_b_shell_distance, self.b0_threshold)
         if data is None:
             return pruned_scheme
         else:
-            return pruned_scheme, data[..., mask]
+            pruned_data = data[..., mask]
+            return pruned_scheme, pruned_data
 
 
 class RotationalHarmonicsAcquisitionScheme:
@@ -369,31 +405,40 @@ class RotationalHarmonicsAcquisitionScheme:
         angles = np.c_[r, thetas, phis]
         angles_cart = utils.sphere2cart(angles)
 
+        b_all_shells = []
         Gdirs_all_shells = []
-        G_all_shells = []
         delta_all_shells = []
         Delta_all_shells = []
         for shell_index in scheme.unique_dwi_indices:
-            G = scheme.shell_gradient_strengths[shell_index]
-            delta = scheme.shell_delta[shell_index]
-            Delta = scheme.shell_Delta[shell_index]
+            b = scheme.shell_bvalues[shell_index]
+            b_all_shells.append(np.tile(b, N_angular_samples))
+            if scheme.shell_delta is not None:
+                delta = scheme.shell_delta[shell_index]
+                delta_all_shells.append(np.tile(delta, N_angular_samples))
+            if scheme.shell_Delta is not None:
+                Delta = scheme.shell_Delta[shell_index]
+                Delta_all_shells.append(np.tile(Delta, N_angular_samples))
             Gdirs_all_shells.append(angles_cart)
-            G_all_shells.append(np.tile(G, N_angular_samples))
-            delta_all_shells.append(np.tile(delta, N_angular_samples))
-            Delta_all_shells.append(np.tile(Delta, N_angular_samples))
 
+        self.bvalues = np.hstack(b_all_shells)
         self.gradient_directions = np.vstack(Gdirs_all_shells)
-        self.gradient_strengths = np.hstack(G_all_shells)
-        self.delta = np.hstack(delta_all_shells)
-        self.Delta = np.hstack(Delta_all_shells)
-        self.bvalues = b_from_g(
-            self.gradient_strengths,
-            self.delta,
-            self.Delta)
-        self.qvalues = q_from_g(
-            self.gradient_strengths,
-            self.delta)
-        self.tau = self.Delta - self.delta / 3.0
+        self.delta = None
+        if scheme.shell_delta is not None:
+            self.delta = np.hstack(delta_all_shells)
+        self.Delta = None
+        if scheme.shell_Delta is not None:
+            self.Delta = np.hstack(Delta_all_shells)
+        if self.delta is not None and self.Delta is not None:
+            self.gradient_strengths = g_from_b(
+                self.bvalues,
+                self.delta,
+                self.Delta)
+            self.qvalues = q_from_g(
+                self.gradient_strengths,
+                self.delta)
+            self.tau = self.Delta - self.delta / 3.0
+        else:
+            self.gradient_strengths = self.qvalues = self.tau = None
         self.b0_mask = np.tile(False, len(self.bvalues))
         self.shell_delta = scheme.shell_delta
         self.shell_Delta = scheme.shell_Delta
@@ -423,7 +468,7 @@ class SphericalMeanAcquisitionScheme:
 
 
 def acquisition_scheme_from_bvalues(
-        bvalues, gradient_directions, delta, Delta, TE=None,
+        bvalues, gradient_directions, delta=None, Delta=None, TE=None,
         min_b_shell_distance=50e6, b0_threshold=10e6):
     r"""
     Creates an acquisition scheme object from bvalues, gradient directions,
@@ -459,8 +504,11 @@ def acquisition_scheme_from_bvalues(
         bvalues, delta, Delta, TE)
     check_acquisition_scheme(
         bvalues, gradient_directions, delta_, Delta_, TE_)
-    qvalues = q_from_b(bvalues, delta_, Delta_)
-    gradient_strengths = g_from_b(bvalues, delta_, Delta_)
+    if delta is not None and Delta is not None:
+        qvalues = q_from_b(bvalues, delta_, Delta_)
+        gradient_strengths = g_from_b(bvalues, delta_, Delta_)
+    else:
+        qvalues = gradient_strengths = None
     return DmipyAcquisitionScheme(bvalues, gradient_directions, qvalues,
                                   gradient_strengths, delta_, Delta_, TE_,
                                   min_b_shell_distance, b0_threshold)
@@ -565,6 +613,12 @@ def acquisition_scheme_from_schemefile(
     ----------
     file_path: string
         absolute file path to schemefile location
+    min_b_shell_distance : float
+        minimum bvalue distance between different shells. This parameter is
+        used to separate measurements into different shells, which is necessary
+        for any model using spherical convolution or spherical mean.
+    b0_threshold : float
+        bvalue threshold for a measurement to be considered a b0 measurement.
 
     Returns
     -------
@@ -615,16 +669,20 @@ def unify_length_reference_delta_Delta(reference_array, delta, Delta, TE):
     TE_ : None or array of size (Nsamples)
         Echo time copied to be same size as reference_array
     """
-    if isinstance(delta, float) or isinstance(delta, int):
+    if delta is None:
+        delta_ = delta
+    elif isinstance(delta, float) or isinstance(delta, int):
         delta_ = np.tile(delta, len(reference_array))
     else:
         delta_ = delta.copy()
-    if isinstance(Delta, float) or isinstance(Delta, int):
+    if Delta is None:
+        Delta_ = Delta
+    elif isinstance(Delta, float) or isinstance(Delta, int):
         Delta_ = np.tile(Delta, len(reference_array))
     else:
         Delta_ = Delta.copy()
     if TE is None:
-        TE_ = None
+        TE_ = TE
     elif isinstance(TE, float) or isinstance(TE, int):
         TE_ = np.tile(TE, len(reference_array))
     else:
@@ -688,24 +746,45 @@ def check_acquisition_scheme(
             len(bqg_values), len(gradient_directions)
         )
         raise ValueError(msg)
-    if len(bqg_values) != len(delta) or len(bqg_values) != len(Delta):
-        msg = "b/q/G input, delta and Delta must have the same length. "
-        msg += "Currently their lengths are {}, {} and {}.".format(
-            len(bqg_values), len(delta), len(Delta)
-        )
-        raise ValueError(msg)
-    if delta.ndim > 1 or Delta.ndim > 1:
-        msg = "delta and Delta must be one-dimensional arrays. "
-        msg += "Currently their dimensions are {} and {}.".format(
-            delta.ndim, Delta.ndim
-        )
-        raise ValueError(msg)
-    if np.min(delta) < 0 or np.min(Delta) < 0:
-        msg = "delta and Delta must be zero or positive. "
-        msg += "Currently their minimum values are {} and {}.".format(
-            np.min(delta), np.min(Delta)
-        )
-        raise ValueError(msg)
+    if delta is not None:
+        if len(bqg_values) != len(delta):
+            msg = "b/q/G input and delta must have the same length. "
+            msg += "Currently their lengths are {} and {}.".format(
+                len(bqg_values), len(delta)
+            )
+            raise ValueError(msg)
+        if delta.ndim > 1:
+            msg = "delta must be one-dimensional array. "
+            msg += "Currently its dimension is {}".format(
+                delta.ndim
+            )
+            raise ValueError(msg)
+        if np.min(delta) < 0:
+            msg = "delta must be zero or positive. "
+            msg += "Currently its minimum value is {}.".format(
+                np.min(delta)
+            )
+            raise ValueError(msg)
+    if Delta is not None:
+        if len(bqg_values) != len(Delta):
+            msg = "b/q/G input and Delta must have the same length. "
+            msg += "Currently their lengths are {} and {}.".format(
+                len(bqg_values), len(Delta)
+            )
+            raise ValueError(msg)
+        if Delta.ndim > 1:
+            msg = "Delta must be one-dimensional array. "
+            msg += "Currently its dimension is {}.".format(
+                Delta.ndim
+            )
+            raise ValueError(msg)
+        if np.min(Delta) < 0:
+            msg = "Delta must be zero or positive. "
+            msg += "Currently its minimum value is {}.".format(
+                np.min(Delta)
+            )
+            raise ValueError(msg)
+
     if gradient_directions.ndim != 2 or gradient_directions.shape[1] != 3:
         msg = "gradient_directions n must be two dimensional array of shape "
         msg += "[N, 3]. Currently its shape is {}.".format(
@@ -727,8 +806,32 @@ def check_acquisition_scheme(
         )
 
 
-def gtab_dipy2mipy(dipy_gradient_table):
-    "Converts a dipy gradient_table to a dmipy acquisition_scheme."
+def gtab_dipy2dmipy(dipy_gradient_table, min_b_shell_distance=50e6,
+                    b0_threshold=10e6):
+    """Converts a dipy gradient_table to a dmipy acquisition_scheme.
+    If no big_delta or small_delta is defined in the gradient table, then None
+    is passed to the DmipyAcquisitionScheme for these fields, and no models
+    can be used that need this information.
+
+    Parameters
+    ----------
+    dipy_gradient_table: dipy GradientTable instance,
+        object that contains bvals, bvecs, pulse separation and duration
+        information.
+    min_b_shell_distance : float
+        minimum bvalue distance between different shells. This parameter is
+        used to separate measurements into different shells, which is necessary
+        for any model using spherical convolution or spherical mean.
+    b0_threshold : float
+        bvalue threshold for a measurement to be considered a b0 measurement.
+
+    Returns
+    -------
+    DmipyAcquisitionScheme: acquisition scheme object
+        contains all information of the acquisition scheme to be used in any
+        microstructure model.
+
+    """
     if not isinstance(dipy_gradient_table, GradientTable):
         msg = "Input must be a dipy GradientTable object. "
         raise ValueError(msg)
@@ -736,13 +839,35 @@ def gtab_dipy2mipy(dipy_gradient_table):
     bvecs = dipy_gradient_table.bvecs
     delta = dipy_gradient_table.small_delta
     Delta = dipy_gradient_table.big_delta
+
+    if delta is None or Delta is None:
+        msg = "pulse_separation (big_delta) or pulse_duration (small_delta) "
+        msg += "are not defined in the Dipy gtab. This means the resulting "
+        msg += "DmipyAcquisitionScheme cannot be used with CompartmentModels "
+        msg += "that need these."
+        warn(msg)
+
     gtab_dmipy = acquisition_scheme_from_bvalues(
-        bvalues=bvals, gradient_directions=bvecs, delta=delta, Delta=Delta)
+        bvalues=bvals, gradient_directions=bvecs, delta=delta, Delta=Delta,
+        min_b_shell_distance=min_b_shell_distance, b0_threshold=b0_threshold)
     return gtab_dmipy
 
 
-def gtab_mipy2dipy(dmipy_gradient_table):
-    "Converts a dmipy acquisition scheme to a dipy gradient_table."
+def gtab_dmipy2dipy(dmipy_gradient_table):
+    """Converts a dmipy acquisition scheme to a dipy gradient_table.
+
+    Parameters
+    ----------
+    DmipyAcquisitionScheme: acquisition scheme object
+        contains all information of the acquisition scheme to be used in any
+        microstructure model.
+
+    Returns
+    -------
+    dipy_gradient_table: dipy GradientTable instance,
+        object that contains bvals, bvecs, pulse separation and duration
+        information.
+    """
     if not isinstance(dmipy_gradient_table, DmipyAcquisitionScheme):
         msg = "Input must be a DmipyAcquisitionScheme object. "
         raise ValueError(msg)
@@ -751,10 +876,22 @@ def gtab_mipy2dipy(dmipy_gradient_table):
     delta = dmipy_gradient_table.delta
     Delta = dmipy_gradient_table.Delta
 
-    if len(np.unique(delta)) == 1:
+    if len(np.unique(delta)) > 1:
+        msg = "Cannot create Dipy GradientTable for Acquisition schemes with "
+        msg += "multiple delta (pulse duration) values, due to current "
+        msg += "limitations of Dipy GradientTables."
+        raise ValueError(msg)
+    elif len(np.unique(delta)) == 1:
         delta = delta[0]
-    if len(np.unique(Delta)) == 1:
+
+    if len(np.unique(Delta)) > 1:
+        msg = "Cannot create Dipy GradientTable for Acquisition schemes with "
+        msg += "multiple Delta (pulse sepration) values, due to current "
+        msg += "limitations of Dipy GradientTables."
+        raise ValueError(msg)
+    elif len(np.unique(Delta)) == 1:
         Delta = Delta[0]
-    gtab_dipy = gradient_table(
+
+    dipy_gradient_table = gradient_table(
         bvals=bvals, bvecs=bvecs, small_delta=delta, big_delta=Delta)
-    return gtab_dipy
+    return dipy_gradient_table
