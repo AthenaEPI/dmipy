@@ -255,7 +255,7 @@ class Brute2FineOptimizer:
             self.model.parameter_vector_to_parameters(parameter_vector_)
         )
         E_model = self.model(self.acquisition_scheme, **parameters)
-        E_diff = E_model - data
+        E_diff = E_model - data / parameter_vector[0]  # first is S0
         objective = np.dot(E_diff, E_diff) / len(data)
         return objective
 
