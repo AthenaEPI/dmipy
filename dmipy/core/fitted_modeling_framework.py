@@ -773,6 +773,43 @@ class FittedMultiCompartmentSphericalHarmonicsModel:
                                   **self._fit_parameters)) * S0[pos])
         return predicted_signal
 
+    def return_filtered_signal(self, filtered_partial_fraction_names,
+                               acquisition_scheme=None, S0=None, mask=None):
+        """
+        Returns the fitted signal but omits the signal contributions of the
+        given partial volume names.
+
+        Parameters
+        ----------
+        filtered_partial_fraction_names: list of strings,
+            partial volume names to be omitted.
+        """
+        # replace with zero but save filtered volume fractions
+        fractions_tmp = {}
+        for fraction_name in filtered_partial_fraction_names:
+            if fraction_name not in self.model.partial_volume_names:
+                msg = "{} not a valid partial volume name".format(
+                    fraction_name)
+                raise ValueError(msg)
+            fractions_tmp[fraction_name] = self.fitted_parameters[
+                fraction_name].copy()
+            self.fitted_parameters[fraction_name] *= 0.
+        self.fitted_parameters_vector = (
+            self.model.parameters_to_parameter_vector(
+                **self.fitted_parameters))
+
+        # get filtered signal
+        filtered_signal = self.predict(acquisition_scheme, S0, mask)
+
+        # return original volume fractions
+        for fraction_name in filtered_partial_fraction_names:
+            self.fitted_parameters[fraction_name] += fractions_tmp[
+                fraction_name]
+        self.fitted_parameters_vector = (
+            self.model.parameters_to_parameter_vector(
+                **self.fitted_parameters))
+        return filtered_signal
+
     def R2_coefficient_of_determination(self, data):
         "Calculates the R-squared of the model fit."
         if self.model.scheme.TE is None:

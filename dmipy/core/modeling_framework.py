@@ -2043,8 +2043,10 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
                 model_rh = (
                     model.rotational_harmonics_representation(
                         self.scheme, **parameters))
-                kernel += S0 * partial_volume * construct_model_based_A_matrix(
+                A_matrix = construct_model_based_A_matrix(
                     self.scheme, model_rh, self.sh_order)
+                A_matrix = self._divide_by_positive_dirac_rh(A_matrix)
+                kernel += S0 * partial_volume * A_matrix
         else:
             kernel = []
             for model, S0 in zip(self.models, self.S0_responses):
@@ -2060,14 +2062,45 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
                     model.rotational_harmonics_representation(
                         self.scheme, **parameters))
                 if 'orientation' in model.parameter_types.values():
-                    kernel.append(S0 * construct_model_based_A_matrix(
-                        self.scheme, model_rh, self.sh_order))
+                    A_matrix = construct_model_based_A_matrix(
+                        self.scheme, model_rh, self.sh_order)
+                    A_matrix = self._divide_by_positive_dirac_rh(A_matrix)
+                    kernel.append(S0 * A_matrix)
                 else:
                     kernel.append(S0 * construct_model_based_A_matrix(
                         self.scheme, model_rh, 0))
 
             kernel = np.hstack(kernel)
         return kernel
+
+    def _divide_by_positive_dirac_rh(self, A_matrix):
+        import cvxpy
+        from dipy.reconst.shm import gen_dirac, sph_harm_ind_list
+        from dipy.data import get_sphere, HemiSphere
+        from dipy.reconst.shm import real_sym_sh_mrtrix
+
+        sphere = get_sphere('symmetric724')
+        hemisphere = HemiSphere(phi=sphere.phi, theta=sphere.theta)
+        L_positivity = real_sym_sh_mrtrix(
+            self.sh_order, hemisphere.theta, hemisphere.phi)[0]
+
+        m, ll = sph_harm_ind_list(self.sh_order)
+        dirac = gen_dirac(m, ll, 0, 0)
+        dirac_data = np.dot(A_matrix, dirac)
+
+        sh = cvxpy.Variable(A_matrix.shape[1])
+        constraints = [L_positivity * sh >= 0.]
+        cost = cvxpy.sum_squares(A_matrix * sh - dirac_data)
+        problem = cvxpy.Problem(cvxpy.Minimize(cost), constraints)
+        problem.solve()
+
+        positive_dirac = sh.value[m == 0]
+        mult = positive_dirac / dirac[m == 0]
+
+        for i, ll_ in enumerate(ll):
+            A_matrix[:, i] /= mult[ll_ // 2]
+
+        return A_matrix
 
 
 def homogenize_x0_to_data(data, x0):
