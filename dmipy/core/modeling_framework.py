@@ -881,12 +881,16 @@ class MultiCompartmentModelProperties:
             'intensity',
             parameter_flag)
 
-
-
         if optimize_S0:
             self.set_initial_guess_parameter('S0', S0)
         else:
             self.set_fixed_parameter('S0', S0)
+
+    def set_parameter_optimization_bounds(self, parameter_name, bounds):
+        parameter_scale = np.max(bounds)
+        ranges = np.array(bounds) / parameter_scale
+        self.parameter_ranges[parameter_name] = ranges
+        self.parameter_scales[parameter_name] = parameter_scale
 
 
 class MultiCompartmentModel(MultiCompartmentModelProperties):
@@ -939,7 +943,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
     def fit(self, acquisition_scheme, data, optimize_S0=False,
             mask=None, solver='brute2fine', Ns=5, maxiter=300,
             N_sphere_samples=30, use_parallel_processing=have_pathos,
-            number_of_processors=None):
+            number_of_processors=None, verbose=True):
         """ The main data fitting function of a MultiCompartmentModel.
 
         This function can fit it to an N-dimensional dMRI data set, and returns
@@ -1049,8 +1053,9 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             if number_of_processors is None:
                 number_of_processors = cpu_count()
             pool = pp.ProcessPool(number_of_processors)
-            print('Using parallel processing with {} workers.'.format(
-                number_of_processors))
+            if verbose:
+                print('Using parallel processing with {} workers.'.format(
+                    number_of_processors))
         else:
             fitted_parameters_lin = np.empty(
                 np.r_[N_voxels, N_parameters], dtype=float)
@@ -1060,13 +1065,15 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             global_brute = GlobalBruteOptimizer(
                 self, self.scheme, x0_, Ns, N_sphere_samples)
             fit_func = Brute2FineOptimizer(self, self.scheme, Ns)
-            print('Setup brute2fine optimizer in {} seconds'.format(
-                time() - start))
+            if verbose:
+                print('Setup brute2fine optimizer in {} seconds'.format(
+                    time() - start))
         elif solver == 'mix':
             self._check_for_tortuosity_constraint()
             fit_func = MixOptimizer(self, self.scheme, maxiter)
-            print('Setup MIX optimizer in {} seconds'.format(
-                time() - start))
+            if verbose:
+                print('Setup MIX optimizer in {} seconds'.format(
+                    time() - start))
         else:
             msg = "Unknown solver name {}".format(solver)
             raise ValueError(msg)
@@ -1089,10 +1096,11 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
                 [p.get() for p in fitted_parameters_lin])
 
         fitting_time = time() - start
-        print('Fitting of {} voxels complete in {} seconds.'.format(
-            len(fitted_parameters_lin), fitting_time))
-        print('Average of {} seconds per voxel.'.format(
-            fitting_time / N_voxels))
+        if verbose:
+            print('Fitting of {} voxels complete in {} seconds.'.format(
+                len(fitted_parameters_lin), fitting_time))
+            print('Average of {} seconds per voxel.'.format(
+                fitting_time / N_voxels))
 
         fitted_parameters = np.zeros_like(x0_, dtype=float)
         fitted_parameters[mask_pos] = (
@@ -1294,7 +1302,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
     def fit(self, acquisition_scheme, data,
             mask=None, solver='brute2fine', Ns=5, maxiter=300,
             N_sphere_samples=30, use_parallel_processing=have_pathos,
-            number_of_processors=None):
+            number_of_processors=None, verbose=True):
         """ The main data fitting function of a MultiCompartmentModel.
 
         This function can fit it to an N-dimensional dMRI data set, and returns
@@ -1417,8 +1425,9 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
             if number_of_processors is None:
                 number_of_processors = cpu_count()
             pool = pp.ProcessPool(number_of_processors)
-            print('Using parallel processing with {} workers.'.format(
-                number_of_processors))
+            if verbose:
+                print('Using parallel processing with {} workers.'.format(
+                    number_of_processors))
         else:
             fitted_parameters_lin = np.empty(
                 np.r_[N_voxels, N_parameters], dtype=float)
@@ -1437,13 +1446,15 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
                 self, self.scheme,
                 x0_, Ns, N_sphere_samples)
             fit_func = Brute2FineOptimizer(self, self.scheme, Ns)
-            print('Setup brute2fine optimizer in {} seconds'.format(
-                time() - start))
+            if verbose:
+                print('Setup brute2fine optimizer in {} seconds'.format(
+                    time() - start))
         elif solver == 'mix':
             self._check_for_tortuosity_constraint()
             fit_func = MixOptimizer(self, self.scheme, maxiter)
-            print('Setup MIX optimizer in {} seconds'.format(
-                time() - start))
+            if verbose:
+                print('Setup MIX optimizer in {} seconds'.format(
+                    time() - start))
         else:
             msg = "Unknown solver name {}".format(solver)
             raise ValueError(msg)
@@ -1467,10 +1478,11 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
                 [p.get() for p in fitted_parameters_lin])
 
         fitting_time = time() - start
-        print('Fitting of {} voxels complete in {} seconds.'.format(
-            len(fitted_parameters_lin), fitting_time))
-        print('Average of {} seconds per voxel.'.format(
-            fitting_time / N_voxels))
+        if verbose:
+            print('Fitting of {} voxels complete in {} seconds.'.format(
+                len(fitted_parameters_lin), fitting_time))
+            print('Average of {} seconds per voxel.'.format(
+                fitting_time / N_voxels))
 
         fitted_parameters = np.zeros_like(x0_, dtype=float)
         fitted_parameters[mask_pos] = (
