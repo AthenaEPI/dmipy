@@ -278,6 +278,8 @@ class Brute2FineOptimizer:
         x_fine: array of size (Nparameters,),
             array of the optimized model parameters.
         """
+        x0_bool = np.isnan(x0_vector)
+        x0_vector[~x0_bool] /= self.model.scales_for_optimization[~x0_bool]
         N_fractions = len(self.model.models)
         fit_args = (data,)
         bounds = self.model.bounds_for_optimization
