@@ -471,6 +471,7 @@ class MultiCompartmentModelProperties:
             msg = '{} does not exist or has already been fixed.'.format(
                 parameter_name)
             raise ValueError(msg)
+        self.parameter_optimization_flags[parameter_name] = True
 
     def _add_initial_guess_parameter_array(
             self, parameter_name, parameter_array):
@@ -506,6 +507,9 @@ class MultiCompartmentModelProperties:
                                                     float(value))
                 elif isinstance(value, np.ndarray):
                     self._add_fixed_parameter_array(parameter_name, value)
+                else:
+                    msg = 'parameter_name must be a float or an ND-array.'
+                    raise ValueError(msg)
             elif card == 2:
                 value = np.array(value, dtype=float)
                 if value.shape[-1] != 2:
@@ -838,16 +842,30 @@ class MultiCompartmentModelProperties:
                     raise ValueError(msg)
 
     def _add_S0_parameter(self, data, mask=None, optimize_S0=False):
-
-        if self.scheme.TE is None or len(np.unique(self.scheme.TE)) == 1:
-            S0 = np.mean(data[..., self.scheme.b0_mask], axis=-1)
-        else:  # if multiple TE are in the data
-            S0 = np.ones_like(data)
-            for TE_ in self.scheme.shell_TE:
-                TE_mask = self.scheme.TE == TE_
-                TE_b0_mask = np.all([self.scheme.b0_mask, TE_mask], axis=0)
-                S0[..., TE_mask] = np.mean(
-                    data[..., TE_b0_mask], axis=-1)[..., None]
+        scheme_has_b0s = np.sum(self.scheme.b0_mask) > 0
+        if scheme_has_b0s:
+            if self.scheme.TE is None or len(np.unique(self.scheme.TE)) == 1:
+                S0 = np.mean(data[..., self.scheme.b0_mask], axis=-1)
+            else:  # if multiple TE are in the data
+                S0 = np.ones_like(data)
+                for TE_ in self.scheme.shell_TE:
+                    TE_mask = self.scheme.TE == TE_
+                    TE_b0_mask = np.all([self.scheme.b0_mask, TE_mask], axis=0)
+                    S0[..., TE_mask] = np.mean(
+                        data[..., TE_b0_mask], axis=-1)[..., None]
+        else:
+            if optimize_S0:
+                "fit each voxel using 2nd order polynomial"
+                S0 = np.zeros(data.shape[:-1])
+                mask_pos = np.where(mask)
+                for pos in zip(*mask_pos):
+                    _, neg_log_S0 = np.polyfit(
+                        x=self.scheme.bvalues, y=-np.log(data[pos]), deg=1)
+                    S0[pos] = np.exp(-neg_log_S0)
+            else:
+                msg = "optimize_S0 must be True when the acquisition scheme "
+                msg += "has no b0 measurements."
+                raise ValueError(msg)
 
         parameter_scale = S0.max()
         S0_norm = S0 / parameter_scale
@@ -862,6 +880,8 @@ class MultiCompartmentModelProperties:
             parameter_card,
             'intensity',
             parameter_flag)
+
+
 
         if optimize_S0:
             self.set_initial_guess_parameter('S0', S0)
@@ -1001,12 +1021,12 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         self.scheme = acquisition_scheme
         # estimate S0
         data_ = np.atleast_2d(data,)
-        self._add_S0_parameter(data_, mask, optimize_S0)
-
         if mask is None:
             mask = data_[..., 0] > 0
         else:
             mask = np.all([mask, data_[..., 0] > 0], axis=0)
+        self._add_S0_parameter(data_, mask, optimize_S0)
+
         mask_pos = np.where(mask)
 
         N_parameters = len(self.bounds_for_optimization)
@@ -1019,7 +1039,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             data_, x0_)
         x0_bool = np.all(
             np.isnan(x0_), axis=tuple(np.arange(x0_.ndim - 1)))
-        x0_[..., ~x0_bool] /= self.scales_for_optimization[~x0_bool]
+        # x0_[..., ~x0_bool] /= self.scales_for_optimization[~x0_bool]
 
         if use_parallel_processing and not have_pathos:
             msg = 'Cannot use parallel processing without pathos.'
@@ -1058,10 +1078,8 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             voxel_x0_vector = x0_[pos]
             if solver == 'brute2fine':
                 if global_brute.global_optimization_grid is True:
-                    voxel_x0_vector = global_brute(
-                        voxel_E / voxel_x0_vector[0])
+                    voxel_x0_vector = global_brute(voxel_E)
             fit_args = (voxel_E, voxel_x0_vector)
-
             if use_parallel_processing:
                 fitted_parameters_lin[idx] = pool.apipe(fit_func, *fit_args)
             else:
@@ -1185,7 +1203,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
                 )
 
             if quantity == "signal":
-                values = (
+                values = kwargs['S0'] * (
                     values +
                     partial_volume * model(
                         acquisition_scheme_or_vertices, **parameters)
