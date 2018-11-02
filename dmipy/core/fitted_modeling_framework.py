@@ -181,7 +181,7 @@ class FittedMultiCompartmentModel:
         if S0 is None:
             S0_mult = np.ones_like(self.S0)
         elif isinstance(S0, float):
-            S0_mult = 1. / self.S0 * S0
+            S0_mult = S0 / self.S0
         if mask is None:
             mask = self.mask
 
