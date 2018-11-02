@@ -362,8 +362,12 @@ class DmipyAcquisitionScheme:
 
         bvals = self.bvalues[mask]
         gradient_directions = self.gradient_directions[mask]
-        delta = self.delta[mask]
-        Delta = self.Delta[mask]
+        delta = None
+        Delta = None
+        if self.delta is not None:
+            delta = self.delta[mask]
+        if self.Delta is not None:
+            Delta = self.Delta[mask]
         if self.TE is not None:
             TE = self.TE[mask]
         else:
