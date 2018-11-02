@@ -867,9 +867,9 @@ class MultiCompartmentModelProperties:
                 msg += "has no b0 measurements."
                 raise ValueError(msg)
 
-        parameter_scale = S0.max()
+        parameter_scale = np.max(S0)
         S0_norm = S0 / parameter_scale
-        range_max = S0_norm * 1.1
+        range_max = np.max(S0_norm) * 1.1
         parameter_card = 1
         parameter_flag = optimize_S0
 
@@ -1211,11 +1211,8 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
                 )
 
             if quantity == "signal":
-                values = kwargs['S0'] * (
-                    values +
-                    partial_volume * model(
-                        acquisition_scheme_or_vertices, **parameters)
-                )
+                values += kwargs['S0'] * partial_volume * model(
+                    acquisition_scheme_or_vertices, **parameters)
             elif quantity == "FOD":
                 try:
                     values = (
