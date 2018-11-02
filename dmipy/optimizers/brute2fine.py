@@ -255,7 +255,7 @@ class Brute2FineOptimizer:
             self.model.parameter_vector_to_parameters(parameter_vector_)
         )
         E_model = self.model(self.acquisition_scheme, **parameters)
-        E_diff = E_model - data / parameter_vector[0]  # first is S0
+        E_diff = E_model - data
         objective = np.dot(E_diff, E_diff) / len(data)
         return objective
 
@@ -305,7 +305,6 @@ class Brute2FineOptimizer:
                 finish=None)
         else:
             x0_brute = x0_vector
-
         x_fine_nested = minimize(self.objective_function, x0_brute,
                                  args=fit_args, bounds=bounds_fine,
                                  method='L-BFGS-B').x
