@@ -1215,7 +1215,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
                 )
 
             if quantity == "signal":
-                values += kwargs['S0'] * partial_volume * model(
+                values += S0 * partial_volume * model(
                     acquisition_scheme_or_vertices, **parameters)
             elif quantity == "FOD":
                 try:
@@ -1227,8 +1227,8 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
                 except AttributeError:
                     continue
             elif quantity == "stochastic cost function":
-                values[:, counter] = model(acquisition_scheme_or_vertices,
-                                           **parameters)
+                values[:, counter] = S0 * model(acquisition_scheme_or_vertices,
+                                                **parameters)
                 counter += 1
         return values
 
