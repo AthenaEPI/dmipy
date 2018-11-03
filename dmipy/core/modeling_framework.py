@@ -1043,7 +1043,6 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             data_, x0_)
         x0_bool = np.all(
             np.isnan(x0_), axis=tuple(np.arange(x0_.ndim - 1)))
-        # x0_[..., ~x0_bool] /= self.scales_for_optimization[~x0_bool]
 
         if use_parallel_processing and not have_pathos:
             msg = 'Cannot use parallel processing without pathos.'
@@ -1178,6 +1177,11 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         kwargs: keyword arguments to the model parameter values,
             Is internally given as **parameter_dictionary.
         """
+        try:
+            S0 = kwargs['S0']
+        except KeyError:
+            S0 = 1.
+
         if quantity == "signal" or quantity == "FOD":
             values = 0
         elif quantity == "stochastic cost function":
