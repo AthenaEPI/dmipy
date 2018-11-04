@@ -1041,8 +1041,6 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             **self.x0_parameters)
         x0_ = homogenize_x0_to_data(
             data_, x0_)
-        x0_bool = np.all(
-            np.isnan(x0_), axis=tuple(np.arange(x0_.ndim - 1)))
 
         if use_parallel_processing and not have_pathos:
             msg = 'Cannot use parallel processing without pathos.'
@@ -1414,9 +1412,6 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
             **self.x0_parameters)
         x0_ = homogenize_x0_to_data(
             data_, x0_)
-        x0_bool = np.all(
-            np.isnan(x0_), axis=tuple(np.arange(x0_.ndim - 1)))
-        x0_[..., ~x0_bool] /= self.scales_for_optimization[~x0_bool]
 
         if use_parallel_processing and not have_pathos:
             msg = 'Cannot use parallel processing without pathos.'

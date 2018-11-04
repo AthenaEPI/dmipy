@@ -76,6 +76,9 @@ class MixOptimizer:
 
         """
         # if there is only one model then MIX only uses DE.
+        x0_bool = np.isnan(x0_vector)
+        x0_vector[~x0_bool] /= self.model.scales_for_optimization[~x0_bool]
+
         bounds = list(self.model.bounds_for_optimization)
         if self.Nmodels == 1:
             bounds_de = bounds

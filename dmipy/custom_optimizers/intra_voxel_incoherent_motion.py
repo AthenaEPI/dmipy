@@ -95,7 +95,7 @@ def ivim_2step(acquisition_scheme, data, mask=None, bvalue_threshold=4e8,
     gaussian_mod = MultiCompartmentModel([G1Ball()])
     gaussian_mod.set_parameter_optimization_bounds(
         'G1Ball_1_lambda_iso', [0.5e-9, 6e-9])  # [3]
-    print('Starting step 1 of IVIM fitting algorithm.')
+    print('Starting step 1 of IVIM 2-step algorithm.')
     gaussian_fit = gaussian_mod.fit(
         acquisition_scheme=gaussian_acquisition_scheme,
         data=gaussian_data,
@@ -108,7 +108,7 @@ def ivim_2step(acquisition_scheme, data, mask=None, bvalue_threshold=4e8,
     ivim_mod.set_fixed_parameter(
         parameter_name='G1Ball_1_lambda_iso',
         value=gaussian_fit.fitted_parameters['G1Ball_1_lambda_iso'])
-    print('Starting step 2 of IVIM fitting algorithm.')
+    print('Starting step 2 of IVIM 2-step algorithm.')
     ivim_fit = ivim_mod.fit(
         acquisition_scheme=acquisition_scheme,
         data=data,
@@ -117,7 +117,7 @@ def ivim_2step(acquisition_scheme, data, mask=None, bvalue_threshold=4e8,
 
     computation_time = time() - start
     N_voxels = np.sum(ivim_fit.mask)
-    msg = 'IVIM optimization of {0:d} voxels'.format(N_voxels)
+    msg = 'IVIM 2-step optimization of {0:d} voxels'.format(N_voxels)
     msg += ' complete in {0:.3f} seconds'.format(computation_time)
     print(msg)
     return ivim_fit
@@ -177,19 +177,28 @@ def ivim_Dstar_fixed(acquisition_scheme, data, mask=None, Dstar_value=7e-9,
         fitting algorithms on the accuracy and reliability of the parameters.
         J Magn Reson Imaging. 2017;45: 1637–1647.
     """
+    start = time()
+
     if fit_args is None:
         fit_args = {}
 
+    print('Starting IVIM Dstar-fixed algorithm.')
     ivim_mod = MultiCompartmentModel([G1Ball(), G1Ball()])
     ivim_mod.set_fixed_parameter(
         'G1Ball_2_lambda_iso', Dstar_value)  # following [2]
     ivim_mod.set_parameter_optimization_bounds(
-        'G1Ball_2_lambda_iso', [.5e-9, 6e-9])  # following [3]
+        'G1Ball_1_lambda_iso', [.5e-9, 6e-9])  # following [3]
     ivim_fit = ivim_mod.fit(
         acquisition_scheme=acquisition_scheme,
         data=data,
         mask=mask,
         solver=solver,
         optimize_S0=optimize_S0,
+        verbose=False,
         **fit_args)
+    computation_time = time() - start
+    N_voxels = np.sum(ivim_fit.mask)
+    msg = 'IVIM Dstar-fixed optimization of {0:d} voxels'.format(N_voxels)
+    msg += ' complete in {0:.3f} seconds'.format(computation_time)
+    print(msg)
     return ivim_fit
