@@ -1082,7 +1082,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             voxel_x0_vector = x0_[pos]
             if solver == 'brute2fine':
                 if global_brute.global_optimization_grid is True:
-                    voxel_x0_vector = global_brute(voxel_E)
+                    voxel_x0_vector = global_brute(voxel_E, voxel_x0_vector[0])
             fit_args = (voxel_E, voxel_x0_vector)
             if use_parallel_processing:
                 fitted_parameters_lin[idx] = pool.apipe(fit_func, *fit_args)
@@ -1462,7 +1462,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
             voxel_x0_vector = x0_[pos]
             if solver == 'brute2fine':
                 if global_brute.global_optimization_grid is True:
-                    voxel_x0_vector = global_brute(voxel_E)
+                    voxel_x0_vector = global_brute(voxel_E, voxel_x0_vector[0])
             fit_args = (voxel_E, voxel_x0_vector)
 
             if use_parallel_processing:

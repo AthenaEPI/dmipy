@@ -58,18 +58,19 @@ class GlobalBruteOptimizer:
                  x0_vector=None, Ns=5, N_sphere_samples=30):
         self.model = model
         self.acquisition_scheme = acquisition_scheme
-        self.x0_vector = x0_vector
+        self.x0_vector = x0_vector[..., 1:]  # currently hardcoded no S0
         self.Ns = Ns
 
         if x0_vector is None:
             self.global_optimization_grid = True
             x0_vector = np.tile(np.nan, len(model.bounds_for_optimization))
             self.precompute_signal_grid(model, x0_vector, Ns, N_sphere_samples)
-        elif x0_vector.squeeze().ndim == 1:
+        elif self.x0_vector.squeeze().ndim == 1:
             self.global_optimization_grid = True
             self.precompute_signal_grid(
-                model, x0_vector.squeeze(), Ns, N_sphere_samples)
-        elif np.all(np.isnan(x0_vector.reshape([-1, x0_vector.shape[-1]])[0])):
+                model, self.x0_vector.squeeze(), Ns, N_sphere_samples)
+        elif np.all(np.isnan(
+                self.x0_vector.reshape([-1, self.x0_vector.shape[-1]])[0])):
             x0_vector_ = np.tile(np.nan, len(model.bounds_for_optimization))
             self.global_optimization_grid = True
             self.precompute_signal_grid(
@@ -167,7 +168,7 @@ class GlobalBruteOptimizer:
         self.signal_grid = model.simulate_signal(
             self.acquisition_scheme, self.parameter_grid)
 
-    def __call__(self, data, parameter_scale_normalization=True):
+    def __call__(self, data, S0):
         """
         Calculates the closest parameter combination based on the sum-squared
         distances between the measured data and the simulated signal grid.
@@ -186,10 +187,8 @@ class GlobalBruteOptimizer:
             estimated closest model parameters in the parameter grid.
         """
         if self.global_optimization_grid is True:
-            argmin = find_minimum_argument(self.signal_grid, data)
+            argmin = find_minimum_argument(S0 * self.signal_grid, data)
             parameters_brute = self.parameter_grid[argmin]
-            if parameter_scale_normalization:
-                return parameters_brute / self.model.scales_for_optimization
             return parameters_brute
         else:
             msg = "Global Parameter Grid could not be set because parameter "

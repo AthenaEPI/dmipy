@@ -39,7 +39,7 @@ class FittedMultiCompartmentModel:
         self.model = model
         self.mask = mask
         self.fitted_parameters_vector = fitted_parameters_vector
-        self.S0 = self.fitted_parameters_vector[..., 0]
+        self.S0 = self.fitted_and_linked_parameters['S0']
 
     @property
     def fitted_parameters(self):
