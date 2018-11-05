@@ -14,14 +14,14 @@ def ivim_2step(acquisition_scheme, data, mask=None, bvalue_threshold=4e8,
     the blood flow and diffusion volume fractions and diffusivities,
     respectively. Changes in e.g. blood volume fraction has been linked to many
     pathologies such as the vasculature in tumor tissue [2]_.
-    
+
     Because the apparent diffusivity of blood flow is much higher than that of
     Brownian motion, the optimization bounds for the diffusivities of the two
     Balls are disjoint; the diffusivies of the diffusion compartment range
     between [0.5 - 6]e-3 mm^2/s (results in more precise fit according to [3]),
-    and those of the blood compartment range between [6 - 20]e-3 mm^2/s 
-    (following [4]). 
-    
+    and those of the blood compartment range between [6 - 20]e-3 mm^2/s
+    (following [4]).
+
     The 2-step optimization [5] hinges on the observation that the blood-flow
     signal is negligible at b-values above 200-400 s/mm^2, but it does have
     a constribution below that bvalue (and to the b0).
@@ -33,11 +33,11 @@ def ivim_2step(acquisition_scheme, data, mask=None, bvalue_threshold=4e8,
         diffusivity of this compartment.
     - step 2: fit the 2-compartment model to the whole signal, but fixing the
         "diffusion" diffusivity to the value estimated in step 1.
-    
+
     In the fitted ivim_fit model, partial_volume_0 and G1Ball_1_lambda_iso
     represent the tissue fraction and diffusivity, and partial_volume_1 and
     G1Ball_2_lambda_iso represent the blood fraction and diffusivity.
-    
+
     Parameters
     ----------
     acquisition_scheme: Dmipy AcquisitionScheme instance,
@@ -46,7 +46,7 @@ def ivim_2step(acquisition_scheme, data, mask=None, bvalue_threshold=4e8,
     data: ND-array of shape (Nx, ..., N_DWI),
         measured data corresponding to the acquisition scheme.
     mask : (N-1)-dimensional integer/boolean array of size (N_x, N_y, ...),
-        Optional mask of voxels to be included in the optimization. 
+        Optional mask of voxels to be included in the optimization.
     bvalue_threshold: float,
         the bvalue threshold at which to separate the blood/diffusion parts of
         the data.
@@ -57,12 +57,12 @@ def ivim_2step(acquisition_scheme, data, mask=None, bvalue_threshold=4e8,
         whether or not to optimize (or just fix it to the mean of the b0-data)
         the S0 value in the second optimization step.
     fit_args: other keywords that are passed to the optimizer
-    
+
     Returns
     -------
     ivim_fit: Dmipy FittedMultiCompartmentModel instance,
         contains the fitted IVIM parameters.
-        
+
     References
     ----------
     .. [1] Le Bihan, D., Breton, E., Lallemand, D., Aubin, M. L., Vignaud, J.,
@@ -89,7 +89,7 @@ def ivim_2step(acquisition_scheme, data, mask=None, bvalue_threshold=4e8,
         bvalues=acquisition_scheme.bvalues[bvalue_mask],
         gradient_directions=acquisition_scheme.gradient_directions[
             bvalue_mask])
-    
+
     gaussian_data = np.atleast_2d(data)[..., bvalue_mask]
 
     gaussian_mod = MultiCompartmentModel([G1Ball()])
@@ -101,7 +101,7 @@ def ivim_2step(acquisition_scheme, data, mask=None, bvalue_threshold=4e8,
         data=gaussian_data,
         optimize_S0=True,
         **fit_args)
-    
+
     ivim_mod = MultiCompartmentModel([G1Ball(), G1Ball()])
     ivim_mod.set_parameter_optimization_bounds(
         'G1Ball_2_lambda_iso', [6e-9, 20e-9])  # [4]
@@ -155,7 +155,7 @@ def ivim_Dstar_fixed(acquisition_scheme, data, mask=None, Dstar_value=7e-9,
         whether or not to optimize (or just fix it to the mean of the b0-data)
         the S0 value in the second optimization step.
     fit_args: other keywords that are passed to the optimizer
-    
+
     Returns
     -------
     ivim_fit: Dmipy FittedMultiCompartmentModel instance,
