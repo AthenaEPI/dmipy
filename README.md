@@ -34,7 +34,7 @@ Dmipy allows the user to do Microstructure Imaging research at the highest level
 - clone repository
 - python setup.py install
 
-See solutions to [common issues](https://github.com/AthenaEPI/mipy/blob/master/common_issues.md)
+See solutions to [common issues](https://github.com/AthenaEPI/dmipy/blob/master/common_issues.md)
 ## Dependencies
 Recommended to use Anaconda Python distribution.
 - numpy >= 1.13
@@ -47,47 +47,48 @@ Recommended to use Anaconda Python distribution.
 
 ## Getting Started
 To get a feeling for how to use Dmipy, we provide a few tutorial notebooks:
-- [Setting up an acquisition scheme](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/tutorial_setting_up_acquisition_scheme.ipynb)
-- [Simulating and fitting data using a simple Stick model](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/tutorial_simulating_and_fitting_using_a_simple_model.ipynb)
-- [Combining biophysical models into a Microstructure model](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/tutorial_combining_biophysical_models_into_microstructure_model.ipynb)
+- [Setting up an acquisition scheme](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/tutorial_setting_up_acquisition_scheme.ipynb)
+- [Simulating and fitting data using a simple Stick model](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/tutorial_simulating_and_fitting_using_a_simple_model.ipynb)
+- [Combining biophysical models into a Microstructure model](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/tutorial_combining_biophysical_models_into_microstructure_model.ipynb)
 - [Creating a dispersed and/or distributed axon bundle representation](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/tutorial_distributed_model_representations.ipynb)
-- [Imposing parameter links and constraints](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/tutorial_imposing_parameter_links.ipynb)
-- [Parameter Cascading: Using a simple model to initialize a complex one](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/tutorial_parameter_cascading_and_simulating_nd_datasets.ipynb)
+- [Imposing parameter links and constraints](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/tutorial_imposing_parameter_links.ipynb)
+- [Parameter Cascading: Using a simple model to initialize a complex one](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/tutorial_parameter_cascading_and_simulating_nd_datasets.ipynb)
 
 ## Explanations and Illustrations of Dmipy Contents
 ### Biophysical Models and Distributions
-- [Cylinder Models (Axons, e.g. [Assaf et al. 2004])](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_cylinder_models.ipynb)
-- [Sphere Models (Tumor cells, e.g. [Panagiotaki et al. 2014])](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_sphere_models.ipynb)
-- [Parameter Distribution Models (Axon Diameter Distribution, e.g. [Assaf et al. 2008])](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_diameter_distributions.ipynb)
-- [Gaussian Models (Extra-axonal, e.g. [Behrens et al. 2003])](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_gaussian_models.ipynb)
+- [Cylinder Models (Axons, e.g. [Assaf et al. 2004])](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_cylinder_models.ipynb)
+- [Sphere Models (Tumor cells, e.g. [Panagiotaki et al. 2014])](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_sphere_models.ipynb)
+- [Parameter Distribution Models (Axon Diameter Distribution, e.g. [Assaf et al. 2008])](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_diameter_distributions.ipynb)
+- [Gaussian Models (Extra-axonal, e.g. [Behrens et al. 2003])](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_gaussian_models.ipynb)
 - Tissue Response Function Models and Estimation (WM/GM/CSF, e.g. [Jeurissen et al. 2014])
-- [Spherical Distribution Models (Axon Dispersion, e.g. [Kaden et al. 2007])](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_watson_bingham.ipynb)
-- [Spherical Mean of any Compartment Model](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_spherical_mean_models.ipynb)
+- [Spherical Distribution Models (Axon Dispersion, e.g. [Kaden et al. 2007])](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_watson_bingham.ipynb)
+- [Spherical Mean of any Compartment Model](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_spherical_mean_models.ipynb)
 ### Global Multi-Compartment Optimizers
 - [Brute Force to Gradient Descent (Brute2Fine)](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_brute_force_optimization.ipynb)
 - [Stochastic (MIX) [Farooq et al. 2016]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_stochastic_mix_optimization.ipynb)
 ### Constrained Spherical Deconvolution Optimizers
 - [Generalized Multi-Shell Multi-Compartment CSD [Tournier et al. 2007, Jeurissen et al. 2014]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_generalized_csd_optimizer.ipynb)
 ## Dmipy implementations of Microstructure Models in Literature
-Dmipy uses HCP data to illustrate microstructure model examples. To reproduce these examples, dmipy provides a direct way to download HCP data (using your own AWS credentials) in the [HCP tutorial](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/tutorial_human_connectome_project_aws.ipynb).
+Dmipy uses HCP data to illustrate microstructure model examples. To reproduce these examples, dmipy provides a direct way to download HCP data (using your own AWS credentials) in the [HCP tutorial](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/tutorial_human_connectome_project_aws.ipynb).
 ### Single Bundle Models
-- [Ball and Stick [Behrens et al. 2003]](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_ball_and_stick.ipynb)
-- [Ball and Racket [Sotiropoulos et al. 2012]](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_ball_and_racket.ipynb)
-- [NODDI-Watson [Zhang et al. 2012]](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_noddi_watson.ipynb)
-- [NODDI-Bingham [Tariq et al. 2016]](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_noddi_bingham.ipynb)
-- [AxCaliber [Assaf et al. 2008]](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_axcaliber.ipynb)
+- [Ball and Stick [Behrens et al. 2003]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_ball_and_stick.ipynb)
+- [Ball and Racket [Sotiropoulos et al. 2012]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_ball_and_racket.ipynb)
+- [NODDI-Watson [Zhang et al. 2012]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_noddi_watson.ipynb)
+- [NODDI-Bingham [Tariq et al. 2016]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_noddi_bingham.ipynb)
+- [AxCaliber [Assaf et al. 2008]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_axcaliber.ipynb)
 - [AxCaliber with Extra-Axonal Diffusion Time-Dependence [De Santis et al. 2016]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_axcaliber_temporal_zeppeline.ipynb)
 
 ### Crossing Bundle Models
-- [Ball and Sticks [Behrens et al. 2003]](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_ball_and_sticks.ipynb)
-- [NODDI in Crossings (NODDIx) [Farooq et al. 2016]](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_mix_microstructure_imaging_in_crossings.ipynb)
+- [Ball and Sticks [Behrens et al. 2003]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_ball_and_sticks.ipynb)
+- [NODDI in Crossings (NODDIx) [Farooq et al. 2016]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_mix_microstructure_imaging_in_crossings.ipynb)
 
 ### Tumor Models
-- [VERDICT [Panagiotaki et al. 2014]](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_verdict.ipynb)
+- [IVIM [Le Bihan et al. 1988]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/ivim/examples/example_ivim.ipynb)
+- [VERDICT [Panagiotaki et al. 2014]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_verdict.ipynb)
 ### Spherical Mean-Based Models
 Any Spherical Mean model can also estimate parametric FODs.
 - [Spherical Mean Technique [Kaden et al. 2015]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_spherical_mean_technique.ipynb)
-- [Multi-Compartment Microscopic Diffusion Imaging [Kaden et al. 2016]](http://nbviewer.jupyter.org/github/AthenaEPI/mipy/blob/master/examples/example_multi_compartment_spherical_mean_technique.ipynb)
+- [Multi-Compartment Microscopic Diffusion Imaging [Kaden et al. 2016]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_multi_compartment_spherical_mean_technique.ipynb)
 ### Spherical Deconvolution-Based Models
 Constrained spherical deconvolution (CSD) models are primarily used for Fiber Orientation Distribution (FOD) estimation. Multi-Tissue CSD models improve FOD estimation by separating WM/GM/CSF signal contributions using multiple tissue response functions.
 - [Multi-Shell Multi-Compartment CSD [model-based version of Jeurissen et al. 2014]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_multi_compartment_constrained_spherical_deconvolution.ipynb)
