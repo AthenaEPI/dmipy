@@ -58,20 +58,23 @@ class GlobalBruteOptimizer:
                  x0_vector=None, Ns=5, N_sphere_samples=30):
         self.model = model
         self.acquisition_scheme = acquisition_scheme
-        self.x0_vector = x0_vector[..., 1:]  # currently hardcoded no S0
         self.Ns = Ns
 
         if x0_vector is None:
             self.global_optimization_grid = True
             x0_vector = np.tile(np.nan, len(model.bounds_for_optimization))
             self.precompute_signal_grid(model, x0_vector, Ns, N_sphere_samples)
-        elif self.x0_vector.squeeze().ndim == 1:
+        elif x0_vector.squeeze().ndim == 1:
             self.global_optimization_grid = True
+            x0_vector_ = x0_vector.copy()
+            x0_vector[0] = 1.
             self.precompute_signal_grid(
-                model, self.x0_vector.squeeze(), Ns, N_sphere_samples)
+                model, x0_vector.squeeze(), Ns, N_sphere_samples)
         elif np.all(np.isnan(
-                self.x0_vector.reshape([-1, self.x0_vector.shape[-1]])[0])):
+                x0_vector[..., 1:].reshape(
+                    [-1, x0_vector[..., 1:].shape[-1]])[0])):
             x0_vector_ = np.tile(np.nan, len(model.bounds_for_optimization))
+            x0_vector_[0] = 1.
             self.global_optimization_grid = True
             self.precompute_signal_grid(
                 model, x0_vector_, Ns, N_sphere_samples)
