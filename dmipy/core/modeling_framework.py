@@ -1023,7 +1023,6 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         self._check_tissue_model_acquisition_scheme(acquisition_scheme)
         self._check_model_params_with_acquisition_params(acquisition_scheme)
         self.scheme = acquisition_scheme
-        # estimate S0
         data_ = np.atleast_2d(data,)
         if mask is None:
             mask = data_[..., 0] > 0
@@ -1298,7 +1297,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
                     del self.parameter_cardinality[appended_param_name]
                     del self.parameter_types[appended_param_name]
 
-    def fit(self, acquisition_scheme, data,
+    def fit(self, acquisition_scheme, data, optimize_S0=False,
             mask=None, solver='brute2fine', Ns=5, maxiter=300,
             N_sphere_samples=30, use_parallel_processing=have_pathos,
             number_of_processors=None, verbose=True):
@@ -1380,27 +1379,15 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         """
         self._check_tissue_model_acquisition_scheme(acquisition_scheme)
         self._check_model_params_with_acquisition_params(acquisition_scheme)
-
-        # estimate S0
         self.scheme = acquisition_scheme
         data_ = np.atleast_2d(data)
-        if self.scheme.TE is None or len(np.unique(self.scheme.TE)) == 1:
-            S0 = np.mean(data_[..., self.scheme.b0_mask], axis=-1)
-        else:  # if multiple TE are in the data
-            S0 = np.ones(np.r_[data_.shape[:-1],
-                               len(acquisition_scheme.shell_TE)])
-            for TE_ in self.scheme.shell_TE:
-                TE_mask = self.scheme.shell_TE == TE_
-                TE_mask_shell = self.scheme.TE == TE_
-                TE_b0_mask = np.all([self.scheme.b0_mask, TE_mask_shell],
-                                    axis=0)
-                S0[..., TE_mask] = np.mean(
-                    data_[..., TE_b0_mask], axis=-1)[..., None]
 
         if mask is None:
             mask = data_[..., 0] > 0
         else:
             mask = np.all([mask, data_[..., 0] > 0], axis=0)
+        self._add_S0_parameter(data_, mask, optimize_S0)
+
         mask_pos = np.where(mask)
 
         N_parameters = len(self.bounds_for_optimization)
@@ -1458,7 +1445,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
 
         start = time()
         for idx, pos in enumerate(zip(*mask_pos)):
-            voxel_E = data_to_fit[pos] / S0[pos]
+            voxel_E = data_to_fit[pos]
             voxel_x0_vector = x0_[pos]
             if solver == 'brute2fine':
                 if global_brute.global_optimization_grid is True:
@@ -1485,7 +1472,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
             fitted_parameters_lin * self.scales_for_optimization)
 
         return FittedMultiCompartmentSphericalMeanModel(
-            self, S0, mask, fitted_parameters)
+            self, mask, fitted_parameters)
 
     def simulate_signal(self, acquisition_scheme, parameters_array_or_dict):
         """

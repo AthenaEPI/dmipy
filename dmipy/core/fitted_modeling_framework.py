@@ -241,11 +241,11 @@ class FittedMultiCompartmentSphericalMeanModel:
         fitted model parameters array.
     """
 
-    def __init__(self, model, S0, mask, fitted_parameters_vector):
+    def __init__(self, model, mask, fitted_parameters_vector):
         self.model = model
-        self.S0 = S0
         self.mask = mask
         self.fitted_parameters_vector = fitted_parameters_vector
+        self.S0 = self.fitted_and_linked_parameters['S0']
 
     @property
     def fitted_parameters(self):
