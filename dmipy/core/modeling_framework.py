@@ -510,11 +510,11 @@ class MultiCompartmentModelProperties:
                 else:
                     msg = 'parameter_name must be a float or an ND-array.'
                     raise ValueError(msg)
-            elif card == 2:
+            elif card > 1:
                 value = np.array(value, dtype=float)
-                if value.shape[-1] != 2:
-                    msg = '{} can only be fixed '.format(parameter_name)
-                    msg += 'to an array or list with last dimension 2.'
+                if value.shape[-1] != card:
+                    msg = '{} can only be fixed to an '.format(parameter_name)
+                    msg += 'array or list with last dimension {}.'.format(card)
                     raise ValueError(msg)
                 if value.ndim == 1:
                     self._add_fixed_parameter_value(parameter_name, value)
@@ -845,37 +845,64 @@ class MultiCompartmentModelProperties:
         scheme_has_b0s = np.sum(self.scheme.b0_mask) > 0
         if scheme_has_b0s:
             if self.scheme.TE is None or len(np.unique(self.scheme.TE)) == 1:
+                N_TE = 1
+                self.S0_mapping = 1.
+                self.S0_mapping_sm = 1.
                 S0 = np.mean(data[..., self.scheme.b0_mask], axis=-1)
             else:  # if multiple TE are in the data
-                S0 = np.ones_like(data)
-                for TE_ in self.scheme.shell_TE:
+                unique_TEs = np.unique(self.scheme.TE)
+                N_TE = len(unique_TEs)
+                S0 = np.ones(np.r_[data.shape[:-1], N_TE])
+                self.S0_mapping = np.zeros([data.shape[-1], N_TE])
+                self.S0_mapping_sm = np.zeros(
+                    [len(self.scheme.shell_TE), N_TE])
+                for i, TE_ in enumerate(unique_TEs):
                     TE_mask = self.scheme.TE == TE_
+                    TE_mask_sm = self.scheme.shell_TE == TE_
                     TE_b0_mask = np.all([self.scheme.b0_mask, TE_mask], axis=0)
-                    S0[..., TE_mask] = np.mean(
+                    S0[..., i] = np.mean(
                         data[..., TE_b0_mask], axis=-1)[..., None]
+                    self.S0_mapping[:, i] = TE_mask
+                    self.S0_mapping_sm[:, i] = TE_mask_sm
         else:
             if optimize_S0:
-                "fit each voxel using 2nd order polynomial"
-                S0 = np.zeros(data.shape[:-1])
-                mask_pos = np.where(mask)
-                for pos in zip(*mask_pos):
-                    _, neg_log_S0 = np.polyfit(
-                        x=self.scheme.bvalues, y=-np.log(data[pos]), deg=1)
-                    S0[pos] = np.exp(-neg_log_S0)
+                if (self.scheme.TE is None or
+                        len(np.unique(self.scheme.TE)) == 1):
+                    "fit each voxel using 2nd order polynomial"
+                    self.S0_mapping = self.S0_mapping_sm = 1.
+                    S0 = np.zeros(data.shape[:-1])
+                    mask_pos = np.where(mask)
+                    for pos in zip(*mask_pos):
+                        _, neg_log_S0 = np.polyfit(
+                            x=self.scheme.bvalues, y=-np.log(data[pos]), deg=1)
+                        S0[pos] = np.exp(-neg_log_S0)
+                else:
+                    raise NotImplementedError(
+                        'multi-TE S0 estimation not yet implemented')
             else:
                 msg = "optimize_S0 must be True when the acquisition scheme "
                 msg += "has no b0 measurements."
                 raise ValueError(msg)
 
-        parameter_scale = np.max(S0)
-        S0_norm = S0 / parameter_scale
-        range_max = np.max(S0_norm) * 1.1
-        parameter_card = 1
-        parameter_flag = optimize_S0
+        if N_TE == 1:
+            parameter_scale = np.max(S0)
+            S0_norm = S0 / parameter_scale
+            parameter_range = [0., np.max(S0_norm) * 1.1]
+            parameter_card = N_TE
+            parameter_flag = optimize_S0
+        else:
+            parameter_scale = []
+            parameter_range = []
+            parameter_card = N_TE
+            parameter_flag = optimize_S0
+            for i in range(N_TE):
+                parameter_scale.append(np.max(S0[..., i]))
+                S0_norm = S0[..., i] / parameter_scale[i]
+                parameter_range.append([0., np.max(S0_norm) * 1.1])
 
         self._add_optimization_parameter(
             'S0',
-            [0., range_max],
+            parameter_range,
             parameter_scale,
             parameter_card,
             'intensity',
@@ -887,6 +914,19 @@ class MultiCompartmentModelProperties:
             self.set_fixed_parameter('S0', S0)
 
     def set_parameter_optimization_bounds(self, parameter_name, bounds):
+        """
+        Sets the parameter optimization bounds for a given parameter.
+
+        Parameters
+        ----------
+        parameter_name: string,
+            name of the parameter whose bounds should be changed.
+        bounds: array or size(card, 2),
+            upper and lower bound for each optimized value for the given
+            parameter, where card is
+            self.parameter_cardinality[parameter_name]).
+
+        """
         parameter_scale = np.max(bounds)
         ranges = np.array(bounds) / parameter_scale
         self.parameter_ranges[parameter_name] = ranges
@@ -1175,7 +1215,8 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             Is internally given as **parameter_dictionary.
         """
         try:
-            S0 = kwargs['S0']
+            S0_pars = kwargs['S0']
+            S0 = np.dot(self.S0_mapping, S0_pars)
         except KeyError:
             S0 = 1.
 
@@ -1543,6 +1584,12 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         kwargs: keyword arguments to the model parameter values,
             Is internally given as **parameter_dictionary.
         """
+        try:
+            S0_pars = kwargs['S0']
+            S0 = np.dot(self.S0_mapping_sm, S0_pars)
+        except KeyError:
+            S0 = 1.
+
         if quantity == "signal":
             values = 0
         elif quantity == "stochastic cost function":
@@ -1576,13 +1623,10 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
                 )
 
             if quantity == "signal":
-                values = (
-                    values +
-                    partial_volume * model.spherical_mean(
+                values += S0 * partial_volume * model.spherical_mean(
                         acquisition_scheme_or_vertices, **parameters)
-                )
             elif quantity == "stochastic cost function":
-                values[:, counter] = model.spherical_mean(
+                values[:, counter] = S0 * model.spherical_mean(
                     acquisition_scheme_or_vertices,
                     **parameters)
                 counter += 1
