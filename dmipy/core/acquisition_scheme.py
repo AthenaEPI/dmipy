@@ -165,9 +165,11 @@ class DmipyAcquisitionScheme:
                 self.shell_sh_orders[shell_index], theta_, phi_)[0]
         # warning in case there are no b0 measurements
         if sum(self.b0_mask) == 0:
-            msg = "No b0 measurements were detected. Check if the b0_threshold"
-            msg += " option is high enough, or if there is a mistake in the "
-            msg += "acquisition design."
+            msg = "No b0 measurements were detected. If this is the case, you "
+            msg += "need to estimate it from the data by setting "
+            msg += "optimize_S0=True when fitting. If not, check if the "
+            msg += "b0_threshold option is high enough, or if there is a "
+            msg += "mistake in the acquisition design."
             warn(msg)
 
         self.spherical_mean_scheme = SphericalMeanAcquisitionScheme(
