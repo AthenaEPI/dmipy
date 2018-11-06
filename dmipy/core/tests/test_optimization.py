@@ -1,8 +1,7 @@
 from dmipy.signal_models import (
     cylinder_models, gaussian_models, sphere_models)
 from dmipy.core import modeling_framework
-from numpy.testing import (
-    assert_equal, assert_array_almost_equal, assert_array_equal)
+from numpy.testing import assert_array_almost_equal
 import numpy as np
 from dmipy.data.saved_acquisition_schemes import wu_minn_hcp_acquisition_scheme
 
@@ -165,13 +164,14 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
         'G2Zeppelin_1_lambda_par'
     )
 
+    gt_parameters = {'C1Stick_1_lambda_par': gt_lambda_par,
+                     'C1Stick_1_mu': gt_mu,
+                     'partial_volume_0': gt_partial_volume,
+                     'partial_volume_1': 1 - gt_partial_volume}
+
     gt_parameter_vector = (
         stick_and_zeppelin.parameters_to_parameter_vector(
-            C1Stick_1_lambda_par=gt_lambda_par,
-            C1Stick_1_mu=gt_mu,
-            partial_volume_0=gt_partial_volume,
-            partial_volume_1=1 - gt_partial_volume)
-    )
+            **gt_parameters))
 
     E = stick_and_zeppelin.simulate_signal(
         scheme, gt_parameter_vector)
@@ -192,11 +192,14 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
         'G2Zeppelin_1_lambda_par',
         'C1Stick_1_lambda_par')
 
-    res_sm = stick_and_tortuous_zeppelin_sm.fit(scheme, E
-                                                ).fitted_parameters_vector
-
-    assert_array_almost_equal(
-        np.r_[gt_lambda_par, gt_partial_volume], res_sm.squeeze()[:-1], 2)
+    fit = stick_and_tortuous_zeppelin_sm.fit(scheme, E)
+    for parname, gt_value in gt_parameters.items():
+        if parname not in fit.fitted_parameters.keys():
+            continue
+        fitval = fit.fitted_parameters[parname][0]
+        scale = stick_and_tortuous_zeppelin_sm.parameter_scales[parname]
+        assert_array_almost_equal(
+            abs(fitval / scale), gt_value / scale, 2)
 
 
 def test_fractions_add_up_to_one():
