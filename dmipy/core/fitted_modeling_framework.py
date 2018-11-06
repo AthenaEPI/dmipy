@@ -447,6 +447,8 @@ class FittedMultiCompartmentSphericalMeanModel:
                                                      parameters[i])
 
         for parameters in parameter_pairs:
+            if smt_par_name == 'S0':  # temporary solution
+                continue
             smt_parameter_name = parameters[0]
             mc_parameter_name = parameters[1]
             mc_bundles_model.set_fixed_parameter(
@@ -526,6 +528,8 @@ class FittedMultiCompartmentSphericalMeanModel:
             del sh_model.parameter_optimization_flags[param_to_delete]
 
         for smt_par_name in self.model.parameter_names:
+            if smt_par_name == 'S0':  # temporary solution
+                continue
             sh_model.set_fixed_parameter(
                 smt_par_name, self.fitted_parameters[smt_par_name])
         return sh_model
