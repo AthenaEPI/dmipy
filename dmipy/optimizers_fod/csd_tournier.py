@@ -1,5 +1,4 @@
 import numpy as np
-from .construct_observation_matrix import construct_model_based_A_matrix
 from dipy.data import get_sphere, HemiSphere
 from dipy.reconst.shm import real_sym_sh_mrtrix
 from dipy.utils.optpkg import optional_package

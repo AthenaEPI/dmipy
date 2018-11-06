@@ -35,11 +35,11 @@ class FittedMultiCompartmentModel:
         fitted model parameters array.
     """
 
-    def __init__(self, model, S0, mask, fitted_parameters_vector):
+    def __init__(self, model, mask, fitted_parameters_vector):
         self.model = model
-        self.S0 = S0
         self.mask = mask
         self.fitted_parameters_vector = fitted_parameters_vector
+        self.S0 = self.fitted_and_linked_parameters['S0']
 
     @property
     def fitted_parameters(self):
@@ -179,9 +179,9 @@ class FittedMultiCompartmentModel:
 
         dataset_shape = self.fitted_parameters_vector.shape[:-1]
         if S0 is None:
-            S0 = self.S0
+            S0_mult = np.ones_like(self.S0)
         elif isinstance(S0, float):
-            S0 = np.ones(dataset_shape) * S0
+            S0_mult = S0 / self.S0
         if mask is None:
             mask = self.mask
 
@@ -193,7 +193,8 @@ class FittedMultiCompartmentModel:
             parameters = self.model.parameter_vector_to_parameters(
                 self.fitted_parameters_vector[pos])
             predicted_signal[pos] = self.model(
-                acquisition_scheme, **parameters) * S0[pos]
+                acquisition_scheme, **parameters) * np.dot(
+                    self.model.S0_mapping, S0_mult[pos])
         return predicted_signal
 
     def R2_coefficient_of_determination(self, data):
@@ -241,11 +242,11 @@ class FittedMultiCompartmentSphericalMeanModel:
         fitted model parameters array.
     """
 
-    def __init__(self, model, S0, mask, fitted_parameters_vector):
+    def __init__(self, model, mask, fitted_parameters_vector):
         self.model = model
-        self.S0 = S0
         self.mask = mask
         self.fitted_parameters_vector = fitted_parameters_vector
+        self.S0 = self.fitted_and_linked_parameters['S0']
 
     @property
     def fitted_parameters(self):
@@ -292,9 +293,9 @@ class FittedMultiCompartmentSphericalMeanModel:
 
         dataset_shape = self.fitted_parameters_vector.shape[:-1]
         if S0 is None:
-            S0 = self.S0
+            S0_mult = np.ones_like(self.S0)
         elif isinstance(S0, float):
-            S0 = np.ones(dataset_shape) * S0
+            S0_mult = S0 / self.S0
         if mask is None:
             mask = self.mask
 
@@ -306,7 +307,8 @@ class FittedMultiCompartmentSphericalMeanModel:
             parameters = self.model.parameter_vector_to_parameters(
                 self.fitted_parameters_vector[pos])
             predicted_signal[pos] = self.model(
-                acquisition_scheme, **parameters) * S0[pos]
+                acquisition_scheme, **parameters) * np.dot(
+                    self.model.S0_mapping_sm, S0_mult[pos])
         return predicted_signal
 
     def R2_coefficient_of_determination(self, data):
@@ -447,6 +449,8 @@ class FittedMultiCompartmentSphericalMeanModel:
                                                      parameters[i])
 
         for parameters in parameter_pairs:
+            if smt_par_name == 'S0':  # temporary solution
+                continue
             smt_parameter_name = parameters[0]
             mc_parameter_name = parameters[1]
             mc_bundles_model.set_fixed_parameter(
@@ -526,6 +530,8 @@ class FittedMultiCompartmentSphericalMeanModel:
             del sh_model.parameter_optimization_flags[param_to_delete]
 
         for smt_par_name in self.model.parameter_names:
+            if smt_par_name == 'S0':  # temporary solution
+                continue
             sh_model.set_fixed_parameter(
                 smt_par_name, self.fitted_parameters[smt_par_name])
         return sh_model

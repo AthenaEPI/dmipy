@@ -1,8 +1,7 @@
 from dmipy.signal_models import (
     cylinder_models, gaussian_models, sphere_models)
 from dmipy.core import modeling_framework
-from numpy.testing import (
-    assert_equal, assert_array_almost_equal, assert_array_equal)
+from numpy.testing import assert_array_almost_equal
 import numpy as np
 from dmipy.data.saved_acquisition_schemes import wu_minn_hcp_acquisition_scheme
 
@@ -17,16 +16,23 @@ def test_simple_stick_optimization():
     stick_model = modeling_framework.MultiCompartmentModel(
         models=[stick])
 
+    gt_parameters = {'C1Stick_1_lambda_par': gt_lambda_par,
+                     'C1Stick_1_mu': gt_mu}
+
     gt_parameter_vector = stick_model.parameters_to_parameter_vector(
-        C1Stick_1_lambda_par=gt_lambda_par, C1Stick_1_mu=gt_mu)
+        **gt_parameters)
 
     E = stick_model.simulate_signal(scheme, gt_parameter_vector)
 
     stick_model.set_initial_guess_parameter('C1Stick_1_lambda_par',
                                             (np.random.rand() + 1.) * 1e-9)
     stick_model.set_initial_guess_parameter('C1Stick_1_mu', np.random.rand(2))
-    res = stick_model.fit(scheme, E).fitted_parameters_vector
-    assert_array_almost_equal(gt_parameter_vector, res.squeeze(), 2)
+    fit = stick_model.fit(scheme, E)
+    for parname, gt_value in gt_parameters.items():
+        fitval = fit.fitted_parameters[parname][0]
+        scale = stick_model.parameter_scales[parname]
+        assert_array_almost_equal(
+            abs(fitval / scale), gt_value / scale, 2)
 
 
 def test_simple_ball_and_stick_optimization():
@@ -42,13 +48,14 @@ def test_simple_ball_and_stick_optimization():
     gt_lambda_iso = gt_lambda_par / 2.
     gt_partial_volume = 0.3
 
+    gt_parameters = {'C1Stick_1_lambda_par': gt_lambda_par,
+                     'G1Ball_1_lambda_iso': gt_lambda_iso,
+                     'C1Stick_1_mu': gt_mu,
+                     'partial_volume_0': gt_partial_volume,
+                     'partial_volume_1': 1 - gt_partial_volume}
+
     gt_parameter_vector = ball_and_stick.parameters_to_parameter_vector(
-        C1Stick_1_lambda_par=gt_lambda_par,
-        G1Ball_1_lambda_iso=gt_lambda_iso,
-        C1Stick_1_mu=gt_mu,
-        partial_volume_0=gt_partial_volume,
-        partial_volume_1=1 - gt_partial_volume
-    )
+        **gt_parameters)
 
     E = ball_and_stick.simulate_signal(
         scheme, gt_parameter_vector)
@@ -63,8 +70,12 @@ def test_simple_ball_and_stick_optimization():
     ball_and_stick.set_initial_guess_parameter('partial_volume_0', vf_rand)
     ball_and_stick.set_initial_guess_parameter('partial_volume_1', 1 - vf_rand)
 
-    res = ball_and_stick.fit(scheme, E).fitted_parameters_vector
-    assert_array_almost_equal(gt_parameter_vector, res.squeeze(), 2)
+    fit = ball_and_stick.fit(scheme, E)
+    for parname, gt_value in gt_parameters.items():
+        fitval = fit.fitted_parameters[parname][0]
+        scale = ball_and_stick.parameter_scales[parname]
+        assert_array_almost_equal(
+            abs(fitval / scale), gt_value / scale, 2)
 
 
 def test_multi_dimensional_x0():
@@ -84,14 +95,15 @@ def test_multi_dimensional_x0():
         for j, mu2 in enumerate(np.linspace(-np.pi, np.pi, 10)):
             gt_mu_array[i, j] = np.r_[mu1, mu2]
 
+    gt_parameters = {'C1Stick_1_lambda_par': gt_lambda_par,
+                     'G1Ball_1_lambda_iso': gt_lambda_iso,
+                     'C1Stick_1_mu': gt_mu_array,
+                     'partial_volume_0': gt_partial_volume,
+                     'partial_volume_1': 1 - gt_partial_volume}
+
     gt_parameter_vector = (
         ball_and_stick.parameters_to_parameter_vector(
-            C1Stick_1_lambda_par=gt_lambda_par,
-            G1Ball_1_lambda_iso=gt_lambda_iso,
-            C1Stick_1_mu=gt_mu_array,
-            partial_volume_0=gt_partial_volume,
-            partial_volume_1=1 - gt_partial_volume)
-    )
+            **gt_parameters))
 
     E_array = ball_and_stick.simulate_signal(
         scheme, gt_parameter_vector)
@@ -107,16 +119,12 @@ def test_multi_dimensional_x0():
     ball_and_stick.set_initial_guess_parameter(
         'partial_volume_1', 1 - gt_partial_volume)
     # I'm giving a voxel-dependent initial condition with gt_mu_array
-    res = ball_and_stick.fit(scheme, E_array).fitted_parameters_vector
-    # optimization should stop immediately as I'm giving the ground truth.
-    assert_equal(np.all(np.ravel(res - gt_parameter_vector) == 0.), True)
+    fit = ball_and_stick.fit(scheme, E_array)
     # and the parameter vector dictionaries of the results and x0 should also
     # be the same.
-    res_parameters = ball_and_stick.parameter_vector_to_parameters(res)
-    x0_parameters = ball_and_stick.parameter_vector_to_parameters(
-        gt_parameter_vector)
-    for key in res_parameters.keys():
-        assert_array_equal(x0_parameters[key], res_parameters[key])
+    for parname, gt_value in gt_parameters.items():
+        fitval = fit.fitted_parameters[parname]
+        assert_array_almost_equal(gt_parameters[parname], fitval)
 
 
 def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
@@ -156,13 +164,14 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
         'G2Zeppelin_1_lambda_par'
     )
 
+    gt_parameters = {'C1Stick_1_lambda_par': gt_lambda_par,
+                     'C1Stick_1_mu': gt_mu,
+                     'partial_volume_0': gt_partial_volume,
+                     'partial_volume_1': 1 - gt_partial_volume}
+
     gt_parameter_vector = (
         stick_and_zeppelin.parameters_to_parameter_vector(
-            C1Stick_1_lambda_par=gt_lambda_par,
-            C1Stick_1_mu=gt_mu,
-            partial_volume_0=gt_partial_volume,
-            partial_volume_1=1 - gt_partial_volume)
-    )
+            **gt_parameters))
 
     E = stick_and_zeppelin.simulate_signal(
         scheme, gt_parameter_vector)
@@ -183,11 +192,14 @@ def test_stick_and_tortuous_zeppelin_to_spherical_mean_fit():
         'G2Zeppelin_1_lambda_par',
         'C1Stick_1_lambda_par')
 
-    res_sm = stick_and_tortuous_zeppelin_sm.fit(scheme, E
-                                                ).fitted_parameters_vector
-
-    assert_array_almost_equal(
-        np.r_[gt_lambda_par, gt_partial_volume], res_sm.squeeze()[:-1], 2)
+    fit = stick_and_tortuous_zeppelin_sm.fit(scheme, E)
+    for parname, gt_value in gt_parameters.items():
+        if parname not in fit.fitted_parameters.keys():
+            continue
+        fitval = fit.fitted_parameters[parname][0]
+        scale = stick_and_tortuous_zeppelin_sm.parameter_scales[parname]
+        assert_array_almost_equal(
+            abs(fitval / scale), gt_value / scale, 2)
 
 
 def test_fractions_add_up_to_one():
@@ -217,21 +229,26 @@ def test_MIX_fitting_multimodel():
         modeling_framework.MultiCompartmentModel(
             models=[ball, zeppelin]))
 
+    gt_parameters = {'G1Ball_1_lambda_iso': 2.7e-9,
+                     'partial_volume_0': .2,
+                     'partial_volume_1': .8,
+                     'G2Zeppelin_1_lambda_perp': .5e-9,
+                     'G2Zeppelin_1_mu': (np.pi / 2., np.pi / 2.),
+                     'G2Zeppelin_1_lambda_par': 1.7e-9}
+
     parameter_vector = ball_and_zeppelin.parameters_to_parameter_vector(
-        G1Ball_1_lambda_iso=2.7e-9,
-        partial_volume_0=.2,
-        partial_volume_1=.8,
-        G2Zeppelin_1_lambda_perp=.5e-9,
-        G2Zeppelin_1_mu=(np.pi / 2., np.pi / 2.),
-        G2Zeppelin_1_lambda_par=1.7e-9
-    )
+        **gt_parameters)
 
     E = ball_and_zeppelin.simulate_signal(
         scheme, parameter_vector)
     fit = ball_and_zeppelin.fit(
         scheme,
-        E, solver='mix').fitted_parameters_vector
-    assert_array_almost_equal(abs(fit).squeeze(), parameter_vector, 2)
+        E, solver='mix')
+    for parname, gt_value in gt_parameters.items():
+        fitval = fit.fitted_parameters[parname][0]
+        scale = ball_and_zeppelin.parameter_scales[parname]
+        assert_array_almost_equal(
+            abs(fitval / scale), gt_value / scale, 2)
 
 
 def test_MIX_fitting_singlemodel():
@@ -240,14 +257,19 @@ def test_MIX_fitting_singlemodel():
         modeling_framework.MultiCompartmentModel(
             models=[stick]))
 
+    gt_parameters = {'C1Stick_1_mu': [np.pi / 2., np.pi / 2.],
+                     'C1Stick_1_lambda_par': 1.7e-9}
+
     parameter_vector = stick_mod.parameters_to_parameter_vector(
-        C1Stick_1_mu=(np.pi / 2., np.pi / 2.),
-        C1Stick_1_lambda_par=1.7e-9
-    )
+        **gt_parameters)
 
     E = stick_mod.simulate_signal(
         scheme, parameter_vector)
     fit = stick_mod.fit(
         scheme,
-        E, solver='mix').fitted_parameters_vector
-    assert_array_almost_equal(abs(fit).squeeze(), parameter_vector, 2)
+        E, solver='mix')
+    for parname, gt_value in gt_parameters.items():
+        fitval = fit.fitted_parameters[parname][0]
+        scale = stick_mod.parameter_scales[parname]
+        assert_array_almost_equal(
+            abs(fitval / scale), gt_value / scale, 2)

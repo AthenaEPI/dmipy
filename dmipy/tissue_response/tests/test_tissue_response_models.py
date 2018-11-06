@@ -98,8 +98,8 @@ def test_tissue_response_model_multi_compartment_models():
     test_data = [test_mc_data, test_mc_data_sm]
 
     params = {
-        'partial_volume_0': [0.5],
-        'partial_volume_1': [0.5],
+        'partial_volume_0': 0.5,
+        'partial_volume_1': 0.5,
         'AnisotropicTissueResponseModel_1_mu': np.array(
             [np.pi / 2, np.pi / 2])
     }

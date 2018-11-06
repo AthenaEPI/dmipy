@@ -58,7 +58,6 @@ class GlobalBruteOptimizer:
                  x0_vector=None, Ns=5, N_sphere_samples=30):
         self.model = model
         self.acquisition_scheme = acquisition_scheme
-        self.x0_vector = x0_vector
         self.Ns = Ns
 
         if x0_vector is None:
@@ -67,10 +66,15 @@ class GlobalBruteOptimizer:
             self.precompute_signal_grid(model, x0_vector, Ns, N_sphere_samples)
         elif x0_vector.squeeze().ndim == 1:
             self.global_optimization_grid = True
+            x0_vector_ = x0_vector.copy().squeeze()
+            x0_vector_[0] = 1.  # setting S0 to 1 for precalculation
             self.precompute_signal_grid(
-                model, x0_vector.squeeze(), Ns, N_sphere_samples)
-        elif np.all(np.isnan(x0_vector.reshape([-1, x0_vector.shape[-1]])[0])):
+                model, x0_vector_, Ns, N_sphere_samples)
+        elif np.all(np.isnan(
+                x0_vector[..., 1:].reshape(
+                    [-1, x0_vector[..., 1:].shape[-1]])[0])):
             x0_vector_ = np.tile(np.nan, len(model.bounds_for_optimization))
+            x0_vector_[0] = 1.
             self.global_optimization_grid = True
             self.precompute_signal_grid(
                 model, x0_vector_, Ns, N_sphere_samples)
@@ -167,7 +171,7 @@ class GlobalBruteOptimizer:
         self.signal_grid = model.simulate_signal(
             self.acquisition_scheme, self.parameter_grid)
 
-    def __call__(self, data, parameter_scale_normalization=True):
+    def __call__(self, data, S0):
         """
         Calculates the closest parameter combination based on the sum-squared
         distances between the measured data and the simulated signal grid.
@@ -186,10 +190,9 @@ class GlobalBruteOptimizer:
             estimated closest model parameters in the parameter grid.
         """
         if self.global_optimization_grid is True:
-            argmin = find_minimum_argument(self.signal_grid, data)
+            argmin = find_minimum_argument(S0 * self.signal_grid, data)
             parameters_brute = self.parameter_grid[argmin]
-            if parameter_scale_normalization:
-                return parameters_brute / self.model.scales_for_optimization
+            parameters_brute[0] = S0
             return parameters_brute
         else:
             msg = "Global Parameter Grid could not be set because parameter "
@@ -237,8 +240,13 @@ class Brute2FineOptimizer:
         self.acquisition_scheme = acquisition_scheme
         self.Ns = Ns
 
-    def objective_function(self, parameter_vector, data):
+    def objective_function(
+            self, parameter_vector_, data, x0_vector, opt_bools):
         "The objective function for brute-force and gradient-based optimizer."
+        parameter_vector = np.empty(len(opt_bools))
+        parameter_vector[opt_bools] = parameter_vector_
+        parameter_vector[~opt_bools] = x0_vector[~opt_bools]
+
         N_fractions = len(self.model.models)
         if N_fractions > 1:
             nested_fractions = parameter_vector[-(N_fractions - 1):]
@@ -278,9 +286,11 @@ class Brute2FineOptimizer:
         x_fine: array of size (Nparameters,),
             array of the optimized model parameters.
         """
+        x0_bool = np.isnan(x0_vector)
+        x0_vector[~x0_bool] /= self.model.scales_for_optimization[~x0_bool]
         N_fractions = len(self.model.models)
-        fit_args = (data,)
         bounds = self.model.bounds_for_optimization
+        optimization_bools = np.array(self.model.opt_params_for_optimization)
         bounds_brute = []
         bounds_fine = list(bounds)
         for i, x0_ in enumerate(x0_vector):
@@ -290,25 +300,33 @@ class Brute2FineOptimizer:
                           (bounds[i][1] - bounds[i][0]) / float(self.Ns)))
             if not np.isnan(x0_):
                 bounds_brute.append(slice(x0_, x0_ + 1e-2, None))
-            if (not np.isnan(x0_) and
-                    self.model.opt_params_for_optimization[i] is False):
-                bounds_fine[i] = np.r_[x0_, x0_]
+        if not np.all(optimization_bools):
+            bounds_fine = []
+            for i, x0_ in enumerate(x0_vector):
+                if optimization_bools[i]:
+                    bounds_fine.append(bounds[i])
 
         if N_fractions > 1:  # go to nested bounds
             bounds_brute = bounds_brute[:-1]
             bounds_fine = bounds_fine[:-1]
             x0_vector = x0_vector[:-1]
+            optimization_bools = optimization_bools[:-1]
+
+        fit_args_brute = (data, x0_vector, ~np.isnan(x0_vector))
+        fit_args_fine = (data, x0_vector, optimization_bools)
 
         if np.any(np.isnan(x0_vector)):
             x0_brute = brute(
-                self.objective_function, ranges=bounds_brute, args=fit_args,
-                finish=None)
+                self.objective_function, ranges=bounds_brute,
+                args=fit_args_brute, finish=None)
         else:
             x0_brute = x0_vector
-
-        x_fine_nested = minimize(self.objective_function, x0_brute,
-                                 args=fit_args, bounds=bounds_fine,
+        x_fine_nested = minimize(self.objective_function,
+                                 x0_brute[optimization_bools],
+                                 args=fit_args_fine, bounds=bounds_fine,
                                  method='L-BFGS-B').x
+        x0_vector[optimization_bools] = x_fine_nested
+        x_fine_nested = x0_vector
         if N_fractions > 1:
             nested_fractions = x_fine_nested[-(N_fractions - 1):]
             normalized_fractions = nested_to_normalized_fractions(
