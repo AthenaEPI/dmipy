@@ -1624,7 +1624,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
 
             if quantity == "signal":
                 values += S0 * partial_volume * model.spherical_mean(
-                            acquisition_scheme_or_vertices, **parameters)
+                    acquisition_scheme_or_vertices, **parameters)
             elif quantity == "stochastic cost function":
                 values[:, counter] = S0 * model.spherical_mean(
                     acquisition_scheme_or_vertices,
