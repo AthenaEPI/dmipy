@@ -842,6 +842,35 @@ class MultiCompartmentModelProperties:
                     raise ValueError(msg)
 
     def _add_S0_parameter(self, data, mask=None, optimize_S0=False):
+        """
+        Adds S0 to the optimized parameters.
+
+        The number of S0 values is the same as the number of TEs in the
+        acquisition scheme (or 1 when it is not given).
+
+        When the acquisition scheme has b0-measurements, then the initial value
+        of the S0 parameters is set to the mean of the b0s for that TE.
+
+        The optimize_S0 option tells the optimization to include S0 in the
+        optimized parameters or not (i.e. if S0 can change to improve the
+        signal fit).
+
+        If the acquisition scheme has no b0-measurements, and the data has
+        only one TE, then the S0 is estimated by fitting a Gaussian to the
+        non-b0 measurements in the acquisition scheme. However, optimize_S0
+        must be set to True in this case. When there are multiple TEs and no
+        b0-measurement it gives a NotImplementedError.
+
+        Parameters
+        ----------
+        data: ND-array of size (Nx, ..., NDWIs),
+            the data array that is to be fitted.
+        mask = ND-array of size (Nx, ...),
+            mask of voxels inside data that are to be fitted.
+        optimize_S0: bool,
+            whether or not the optimize S0 as part of the parameters or leave
+            it fixed as mean of the b0-measurements.
+        """
         scheme_has_b0s = np.sum(self.scheme.b0_mask) > 0
         if scheme_has_b0s:
             if self.scheme.TE is None or len(np.unique(self.scheme.TE)) == 1:
