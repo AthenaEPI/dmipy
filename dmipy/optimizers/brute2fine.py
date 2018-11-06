@@ -66,10 +66,10 @@ class GlobalBruteOptimizer:
             self.precompute_signal_grid(model, x0_vector, Ns, N_sphere_samples)
         elif x0_vector.squeeze().ndim == 1:
             self.global_optimization_grid = True
-            x0_vector_ = x0_vector.copy()
-            x0_vector[0] = 1.
+            x0_vector_ = x0_vector.copy().squeeze()
+            x0_vector_[0] = 1.  # setting S0 to 1 for precalculation
             self.precompute_signal_grid(
-                model, x0_vector.squeeze(), Ns, N_sphere_samples)
+                model, x0_vector_, Ns, N_sphere_samples)
         elif np.all(np.isnan(
                 x0_vector[..., 1:].reshape(
                     [-1, x0_vector[..., 1:].shape[-1]])[0])):
@@ -192,6 +192,7 @@ class GlobalBruteOptimizer:
         if self.global_optimization_grid is True:
             argmin = find_minimum_argument(S0 * self.signal_grid, data)
             parameters_brute = self.parameter_grid[argmin]
+            parameters_brute[0] = S0
             return parameters_brute
         else:
             msg = "Global Parameter Grid could not be set because parameter "
