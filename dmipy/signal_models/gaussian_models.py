@@ -9,6 +9,8 @@ from scipy.special import erf
 
 from ..utils import utils
 from ..core.modeling_framework import ModelProperties
+from ..core.signal_model_properties import (
+    IsotropicSignalModelProperties, AnisotropicSignalModelProperties)
 from dipy.utils.optpkg import optional_package
 
 numba, have_numba, _ = optional_package("numba")
@@ -23,7 +25,7 @@ __all__ = [
 ]
 
 
-class G1Ball(ModelProperties):
+class G1Ball(ModelProperties, IsotropicSignalModelProperties):
     r""" The Ball model [1]_ - an isotropic Tensor with one diffusivity.
 
     Parameters
@@ -75,58 +77,8 @@ class G1Ball(ModelProperties):
         E_ball = np.exp(-bvals * lambda_iso)
         return E_ball
 
-    def rotational_harmonics_representation(
-            self, acquisition_scheme, **kwargs):
-        r""" The rotational harmonics of the model, such that Y_lm = Yl0.
-        Axis aligned with z-axis to be used as kernel for spherical
-        convolution. Returns an array with rotational harmonics for each shell.
 
-        Parameters
-        ----------
-        acquisition_scheme : DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using dMipy.
-        kwargs: keyword arguments to the model parameter values,
-            Is internally given as **parameter_dictionary.
-
-        Returns
-        -------
-        rh_array : array, shape(Nshells, N_rh_coef),
-            Rotational harmonics coefficients for each shell.
-        """
-        rh_scheme = acquisition_scheme.rotational_harmonics_scheme
-        kwargs.update({'mu': [0., 0.]})
-        E_kernel_sf = self(rh_scheme, **kwargs)
-        E_reshaped = E_kernel_sf.reshape([-1, rh_scheme.Nsamples])
-        rh_array = np.zeros((len(E_reshaped), 1))
-
-        for i, sh_order in enumerate(rh_scheme.shell_sh_orders):
-            rh_array[i, :sh_order // 2 + 1] = (
-                np.dot(
-                    rh_scheme.inverse_rh_matrix[0],
-                    E_reshaped[i])
-            )
-        return rh_array
-
-    def spherical_mean(self, acquisition_scheme, **kwargs):
-        """
-        Estimates spherical mean for every shell in acquisition scheme
-
-        Parameters
-        ----------
-        acquisition_scheme : DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using dMipy.
-        kwargs: keyword arguments to the model parameter values,
-            Is internally given as **parameter_dictionary.
-
-        Returns
-        -------
-        E_mean : float,
-            spherical mean of the model for every acquisition shell.
-        """
-        return self(acquisition_scheme.spherical_mean_scheme, **kwargs)
-
-
-class G2Zeppelin(ModelProperties):
+class G2Zeppelin(ModelProperties, AnisotropicSignalModelProperties):
     r""" The Zeppelin model [1]_ - an axially symmetric Tensor - typically used
     for extra-axonal diffusion.
 
@@ -202,39 +154,6 @@ class G2Zeppelin(ModelProperties):
             bvals, lambda_par, lambda_perp, n, mu)
         return E_zeppelin
 
-    def rotational_harmonics_representation(
-            self, acquisition_scheme, **kwargs):
-        r""" The rotational harmonics of the model, such that Y_lm = Yl0.
-        Axis aligned with z-axis to be used as kernel for spherical
-        convolution. Returns an array with rotational harmonics for each shell.
-
-        Parameters
-        ----------
-        acquisition_scheme : DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using dMipy.
-        kwargs: keyword arguments to the model parameter values,
-            Is internally given as **parameter_dictionary.
-
-        Returns
-        -------
-        rh_array : array, shape(Nshells, N_rh_coef),
-            Rotational harmonics coefficients for each shell.
-        """
-        rh_scheme = acquisition_scheme.rotational_harmonics_scheme
-        kwargs.update({'mu': [0., 0.]})
-        E_kernel_sf = self(rh_scheme, **kwargs)
-        E_reshaped = E_kernel_sf.reshape([-1, rh_scheme.Nsamples])
-        rh_array = np.zeros((len(E_reshaped),
-                             rh_scheme.shell_sh_orders.max() // 2 + 1))
-
-        for i, sh_order in enumerate(rh_scheme.shell_sh_orders):
-            rh_array[i, :sh_order // 2 + 1] = (
-                np.dot(
-                    rh_scheme.inverse_rh_matrix[sh_order],
-                    E_reshaped[i])
-            )
-        return rh_array
-
     def spherical_mean(self, acquisition_scheme, **kwargs):
         """
         Estimates spherical mean for every shell in acquisition scheme for
@@ -273,7 +192,7 @@ class G2Zeppelin(ModelProperties):
         return E_mean
 
 
-class G3TemporalZeppelin(ModelProperties):
+class G3TemporalZeppelin(ModelProperties, AnisotropicSignalModelProperties):
     r"""
     The temporal Zeppelin model [1]_ - an axially symmetric Tensor - typically
     used to describe extra-axonal diffusion. The G3TemporalZeppelin differs
@@ -380,39 +299,6 @@ class G3TemporalZeppelin(ModelProperties):
             D = np.dot(np.dot(R, D_h), R.T)
             E_zeppelin[i] = np.exp(-bval_ * np.dot(n_, np.dot(n_, D)))
         return E_zeppelin
-
-    def rotational_harmonics_representation(
-            self, acquisition_scheme, **kwargs):
-        r""" The rotational harmonics of the model, such that Y_lm = Yl0.
-        Axis aligned with z-axis to be used as kernel for spherical
-        convolution. Returns an array with rotational harmonics for each shell.
-
-        Parameters
-        ----------
-        acquisition_scheme : DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using dMipy.
-        kwargs: keyword arguments to the model parameter values,
-            Is internally given as **parameter_dictionary.
-
-        Returns
-        -------
-        rh_array : array, shape(Nshells, N_rh_coef),
-            Rotational harmonics coefficients for each shell.
-        """
-        rh_scheme = acquisition_scheme.rotational_harmonics_scheme
-        kwargs.update({'mu': [0., 0.]})
-        E_kernel_sf = self(rh_scheme, **kwargs)
-        E_reshaped = E_kernel_sf.reshape([-1, rh_scheme.Nsamples])
-        rh_array = np.zeros((len(E_reshaped),
-                             rh_scheme.shell_sh_orders.max() // 2 + 1))
-
-        for i, sh_order in enumerate(rh_scheme.shell_sh_orders):
-            rh_array[i, :sh_order // 2 + 1] = (
-                np.dot(
-                    rh_scheme.inverse_rh_matrix[sh_order],
-                    E_reshaped[i])
-            )
-        return rh_array
 
     def spherical_mean(self, acquisition_scheme, **kwargs):
         """

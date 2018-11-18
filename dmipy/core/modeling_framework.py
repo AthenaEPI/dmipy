@@ -19,7 +19,7 @@ from .fitted_modeling_framework import (
     FittedMultiCompartmentModel,
     FittedMultiCompartmentSphericalMeanModel,
     FittedMultiCompartmentSphericalHarmonicsModel)
-from ..optimizers_fod.construct_observation_matrix import (
+from ..utils.construct_observation_matrix import (
     construct_model_based_A_matrix)
 from ..optimizers.brute2fine import (
     GlobalBruteOptimizer, Brute2FineOptimizer)

@@ -7,6 +7,7 @@ from scipy.special import erf
 from ..utils import utils
 from ..core.constants import CONSTANTS
 from ..core.modeling_framework import ModelProperties
+from ..core.signal_model_properties import AnisotropicSignalModelProperties
 from dipy.utils.optpkg import optional_package
 
 numba, have_numba, _ = optional_package("numba")
@@ -24,7 +25,7 @@ __all__ = [
 ]
 
 
-class C1Stick(ModelProperties):
+class C1Stick(ModelProperties, AnisotropicSignalModelProperties):
     r""" The Stick model [1]_ - a cylinder with zero radius - typically used
     for intra-axonal diffusion.
 
@@ -90,39 +91,6 @@ class C1Stick(ModelProperties):
         E_stick = _attenuation_parallel_stick(bvals, lambda_par_, n, mu)
         return E_stick
 
-    def rotational_harmonics_representation(
-            self, acquisition_scheme, **kwargs):
-        r""" The rotational harmonics of the model, such that Y_lm = Yl0.
-        Axis aligned with z-axis to be used as kernel for spherical
-        convolution. Returns an array with rotational harmonics for each shell.
-
-        Parameters
-        ----------
-        acquisition_scheme : DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using dMipy.
-        kwargs: keyword arguments to the model parameter values,
-            Is internally given as **parameter_dictionary.
-
-        Returns
-        -------
-        rh_array : array, shape(Nshells, N_rh_coef),
-            Rotational harmonics coefficients for each shell.
-        """
-        rh_scheme = acquisition_scheme.rotational_harmonics_scheme
-        kwargs.update({'mu': [0., 0.]})
-        E_kernel_sf = self(rh_scheme, **kwargs)
-        E_reshaped = E_kernel_sf.reshape([-1, rh_scheme.Nsamples])
-        rh_array = np.zeros((len(E_reshaped),
-                             rh_scheme.shell_sh_orders.max() // 2 + 1))
-
-        for i, sh_order in enumerate(rh_scheme.shell_sh_orders):
-            rh_array[i, :sh_order // 2 + 1] = (
-                np.dot(
-                    rh_scheme.inverse_rh_matrix[sh_order],
-                    E_reshaped[i])
-            )
-        return rh_array
-
     def spherical_mean(self, acquisition_scheme, **kwargs):
         """
         Estimates spherical mean for every shell in acquisition scheme for
@@ -154,7 +122,8 @@ class C1Stick(ModelProperties):
         return E_mean
 
 
-class C2CylinderStejskalTannerApproximation(ModelProperties):
+class C2CylinderStejskalTannerApproximation(
+        ModelProperties, AnisotropicSignalModelProperties):
     r""" The Stejskal-Tanner approximation of the cylinder model with finite
     radius, proposed by Soderman and Jonsson [1]_. Assumes that both the short
     gradient pulse (SGP) approximation is met and long diffusion time limit is
@@ -261,65 +230,9 @@ class C2CylinderStejskalTannerApproximation(ModelProperties):
         )
         return E_parallel * E_perpendicular
 
-    def rotational_harmonics_representation(
-            self, acquisition_scheme, **kwargs):
-        r""" The rotational harmonics of the model, such that Y_lm = Yl0.
-        Axis aligned with z-axis to be used as kernel for spherical
-        convolution. Returns an array with rotational harmonics for each shell.
 
-        Parameters
-        ----------
-        acquisition_scheme : DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using dMipy.
-        kwargs: keyword arguments to the model parameter values,
-            Is internally given as **parameter_dictionary.
-
-        Returns
-        -------
-        rh_array : array, shape(Nshells, N_rh_coef),
-            Rotational harmonics coefficients for each shell.
-        """
-        rh_scheme = acquisition_scheme.rotational_harmonics_scheme
-        kwargs.update({'mu': [0., 0.]})
-        E_kernel_sf = self(rh_scheme, **kwargs)
-        E_reshaped = E_kernel_sf.reshape([-1, rh_scheme.Nsamples])
-        rh_array = np.zeros((len(E_reshaped),
-                             rh_scheme.shell_sh_orders.max() // 2 + 1))
-
-        for i, sh_order in enumerate(rh_scheme.shell_sh_orders):
-            rh_array[i, :sh_order // 2 + 1] = (
-                np.dot(
-                    rh_scheme.inverse_rh_matrix[sh_order],
-                    E_reshaped[i])
-            )
-        return rh_array
-
-    def spherical_mean(self, acquisition_scheme, **kwargs):
-        """
-        Estimates spherical mean for every shell in acquisition scheme.
-
-        Parameters
-        ----------
-        acquisition_scheme : DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using dMipy.
-        kwargs: keyword arguments to the model parameter values,
-            Is internally given as **parameter_dictionary.
-
-        Returns
-        -------
-        E_mean : float,
-            spherical mean of the model for every acquisition shell.
-        """
-        E_mean = np.ones_like(acquisition_scheme.shell_bvalues)
-        rh_array = self.rotational_harmonics_representation(
-            acquisition_scheme, **kwargs)
-        E_mean[acquisition_scheme.unique_dwi_indices] = (
-            rh_array[:, 0] / (2 * np.sqrt(np.pi))
-        )
-        return E_mean
-
-
-class C3CylinderCallaghanApproximation(ModelProperties):
+class C3CylinderCallaghanApproximation(
+        ModelProperties, AnisotropicSignalModelProperties):
     r""" The Callaghan model [1]_ - a cylinder with finite radius - typically
     used for intra-axonal diffusion. The perpendicular diffusion is modelled
     after Callaghan's solution for the disk. Is dependent on both q-value
@@ -465,65 +378,9 @@ class C3CylinderCallaghanApproximation(ModelProperties):
         )
         return E_parallel * E_perpendicular
 
-    def rotational_harmonics_representation(
-            self, acquisition_scheme, **kwargs):
-        r""" The rotational harmonics of the model, such that Y_lm = Yl0.
-        Axis aligned with z-axis to be used as kernel for spherical
-        convolution. Returns an array with rotational harmonics for each shell.
 
-        Parameters
-        ----------
-        acquisition_scheme : DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using dMipy.
-        kwargs: keyword arguments to the model parameter values,
-            Is internally given as **parameter_dictionary.
-
-        Returns
-        -------
-        rh_array : array, shape(Nshells, N_rh_coef),
-            Rotational harmonics coefficients for each shell.
-        """
-        rh_scheme = acquisition_scheme.rotational_harmonics_scheme
-        kwargs.update({'mu': [0., 0.]})
-        E_kernel_sf = self(rh_scheme, **kwargs)
-        E_reshaped = E_kernel_sf.reshape([-1, rh_scheme.Nsamples])
-        rh_array = np.zeros((len(E_reshaped),
-                             rh_scheme.shell_sh_orders.max() // 2 + 1))
-
-        for i, sh_order in enumerate(rh_scheme.shell_sh_orders):
-            rh_array[i, :sh_order // 2 + 1] = (
-                np.dot(
-                    rh_scheme.inverse_rh_matrix[sh_order],
-                    E_reshaped[i])
-            )
-        return rh_array
-
-    def spherical_mean(self, acquisition_scheme, **kwargs):
-        """
-        Estimates spherical mean for every shell in acquisition scheme.
-
-        Parameters
-        ----------
-        acquisition_scheme : DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using dMipy.
-        kwargs: keyword arguments to the model parameter values,
-            Is internally given as **parameter_dictionary.
-
-        Returns
-        -------
-        E_mean : float,
-            spherical mean of the model for every acquisition shell.
-        """
-        E_mean = np.ones_like(acquisition_scheme.shell_bvalues)
-        rh_array = self.rotational_harmonics_representation(
-            acquisition_scheme, **kwargs)
-        E_mean[acquisition_scheme.unique_dwi_indices] = (
-            rh_array[:, 0] / (2 * np.sqrt(np.pi))
-        )
-        return E_mean
-
-
-class C4CylinderGaussianPhaseApproximation(ModelProperties):
+class C4CylinderGaussianPhaseApproximation(
+        ModelProperties, AnisotropicSignalModelProperties):
     r""" The Gaussian phase model [1]_ - a cylinder with finite radius -
     typically used for intra-axonal diffusion. The perpendicular diffusion is
     modelled after Van Gelderen's solution for the disk. It is dependent on
@@ -638,63 +495,6 @@ class C4CylinderGaussianPhaseApproximation(ModelProperties):
                 g_perp[mask], delta_, Delta_, diameter
             )
         return E_parallel * E_perpendicular
-
-    def rotational_harmonics_representation(
-            self, acquisition_scheme, **kwargs):
-        r""" The rotational harmonics of the model, such that Y_lm = Yl0.
-        Axis aligned with z-axis to be used as kernel for spherical
-        convolution. Returns an array with rotational harmonics for each shell.
-
-        Parameters
-        ----------
-        acquisition_scheme : DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using dMipy.
-        kwargs: keyword arguments to the model parameter values,
-            Is internally given as **parameter_dictionary.
-
-        Returns
-        -------
-        rh_array : array, shape(Nshells, N_rh_coef),
-            Rotational harmonics coefficients for each shell.
-        """
-        rh_scheme = acquisition_scheme.rotational_harmonics_scheme
-        kwargs.update({'mu': [0., 0.]})
-        E_kernel_sf = self(rh_scheme, **kwargs)
-        E_reshaped = E_kernel_sf.reshape([-1, rh_scheme.Nsamples])
-        rh_array = np.zeros((len(E_reshaped),
-                             rh_scheme.shell_sh_orders.max() // 2 + 1))
-
-        for i, sh_order in enumerate(rh_scheme.shell_sh_orders):
-            rh_array[i, :sh_order // 2 + 1] = (
-                np.dot(
-                    rh_scheme.inverse_rh_matrix[sh_order],
-                    E_reshaped[i])
-            )
-        return rh_array
-
-    def spherical_mean(self, acquisition_scheme, **kwargs):
-        """
-        Estimates spherical mean for every shell in acquisition scheme.
-
-        Parameters
-        ----------
-        acquisition_scheme : DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using dMipy.
-        kwargs: keyword arguments to the model parameter values,
-            Is internally given as **parameter_dictionary.
-
-        Returns
-        -------
-        E_mean : float,
-            spherical mean of the model for every acquisition shell.
-        """
-        E_mean = np.ones_like(acquisition_scheme.shell_bvalues)
-        rh_array = self.rotational_harmonics_representation(
-            acquisition_scheme, **kwargs)
-        E_mean[acquisition_scheme.unique_dwi_indices] = (
-            rh_array[:, 0] / (2 * np.sqrt(np.pi))
-        )
-        return E_mean
 
 
 def _attenuation_parallel_stick(bvals, lambda_par, n, mu):

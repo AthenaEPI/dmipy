@@ -2,12 +2,16 @@ import numpy as np
 from dmipy.utils.utils import cart2mu
 from dmipy.utils.spherical_convolution import real_sym_rh_basis
 from ..core.modeling_framework import ModelProperties
+from ..core.signal_model_properties import (
+    AnisotropicSignalModelProperties,
+    IsotropicSignalModelProperties)
 from ..utils import utils
 from dmipy.core.acquisition_scheme import gtab_dmipy2dipy
 from dipy.reconst import dti
 
 
-class AnisotropicTissueResponseModel(ModelProperties):
+class AnisotropicTissueResponseModel(
+        ModelProperties, AnisotropicSignalModelProperties):
     r""" Estimates anistropic TissueResponseModel describing the convolution
     kernel of e.g. anistropic white matter from array of candidate voxels [1]_.
 
@@ -177,7 +181,8 @@ class AnisotropicTissueResponseModel(ModelProperties):
         return self.S0_response * self._spherical_mean
 
 
-class IsotropicTissueResponseModel(ModelProperties):
+class IsotropicTissueResponseModel(
+        ModelProperties, IsotropicSignalModelProperties):
     r""" Estimates istropic TissueResponseModel describing the convolution
     kernel of e.g. CSF or grey matter from array of candidate voxels [1]_.
 
