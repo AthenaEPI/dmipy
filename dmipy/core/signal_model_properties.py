@@ -31,10 +31,11 @@ class AnisotropicSignalModelProperties:
         kwargs.update({'mu': [0., 0.]})
         E_kernel_sf = self(rh_scheme, **kwargs)
         E_reshaped = E_kernel_sf.reshape([-1, rh_scheme.Nsamples])
-        rh_array = np.zeros((len(E_reshaped),
-                             rh_scheme.shell_sh_orders.max() // 2 + 1))
+        max_sh_order = max(rh_scheme.shell_sh_orders.values())
+        rh_array = np.zeros((len(E_reshaped), max_sh_order // 2 + 1))
 
-        for i, sh_order in enumerate(rh_scheme.shell_sh_orders):
+        for i, (shell_index, sh_order) in enumerate(
+                rh_scheme.shell_sh_orders.items()):
             rh_array[i, :sh_order // 2 + 1] = (
                 np.dot(
                     rh_scheme.inverse_rh_matrix[sh_order],

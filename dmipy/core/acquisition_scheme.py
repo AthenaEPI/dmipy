@@ -152,9 +152,12 @@ class DmipyAcquisitionScheme:
 
         # calculates observation matrices to convert spherical harmonic
         # coefficients to the positions on the sphere for every shell
+        self.unique_b0_indices = np.unique(self.shell_indices[self.b0_mask])
         self.unique_dwi_indices = np.unique(self.shell_indices[~self.b0_mask])
         self.shell_sh_matrices = {}
-        self.shell_sh_orders = np.zeros(len(self.shell_bvalues), dtype=int)
+        self.shell_sh_orders = {}
+        for shell_index in self.unique_b0_indices:
+            self.shell_sh_orders[shell_index] = 0
         for shell_index in self.unique_dwi_indices:
             shell_mask = self.shell_indices == shell_index
             bvecs_shell = self.gradient_directions[shell_mask]
@@ -409,6 +412,7 @@ class RotationalHarmonicsAcquisitionScheme:
         Gdirs_all_shells = []
         delta_all_shells = []
         Delta_all_shells = []
+        shell_indices = []
         for shell_index in scheme.unique_dwi_indices:
             b = scheme.shell_bvalues[shell_index]
             b_all_shells.append(np.tile(b, N_angular_samples))
@@ -419,7 +423,9 @@ class RotationalHarmonicsAcquisitionScheme:
                 Delta = scheme.shell_Delta[shell_index]
                 Delta_all_shells.append(np.tile(Delta, N_angular_samples))
             Gdirs_all_shells.append(angles_cart)
+            shell_indices.append(np.tile(shell_index, N_angular_samples))
 
+        self.shell_indices = np.hstack(shell_indices)
         self.bvalues = np.hstack(b_all_shells)
         self.gradient_directions = np.vstack(Gdirs_all_shells)
         self.delta = None
@@ -442,11 +448,17 @@ class RotationalHarmonicsAcquisitionScheme:
         self.b0_mask = np.tile(False, len(self.bvalues))
         self.shell_delta = scheme.shell_delta
         self.shell_Delta = scheme.shell_Delta
-        self.shell_sh_orders = (
-            np.array(scheme.shell_sh_orders[scheme.unique_dwi_indices],
-                     dtype=int))
         self.unique_dwi_indices = scheme.unique_dwi_indices
         self.number_of_measurements = len(self.bvalues)
+
+        self.shell_sh_matrices = {}
+        self.shell_sh_orders = {}
+        for shell_index in scheme.unique_dwi_indices:
+            self.shell_sh_orders[shell_index] = int(
+                scheme.shell_sh_orders[shell_index])
+            self.shell_sh_matrices[shell_index] = real_sym_sh_mrtrix(
+                self.shell_sh_orders[shell_index], thetas, phis)[0]
+
         self.inverse_rh_matrix = {
             rh_order: np.linalg.pinv(real_sym_rh_basis(
                 rh_order, thetas, phis

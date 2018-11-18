@@ -608,6 +608,44 @@ class SD1WatsonDistributed(DistributedModel, AnisotropicSignalModelProperties):
         self._delete_orientation_from_parameters()
         self._prepare_partial_volumes()
         self._prepare_parameter_links()
+        for param in self.parameter_names:
+            if param.endswith('mu'):
+                self.mu_param = param
+
+    def rotational_harmonics_representation(
+            self, acquisition_scheme, **kwargs):
+        r""" The rotational harmonics of the model, such that Y_lm = Yl0.
+        Axis aligned with z-axis to be used as kernel for spherical
+        convolution. Returns an array with rotational harmonics for each shell.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+
+        Returns
+        -------
+        rh_array : array, shape(Nshells, N_rh_coef),
+            Rotational harmonics coefficients for each shell.
+        """
+        rh_scheme = acquisition_scheme.rotational_harmonics_scheme
+        rh_scheme.rotational_harmonics_scheme = rh_scheme
+        kwargs.update({self.mu_param: [0., 0.]})
+        E_kernel_sf = self(rh_scheme, **kwargs)
+        E_reshaped = E_kernel_sf.reshape([-1, rh_scheme.Nsamples])
+        max_sh_order = max(rh_scheme.shell_sh_orders.values())
+        rh_array = np.zeros((len(E_reshaped), max_sh_order // 2 + 1))
+
+        for i, (shell_index, sh_order) in enumerate(
+                rh_scheme.shell_sh_orders.items()):
+            rh_array[i, :sh_order // 2 + 1] = (
+                np.dot(
+                    rh_scheme.inverse_rh_matrix[sh_order],
+                    E_reshaped[i])
+            )
+        return rh_array
 
 
 class SD2BinghamDistributed(
@@ -648,6 +686,9 @@ class SD2BinghamDistributed(
         self._delete_orientation_from_parameters()
         self._prepare_partial_volumes()
         self._prepare_parameter_links()
+        for param in self.parameter_names:
+            if param.endswith('mu'):
+                self.mu_param = param
 
 
 class DD1GammaDistributed(DistributedModel, AnisotropicSignalModelProperties):
@@ -719,40 +760,17 @@ class DD1GammaDistributed(DistributedModel, AnisotropicSignalModelProperties):
         kwargs.update({self.mu_param: [0., 0.]})
         E_kernel_sf = self(rh_scheme, **kwargs)
         E_reshaped = E_kernel_sf.reshape([-1, rh_scheme.Nsamples])
-        rh_array = np.zeros((len(E_reshaped),
-                             rh_scheme.shell_sh_orders.max() // 2 + 1))
+        max_sh_order = max(rh_scheme.shell_sh_orders.values())
+        rh_array = np.zeros((len(E_reshaped), max_sh_order // 2 + 1))
 
-        for i, sh_order in enumerate(rh_scheme.shell_sh_orders):
+        for i, (shell_index, sh_order) in enumerate(
+                rh_scheme.shell_sh_orders.items()):
             rh_array[i, :sh_order // 2 + 1] = (
                 np.dot(
                     rh_scheme.inverse_rh_matrix[sh_order],
                     E_reshaped[i])
             )
         return rh_array
-
-    # def spherical_mean(self, acquisition_scheme, **kwargs):
-    #     """
-    #     Estimates spherical mean for every shell in acquisition scheme.
-
-    #     Parameters
-    #     ----------
-    #     acquisition_scheme : DmipyAcquisitionScheme instance,
-    #         An acquisition scheme that has been instantiated using dMipy.
-    #     kwargs: keyword arguments to the model parameter values,
-    #         Is internally given as **parameter_dictionary.
-
-    #     Returns
-    #     -------
-    #     E_mean : float,
-    #         spherical mean of the model for every acquisition shell.
-    #     """
-    #     E_mean = np.ones_like(acquisition_scheme.shell_bvalues)
-    #     rh_array = self.rotational_harmonics_representation(
-    #         acquisition_scheme, **kwargs)
-    #     E_mean[acquisition_scheme.unique_dwi_indices] = (
-    #         rh_array[:, 0] / (2 * np.sqrt(np.pi))
-    #     )
-    #     return E_mean
 
     def set_diameter_constrained_parameter_beta(
             self, diameter_min, diameter_max):

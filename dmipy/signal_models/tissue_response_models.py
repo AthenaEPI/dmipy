@@ -60,10 +60,9 @@ class AnisotropicTissueResponseModel(
         tenfit = tenmod.fit(data)
         evecs = tenfit.evecs
         N_shells = acquisition_scheme.shell_indices.max()
+        max_sh_order = max(acquisition_scheme.shell_sh_orders.values())
         rh_matrices = np.zeros(
-            (len(data),
-             N_shells + 1,
-             int(acquisition_scheme.shell_sh_orders.max() // 2 + 1)))
+            (len(data), N_shells + 1, int(max_sh_order // 2 + 1)))
         self.S0_response = np.mean(data[:, acquisition_scheme.b0_mask])
 
         for i in range(len(data)):
@@ -74,7 +73,7 @@ class AnisotropicTissueResponseModel(
             # the gradient directions with the reverse of the dti eigenvectors.
             bvecs_rot = np.dot(acquisition_scheme.gradient_directions,
                                evecs[i][:, ::-1])
-            for shell_index in range(N_shells + 1):
+            for shell_index in acquisition_scheme.shell_indices:
                 shell_sh = acquisition_scheme.shell_sh_orders[shell_index]
                 shell_mask = acquisition_scheme.shell_indices == shell_index
                 if acquisition_scheme.b0_mask[shell_mask][0]:
