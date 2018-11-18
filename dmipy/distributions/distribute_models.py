@@ -3,6 +3,7 @@ from collections import OrderedDict
 from itertools import chain
 from ..utils.spherical_convolution import sh_convolution
 from ..utils.utils import T1_tortuosity, parameter_equality
+from ..core.signal_model_properties import AnisotropicSignalModelProperties
 import copy
 import numpy as np
 
@@ -571,7 +572,7 @@ class DistributedModel:
         return self.distribution(vertices, **distribution_parameters)
 
 
-class SD1WatsonDistributed(DistributedModel):
+class SD1WatsonDistributed(DistributedModel, AnisotropicSignalModelProperties):
     """
     The DistributedModel instantiation for a Watson-dispersed model. Multiple
     models can be dispersed at the same time (like a Stick and Zeppelin for
@@ -609,7 +610,8 @@ class SD1WatsonDistributed(DistributedModel):
         self._prepare_parameter_links()
 
 
-class SD2BinghamDistributed(DistributedModel):
+class SD2BinghamDistributed(
+        DistributedModel, AnisotropicSignalModelProperties):
     """
     The DistributedModel instantiation for a Bingham-dispersed model. Multiple
     models can be dispersed at the same time (like a Stick and Zeppelin for
@@ -648,7 +650,7 @@ class SD2BinghamDistributed(DistributedModel):
         self._prepare_parameter_links()
 
 
-class DD1GammaDistributed(DistributedModel):
+class DD1GammaDistributed(DistributedModel, AnisotropicSignalModelProperties):
     """
     The DistributedModel instantiation for a Gamma-distributed model for
     cylinder or sphere models. Multiple models can be distributed at the same
@@ -728,29 +730,29 @@ class DD1GammaDistributed(DistributedModel):
             )
         return rh_array
 
-    def spherical_mean(self, acquisition_scheme, **kwargs):
-        """
-        Estimates spherical mean for every shell in acquisition scheme.
+    # def spherical_mean(self, acquisition_scheme, **kwargs):
+    #     """
+    #     Estimates spherical mean for every shell in acquisition scheme.
 
-        Parameters
-        ----------
-        acquisition_scheme : DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using dMipy.
-        kwargs: keyword arguments to the model parameter values,
-            Is internally given as **parameter_dictionary.
+    #     Parameters
+    #     ----------
+    #     acquisition_scheme : DmipyAcquisitionScheme instance,
+    #         An acquisition scheme that has been instantiated using dMipy.
+    #     kwargs: keyword arguments to the model parameter values,
+    #         Is internally given as **parameter_dictionary.
 
-        Returns
-        -------
-        E_mean : float,
-            spherical mean of the model for every acquisition shell.
-        """
-        E_mean = np.ones_like(acquisition_scheme.shell_bvalues)
-        rh_array = self.rotational_harmonics_representation(
-            acquisition_scheme, **kwargs)
-        E_mean[acquisition_scheme.unique_dwi_indices] = (
-            rh_array[:, 0] / (2 * np.sqrt(np.pi))
-        )
-        return E_mean
+    #     Returns
+    #     -------
+    #     E_mean : float,
+    #         spherical mean of the model for every acquisition shell.
+    #     """
+    #     E_mean = np.ones_like(acquisition_scheme.shell_bvalues)
+    #     rh_array = self.rotational_harmonics_representation(
+    #         acquisition_scheme, **kwargs)
+    #     E_mean[acquisition_scheme.unique_dwi_indices] = (
+    #         rh_array[:, 0] / (2 * np.sqrt(np.pi))
+    #     )
+    #     return E_mean
 
     def set_diameter_constrained_parameter_beta(
             self, diameter_min, diameter_max):

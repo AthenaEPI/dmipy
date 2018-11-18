@@ -66,17 +66,18 @@ class AnisotropicSignalModelProperties:
         )
         return E_mean
 
-    def convolution_response_kernel(self, acquisition_scheme, lmax):
+    def convolution_kernel_matrix(self, acquisition_scheme, lmax, **kwargs):
         """Constructs the multi-shell observation matrix from spherical_harmonics
         to DWIs. Follows the notation of Eq. (2) in [1]_.
 
-        The dmipy acquisition_scheme object contains all the information on which
-        DWIs belong to which acquisition shells, what are the maximum spherical
-        harmonics order used for each shell, and the observation matrix that maps
-        the DWIs of each shell to a spherical harmonics representation.
+        The dmipy acquisition_scheme object contains all the information on
+        which DWIs belong to which acquisition shells, what are the maximum
+        spherical harmonics order used for each shell, and the observation
+        matrix that maps the DWIs of each shell to a spherical harmonics
+        representation.
 
-        The dmipy model must be have all parameters fixed to be able to generate
-        the rotational harmonics of each shell.
+        The dmipy model must be have all parameters fixed to be able to
+        generate the rotational harmonics of each shell.
 
         Parameters
         ----------
@@ -93,12 +94,13 @@ class AnisotropicSignalModelProperties:
         References
         ----------
         .. [1] Jeurissen, Ben, et al. "Multi-tissue constrained spherical
-            deconvolution for improved analysis of multi-shell diffusion MRI data."
-            NeuroImage 103 (2014): 411-426.
+            deconvolution for improved analysis of multi-shell diffusion MRI
+            data." NeuroImage 103 (2014): 411-426.
         """
         model_rh = self.rotational_harmonics_representation(
             acquisition_scheme, **kwargs)
-        return construct_model_based_A_matrix(acquisition_scheme, model_rh, lmax)
+        return construct_model_based_A_matrix(
+            acquisition_scheme, model_rh, lmax)
 
 
 class IsotropicSignalModelProperties:
@@ -157,17 +159,18 @@ class IsotropicSignalModelProperties:
         """
         return self(acquisition_scheme.spherical_mean_scheme, **kwargs)
 
-    def convolution_response_kernel(self, acquisition_scheme, lmax, **kwargs):
+    def convolution_kernel_matrix(self, acquisition_scheme, lmax, **kwargs):
         """Constructs the multi-shell observation matrix from spherical_harmonics
         to DWIs. Follows the notation of Eq. (2) in [1]_.
 
-        The dmipy acquisition_scheme object contains all the information on which
-        DWIs belong to which acquisition shells, what are the maximum spherical
-        harmonics order used for each shell, and the observation matrix that maps
-        the DWIs of each shell to a spherical harmonics representation.
+        The dmipy acquisition_scheme object contains all the information on
+        which DWIs belong to which acquisition shells, what are the maximum
+        spherical harmonics order used for each shell, and the observation
+        matrix that maps the DWIs of each shell to a spherical harmonics
+        representation.
 
-        The dmipy model must be have all parameters fixed to be able to generate
-        the rotational harmonics of each shell.
+        The dmipy model must be have all parameters fixed to be able to
+        generate the rotational harmonics of each shell.
 
         Parameters
         ----------
@@ -184,8 +187,8 @@ class IsotropicSignalModelProperties:
         References
         ----------
         .. [1] Jeurissen, Ben, et al. "Multi-tissue constrained spherical
-            deconvolution for improved analysis of multi-shell diffusion MRI data."
-            NeuroImage 103 (2014): 411-426.
+            deconvolution for improved analysis of multi-shell diffusion MRI
+            data." NeuroImage 103 (2014): 411-426.
         """
 
         model_rh = self.rotational_harmonics_representation(
@@ -194,6 +197,6 @@ class IsotropicSignalModelProperties:
         Ncoef = int((lmax + 2) * (lmax + 1) // 2)
         Ams = np.zeros([acquisition_scheme.number_of_measurements, Ncoef])
 
-        Ams[:, 0] = construct_model_based_A_matrix(
+        Ams[:, :1] = construct_model_based_A_matrix(
             acquisition_scheme, model_rh, 0)
         return Ams
