@@ -1278,7 +1278,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         if parameter_links is None:
             self.parameter_links = []
 
-        self._check_for_dispersed_or_NMR_models()
+        self._check_for_NMR_models()
         self._prepare_parameters()
         self._delete_orientation_parameters()
         self._prepare_partial_volumes()
@@ -1297,15 +1297,10 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
             msg += "multicore processing."
             print(msg)
 
-    def _check_for_dispersed_or_NMR_models(self):
+    def _check_for_NMR_models(self):
         for model in self.models:
             if model._model_type is 'NMRModel':
                 msg = "Cannot estimate spherical mean of 1D-NMR models."
-                raise ValueError(msg)
-            if model._model_type is 'SphericalDistributedModel':
-                msg = "Cannot estimate spherical mean spherically distributed "
-                msg += "model. Please give the input models to the distributed"
-                msg += " model directly to MultiCompartmentSphericalMeanModel."
                 raise ValueError(msg)
 
     def _delete_orientation_parameters(self):

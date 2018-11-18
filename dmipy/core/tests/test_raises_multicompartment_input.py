@@ -16,15 +16,6 @@ def test_raise_combination_NRM_and_others():
         [ball, plane])
 
 
-def test_raise_spherical_distribution_in_spherical_mean():
-    zeppelin = gaussian_models.G2Zeppelin()
-    watson = distribute_models.SD1WatsonDistributed([zeppelin])
-    assert_raises(
-        ValueError,
-        modeling_framework.MultiCompartmentSphericalMeanModel,
-        [watson])
-
-
 def test_raise_NRMmodel_in_spherical_mean():
     plane = plane_models.P3PlaneCallaghanApproximation()
     assert_raises(
