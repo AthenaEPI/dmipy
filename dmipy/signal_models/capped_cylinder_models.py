@@ -1,6 +1,7 @@
 from . import cylinder_models, plane_models
 from ..utils import utils
 from ..core.modeling_framework import ModelProperties
+from ..core.signal_model_properties import AnisotropicSignalModelProperties
 from ..core.constants import CONSTANTS
 import numpy as np
 
@@ -9,7 +10,8 @@ __all__ = [
 ]
 
 
-class CC2CappedCylinderStejskalTannerApproximation(ModelProperties):
+class CC2CappedCylinderStejskalTannerApproximation(
+        ModelProperties, AnisotropicSignalModelProperties):
     r""" The Stejskal-Tanner model for intra-cylindrical diffusion inside
     a capped cylinder with finite radius and length. The perpendicular
     diffusion is modelled after Soderman's solution for the disk [1]_. The
@@ -110,7 +112,8 @@ class CC2CappedCylinderStejskalTannerApproximation(ModelProperties):
         return E_parallel * E_perpendicular
 
 
-class CC3CappedCylinderCallaghanApproximation(ModelProperties):
+class CC3CappedCylinderCallaghanApproximation(
+        ModelProperties, AnisotropicSignalModelProperties):
     r""" The Callaghan model [1]_ - a cylinder with finite radius - for
     intra-axonal diffusion. The perpendicular diffusion is modelled
     after Callaghan's solution for the disk. The parallel diffusion of the

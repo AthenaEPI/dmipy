@@ -19,7 +19,7 @@ from .fitted_modeling_framework import (
     FittedMultiCompartmentModel,
     FittedMultiCompartmentSphericalMeanModel,
     FittedMultiCompartmentSphericalHarmonicsModel)
-from ..optimizers_fod.construct_observation_matrix import (
+from ..utils.construct_observation_matrix import (
     construct_model_based_A_matrix)
 from ..optimizers.brute2fine import (
     GlobalBruteOptimizer, Brute2FineOptimizer)
@@ -837,6 +837,80 @@ class MultiCompartmentModelProperties:
                     msg += "model are not the same."
                     raise ValueError(msg)
 
+    def _construct_convolution_kernel(self, **kwargs):
+        """
+        Helper function that constructs the convolution kernel for the given
+        multi-compartment model and the initial condition x0_vector.
+
+        First the parameter vector is converted to a dictionary with the
+        corresponding parameter names. Then, the linked parameters are added to
+        the given ones. Finally, the rotational harmonics of the model is
+        passed to the construct_model_based_A_matrix, which constructs the
+        kernel for an arbitrary PGSE-acquisition scheme.
+
+        For multiple models with fixed volume fractions, the A-matrices
+        are combined to have a combined convolution kernel.
+
+        For multiple models without fixed volume fractions, the convolution
+        kernels for anisotropic and isotropic models are concatenated, with
+        the isotropic kernels always having a spherical harmonics order of 0.
+
+        Parameters
+        ----------
+        x0_vector: array of size (N_parameters),
+            Contains the fixed parameters of the convolution kernel.
+
+        Returns
+        -------
+        kernel: array of size (N_coef, N_data),
+            Observation matrix that maps the FOD spherical harmonics
+            coefficients to the DWI signal values.
+        """
+        parameters_dict = self.add_linked_parameters_to_parameters(kwargs)
+
+        if self.volume_fractions_fixed:
+            if len(self.models) > 1:
+                partial_volumes = [
+                    parameters_dict[p] for p in self.partial_volume_names
+                ]
+            else:
+                partial_volumes = [1.]
+            kernel = 0.
+            for model, partial_volume, S0 in zip(self.models,
+                                                 partial_volumes,
+                                                 self.S0_responses):
+                parameters = {}
+                for parameter in model.parameter_ranges:
+                    parameter_name = self._inverted_parameter_map[
+                        (model, parameter)
+                    ]
+                    parameters[parameter] = parameters_dict.get(
+                        parameter_name
+                    )
+                kernel += S0 * partial_volume * (
+                    model.convolution_kernel_matrix(
+                        self.scheme, self.sh_order, **parameters))
+        else:
+            kernel = []
+            for model, S0 in zip(self.models, self.S0_responses):
+                parameters = {}
+                for parameter in model.parameter_ranges:
+                    parameter_name = self._inverted_parameter_map[
+                        (model, parameter)
+                    ]
+                    parameters[parameter] = parameters_dict.get(
+                        parameter_name
+                    )
+                if 'orientation' in model.parameter_types.values():
+                    kernel.append(S0 * model.convolution_kernel_matrix(
+                        self.scheme, self.sh_order, **parameters))
+                else:
+                    kernel.append(S0 * model.convolution_kernel_matrix(
+                        self.scheme, 0, **parameters))
+
+            kernel = np.hstack(kernel)
+        return kernel
+
 
 class MultiCompartmentModel(MultiCompartmentModelProperties):
     r'''
@@ -1204,7 +1278,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         if parameter_links is None:
             self.parameter_links = []
 
-        self._check_for_dispersed_or_NMR_models()
+        self._check_for_NMR_models()
         self._prepare_parameters()
         self._delete_orientation_parameters()
         self._prepare_partial_volumes()
@@ -1223,15 +1297,10 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
             msg += "multicore processing."
             print(msg)
 
-    def _check_for_dispersed_or_NMR_models(self):
+    def _check_for_NMR_models(self):
         for model in self.models:
             if model._model_type is 'NMRModel':
                 msg = "Cannot estimate spherical mean of 1D-NMR models."
-                raise ValueError(msg)
-            if model._model_type is 'SphericalDistributedModel':
-                msg = "Cannot estimate spherical mean spherically distributed "
-                msg += "model. Please give the input models to the distributed"
-                msg += " model directly to MultiCompartmentSphericalMeanModel."
                 raise ValueError(msg)
 
     def _delete_orientation_parameters(self):
@@ -1963,15 +2032,10 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         kwargs: keyword arguments to the model parameter values,
             Is internally given as **parameter_dictionary.
         """
-        kwargs = self.add_linked_parameters_to_parameters(
-            kwargs
-        )
+        A = self._construct_convolution_kernel(**kwargs)
         self.S0_responses = kwargs.get('S0_responses', self.S0_responses)
         self.fit_S0_response = kwargs.get(
             'fit_S0_response', self.fit_S0_response)
-
-        A = self._construct_convolution_kernel(
-            self.parameters_to_parameter_vector(**kwargs))
 
         # if vf fixed then just multiply with sh_coeff
         if self.volume_fractions_fixed:
@@ -1986,88 +2050,6 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
                 'sh_coeff']
             E = np.dot(A, sh_coeff)
         return E
-
-    def _construct_convolution_kernel(self, x0_vector):
-        """
-        Helper function that constructs the convolution kernel for the given
-        multi-compartment model and the initial condition x0_vector.
-
-        First the parameter vector is converted to a dictionary with the
-        corresponding parameter names. Then, the linked parameters are added to
-        the given ones. Finally, the rotational harmonics of the model is
-        passed to the construct_model_based_A_matrix, which constructs the
-        kernel for an arbitrary PGSE-acquisition scheme.
-
-        For multiple models with fixed volume fractions, the A-matrices
-        are combined to have a combined convolution kernel.
-
-        For multiple models without fixed volume fractions, the convolution
-        kernels for anisotropic and isotropic models are concatenated, with
-        the isotropic kernels always having a spherical harmonics order of 0.
-
-        Parameters
-        ----------
-        x0_vector: array of size (N_parameters),
-            Contains the fixed parameters of the convolution kernel.
-
-        Returns
-        -------
-        kernel: array of size (N_coef, N_data),
-            Observation matrix that maps the FOD spherical harmonics
-            coefficients to the DWI signal values.
-        """
-        parameters_dict = self.parameter_vector_to_parameters(
-            x0_vector)
-        parameters_dict = self.add_linked_parameters_to_parameters(
-            parameters_dict)
-
-        if self.volume_fractions_fixed:
-            if len(self.models) > 1:
-                partial_volumes = [
-                    parameters_dict[p] for p in self.partial_volume_names
-                ]
-            else:
-                partial_volumes = [1.]
-            kernel = 0.
-            for model, partial_volume, S0 in zip(self.models,
-                                                 partial_volumes,
-                                                 self.S0_responses):
-                parameters = {}
-                for parameter in model.parameter_ranges:
-                    parameter_name = self._inverted_parameter_map[
-                        (model, parameter)
-                    ]
-                    parameters[parameter] = parameters_dict.get(
-                        parameter_name
-                    )
-                model_rh = (
-                    model.rotational_harmonics_representation(
-                        self.scheme, **parameters))
-                kernel += S0 * partial_volume * construct_model_based_A_matrix(
-                    self.scheme, model_rh, self.sh_order)
-        else:
-            kernel = []
-            for model, S0 in zip(self.models, self.S0_responses):
-                parameters = {}
-                for parameter in model.parameter_ranges:
-                    parameter_name = self._inverted_parameter_map[
-                        (model, parameter)
-                    ]
-                    parameters[parameter] = parameters_dict.get(
-                        parameter_name
-                    )
-                model_rh = (
-                    model.rotational_harmonics_representation(
-                        self.scheme, **parameters))
-                if 'orientation' in model.parameter_types.values():
-                    kernel.append(S0 * construct_model_based_A_matrix(
-                        self.scheme, model_rh, self.sh_order))
-                else:
-                    kernel.append(S0 * construct_model_based_A_matrix(
-                        self.scheme, model_rh, 0))
-
-            kernel = np.hstack(kernel)
-        return kernel
 
 
 def homogenize_x0_to_data(data, x0):

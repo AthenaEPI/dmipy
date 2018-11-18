@@ -11,7 +11,7 @@ from dmipy.signal_models.tissue_response_models import (
     AnisotropicTissueResponseModel)
 import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_raises
-from dmipy.optimizers_fod.construct_observation_matrix import (
+from dmipy.utils.construct_observation_matrix import (
     construct_model_based_A_matrix)
 scheme = wu_minn_hcp_acquisition_scheme()
 

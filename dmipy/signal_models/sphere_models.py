@@ -1,4 +1,5 @@
 from ..core.modeling_framework import ModelProperties
+from ..core.signal_model_properties import IsotropicSignalModelProperties
 from ..core.constants import CONSTANTS
 from scipy import special
 import numpy as np
@@ -11,7 +12,7 @@ __all__ = [
 ]
 
 
-class S1Dot(ModelProperties):
+class S1Dot(ModelProperties, IsotropicSignalModelProperties):
     r"""
     The Dot model [1]_ - an non-diffusing compartment.
     It has no parameters and returns 1 no matter the input.
@@ -51,58 +52,9 @@ class S1Dot(ModelProperties):
         E_dot = np.ones(acquisition_scheme.number_of_measurements)
         return E_dot
 
-    def rotational_harmonics_representation(
-            self, acquisition_scheme, **kwargs):
-        r""" The rotational harmonics of the model, such that Y_lm = Yl0.
-        Axis aligned with z-axis to be used as kernel for spherical
-        convolution. Returns an array with rotational harmonics for each shell.
 
-        Parameters
-        ----------
-        acquisition_scheme : DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using dMipy.
-        kwargs: keyword arguments to the model parameter values,
-            Is internally given as **parameter_dictionary.
-
-        Returns
-        -------
-        rh_array : array, shape(Nshells, N_rh_coef),
-            Rotational harmonics coefficients for each shell.
-        """
-        rh_scheme = acquisition_scheme.rotational_harmonics_scheme
-        kwargs.update({'mu': [0., 0.]})
-        E_kernel_sf = self(rh_scheme, **kwargs)
-        E_reshaped = E_kernel_sf.reshape([-1, rh_scheme.Nsamples])
-        rh_array = np.zeros((len(E_reshaped), 1))
-
-        for i, sh_order in enumerate(rh_scheme.shell_sh_orders):
-            rh_array[i, :sh_order // 2 + 1] = (
-                np.dot(
-                    rh_scheme.inverse_rh_matrix[0],
-                    E_reshaped[i])
-            )
-        return rh_array
-
-    def spherical_mean(self, acquisition_scheme, **kwargs):
-        """
-        Estimates spherical mean for every shell in acquisition scheme.
-
-        Parameters
-        ----------
-        acquisition_scheme : DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using dMipy.
-        kwargs: keyword arguments to the model parameter values,
-            Is internally given as **parameter_dictionary.
-
-        Returns
-        -------
-        E_mean : float,
-            spherical mean of the model for every acquisition shell.
-        """
-        return self(acquisition_scheme.spherical_mean_scheme, **kwargs)
-
-
-class S2SphereStejskalTannerApproximation(ModelProperties):
+class S2SphereStejskalTannerApproximation(
+        ModelProperties, IsotropicSignalModelProperties):
     r"""
     The Stejskal Tanner signal approximation of a sphere model. It assumes
     that pulse length is infinitessimally small and diffusion time large enough
@@ -173,58 +125,9 @@ class S2SphereStejskalTannerApproximation(ModelProperties):
             q[q_nonzero], diameter)
         return E_sphere
 
-    def rotational_harmonics_representation(
-            self, acquisition_scheme, **kwargs):
-        r""" The rotational harmonics of the model, such that Y_lm = Yl0.
-        Axis aligned with z-axis to be used as kernel for spherical
-        convolution. Returns an array with rotational harmonics for each shell.
 
-        Parameters
-        ----------
-        acquisition_scheme : DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using dMipy.
-        kwargs: keyword arguments to the model parameter values,
-            Is internally given as **parameter_dictionary.
-
-        Returns
-        -------
-        rh_array : array, shape(Nshells, N_rh_coef),
-            Rotational harmonics coefficients for each shell.
-        """
-        rh_scheme = acquisition_scheme.rotational_harmonics_scheme
-        kwargs.update({'mu': [0., 0.]})
-        E_kernel_sf = self(rh_scheme, **kwargs)
-        E_reshaped = E_kernel_sf.reshape([-1, rh_scheme.Nsamples])
-        rh_array = np.zeros((len(E_reshaped), 1))
-
-        for i, sh_order in enumerate(rh_scheme.shell_sh_orders):
-            rh_array[i, :sh_order // 2 + 1] = (
-                np.dot(
-                    rh_scheme.inverse_rh_matrix[0],
-                    E_reshaped[i])
-            )
-        return rh_array
-
-    def spherical_mean(self, acquisition_scheme, **kwargs):
-        """
-        Estimates spherical mean for every shell in acquisition scheme.
-
-        Parameters
-        ----------
-        acquisition_scheme : DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using dMipy.
-        kwargs: keyword arguments to the model parameter values,
-            Is internally given as **parameter_dictionary.
-
-        Returns
-        -------
-        E_mean : float,
-            spherical mean of the model for every acquisition shell.
-        """
-        return self(acquisition_scheme.spherical_mean_scheme, **kwargs)
-
-
-class _S3SphereCallaghanApproximation(ModelProperties):
+class _S3SphereCallaghanApproximation(
+        ModelProperties, IsotropicSignalModelProperties):
     r"""
     The Callaghan model [1]_ of diffusion inside a sphere.
 
@@ -324,7 +227,8 @@ class _S3SphereCallaghanApproximation(ModelProperties):
         return E_sphere
 
 
-class S4SphereGaussianPhaseApproximation(ModelProperties):
+class S4SphereGaussianPhaseApproximation(
+        ModelProperties, IsotropicSignalModelProperties):
     r"""
     The gaussian phase approximation for diffusion inside a sphere according
     to [1]_. It is dependent on gradient strength, pulse separation and pulse
@@ -457,53 +361,3 @@ class S4SphereGaussianPhaseApproximation(ModelProperties):
                 g[mask], delta_, Delta_, diameter
             )
         return E_sphere
-
-    def rotational_harmonics_representation(
-            self, acquisition_scheme, **kwargs):
-        r""" The rotational harmonics of the model, such that Y_lm = Yl0.
-        Axis aligned with z-axis to be used as kernel for spherical
-        convolution. Returns an array with rotational harmonics for each shell.
-
-        Parameters
-        ----------
-        acquisition_scheme : DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using dMipy.
-        kwargs: keyword arguments to the model parameter values,
-            Is internally given as **parameter_dictionary.
-
-        Returns
-        -------
-        rh_array : array, shape(Nshells, N_rh_coef),
-            Rotational harmonics coefficients for each shell.
-        """
-        rh_scheme = acquisition_scheme.rotational_harmonics_scheme
-        kwargs.update({'mu': [0., 0.]})
-        E_kernel_sf = self(rh_scheme, **kwargs)
-        E_reshaped = E_kernel_sf.reshape([-1, rh_scheme.Nsamples])
-        rh_array = np.zeros((len(E_reshaped), 1))
-
-        for i, sh_order in enumerate(rh_scheme.shell_sh_orders):
-            rh_array[i, :sh_order // 2 + 1] = (
-                np.dot(
-                    rh_scheme.inverse_rh_matrix[0],
-                    E_reshaped[i])
-            )
-        return rh_array
-
-    def spherical_mean(self, acquisition_scheme, **kwargs):
-        """
-        Estimates spherical mean for every shell in acquisition scheme.
-
-        Parameters
-        ----------
-        acquisition_scheme : DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using dMipy.
-        kwargs: keyword arguments to the model parameter values,
-            Is internally given as **parameter_dictionary.
-
-        Returns
-        -------
-        E_mean : float,
-            spherical mean of the model for every acquisition shell.
-        """
-        return self(acquisition_scheme.spherical_mean_scheme, **kwargs)

@@ -82,8 +82,10 @@ class CsdCvxpyOptimizer:
             x0_vector, (-1, x0_vector.shape[-1]))[0]
         if np.all(np.isnan(x0_single_voxel)):
             self.single_convolution_kernel = True
-            self.A = self.model._construct_convolution_kernel(
+            parameters_dict = self.model.parameter_vector_to_parameters(
                 x0_single_voxel)
+            self.A = self.model._construct_convolution_kernel(
+                **parameters_dict)
         else:
             self.single_convolution_kernel = False
 
@@ -144,7 +146,9 @@ class CsdCvxpyOptimizer:
         if self.single_convolution_kernel:
             A = self.A
         else:
-            A = self.model._construct_convolution_kernel(x0_vector)
+            parameters_dict = self.model.parameter_vector_to_parameters(
+                x0_vector)
+            A = self.model._construct_convolution_kernel(**parameters_dict)
 
         sh_coef = cvxpy.Variable(self.Ncoef_total)
         sh_fod = sh_coef[self.sh_start: self.Ncoef + self.sh_start]

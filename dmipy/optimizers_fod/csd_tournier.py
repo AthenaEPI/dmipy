@@ -1,5 +1,4 @@
 import numpy as np
-from .construct_observation_matrix import construct_model_based_A_matrix
 from dipy.data import get_sphere, HemiSphere
 from dipy.reconst.shm import real_sym_sh_mrtrix
 from dipy.utils.optpkg import optional_package
@@ -95,8 +94,10 @@ class CsdTournierOptimizer:
                 x0_vector, (-1, x0_vector.shape[-1]))[0]
             if np.all(np.isnan(x0_single_voxel)):
                 self.single_convolution_kernel = True
-                self.A = self.model._construct_convolution_kernel(
+                parameters_dict = self.model.parameter_vector_to_parameters(
                     x0_single_voxel)
+                self.A = self.model._construct_convolution_kernel(
+                    **parameters_dict)
                 self.AT_A = np.dot(self.A.T, self.A)
             else:
                 self.single_convolution_kernel = False
@@ -131,7 +132,9 @@ class CsdTournierOptimizer:
             A = self.A
             AT_A = self.AT_A + self.lambda_lb * self.R_smoothness
         else:
-            A = self.model._construct_convolution_kernel(x0_vector)
+            parameters_dict = self.model.parameter_vector_to_parameters(
+                x0_vector)
+            A = self.model._construct_convolution_kernel(**parameters_dict)
             AT_A = np.dot(A.T, A) + self.lambda_lb * self.R_smoothness
 
         if self.unity_constraint:

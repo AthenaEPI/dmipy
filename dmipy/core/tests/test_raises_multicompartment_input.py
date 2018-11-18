@@ -1,7 +1,6 @@
 from dmipy.core import modeling_framework
 from dmipy.signal_models import (
     cylinder_models, plane_models, gaussian_models)
-from dmipy.distributions import distribute_models
 from numpy.testing import assert_raises
 from dmipy.data.saved_acquisition_schemes import (
     wu_minn_hcp_acquisition_scheme)
@@ -14,15 +13,6 @@ def test_raise_combination_NRM_and_others():
     assert_raises(
         ValueError, modeling_framework.MultiCompartmentModel,
         [ball, plane])
-
-
-def test_raise_spherical_distribution_in_spherical_mean():
-    zeppelin = gaussian_models.G2Zeppelin()
-    watson = distribute_models.SD1WatsonDistributed([zeppelin])
-    assert_raises(
-        ValueError,
-        modeling_framework.MultiCompartmentSphericalMeanModel,
-        [watson])
 
 
 def test_raise_NRMmodel_in_spherical_mean():

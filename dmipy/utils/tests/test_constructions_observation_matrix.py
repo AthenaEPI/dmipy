@@ -3,7 +3,7 @@ from dmipy.distributions import distribute_models, distributions
 import numpy as np
 from dmipy.data.saved_acquisition_schemes import (
     wu_minn_hcp_acquisition_scheme)
-from dmipy.optimizers_fod.construct_observation_matrix import (
+from dmipy.utils.construct_observation_matrix import (
     construct_model_based_A_matrix)
 
 

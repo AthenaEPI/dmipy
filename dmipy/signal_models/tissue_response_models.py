@@ -2,12 +2,16 @@ import numpy as np
 from dmipy.utils.utils import cart2mu
 from dmipy.utils.spherical_convolution import real_sym_rh_basis
 from ..core.modeling_framework import ModelProperties
+from ..core.signal_model_properties import (
+    AnisotropicSignalModelProperties,
+    IsotropicSignalModelProperties)
 from ..utils import utils
 from dmipy.core.acquisition_scheme import gtab_dmipy2dipy
 from dipy.reconst import dti
 
 
-class AnisotropicTissueResponseModel(ModelProperties):
+class AnisotropicTissueResponseModel(
+        ModelProperties, AnisotropicSignalModelProperties):
     r""" Estimates anistropic TissueResponseModel describing the convolution
     kernel of e.g. anistropic white matter from array of candidate voxels [1]_.
 
@@ -56,10 +60,9 @@ class AnisotropicTissueResponseModel(ModelProperties):
         tenfit = tenmod.fit(data)
         evecs = tenfit.evecs
         N_shells = acquisition_scheme.shell_indices.max()
+        max_sh_order = max(acquisition_scheme.shell_sh_orders.values())
         rh_matrices = np.zeros(
-            (len(data),
-             N_shells + 1,
-             int(acquisition_scheme.shell_sh_orders.max() // 2 + 1)))
+            (len(data), N_shells + 1, int(max_sh_order // 2 + 1)))
         self.S0_response = np.mean(data[:, acquisition_scheme.b0_mask])
 
         for i in range(len(data)):
@@ -70,7 +73,7 @@ class AnisotropicTissueResponseModel(ModelProperties):
             # the gradient directions with the reverse of the dti eigenvectors.
             bvecs_rot = np.dot(acquisition_scheme.gradient_directions,
                                evecs[i][:, ::-1])
-            for shell_index in range(N_shells + 1):
+            for shell_index in acquisition_scheme.shell_indices:
                 shell_sh = acquisition_scheme.shell_sh_orders[shell_index]
                 shell_mask = acquisition_scheme.shell_indices == shell_index
                 if acquisition_scheme.b0_mask[shell_mask][0]:
@@ -177,7 +180,8 @@ class AnisotropicTissueResponseModel(ModelProperties):
         return self.S0_response * self._spherical_mean
 
 
-class IsotropicTissueResponseModel(ModelProperties):
+class IsotropicTissueResponseModel(
+        ModelProperties, IsotropicSignalModelProperties):
     r""" Estimates istropic TissueResponseModel describing the convolution
     kernel of e.g. CSF or grey matter from array of candidate voxels [1]_.
 
