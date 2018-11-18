@@ -1,7 +1,6 @@
 from dmipy.core import modeling_framework
 from dmipy.signal_models import (
     cylinder_models, plane_models, gaussian_models)
-from dmipy.distributions import distribute_models
 from numpy.testing import assert_raises
 from dmipy.data.saved_acquisition_schemes import (
     wu_minn_hcp_acquisition_scheme)
