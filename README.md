@@ -97,7 +97,7 @@ Constrained spherical deconvolution (CSD) models are primarily used for Fiber Or
 ## How to contribute to Dmipy
 Dmipy's design is completely modular and can easily be extended with new models, distributions or optimizers. To contribute, view our [contribution guidelines](https://github.com/AthenaEPI/dmipy/blob/master/contribution_guidelines.rst).
 ## How to cite Dmipy
-- **Temporarily Reference**: Rutger Fick, Demian Wassermann and Rachid Deriche *Mipy: An Open-Source Framework to improve reproducibility in Brain Microstructure Imaging*, OHBM (2018) Singapore.
+- **Temporarily Reference**: Rutger Fick, Abib Alimi, Demian Wassermann and Rachid Deriche *Dmipy, a Diffusion Microstructure Imaging toolbox in Python to improve research reproducibility*, MICCAI (2018) Spain.
 - **Github Repository**: Rutger Fick, Rachid Deriche, & Demian Wassermann. (2018, March 3). *Dmipy: An Open-source Framework for Reproducible dMRI-Based Microstructure Research (Version 0.1)*. Zenodo. http://doi.org/10.5281/zenodo.1188268
 
 [Package Acknowledgements](https://github.com/AthenaEPI/dmipy/blob/master/Acknowledgements.md)
