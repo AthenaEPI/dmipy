@@ -19,8 +19,6 @@ from .fitted_modeling_framework import (
     FittedMultiCompartmentModel,
     FittedMultiCompartmentSphericalMeanModel,
     FittedMultiCompartmentSphericalHarmonicsModel)
-from ..utils.construct_observation_matrix import (
-    construct_model_based_A_matrix)
 from ..optimizers.brute2fine import (
     GlobalBruteOptimizer, Brute2FineOptimizer)
 from ..optimizers_fod.csd_tournier import CsdTournierOptimizer
