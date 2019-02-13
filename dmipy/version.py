@@ -52,6 +52,7 @@ PACKAGE_DATA = {
         pjoin('data', 'gradient_tables', '*'),
         pjoin('data', 'spheres', '*'),
         pjoin('data', 'bingham_normalization_splinefit.npz'),
+        pjoin('data', 'real_gaunt_coefficients.npz'),
         pjoin('data', 'wu_minn_hcp_subjects.txt'),
         pjoin('data', 'wu_minn_hcp_coronal_slice.nii.gz'),
         pjoin('data', 'tanguy_cat_spinal_cord', '*'),
