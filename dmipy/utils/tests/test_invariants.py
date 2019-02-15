@@ -16,4 +16,3 @@ def test_invariants():
         invariants = get_invariants(coef[:,0:n_c], l_list)
         inv_test = np.ones((100, len(l_list)))
         assert_array_almost_equal(invariants, inv_test, decimal=6)
-    return invariants, inv_test
