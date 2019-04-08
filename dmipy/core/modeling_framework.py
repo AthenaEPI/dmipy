@@ -871,12 +871,11 @@ class MultiCompartmentModelProperties:
             whether or not the optimize S0 as part of the parameters or leave
             it fixed as mean of the b0-measurements.
         """
-        scheme_has_b0s = np.sum(self.scheme.b0_mask) > 0
+        scheme_has_b0s = np.any(self.scheme.b0_mask)
         if scheme_has_b0s:
             if self.scheme.TE is None or len(np.unique(self.scheme.TE)) == 1:
                 N_TE = 1
-                self.S0_mapping = 1.
-                self.S0_mapping_sm = 1.
+                self.S0_mapping = self.S0_mapping_sm = 1.
                 S0 = np.mean(data[..., self.scheme.b0_mask], axis=-1)
             else:  # if multiple TE are in the data
                 unique_TEs = np.unique(self.scheme.TE)
@@ -898,6 +897,7 @@ class MultiCompartmentModelProperties:
                 if (self.scheme.TE is None or
                         len(np.unique(self.scheme.TE)) == 1):
                     "fit each voxel using 2nd order polynomial"
+                    N_TE = 1
                     self.S0_mapping = self.S0_mapping_sm = 1.
                     S0 = np.zeros(data.shape[:-1])
                     mask_pos = np.where(mask)
