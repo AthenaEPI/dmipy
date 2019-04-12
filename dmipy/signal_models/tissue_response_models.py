@@ -122,18 +122,24 @@ class AnisotropicTissueResponseModel(
         # now map the rotational harmonics to the rotated gradient vectors.
         rh_coef = self._rotational_harmonics_representation
         E = np.ones_like(acquisition_scheme.bvalues)
-        N_shells = acquisition_scheme.shell_indices.max()
-        for shell_index in range(N_shells + 1):
+        for shell_index, b_value in enumerate(
+                acquisition_scheme.shell_bvalues):
+            shell_overlap = self.acquisition_scheme.shell_bvalues == b_value
+            if not np.any(shell_overlap):
+                raise ValueError(
+                    'bvalue {}s/mm^2 not in tissue response bvalues'.format(
+                        b_value / 1e6))
+            native_shell_index = np.where(shell_overlap)[0][0]
             shell_sh = acquisition_scheme.shell_sh_orders[shell_index]
             shell_mask = acquisition_scheme.shell_indices == shell_index
-            if acquisition_scheme.b0_mask[shell_mask][0]:
+            if acquisition_scheme.shell_b0_mask[shell_index]:
                 E[shell_mask] = rh_coef[shell_index, 0] / (2 * np.sqrt(np.pi))
             else:
                 shell_bvecs = bvecs_rot[shell_mask]
                 theta, phi = cart2mu(shell_bvecs).T
                 rh_mat = real_sym_rh_basis(shell_sh, theta, phi)
                 E[shell_mask] = np.dot(
-                    rh_mat, rh_coef[shell_index, :shell_sh // 2 + 1])
+                    rh_mat, rh_coef[native_shell_index, :shell_sh // 2 + 1])
         return E
 
     def rotational_harmonics_representation(
@@ -257,11 +263,17 @@ class IsotropicTissueResponseModel(
         attenuation : float or array, shape(N),
             signal attenuation
         '''
-        N_shells = acquisition_scheme.shell_indices.max()
         E = np.ones_like(acquisition_scheme.bvalues)
-        for shell_index in range(N_shells + 1):
+        for shell_index, b_value in enumerate(
+                acquisition_scheme.shell_bvalues):
+            shell_overlap = self.acquisition_scheme.shell_bvalues == b_value
+            if not np.any(shell_overlap):
+                raise ValueError(
+                    'bvalue {}s/mm^2 not in tissue response bvalues'.format(
+                        b_value / 1e6))
+            native_shell_index = np.where(shell_overlap)[0][0]
             shell_mask = acquisition_scheme.shell_indices == shell_index
-            E[shell_mask] = self._spherical_mean[shell_index]
+            E[shell_mask] = self._spherical_mean[native_shell_index]
         return E
 
     def rotational_harmonics_representation(
