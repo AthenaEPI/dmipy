@@ -94,19 +94,7 @@ def de_santis_generated_acquisition_scheme():
 def isbi2015_white_matter_challenge_scheme():
     "Returns 35-shell ISBI 2015 challenge DmipyAcquisitionScheme."
     isbi_data_path = join(DATA_PATH, 'isbi2015_white_matter_challenge')
-    if not os.path.exists(isbi_data_path):
-        os.makedirs(isbi_data_path)
-
-    path_schemefile = (
-        "http://cmic.cs.ucl.ac.uk/wmmchallenge/ISBIdata/seenScheme.txt")
     filename = 'isbi_schemefile.txt'
-
-    response = urlopen(path_schemefile)
-    data = response.read()
-    file_ = open(join(isbi_data_path, filename), 'wb')
-    file_.write(data)
-    file_.close()
-
     return acquisition_scheme_from_schemefile(join(isbi_data_path, filename))
 
 

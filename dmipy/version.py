@@ -56,7 +56,8 @@ PACKAGE_DATA = {
         pjoin('data', 'wu_minn_hcp_coronal_slice.nii.gz'),
         pjoin('data', 'tanguy_cat_spinal_cord', '*'),
         pjoin('data', 'camino', '*'),
-        pjoin('data', 'de_santis_camino', '*')
+        pjoin('data', 'de_santis_camino', '*'),
+        pjoin('data', 'isbi2015_white_matter_challenge', '*')
     ]
 }
 REQUIRES = ["dipy", "scipy", "numpy (>=1.13)"]

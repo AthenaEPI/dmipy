@@ -187,25 +187,6 @@ def isbi2015_white_matter_challenge():
         comparison." NMR in Biomedicine 30.9 (2017)
     """
     isbi_data_path = join(DATA_PATH, 'isbi2015_white_matter_challenge')
-
-    if not os.path.exists(isbi_data_path):
-        os.makedirs(isbi_data_path)
-
-    path_genu = (
-        "http://cmic.cs.ucl.ac.uk/wmmchallenge/ISBIdata/seenSignal.txt")
-    path_fornix = (
-        "http://cmic.cs.ucl.ac.uk/wmmchallenge/ISBIdata/seenSignaX.txt")
-
-    filenames = ['genu.txt', 'fornix.txt']
-    paths = [path_genu, path_fornix]
-
-    for filename, path in zip(filenames, paths):
-        response = urlopen(path)
-        data = response.read()
-        file_ = open(join(isbi_data_path, filename), 'wb')
-        file_.write(data)
-        file_.close()
-
     data_genu = np.loadtxt(join(isbi_data_path, 'genu.txt'), skiprows=1)
     data_fornix = np.loadtxt(join(isbi_data_path, 'fornix.txt'), skiprows=1)
     scheme = (
