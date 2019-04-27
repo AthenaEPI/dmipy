@@ -1,9 +1,12 @@
 from dmipy.core import modeling_framework
+from dmipy.core.acquisition_scheme import (
+    acquisition_scheme_from_bvalues)
 from dmipy.signal_models import (
     cylinder_models, plane_models, gaussian_models)
 from numpy.testing import assert_raises
 from dmipy.data.saved_acquisition_schemes import (
     wu_minn_hcp_acquisition_scheme)
+import numpy as np
 
 
 def test_raise_combination_NRM_and_others():
@@ -64,3 +67,13 @@ def test_set_fixed_parameter_raises():
                   'C1Stick_1_mu', [1])
     assert_raises(ValueError, mod.set_fixed_parameter,
                   'blabla', [1])
+
+
+def test_fitting_without_b0_raises():
+    bvals = np.atleast_1d(1e9)
+    bvecs = np.atleast_2d([1., 0., 0.])
+    scheme = acquisition_scheme_from_bvalues(bvals, bvecs)
+    mc = modeling_framework.MultiCompartmentModel(
+        [gaussian_models.G1Ball()])
+    data = np.atleast_1d(1.)
+    assert_raises(ValueError, mc.fit, scheme, data)

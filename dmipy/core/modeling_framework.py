@@ -813,7 +813,7 @@ class MultiCompartmentModelProperties:
         Parameters
         ----------
         acquisition_scheme : DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using dMipy.
+            An acquisition scheme that has been instantiated using Dmipy.
         """
         for model in self.models:
             if model._model_type == 'TissueResponseModel':
@@ -834,6 +834,20 @@ class MultiCompartmentModelProperties:
                     msg = "Acquisition scheme of MC-model and tissue response "
                     msg += "model are not the same."
                     raise ValueError(msg)
+
+    def _check_acquisition_scheme_has_b0s(self, acquisition_scheme):
+        """
+        Checks if acquisition scheme has any b0-measurements. This for the
+        moment is a prerequisite for signal-attenuation-based model fitting.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using Dmipy.
+        """
+        if not np.any(acquisition_scheme.b0_mask):
+            raise ValueError('acquisition scheme must have b0-measurements '
+                             'for signal-attenuation-based model fitting.')
 
     def _construct_convolution_kernel(self, **kwargs):
         """
@@ -1039,6 +1053,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         """
         self._check_tissue_model_acquisition_scheme(acquisition_scheme)
         self._check_model_params_with_acquisition_params(acquisition_scheme)
+        self._check_acquisition_scheme_has_b0s(acquisition_scheme)
 
         # estimate S0
         self.scheme = acquisition_scheme
@@ -1399,6 +1414,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         """
         self._check_tissue_model_acquisition_scheme(acquisition_scheme)
         self._check_model_params_with_acquisition_params(acquisition_scheme)
+        self._check_acquisition_scheme_has_b0s(acquisition_scheme)
 
         # estimate S0
         self.scheme = acquisition_scheme
@@ -1812,6 +1828,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         """
         self._check_if_kernel_parameters_are_fixed()
         self._check_tissue_model_acquisition_scheme(acquisition_scheme)
+        self._check_acquisition_scheme_has_b0s(acquisition_scheme)
         self._check_model_params_with_acquisition_params(acquisition_scheme)
 
         self.voxel_varying_kernel = False
