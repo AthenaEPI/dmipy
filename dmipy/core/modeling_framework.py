@@ -923,6 +923,45 @@ class MultiCompartmentModelProperties:
             kernel = np.hstack(kernel)
         return kernel
 
+    def set_parameter_optimization_bounds(self, parameter_name, bounds):
+        """
+        Sets the parameter optimization bounds for a given parameter.
+
+        Parameters
+        ----------
+        parameter_name: string,
+            name of the parameter whose bounds should be changed.
+        bounds: array or size(card, 2),
+            upper and lower bound for each optimized value for the given
+            parameter, where card is
+            self.parameter_cardinality[parameter_name]).
+
+        Raises
+        ------
+        ValueError: parameter name not in model parameters
+        ValueError: input bounds are not of correct shape [card, 2]
+        ValueError: input higher bound is lower than lower bound
+        """
+        if parameter_name not in self.parameter_names:
+            raise ValueError(
+                '{} not in model parameters'.format(parameter_name))
+        card = self.parameter_cardinality[parameter_name]
+        bounds_array = np.atleast_2d(bounds)
+        input_card, N_bounds = bounds_array.shape[:2]
+        if bounds_array.ndim > 2 or input_card != card or N_bounds != 2:
+            msg = '{} bounds must be of shape ({}, 2), currently {}.'
+            raise ValueError(
+                msg.format(parameter_name, card, bounds_array.shape))
+        for lower, higher in bounds_array:
+            if higher < lower:
+                msg = 'given optimization bounds for {} are invalid: lower '\
+                      'bound {} is higher than upper bound {}.'
+                raise ValueError(msg.format(parameter_name, lower, higher))
+        parameter_scale = np.max(bounds)
+        ranges = np.array(bounds) / parameter_scale
+        self.parameter_ranges[parameter_name] = ranges
+        self.parameter_scales[parameter_name] = parameter_scale
+
 
 class MultiCompartmentModel(MultiCompartmentModelProperties):
     r'''

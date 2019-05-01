@@ -77,3 +77,18 @@ def test_fitting_without_b0_raises():
         [gaussian_models.G1Ball()])
     data = np.atleast_1d(1.)
     assert_raises(ValueError, mc.fit, scheme, data)
+
+
+def test_set_parameter_optimization_bounds_raises():
+    ball = gaussian_models.G1Ball()
+    mc = modeling_framework.MultiCompartmentModel([ball])
+    assert_raises(ValueError, mc.set_parameter_optimization_bounds,
+                  'not a valid name', [1, 2])
+    assert_raises(ValueError, mc.set_parameter_optimization_bounds,
+                  'G1Ball_1_lambda_iso', 1)
+    assert_raises(ValueError, mc.set_parameter_optimization_bounds,
+                  'G1Ball_1_lambda_iso', [[1, 2], [1, 2]])
+    assert_raises(ValueError, mc.set_parameter_optimization_bounds,
+                  'G1Ball_1_lambda_iso', [1, 2, 3])
+    assert_raises(ValueError, mc.set_parameter_optimization_bounds,
+                  'G1Ball_1_lambda_iso', [2, 1])
