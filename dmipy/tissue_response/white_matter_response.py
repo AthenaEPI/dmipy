@@ -190,8 +190,8 @@ def white_matter_response_tournier13(
                 values[..., 0] * (1 - values[..., 1] / values[..., 0])) ** 2
         selected_indices_old = selected_indices
         selected_indices = np.argsort(ratio)[:N_candidate_voxels]
-        percentage_overlap = len(np.intersect1d(
-            selected_indices, selected_indices_old)) / N_candidate_voxels * 100
+        percentage_overlap = 100. * float(len(np.intersect1d(
+            selected_indices, selected_indices_old))) / N_candidate_voxels
         print('{:.1f} percent candidate voxel overlap.'.format(
             percentage_overlap))
         if percentage_overlap == 100.:

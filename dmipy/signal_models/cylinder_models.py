@@ -89,7 +89,7 @@ class C1Stick(ModelProperties, AnisotropicSignalModelProperties):
         mu = kwargs.get('mu', self.mu)
         mu = utils.unitsphere2cart_1d(mu)
         E_stick = _attenuation_parallel_stick(bvals, lambda_par_, n, mu)
-        return E_stick
+        return self.S0 * E_stick
 
     def spherical_mean(self, acquisition_scheme, **kwargs):
         """
@@ -228,7 +228,7 @@ class C2CylinderStejskalTannerApproximation(
         E_perpendicular[q_nonzero] = self.perpendicular_attenuation(
             q_perp[q_nonzero], diameter
         )
-        return E_parallel * E_perpendicular
+        return self.S0 * E_parallel * E_perpendicular
 
 
 class C3CylinderCallaghanApproximation(
@@ -376,7 +376,7 @@ class C3CylinderCallaghanApproximation(
         E_perpendicular[q_nonzero] = self.perpendicular_attenuation(
             q_perp[q_nonzero], tau[q_nonzero], diameter
         )
-        return E_parallel * E_perpendicular
+        return self.S0 * E_parallel * E_perpendicular
 
 
 class C4CylinderGaussianPhaseApproximation(
@@ -494,7 +494,7 @@ class C4CylinderGaussianPhaseApproximation(
             E_perpendicular[mask] = self.perpendicular_attenuation(
                 g_perp[mask], delta_, Delta_, diameter
             )
-        return E_parallel * E_perpendicular
+        return self.S0 * E_parallel * E_perpendicular
 
 
 def _attenuation_parallel_stick(bvals, lambda_par, n, mu):

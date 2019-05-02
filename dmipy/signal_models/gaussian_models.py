@@ -75,7 +75,7 @@ class G1Ball(ModelProperties, IsotropicSignalModelProperties):
         bvals = acquisition_scheme.bvalues
         lambda_iso = kwargs.get('lambda_iso', self.lambda_iso)
         E_ball = np.exp(-bvals * lambda_iso)
-        return E_ball
+        return self.S0 * E_ball
 
 
 class G2Zeppelin(ModelProperties, AnisotropicSignalModelProperties):
@@ -152,7 +152,7 @@ class G2Zeppelin(ModelProperties, AnisotropicSignalModelProperties):
         mu = utils.unitsphere2cart_1d(mu)
         E_zeppelin = _attenuation_zeppelin(
             bvals, lambda_par, lambda_perp, n, mu)
-        return E_zeppelin
+        return self.S0 * E_zeppelin
 
     def spherical_mean(self, acquisition_scheme, **kwargs):
         """
@@ -298,7 +298,7 @@ class G3TemporalZeppelin(ModelProperties, AnisotropicSignalModelProperties):
             D_h = np.diag(np.r_[lambda_par, D_perp, D_perp])
             D = np.dot(np.dot(R, D_h), R.T)
             E_zeppelin[i] = np.exp(-bval_ * np.dot(n_, np.dot(n_, D)))
-        return E_zeppelin
+        return self.S0 * E_zeppelin
 
     def spherical_mean(self, acquisition_scheme, **kwargs):
         """

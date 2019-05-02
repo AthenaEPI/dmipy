@@ -140,7 +140,7 @@ class AnisotropicTissueResponseModel(
                 rh_mat = real_sym_rh_basis(shell_sh, theta, phi)
                 E[shell_mask] = np.dot(
                     rh_mat, rh_coef[native_shell_index, :shell_sh // 2 + 1])
-        return E
+        return self.S0 * E
 
     def rotational_harmonics_representation(
             self, acquisition_scheme=None, **kwargs):
@@ -160,7 +160,7 @@ class AnisotropicTissueResponseModel(
         rh_array : array, shape(Nshells, N_rh_coef),
             Rotational harmonics coefficients for each shell.
         """
-        return self._rotational_harmonics_representation[1:]
+        return self.S0 * self._rotational_harmonics_representation[1:]
 
     def spherical_mean(self, acquisition_scheme=None, **kwargs):
         """
@@ -179,7 +179,7 @@ class AnisotropicTissueResponseModel(
         E_mean : float,
             spherical mean of the Zeppelin model for every acquisition shell.
         """
-        return self._spherical_mean
+        return self.S0 * self._spherical_mean
 
     def tissue_response(self, **kwargs):
         # Returns the tissue response including S0 intensity.
@@ -274,7 +274,7 @@ class IsotropicTissueResponseModel(
             native_shell_index = np.where(shell_overlap)[0][0]
             shell_mask = acquisition_scheme.shell_indices == shell_index
             E[shell_mask] = self._spherical_mean[native_shell_index]
-        return E
+        return self.S0 * E
 
     def rotational_harmonics_representation(
             self, acquisition_scheme=None, **kwargs):
@@ -292,7 +292,7 @@ class IsotropicTissueResponseModel(
         rh_array : array, shape(Nshells, N_rh_coef),
             Rotational harmonics coefficients for each shell.
         """
-        return self._rotational_harmonics_representation[1:]
+        return self.S0 * self._rotational_harmonics_representation[1:]
 
     def spherical_mean(self, acquisition_scheme=None, **kwargs):
         """
@@ -311,7 +311,7 @@ class IsotropicTissueResponseModel(
         E_mean : float,
             spherical mean of the Zeppelin model for every acquisition shell.
         """
-        return self._spherical_mean
+        return self.S0 * self._spherical_mean
 
     def tissue_response(self, **kwargs):
         # Returns the tissue response including S0 intensity.

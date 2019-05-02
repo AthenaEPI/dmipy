@@ -4,7 +4,7 @@ from itertools import chain
 from ..utils.spherical_convolution import sh_convolution
 from ..utils.utils import T1_tortuosity, parameter_equality
 from ..core.signal_model_properties import AnisotropicSignalModelProperties
-import copy
+from copy import deepcopy
 import numpy as np
 
 __all__ = [
@@ -64,6 +64,16 @@ class DistributedModel:
             msg += "Current input parameter types are {}.".format(
                 parameter_types)
             raise AttributeError(msg)
+
+    def _check_models_have_S0_all_or_none(self):
+        N_responses_set = np.sum([mod.signal_based for mod in self.models])
+        if 0 < N_responses_set < len(self.models):
+            raise ValueError('S0_response of all or none of the models must '
+                             'be set')
+        if N_responses_set == 0:
+            self.signal_based = False
+        if N_responses_set == len(self.models):
+            self.signal_based = True
 
     def _prepare_parameters(self, models_and_distribution):
         """
@@ -348,15 +358,6 @@ class DistributedModel:
         del self.parameter_cardinality[parameter_name_out]
         del self.parameter_types[parameter_name_out]
 
-    def copy(self):
-        """
-        Retuns a different instantiation of the DistributedModel with the same
-        configuration, which can be used together with the original in a
-        MultiCompartmentModel. For example, to do NODDI with multiple
-        orientations.
-        """
-        return copy.copy(self)
-
     def _set_required_acquisition_parameters(self):
         self._required_acquisition_parameters = []
         for model in self.models:
@@ -592,8 +593,10 @@ class SD1WatsonDistributed(DistributedModel, AnisotropicSignalModelProperties):
     _model_type = 'SphericalDistributedModel'
 
     def __init__(self, models, parameter_links=None):
-        self.models = models
+        self.models = [deepcopy(model) for model in models]
+        self._check_models_have_S0_all_or_none()
         self._set_required_acquisition_parameters()
+
         self._check_for_double_model_class_instances()
         self._check_for_dispersable_models()
 
@@ -670,8 +673,9 @@ class SD2BinghamDistributed(
     _model_type = 'SphericalDistributedModel'
 
     def __init__(self, models, parameter_links=None):
-        self.models = models
+        self.models = [deepcopy(model) for model in models]
         self._set_required_acquisition_parameters()
+        self._check_models_have_S0_all_or_none()
         self._check_for_double_model_class_instances()
         self._check_for_dispersable_models()
 
@@ -713,7 +717,8 @@ class DD1GammaDistributed(DistributedModel, AnisotropicSignalModelProperties):
 
     def __init__(self, models, parameter_links=None,
                  target_parameter='diameter'):
-        self.models = models
+        self.models = [deepcopy(model) for model in models]
+        self._check_models_have_S0_all_or_none()
         self._set_required_acquisition_parameters()
         self.target_parameter = target_parameter
         self._check_for_double_model_class_instances()

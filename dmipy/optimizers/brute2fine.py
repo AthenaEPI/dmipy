@@ -55,11 +55,13 @@ class GlobalBruteOptimizer:
     """
 
     def __init__(self, model, acquisition_scheme,
-                 x0_vector=None, Ns=5, N_sphere_samples=30):
+                 x0_vector=None, Ns=5, N_sphere_samples=30,
+                 signal_based=False):
         self.model = model
         self.acquisition_scheme = acquisition_scheme
         self.x0_vector = x0_vector
         self.Ns = Ns
+        self.signal_based = signal_based
 
         if x0_vector is None:
             self.global_optimization_grid = True
@@ -167,7 +169,7 @@ class GlobalBruteOptimizer:
         self.signal_grid = model.simulate_signal(
             self.acquisition_scheme, self.parameter_grid)
 
-    def __call__(self, data, parameter_scale_normalization=True):
+    def __call__(self, data, S0, parameter_scale_normalization=True):
         """
         Calculates the closest parameter combination based on the sum-squared
         distances between the measured data and the simulated signal grid.
@@ -185,6 +187,8 @@ class GlobalBruteOptimizer:
         parameters_brute: array of size (Nparameters,),
             estimated closest model parameters in the parameter grid.
         """
+        if self.signal_based:
+            data = data * S0
         if self.global_optimization_grid is True:
             argmin = find_minimum_argument(self.signal_grid, data)
             parameters_brute = self.parameter_grid[argmin]
@@ -232,12 +236,13 @@ class Brute2FineOptimizer:
         550-560.
     """
 
-    def __init__(self, model, acquisition_scheme, Ns=5):
+    def __init__(self, model, acquisition_scheme, Ns=5, signal_based=False):
         self.model = model
         self.acquisition_scheme = acquisition_scheme
         self.Ns = Ns
+        self.signal_based = signal_based
 
-    def objective_function(self, parameter_vector, data):
+    def objective_function(self, parameter_vector, data, S0):
         "The objective function for brute-force and gradient-based optimizer."
         N_fractions = len(self.model.models)
         if N_fractions > 1:
@@ -255,11 +260,13 @@ class Brute2FineOptimizer:
             self.model.parameter_vector_to_parameters(parameter_vector_)
         )
         E_model = self.model(self.acquisition_scheme, **parameters)
+        if self.signal_based:
+            E_model /= S0
         E_diff = E_model - data
         objective = np.dot(E_diff, E_diff) / len(data)
         return objective
 
-    def __call__(self, data, x0_vector):
+    def __call__(self, data, x0_vector, S0):
         """
         Estimates the model parameters given the measured signal attenuation
         and an initial parameter guess. For parameters that are not given an
@@ -279,7 +286,7 @@ class Brute2FineOptimizer:
             array of the optimized model parameters.
         """
         N_fractions = len(self.model.models)
-        fit_args = (data,)
+        fit_args = (data, S0)
         bounds = self.model.bounds_for_optimization
         bounds_brute = []
         bounds_fine = list(bounds)

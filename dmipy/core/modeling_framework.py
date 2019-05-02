@@ -27,6 +27,8 @@ from ..optimizers.mix import MixOptimizer
 from dipy.utils.optpkg import optional_package
 from graphviz import Digraph
 from uuid import uuid4
+from copy import deepcopy
+import numbers
 pathos, have_pathos, _ = optional_package("pathos")
 numba, have_numba, _ = optional_package("numba")
 
@@ -56,7 +58,8 @@ __all__ = [
 class ModelProperties:
     "Contains various properties for CompartmentModels."
 
-    S0_response = 1.
+    S0 = 1.
+    signal_based = False
 
     @property
     def parameter_ranges(self):
@@ -94,6 +97,25 @@ class ModelProperties:
             (k, len(np.atleast_2d(self.parameter_ranges[k])))
             for k in self.parameter_ranges
         ])
+
+    def set_S0_response(self, S0):
+        """
+        Sets the S0 response of the compartment model. Should be used to
+        associate a model with the S0 response of the tissue it is supposed to
+        represent.
+
+        NOTE: multi-TE S0 responses are currently not supported.
+
+        Parameters
+        ----------
+        S0: float,
+            S0 intensity.
+        """
+        if not isinstance(S0, numbers.Number):
+            raise ValueError('S0 must be float, currently {}.'.format(
+                type(S0)))
+        self.S0 = S0
+        self.signal_based = True
 
 
 class MultiCompartmentModelProperties:
@@ -962,6 +984,16 @@ class MultiCompartmentModelProperties:
         self.parameter_ranges[parameter_name] = ranges
         self.parameter_scales[parameter_name] = parameter_scale
 
+    def _check_models_have_S0_all_or_none(self):
+        N_responses_set = np.sum([mod.signal_based for mod in self.models])
+        if 0 < N_responses_set < len(self.models):
+            raise ValueError('S0_response of all or none of the models must '
+                             'be set')
+        if N_responses_set == 0:
+            self.signal_based = False
+        if N_responses_set == len(self.models):
+            self.signal_based = True
+
 
 class MultiCompartmentModel(MultiCompartmentModelProperties):
     r'''
@@ -979,11 +1011,12 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
     '''
 
     def __init__(self, models, parameter_links=None):
-        self.models = models
+        self.models = [deepcopy(model) for model in models]
         self.parameter_links = parameter_links
         if parameter_links is None:
             self.parameter_links = []
 
+        self._check_models_have_S0_all_or_none()
         self._prepare_parameters()
         self._prepare_partial_volumes()
         self._prepare_parameter_links()
@@ -1142,13 +1175,16 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         start = time()
         if solver == 'brute2fine':
             global_brute = GlobalBruteOptimizer(
-                self, self.scheme, x0_, Ns, N_sphere_samples)
-            fit_func = Brute2FineOptimizer(self, self.scheme, Ns)
+                self, self.scheme, x0_, Ns, N_sphere_samples,
+                self.signal_based)
+            fit_func = Brute2FineOptimizer(
+                self, self.scheme, Ns, self.signal_based)
             print('Setup brute2fine optimizer in {} seconds'.format(
                 time() - start))
         elif solver == 'mix':
             self._check_for_tortuosity_constraint()
-            fit_func = MixOptimizer(self, self.scheme, maxiter)
+            fit_func = MixOptimizer(
+                self, self.scheme, maxiter, self.signal_based)
             print('Setup MIX optimizer in {} seconds'.format(
                 time() - start))
         else:
@@ -1158,12 +1194,13 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
 
         start = time()
         for idx, pos in enumerate(zip(*mask_pos)):
-            voxel_E = data_[pos] / S0[pos]
+            voxel_S = data_[pos]
+            voxel_E = voxel_S / S0[pos]
             voxel_x0_vector = x0_[pos]
             if solver == 'brute2fine':
                 if global_brute.global_optimization_grid is True:
-                    voxel_x0_vector = global_brute(voxel_E)
-            fit_args = (voxel_E, voxel_x0_vector)
+                    voxel_x0_vector = global_brute(voxel_S, S0[pos])
+            fit_args = (voxel_E, voxel_x0_vector, S0[pos])
 
             if use_parallel_processing:
                 fitted_parameters_lin[idx] = pool.apipe(fit_func, *fit_args)
@@ -1325,11 +1362,12 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
     '''
 
     def __init__(self, models, parameter_links=None):
-        self.models = models
+        self.models = [deepcopy(model) for model in models]
         self.parameter_links = parameter_links
         if parameter_links is None:
             self.parameter_links = []
 
+        self._check_models_have_S0_all_or_none()
         self._check_for_NMR_models()
         self._prepare_parameters()
         self._delete_orientation_parameters()
@@ -1516,13 +1554,15 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         if solver == 'brute2fine':
             global_brute = GlobalBruteOptimizer(
                 self, self.scheme,
-                x0_, Ns, N_sphere_samples)
-            fit_func = Brute2FineOptimizer(self, self.scheme, Ns)
+                x0_, Ns, N_sphere_samples, self.signal_based)
+            fit_func = Brute2FineOptimizer(
+                self, self.scheme, Ns, self.signal_based)
             print('Setup brute2fine optimizer in {} seconds'.format(
                 time() - start))
         elif solver == 'mix':
             self._check_for_tortuosity_constraint()
-            fit_func = MixOptimizer(self, self.scheme, maxiter)
+            fit_func = MixOptimizer(self, self.scheme, maxiter,
+                                    self.signal_based)
             print('Setup MIX optimizer in {} seconds'.format(
                 time() - start))
         else:
@@ -1532,12 +1572,13 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
 
         start = time()
         for idx, pos in enumerate(zip(*mask_pos)):
-            voxel_E = data_to_fit[pos] / S0[pos]
+            voxel_S = data_to_fit[pos]
+            voxel_E = voxel_S / S0[pos]
             voxel_x0_vector = x0_[pos]
             if solver == 'brute2fine':
                 if global_brute.global_optimization_grid is True:
-                    voxel_x0_vector = global_brute(voxel_E)
-            fit_args = (voxel_E, voxel_x0_vector)
+                    voxel_x0_vector = global_brute(voxel_S, S0[pos])
+            fit_args = (voxel_E, voxel_x0_vector, S0[pos])
 
             if use_parallel_processing:
                 fitted_parameters_lin[idx] = pool.apipe(fit_func, *fit_args)
@@ -1688,10 +1729,11 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
     '''
 
     def __init__(self, models, sh_order=8):
-        self.models = models
+        self.models = [deepcopy(model) for model in models]
         self.parameter_links = []
 
         self._check_for_dispersed_or_NMR_models()
+        self._check_models_have_S0_all_or_none()
         self._prepare_parameters()
         self._delete_orientation_parameters()
         self._prepare_partial_volumes()

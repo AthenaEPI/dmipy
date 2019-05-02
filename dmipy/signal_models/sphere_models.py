@@ -50,7 +50,7 @@ class S1Dot(ModelProperties, IsotropicSignalModelProperties):
             signal attenuation
         '''
         E_dot = np.ones(acquisition_scheme.number_of_measurements)
-        return E_dot
+        return self.S0 * E_dot
 
 
 class S2SphereStejskalTannerApproximation(
@@ -123,7 +123,7 @@ class S2SphereStejskalTannerApproximation(
         q_nonzero = q > 0  # only q>0 attenuate
         E_sphere[q_nonzero] = self.sphere_attenuation(
             q[q_nonzero], diameter)
-        return E_sphere
+        return self.S0 * E_sphere
 
 
 class _S3SphereCallaghanApproximation(
@@ -224,7 +224,7 @@ class _S3SphereCallaghanApproximation(
         E_sphere[q_nonzero] = self.sphere_attenuation(
             q[q_nonzero], tau[q_nonzero], diameter
         )
-        return E_sphere
+        return self.S0 * E_sphere
 
 
 class S4SphereGaussianPhaseApproximation(
@@ -360,4 +360,4 @@ class S4SphereGaussianPhaseApproximation(
             E_sphere[mask] = self.sphere_attenuation(
                 g[mask], delta_, Delta_, diameter
             )
-        return E_sphere
+        return self.S0 * E_sphere

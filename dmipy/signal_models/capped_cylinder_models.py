@@ -109,7 +109,7 @@ class CC2CappedCylinderStejskalTannerApproximation(
             self._cylinder_model.perpendicular_attenuation(
                 q_perp[q_nonzero], diameter)
         )
-        return E_parallel * E_perpendicular
+        return self.S0 * self.S0 * E_parallel * E_perpendicular
 
 
 class CC3CappedCylinderCallaghanApproximation(
@@ -235,4 +235,4 @@ class CC3CappedCylinderCallaghanApproximation(
             self._cylinder_model.perpendicular_attenuation(
                 q_perp[q_nonzero], tau[q_nonzero], diameter)
         )
-        return E_parallel * E_perpendicular
+        return self.S0 * E_parallel * E_perpendicular

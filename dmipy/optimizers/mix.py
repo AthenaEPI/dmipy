@@ -50,13 +50,15 @@ class MixOptimizer:
 
     """
 
-    def __init__(self, model, acquisition_scheme, maxiter=150):
+    def __init__(
+            self, model, acquisition_scheme, maxiter=150, signal_based=False):
         self.model = model
         self.acquisition_scheme = acquisition_scheme
         self.maxiter = maxiter
         self.Nmodels = len(self.model.models)
+        self.signal_based = signal_based
 
-    def __call__(self, data, x0_vector=np.array([np.nan])):
+    def __call__(self, data, x0_vector=np.array([np.nan]), S0=1.):
         """ The fitting function of the MIX algorithm. Fits the data in three
         distinct steps, first fitting non-linear parameters using
         differential_evolution, then linear parameters using COBYLA, and
@@ -92,7 +94,7 @@ class MixOptimizer:
                 self.stochastic_objective_function,
                 bounds=bounds_de,
                 maxiter=self.maxiter,
-                args=(data, self.acquisition_scheme, x0_vector),
+                args=(data, self.acquisition_scheme, x0_vector, S0),
                 polish=True).x
             if np.all(np.isnan(x0_vector)):
                 fitted_parameters = res_de
@@ -128,7 +130,8 @@ class MixOptimizer:
                                             maxiter=self.maxiter,
                                             args=(data,
                                                   self.acquisition_scheme,
-                                                  x0_vector))
+                                                  x0_vector,
+                                                  S0))
             optimized_parameter_vector = res_de.x
             if np.all(np.isnan(x0_vector)):
                 parameter_vector = np.r_[optimized_parameter_vector,
@@ -156,6 +159,8 @@ class MixOptimizer:
             # step 2: Estimating linear variables using COBYLA
             phi = self.model(self.acquisition_scheme,
                              quantity="stochastic cost function", **parameters)
+            if self.signal_based:
+                phi /= S0
             try:
                 phi_inv = np.dot(np.linalg.inv(np.dot(phi.T, phi)), phi.T)
                 vf_x0 = np.dot(phi_inv, data)
@@ -179,7 +184,7 @@ class MixOptimizer:
             x_fine_nested = minimize(self.objective_function, x0_refine,
                                      (data,
                                       self.acquisition_scheme,
-                                      x0_vector),
+                                      x0_vector, S0),
                                      bounds=bounds_minimize).x
             nested_fractions = x_fine_nested[-(self.Nmodels - 1):]
             normalized_fractions = nested_to_normalized_fractions(
@@ -197,7 +202,7 @@ class MixOptimizer:
             return fitted_parameters
 
     def stochastic_objective_function(self, optimized_parameter_vector,
-                                      data, acquisition_scheme, x0_params):
+                                      data, acquisition_scheme, x0_params, S0):
         """Objective function for stochastic non-linear parameter estimation
         using differential_evolution
         """
@@ -249,6 +254,8 @@ class MixOptimizer:
                     # happens when models have the same signal attenuations.
                     vf = np.ones(self.Nmodels) / float(self.Nmodels)
             E_hat = np.dot(phi_x, vf)
+        if self.signal_based:
+            E_hat /= S0
         objective = np.dot(data - E_hat, data - E_hat).squeeze()
         return objective * 1e5
 
@@ -261,7 +268,7 @@ class MixOptimizer:
 
     def objective_function(
             self, optimized_parameter_vector, data, acquisition_scheme,
-            x0_params):
+            x0_params, S0):
         "Objective function of final refining step using L-BFGS-B"
         nested_fractions = optimized_parameter_vector[-(self.Nmodels - 1):]
         normalized_fractions = nested_to_normalized_fractions(
@@ -285,6 +292,8 @@ class MixOptimizer:
             self.model.parameter_vector_to_parameters(parameter_vector)
         )
         E_model = self.model(acquisition_scheme, **parameters)
+        if self.signal_based:
+            E_model /= S0
         E_diff = E_model - data
         objective = np.dot(E_diff, E_diff) / len(data)
         return objective * 1e5
