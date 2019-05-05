@@ -383,14 +383,62 @@ class DistributedModel:
         kwargs: keyword arguments to the model parameter values,
             Is internally given as **parameter_dictionary.
         """
-        if (isinstance(self.distribution, distributions.SD1Watson) or
-                isinstance(self.distribution, distributions.SD2Bingham)):
-            return self.sh_convolved_model(acquisition_scheme, **kwargs)
-        elif isinstance(self.distribution, distributions.DD1Gamma):
-            return self.integrated_model(acquisition_scheme, **kwargs)
+        if hasattr(self, 'distribution'):
+            if (isinstance(self.distribution, distributions.SD1Watson) or
+                    isinstance(self.distribution, distributions.SD2Bingham)):
+                return self.sh_convolved_model(acquisition_scheme, **kwargs)
+            elif isinstance(self.distribution, distributions.DD1Gamma):
+                return self.integrated_model(acquisition_scheme, **kwargs)
         else:
-            msg = "Unknown distribution."
-            raise ValueError(msg)
+            return self.bundle_model(acquisition_scheme, **kwargs)
+
+    def bundle_model(self, acquisition_scheme, **kwargs):
+        """
+        Simple bundle model that does not apply any distribution. It can be
+        considered a sub-multi-compartment model that allows for tortuosity
+        constraints.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+        """
+        kwargs = self.add_linked_parameters_to_parameters(
+            kwargs
+        )
+
+        if len(self.models) > 1:
+            partial_volumes = [
+                kwargs[p] for p in self.partial_volume_names
+            ]
+        else:
+            partial_volumes = []
+
+        remaining_volume_fraction = 1.
+        E = 0.
+        for model_name, model, partial_volume in zip(
+            self.model_names, self.models,
+            chain(partial_volumes, [None])
+        ):
+            parameters = {}
+            for parameter in model.parameter_ranges:
+                parameter_name = self._inverted_parameter_map[
+                    (model, parameter)
+                ]
+                parameters[parameter] = kwargs.get(
+                    parameter_name
+                )
+
+            if partial_volume is not None:
+                volume_fraction = remaining_volume_fraction * partial_volume
+                remaining_volume_fraction = (
+                    remaining_volume_fraction - volume_fraction)
+            else:
+                volume_fraction = remaining_volume_fraction
+            E += volume_fraction * model(acquisition_scheme, **parameters)
+        return E
 
     def sh_convolved_model(self, acquisition_scheme, **kwargs):
         """
@@ -570,6 +618,76 @@ class DistributedModel:
             distribution_parameters[parameter] = kwargs.get(
                 parameter_name)
         return self.distribution(vertices, **distribution_parameters)
+
+
+class BundleModel(DistributedModel, AnisotropicSignalModelProperties):
+    """
+    The DistributedModel instantiation for a simple, non-distributed bundle
+    model. This allows to join models in a secondary layer that allows for
+    tortuosity constraints.
+
+    Parameters
+    ----------
+    models: list of length 1 or more,
+        list of models to be Watson-dispersed.
+    parameters_links: list of length 1 or more,
+        deprecated for testing use only.
+    """
+    _model_type = 'BundleModel'
+
+    def __init__(self, models, parameter_links=None):
+        self.models = models
+        self._set_required_acquisition_parameters()
+        self._check_for_double_model_class_instances()
+
+        self.parameter_links = parameter_links
+        if parameter_links is None:
+            self.parameter_links = []
+
+        _models_and_distribution = list(self.models)
+        self._prepare_parameters(_models_and_distribution)
+        self._prepare_partial_volumes()
+        self._prepare_parameter_links()
+        self.mu_params = []
+        for param in self.parameter_names:
+            if param.endswith('mu'):
+                self.mu_params.append(param)
+
+    def rotational_harmonics_representation(
+            self, acquisition_scheme, **kwargs):
+        r""" The rotational harmonics of the model, such that Y_lm = Yl0.
+        Axis aligned with z-axis to be used as kernel for spherical
+        convolution. Returns an array with rotational harmonics for each shell.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+
+        Returns
+        -------
+        rh_array : array, shape(Nshells, N_rh_coef),
+            Rotational harmonics coefficients for each shell.
+        """
+        rh_scheme = acquisition_scheme.rotational_harmonics_scheme
+        rh_scheme.rotational_harmonics_scheme = rh_scheme
+        for param in self.mu_params:
+            kwargs.update({param: [0., 0.]})
+        E_kernel_sf = self(rh_scheme, **kwargs)
+        E_reshaped = E_kernel_sf.reshape([-1, rh_scheme.Nsamples])
+        max_sh_order = max(rh_scheme.shell_sh_orders.values())
+        rh_array = np.zeros((len(E_reshaped), max_sh_order // 2 + 1))
+
+        for i, (shell_index, sh_order) in enumerate(
+                rh_scheme.shell_sh_orders.items()):
+            rh_array[i, :sh_order // 2 + 1] = (
+                np.dot(
+                    rh_scheme.inverse_rh_matrix[sh_order],
+                    E_reshaped[i])
+            )
+        return rh_array
 
 
 class SD1WatsonDistributed(DistributedModel, AnisotropicSignalModelProperties):
