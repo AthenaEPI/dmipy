@@ -773,7 +773,8 @@ class MultiCompartmentModelProperties:
             graph_model.node(model_uuid, model_name)
             graph_model.edge(model_uuid, entry_uuid)
             if (sub_model._model_type == 'SphericalDistributedModel' or
-                    sub_model._model_type == 'SpatialDistributedModel'):
+                    sub_model._model_type == 'SpatialDistributedModel' or
+                    sub_model._model_type == 'BundleModel'):
                 self._add_recursive_graph_node(
                     graph_model, model_uuid, sub_model, with_parameters)
             elif with_parameters:
