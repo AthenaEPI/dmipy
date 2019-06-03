@@ -75,6 +75,7 @@ Dmipy uses HCP data to illustrate microstructure model examples. To reproduce th
 - [Ball and Racket [Sotiropoulos et al. 2012]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_ball_and_racket.ipynb)
 - [NODDI-Watson [Zhang et al. 2012]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_noddi_watson.ipynb)
 - [NODDI-Bingham [Tariq et al. 2016]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_noddi_bingham.ipynb)
+- [SMT-NODDI [Cabeen et al. 2018]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_smt_noddi.ipynb)
 - [AxCaliber [Assaf et al. 2008]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_axcaliber.ipynb)
 - [AxCaliber with Extra-Axonal Diffusion Time-Dependence [De Santis et al. 2016]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_axcaliber_temporal_zeppeline.ipynb)
 
