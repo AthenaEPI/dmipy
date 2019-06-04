@@ -96,8 +96,8 @@ class GlobalBruteOptimizer:
         grids_per_mu = []
         N_model_fracts = 0
         parameter_cardinality_items = list(model.parameter_cardinality.items())
-        if len(model.models) > 1:
-            N_model_fracts = len(model.models)
+        if self.model.N_models > 1:
+            N_model_fracts = self.model.N_models
             parameter_cardinality_items = parameter_cardinality_items[
                 :-N_model_fracts
             ]
@@ -127,7 +127,7 @@ class GlobalBruteOptimizer:
                     per_parameter_vectors.append(np.nan)
                     counter += 2
             # append nested volume fractions now.
-            if N_model_fracts > 0:
+            if self.model.N_models > 1:
                 for _ in range(N_model_fracts - 1):
                     per_parameter_vectors.append(np.linspace(0., 1., Ns))
             grids_per_mu.append(np.meshgrid(*per_parameter_vectors))
@@ -146,7 +146,7 @@ class GlobalBruteOptimizer:
                 counter += 2
 
         # now add nested to regular volume fractions
-        if N_model_fracts > 0:
+        if self.model.N_models > 1:
             nested_fractions = grids_per_mu[0][-(N_model_fracts - 1):]
             lin_nested_fractions = [
                 fracts.reshape(-1) for fracts in nested_fractions]
@@ -236,16 +236,20 @@ class Brute2FineOptimizer:
         self.model = model
         self.acquisition_scheme = acquisition_scheme
         self.Ns = Ns
+        if model.N_models > 1 and model.volume_fractions_fixed:
+            self.obj_func = self.objective_function_vf_fixed
+        else:
+            self.obj_func = self.objective_function
 
     def objective_function(self, parameter_vector, data):
         "The objective function for brute-force and gradient-based optimizer."
-        N_fractions = len(self.model.models)
-        if N_fractions > 1:
-            nested_fractions = parameter_vector[-(N_fractions - 1):]
+        if self.model.N_models > 1:
+            nested_fractions = parameter_vector[-(self.model.N_models - 1):]
             normalized_fractions = nested_to_normalized_fractions(
                 nested_fractions)
             parameter_vector_ = np.r_[
-                parameter_vector[:-(N_fractions - 1)], normalized_fractions]
+                parameter_vector[:-(self.model.N_models - 1)],
+                normalized_fractions]
         else:
             parameter_vector_ = parameter_vector
         parameter_vector_ = (
@@ -255,6 +259,23 @@ class Brute2FineOptimizer:
             self.model.parameter_vector_to_parameters(parameter_vector_)
         )
         E_model = self.model(self.acquisition_scheme, **parameters)
+        E_diff = E_model - data
+        objective = np.dot(E_diff, E_diff) / len(data)
+        return objective
+
+    def objective_function_vf_fixed(self, parameter_vector, data, vf):
+        "The objective function if the volume fractions have been fixed."
+        parameter_vector_ = np.hstack([parameter_vector, vf])
+        parameter_vector_ = (
+            parameter_vector_ * self.model.scales_for_optimization)
+        parameters = {}
+        parameters.update(
+            self.model.parameter_vector_to_parameters(parameter_vector_)
+        )
+        E_model_sep = self.model(
+            self.acquisition_scheme, quantity="stochastic cost function",
+            **parameters)
+        E_model = np.dot(E_model_sep, vf)
         E_diff = E_model - data
         objective = np.dot(E_diff, E_diff) / len(data)
         return objective
@@ -278,8 +299,6 @@ class Brute2FineOptimizer:
         x_fine: array of size (Nparameters,),
             array of the optimized model parameters.
         """
-        N_fractions = len(self.model.models)
-        fit_args = (data,)
         bounds = self.model.bounds_for_optimization
         bounds_brute = []
         bounds_fine = list(bounds)
@@ -294,27 +313,41 @@ class Brute2FineOptimizer:
                     self.model.opt_params_for_optimization[i] is False):
                 bounds_fine[i] = np.r_[x0_, x0_]
 
-        if N_fractions > 1:  # go to nested bounds
+        if self.model.N_models > 1 and not self.model.volume_fractions_fixed:
+            # go to nested bounds
             bounds_brute = bounds_brute[:-1]
             bounds_fine = bounds_fine[:-1]
             x0_vector = x0_vector[:-1]
+            fit_args = (data,)
+        elif self.model.N_models > 1 and self.model.volume_fractions_fixed:
+            # separate nonlinear and linear parameters
+            vfs = x0_vector[-self.model.N_models:]
+            bounds_brute = bounds_brute[:-self.model.N_models]
+            bounds_fine = bounds_fine[:-self.model.N_models]
+            x0_vector = x0_vector[:-self.model.N_models]
+            fit_args = (data, vfs)
+        else:
+            fit_args = (data,)
 
         if np.any(np.isnan(x0_vector)):
             x0_brute = brute(
-                self.objective_function, ranges=bounds_brute, args=fit_args,
+                self.obj_func, ranges=bounds_brute, args=fit_args,
                 finish=None)
         else:
             x0_brute = x0_vector
 
-        x_fine_nested = minimize(self.objective_function, x0_brute,
+        x_fine_nested = minimize(self.obj_func, x0_brute,
                                  args=fit_args, bounds=bounds_fine,
                                  method='L-BFGS-B').x
-        if N_fractions > 1:
-            nested_fractions = x_fine_nested[-(N_fractions - 1):]
+        if self.model.N_models > 1 and not self.model.volume_fractions_fixed:
+            nested_fractions = x_fine_nested[-(self.model.N_models - 1):]
             normalized_fractions = nested_to_normalized_fractions(
                 nested_fractions)
             x_fine = np.r_[
-                x_fine_nested[:-(N_fractions - 1)], normalized_fractions]
+                x_fine_nested[:-(self.model.N_models - 1)],
+                normalized_fractions]
+        elif self.model.N_models > 1 and self.model.volume_fractions_fixed:
+            x_fine = np.hstack([x_fine_nested, vfs])
         else:
             x_fine = x_fine_nested
         return x_fine

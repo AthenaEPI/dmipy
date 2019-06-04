@@ -67,6 +67,49 @@ def test_simple_ball_and_stick_optimization():
     assert_array_almost_equal(gt_parameter_vector, res.squeeze(), 2)
 
 
+def test_simple_ball_and_stick_optimization_vf_fixed():
+    stick = cylinder_models.C1Stick()
+    ball = gaussian_models.G1Ball()
+
+    ball_and_stick = (
+        modeling_framework.MultiCompartmentModel(
+            models=[ball, stick])
+    )
+    gt_mu = np.clip(np.random.rand(2), .3, np.inf)
+    gt_lambda_par = (np.random.rand() + 1.) * 1e-9
+    gt_lambda_iso = gt_lambda_par / 2.
+    gt_partial_volume = 0.3
+
+    gt_parameter_vector = ball_and_stick.parameters_to_parameter_vector(
+        C1Stick_1_lambda_par=gt_lambda_par,
+        G1Ball_1_lambda_iso=gt_lambda_iso,
+        C1Stick_1_mu=gt_mu,
+        partial_volume_0=gt_partial_volume,
+        partial_volume_1=1 - gt_partial_volume
+    )
+
+    E = ball_and_stick.simulate_signal(
+        scheme, gt_parameter_vector)
+
+    E2d = np.array([E, E])
+
+    vf_rand = np.random.rand()
+    ball_and_stick.set_fixed_parameter(
+        'partial_volume_0', np.r_[vf_rand, vf_rand])
+    ball_and_stick.set_fixed_parameter(
+        'partial_volume_1', np.r_[1 - vf_rand, 1 - vf_rand])
+    ball_and_stick.set_initial_guess_parameter(
+        'C1Stick_1_lambda_par', (np.random.rand() + 1.) * 1e-9)
+    ball_and_stick.set_initial_guess_parameter(
+        'G1Ball_1_lambda_iso', gt_lambda_par / 2.)
+    ball_and_stick.set_initial_guess_parameter(
+        'C1Stick_1_mu', np.random.rand(2))
+
+    vf_fitted = ball_and_stick.fit(
+        scheme, E2d).fitted_parameters['partial_volume_0'][0]
+    assert_equal(vf_fitted, vf_rand)
+
+
 def test_multi_dimensional_x0():
     stick = cylinder_models.C1Stick()
     ball = gaussian_models.G1Ball()

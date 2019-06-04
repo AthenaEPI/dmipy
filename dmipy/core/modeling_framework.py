@@ -385,6 +385,13 @@ class MultiCompartmentModelProperties:
                 parameters[parameter_name] = parameter_function()
         return parameters
 
+    def _check_if_volume_fractions_are_fixed(self):
+        "checks if volume fractions have been fixed."
+        self.volume_fractions_fixed = True
+        for name, flag in self.parameter_optimization_flags.items():
+            if flag and name in self.partial_volume_names:
+                self.volume_fractions_fixed = False
+
     def _prepare_parameters_to_optimize(self):
         "Sets up which parmameters to optimize."
         self.parameter_optimization_flags = OrderedDict({
@@ -504,6 +511,10 @@ class MultiCompartmentModelProperties:
                                                     float(value))
                 elif isinstance(value, np.ndarray):
                     self._add_fixed_parameter_array(parameter_name, value)
+                else:
+                    msg = 'fixed value for {} must be number or np.array, '\
+                          'currently {}'
+                    raise ValueError(msg.format(parameter_name, type(value)))
             elif card == 2:
                 value = np.array(value, dtype=float)
                 if value.shape[-1] != 2:
@@ -981,6 +992,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
 
     def __init__(self, models, parameter_links=None):
         self.models = models
+        self.N_models = len(models)
         self.parameter_links = parameter_links
         if parameter_links is None:
             self.parameter_links = []
@@ -1094,6 +1106,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         self._check_tissue_model_acquisition_scheme(acquisition_scheme)
         self._check_model_params_with_acquisition_params(acquisition_scheme)
         self._check_acquisition_scheme_has_b0s(acquisition_scheme)
+        self._check_if_volume_fractions_are_fixed()
 
         # estimate S0
         self.scheme = acquisition_scheme
@@ -1327,6 +1340,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
 
     def __init__(self, models, parameter_links=None):
         self.models = models
+        self.N_models = len(models)
         self.parameter_links = parameter_links
         if parameter_links is None:
             self.parameter_links = []
@@ -1455,6 +1469,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         self._check_tissue_model_acquisition_scheme(acquisition_scheme)
         self._check_model_params_with_acquisition_params(acquisition_scheme)
         self._check_acquisition_scheme_has_b0s(acquisition_scheme)
+        self._check_if_volume_fractions_are_fixed()
 
         # estimate S0
         self.scheme = acquisition_scheme
@@ -1690,6 +1705,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
 
     def __init__(self, models, sh_order=8):
         self.models = models
+        self.N_models = len(models)
         self.parameter_links = []
 
         self._check_for_dispersed_or_NMR_models()
