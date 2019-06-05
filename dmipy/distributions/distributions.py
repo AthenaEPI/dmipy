@@ -35,8 +35,8 @@ SPHERE_CARTESIAN = np.loadtxt(
 )
 SPHERE_SPHERICAL = utils.cart2sphere(SPHERE_CARTESIAN)
 log_bingham_normalization_splinefit = np.load(
-    join(DATA_PATH,
-         "bingham_normalization_splinefit.npz"), encoding='bytes')['arr_0']
+    join(DATA_PATH, "bingham_normalization_splinefit.npz"),
+    encoding='bytes', allow_pickle=True)['arr_0']
 
 inverse_sh_matrix_kernel = {
     sh_order: np.linalg.pinv(real_sym_sh_mrtrix(
