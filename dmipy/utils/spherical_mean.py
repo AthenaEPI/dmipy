@@ -33,16 +33,19 @@ def estimate_spherical_mean_multi_shell(E_attenuation, acquisition_scheme,
     """
     shell_indices = acquisition_scheme.shell_indices
     gradient_directions = acquisition_scheme.gradient_directions
-    unique_dwi_indices = acquisition_scheme.unique_dwi_indices
+    unique_indices = acquisition_scheme.unique_shell_indices
 
-    E_mean = np.ones(len(acquisition_scheme.shell_bvalues))
-    for b_shell_index in unique_dwi_indices:  # per shell
-        sh_mat = acquisition_scheme.shell_sh_matrices[b_shell_index]
+    E_mean = np.ones(acquisition_scheme.N_shells)
+    for b_shell_index in unique_indices:  # per shell
         shell_mask = shell_indices == b_shell_index
-        bvecs_shell = gradient_directions[shell_mask]
         E_shell = E_attenuation[shell_mask]
-        E_mean[b_shell_index] = estimate_spherical_mean_shell(
-            E_shell, bvecs_shell, sh_order, sh_mat)
+        if acquisition_scheme.shell_b0_mask[b_shell_index]:
+            E_mean[b_shell_index] = np.mean(E_shell)
+        else:
+            sh_mat = acquisition_scheme.shell_sh_matrices[b_shell_index]
+            bvecs_shell = gradient_directions[shell_mask]
+            E_mean[b_shell_index] = estimate_spherical_mean_shell(
+                E_shell, bvecs_shell, sh_order, sh_mat)
     return E_mean
 
 
@@ -81,4 +84,5 @@ def estimate_spherical_mean_shell(
     # Integral of Y00 spherical harmonic is 2 * np.sqrt(np.pi)
     # Multiplication results in normalization of 1 / (2 * np.sqrt(np.pi))
     E_mean = E_sh_coef[0] / (2 * np.sqrt(np.pi))
+    print 'emean', E_mean
     return E_mean

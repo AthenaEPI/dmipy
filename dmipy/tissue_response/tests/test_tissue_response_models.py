@@ -7,8 +7,8 @@ from dmipy.core.modeling_framework import (
     MultiCompartmentSphericalMeanModel,
     MultiCompartmentSphericalHarmonicsModel)
 from dmipy.signal_models.tissue_response_models import (
-    IsotropicTissueResponseModel,
-    AnisotropicTissueResponseModel)
+    estimate_TR1_isotropic_tissue_response_model,
+    estimate_TR2_anisotropic_tissue_response_model)
 import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_raises
 from dmipy.utils.construct_observation_matrix import (
@@ -19,13 +19,14 @@ scheme = wu_minn_hcp_acquisition_scheme()
 def test_isotropic_response():
     ball = G1Ball(lambda_iso=2.5e-9)
     data = ball(scheme)
-    iso_model = IsotropicTissueResponseModel(scheme, np.atleast_2d(data))
+    S0_iso, iso_model = estimate_TR1_isotropic_tissue_response_model(
+        scheme, np.atleast_2d(data))
 
     assert_array_almost_equal(
-        iso_model.spherical_mean(),
+        iso_model.spherical_mean(scheme),
         ball.spherical_mean(scheme))
     assert_array_almost_equal(
-        iso_model.rotational_harmonics_representation(),
+        iso_model.rotational_harmonics_representation(scheme),
         ball.rotational_harmonics_representation(scheme))
     assert_array_almost_equal(
         iso_model(scheme),
@@ -36,13 +37,14 @@ def test_anisotropic_response_rh_coef_attenuation(mu=[np.pi / 2, np.pi / 2]):
     zeppelin = G2Zeppelin(
         lambda_par=1.7e-9, lambda_perp=1e-9, mu=mu)
     data = zeppelin(scheme)
-    aniso_model = AnisotropicTissueResponseModel(scheme, np.atleast_2d(data))
+    S0_aniso, aniso_model = estimate_TR2_anisotropic_tissue_response_model(
+        scheme, np.atleast_2d(data))
 
     assert_array_almost_equal(
-        aniso_model.spherical_mean(),
+        aniso_model.spherical_mean(scheme),
         zeppelin.spherical_mean(scheme), 3)
     assert_array_almost_equal(
-        aniso_model.rotational_harmonics_representation(),
+        aniso_model.rotational_harmonics_representation(scheme),
         zeppelin.rotational_harmonics_representation(scheme), 3)
     assert_array_almost_equal(
         aniso_model(scheme, mu=mu), data, 3)
@@ -53,23 +55,25 @@ def test_anisotropic_response_rh_coef_signal(
     zeppelin = G2Zeppelin(
         lambda_par=1.7e-9, lambda_perp=1e-9, mu=mu)
     data = zeppelin(scheme) * S0
-    aniso_model = AnisotropicTissueResponseModel(scheme, np.atleast_2d(data))
+    S0_aniso, aniso_model = estimate_TR2_anisotropic_tissue_response_model(
+        scheme, np.atleast_2d(data))
 
     assert_array_almost_equal(
-        aniso_model.spherical_mean(),
+        aniso_model.spherical_mean(scheme),
         zeppelin.spherical_mean(scheme), 3)
     assert_array_almost_equal(
-        aniso_model.rotational_harmonics_representation(),
+        aniso_model.rotational_harmonics_representation(scheme),
         zeppelin.rotational_harmonics_representation(scheme), 3)
     assert_array_almost_equal(
-        aniso_model(scheme, mu=mu), data / S0, 3)
+        aniso_model(scheme, mu=mu), data / S0_aniso, 3)
 
 
 def test_isotropic_convolution_kernel():
     ball = G1Ball(lambda_iso=2.5e-9)
     data = ball(scheme)
-    iso_model = IsotropicTissueResponseModel(scheme, np.atleast_2d(data))
-    model_rh = iso_model.rotational_harmonics_representation()
+    S0_iso, iso_model = estimate_TR1_isotropic_tissue_response_model(
+        scheme, np.atleast_2d(data))
+    model_rh = iso_model.rotational_harmonics_representation(scheme)
     A = construct_model_based_A_matrix(scheme, model_rh, 0)
     sh_coef = 1 / (2 * np.sqrt(np.pi))
     data_pred = np.dot(A, np.r_[sh_coef])
@@ -80,13 +84,14 @@ def test_tissue_response_model_multi_compartment_models():
     ball = G1Ball(lambda_iso=2.5e-9)
     data_iso = ball(scheme)
     data_iso_sm = ball.spherical_mean(scheme)
-    iso_model = IsotropicTissueResponseModel(scheme, np.atleast_2d(data_iso))
+    S0_iso, iso_model = estimate_TR1_isotropic_tissue_response_model(
+        scheme, np.atleast_2d(data_iso))
 
     zeppelin = G2Zeppelin(
         lambda_par=1.7e-9, lambda_perp=1e-9, mu=[np.pi / 2, np.pi / 2])
     data_aniso = zeppelin(scheme)
     data_aniso_sm = zeppelin.spherical_mean(scheme)
-    aniso_model = AnisotropicTissueResponseModel(
+    S0_aniso, aniso_model = estimate_TR2_anisotropic_tissue_response_model(
         scheme, np.atleast_2d(data_aniso))
     models = [iso_model, aniso_model]
 
@@ -100,7 +105,7 @@ def test_tissue_response_model_multi_compartment_models():
     params = {
         'partial_volume_0': [0.5],
         'partial_volume_1': [0.5],
-        'AnisotropicTissueResponseModel_1_mu': np.array(
+        'TR2AnisotropicTissueResponseModel_1_mu': np.array(
             [np.pi / 2, np.pi / 2])
     }
 

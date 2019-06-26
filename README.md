@@ -53,6 +53,7 @@ To get a feeling for how to use Dmipy, we provide a few tutorial notebooks:
 - [Creating a dispersed and/or distributed axon bundle representation](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/tutorial_distributed_model_representations.ipynb)
 - [Imposing parameter links and constraints](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/tutorial_imposing_parameter_links.ipynb)
 - [Parameter Cascading: Using a simple model to initialize a complex one](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/tutorial_parameter_cascading_and_simulating_nd_datasets.ipynb)
+- [Generalized Multi-Tissue Modeling](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/tutorial_generalized_multi_tissue_modeling.ipynb)
 
 ## Explanations and Illustrations of Dmipy Contents
 ### Biophysical Models and Distributions
@@ -75,6 +76,7 @@ Dmipy uses HCP data to illustrate microstructure model examples. To reproduce th
 - [Ball and Racket [Sotiropoulos et al. 2012]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_ball_and_racket.ipynb)
 - [NODDI-Watson [Zhang et al. 2012]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_noddi_watson.ipynb)
 - [NODDI-Bingham [Tariq et al. 2016]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_noddi_bingham.ipynb)
+- [Multi-Tissue NODDI [combining Zhang et al. 2012, Jeurissen et al. 2014]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_multi_tissue_noddi.ipynb)
 - [SMT-NODDI [Cabeen et al. 2019]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_smt_noddi.ipynb)
 - [AxCaliber [Assaf et al. 2008]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_axcaliber.ipynb)
 - [AxCaliber with Extra-Axonal Diffusion Time-Dependence [De Santis et al. 2016]](http://nbviewer.jupyter.org/github/AthenaEPI/dmipy/blob/master/examples/example_axcaliber_temporal_zeppeline.ipynb)

@@ -24,6 +24,8 @@ from ..optimizers.brute2fine import (
 from ..optimizers_fod.csd_tournier import CsdTournierOptimizer
 from ..optimizers_fod.csd_cvxpy import CsdCvxpyOptimizer
 from ..optimizers.mix import MixOptimizer
+from ..optimizers.multi_tissue_convex_optimizer import (
+    MultiTissueConvexOptimizer)
 from dipy.utils.optpkg import optional_package
 from graphviz import Digraph
 from uuid import uuid4
@@ -990,9 +992,16 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         deprecated, for testing only.
     '''
 
-    def __init__(self, models, parameter_links=None):
+    def __init__(self, models, S0_tissue_responses=None, parameter_links=None):
         self.models = models
         self.N_models = len(models)
+        if S0_tissue_responses is not None:
+            if len(S0_tissue_responses) != self.N_models:
+                msg = 'Number of S0_tissue responses {} must be same as '\
+                      'number of input models {}.'
+                raise ValueError(
+                    msg.format(len(S0_tissue_responses), self.N_models))
+        self.S0_tissue_responses = S0_tissue_responses
         self.parameter_links = parameter_links
         if parameter_links is None:
             self.parameter_links = []
@@ -1186,6 +1195,9 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         if use_parallel_processing:
             fitted_parameters_lin = np.array(
                 [p.get() for p in fitted_parameters_lin])
+            pool.close()
+            pool.join()
+            pool.clear()
 
         fitting_time = time() - start
         print('Fitting of {} voxels complete in {} seconds.'.format(
@@ -1193,12 +1205,31 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         print('Average of {} seconds per voxel.'.format(
             fitting_time / N_voxels))
 
+        fitted_mt_fractions = None
+        if self.S0_tissue_responses:
+            # secondary fitting including S0 responses
+            print('Starting secondary multi-tissue optimization.')
+            start = time()
+            mt_fractions = np.empty(
+                np.r_[N_voxels, self.N_models], dtype=float)
+            fit_func = MultiTissueConvexOptimizer(
+                acquisition_scheme, self, self.S0_tissue_responses)
+            for idx, pos in enumerate(zip(*mask_pos)):
+                voxel_S = data_[pos]
+                parameters = fitted_parameters_lin[idx]
+                mt_fractions[idx] = fit_func(voxel_S, parameters)
+            fitting_time = time() - start
+            msg = 'Multi-tissue fitting of {} voxels complete in {} seconds.'
+            print(msg.format(len(mt_fractions), fitting_time))
+            fitted_mt_fractions = np.zeros(np.r_[mask.shape, self.N_models])
+            fitted_mt_fractions[mask_pos] = mt_fractions
+
         fitted_parameters = np.zeros_like(x0_, dtype=float)
         fitted_parameters[mask_pos] = (
             fitted_parameters_lin * self.scales_for_optimization)
 
         return FittedMultiCompartmentModel(
-            self, S0, mask, fitted_parameters)
+            self, S0, mask, fitted_parameters, fitted_mt_fractions)
 
     def simulate_signal(self, acquisition_scheme, parameters_array_or_dict):
         """
@@ -1338,9 +1369,16 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         deprecated, for testing only.
     '''
 
-    def __init__(self, models, parameter_links=None):
+    def __init__(self, models, S0_tissue_responses=None, parameter_links=None):
         self.models = models
         self.N_models = len(models)
+        if S0_tissue_responses is not None:
+            if len(S0_tissue_responses) != self.N_models:
+                msg = 'Number of S0_tissue responses {} must be same as '\
+                      'number of input models {}.'
+                raise ValueError(
+                    msg.format(len(S0_tissue_responses), self.N_models))
+        self.S0_tissue_responses = S0_tissue_responses
         self.parameter_links = parameter_links
         if parameter_links is None:
             self.parameter_links = []
@@ -1497,7 +1535,6 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         N_voxels = np.sum(mask)
 
         # make starting parameters and data the same size
-        # make starting parameters and data the same size
         x0_ = self.parameter_initial_guess_to_parameter_vector(
             **self.x0_parameters)
         x0_ = homogenize_x0_to_data(
@@ -1521,9 +1558,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
                 np.r_[N_voxels, N_parameters], dtype=float)
 
         # estimate the spherical mean of the data.
-        data_to_fit = np.zeros(
-            np.r_[data_.shape[:-1],
-                  self.scheme.unique_dwi_indices.max() + 1])
+        data_to_fit = np.zeros(np.r_[data_.shape[:-1], self.scheme.N_shells])
         for pos in zip(*mask_pos):
             data_to_fit[pos] = estimate_spherical_mean_multi_shell(
                 data_[pos], self.scheme)
@@ -1562,6 +1597,9 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         if use_parallel_processing:
             fitted_parameters_lin = np.array(
                 [p.get() for p in fitted_parameters_lin])
+            pool.close()
+            pool.join()
+            pool.clear()
 
         fitting_time = time() - start
         print('Fitting of {} voxels complete in {} seconds.'.format(
@@ -1569,12 +1607,31 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         print('Average of {} seconds per voxel.'.format(
             fitting_time / N_voxels))
 
+        fitted_mt_fractions = None
+        if self.S0_tissue_responses:
+            # secondary fitting including S0 responses
+            print('Starting secondary multi-tissue optimization.')
+            start = time()
+            mt_fractions = np.empty(
+                np.r_[N_voxels, self.N_models], dtype=float)
+            fit_func = MultiTissueConvexOptimizer(
+                acquisition_scheme, self, self.S0_tissue_responses)
+            for idx, pos in enumerate(zip(*mask_pos)):
+                voxel_S = data_to_fit[pos]
+                parameters = fitted_parameters_lin[idx]
+                mt_fractions[idx] = fit_func(voxel_S, parameters)
+            fitting_time = time() - start
+            msg = 'Multi-tissue fitting of {} voxels complete in {} seconds.'
+            print(msg.format(len(mt_fractions), fitting_time))
+            fitted_mt_fractions = np.zeros(np.r_[mask.shape, self.N_models])
+            fitted_mt_fractions[mask_pos] = mt_fractions
+
         fitted_parameters = np.zeros_like(x0_, dtype=float)
         fitted_parameters[mask_pos] = (
             fitted_parameters_lin * self.scales_for_optimization)
 
         return FittedMultiCompartmentSphericalMeanModel(
-            self, S0, mask, fitted_parameters)
+            self, S0, mask, fitted_parameters, fitted_mt_fractions)
 
     def simulate_signal(self, acquisition_scheme, parameters_array_or_dict):
         """
@@ -1703,9 +1760,16 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         the models to combine into the MultiCompartmentModel.
     '''
 
-    def __init__(self, models, sh_order=8):
+    def __init__(self, models, S0_tissue_responses=None, sh_order=8):
         self.models = models
         self.N_models = len(models)
+        if S0_tissue_responses is not None:
+            if len(S0_tissue_responses) != self.N_models:
+                msg = 'Number of S0_tissue responses {} must be same as '\
+                      'number of input models {}.'
+                raise ValueError(
+                    msg.format(len(S0_tissue_responses), self.N_models))
+        self.S0_tissue_responses = S0_tissue_responses
         self.parameter_links = []
 
         self._check_for_dispersed_or_NMR_models()
@@ -1801,7 +1865,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
 
     def fit(self, acquisition_scheme, data, mask=None, solver='csd',
             lambda_lb=1e-5, unity_constraint='kernel_dependent',
-            fit_S0_response=False, use_parallel_processing=have_pathos,
+            fit_S0_response=True, use_parallel_processing=have_pathos,
             number_of_processors=None, verbose=True):
         """ The main data fitting function of a
         MultiCompartmentSphericalHarmonicsModel.
@@ -1848,11 +1912,10 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             fractions are estimated. Otherwise unity_constraint is set to
             False.
         fit_S0_response: bool,
-            whether or not to fit the raw signal or signal attenuation.
-            default: False, the signal is automatically divided by S0-value.
-            if True, the raw signal is fitted and the S0 intensities of the
-            biophysical models are used in the signal generation. This is
-            useful when using tissue_response_models for example.
+            Fits the raw signal using the S0_tissue_responses, if they are
+            given. If True, the raw signal is fitted and the S0 intensities of
+            the biophysical models are used in the signal generation.
+            Default: True.
         use_parallel_processing : bool,
             Whether or not to use parallel processing using pathos.
         number_of_processors : integer,
@@ -1901,8 +1964,8 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             self.unity_constraint = unity_constraint
 
         self.fit_S0_response = fit_S0_response
-        if self.fit_S0_response:
-            S0_responses = np.r_[[model.S0_response for model in self.models]]
+        if self.fit_S0_response and self.S0_tissue_responses is not None:
+            S0_responses = np.array(self.S0_tissue_responses)
             self.max_S0_response = S0_responses.max()
             self.S0_responses = S0_responses / self.max_S0_response
         else:
@@ -1912,8 +1975,6 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         # estimate S0
         self.scheme = acquisition_scheme
         data_ = np.atleast_2d(data)
-        # if self.tissue_response_kernels_present:
-        #     S0 = np.ones(data_.shape[:-1], dtype=float) * S0_responses.max()
         if self.scheme.TE is None or len(np.unique(self.scheme.TE)) == 1:
             S0 = np.mean(data_[..., self.scheme.b0_mask], axis=-1)
         else:  # if multiple TE are in the data
@@ -2022,6 +2083,9 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         if use_parallel_processing:
             fitted_parameters_lin = np.array(
                 [p.get() for p in fitted_parameters_lin])
+            pool.close()
+            pool.join()
+            pool.clear()
 
         fitting_time = time() - start
         if verbose:
