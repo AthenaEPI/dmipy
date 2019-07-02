@@ -69,6 +69,21 @@ def test_set_fixed_parameter_raises():
                   'blabla', [1])
 
 
+def test_wrong_number_S0_tissue_responses_raises():
+    cyl = cylinder_models.C1Stick()
+    mods = [cyl]
+    S0s = [1., 1.]
+    assert_raises(
+        ValueError,
+        modeling_framework.MultiCompartmentModel, mods, S0s)
+    assert_raises(
+        ValueError,
+        modeling_framework.MultiCompartmentSphericalMeanModel, mods, S0s)
+    assert_raises(
+        ValueError,
+        modeling_framework.MultiCompartmentSphericalHarmonicsModel, mods, S0s)
+
+
 def test_fitting_without_b0_raises():
     bvals = np.atleast_1d(1e9)
     bvecs = np.atleast_2d([1., 0., 0.])

@@ -7,8 +7,9 @@ from dmipy.tissue_response.three_tissue_response import (
 
 
 def single_shell_three_tissue_csd(
-        acquisition_scheme, data, tissue_responses=None, N_iterations=4,
-        return_all_csd_fits=False, csd_fit_verbose=False, ss3t_verbose=True):
+        acquisition_scheme, data, tissue_response_models=None,
+        S0_tissue_responses=None, N_iterations=4, return_all_csd_fits=False,
+        csd_fit_verbose=False, ss3t_verbose=True):
     """
     Implementation of Single-Shell (1 shell + b0) three-tissue CSD algorithm
     [1]_. The algorithm is based on a biconvex optimization strategy that is
@@ -41,11 +42,13 @@ def single_shell_three_tissue_csd(
         single shell (or whatever-shell) acquisition scheme.
     data: ND-array of shape (Nx...., NDWI),
         the fitted that is to be fitted.
-    tissue_responses: list of Dmipy tissue response models,
+    tissue_response_models: list of Dmipy tissue response models,
         assumed to be in the same order as they are generated using the
         dhollander16 tissue response estimation, i.e. [wm, gm, csf].
         if not given it is estimated from the data using the Dhollander16
         heuristic three-tissue estimation algorithm [2]_.
+    S0_tissue_responses: list of floats,
+        S0 response values corresponding to input tissue response models.
     N_iterations: positive integer,
         number of biconvex optimization steps to do in the algorithm.
         default is 4 according to [1]_.
@@ -72,10 +75,9 @@ def single_shell_three_tissue_csd(
         MR data without a co-registered T1 image. ISMRM Workshop on Breaking
         the Barriers of Diffusion MRI, 2016, 5
     """
-    if tissue_responses is None:
-        wm, gm, csf, selection_map = three_tissue_response_dhollander16(
-            acquisition_scheme, data)
-        tissue_responses = [wm, gm, csf]
+    if tissue_response_models is None:
+        S0_tissue_responses, tissue_response_models, selection_map = (
+            three_tissue_response_dhollander16(acquisition_scheme, data))
 
     fit_args = {
         'acquisition_scheme': acquisition_scheme,
@@ -89,7 +91,8 @@ def single_shell_three_tissue_csd(
     for it in range(N_iterations):
         start = time.time()
         # step one: fix WM and fit GM + CSF
-        mt_csd_mod = MultiCompartmentSphericalHarmonicsModel(tissue_responses)
+        mt_csd_mod = MultiCompartmentSphericalHarmonicsModel(
+            tissue_response_models, S0_tissue_responses)
         if it == 0:
             mt_csd_mod.set_fixed_parameter(
                 'partial_volume_0',
@@ -103,7 +106,8 @@ def single_shell_three_tissue_csd(
             mt_csd_fits.append(mt_csd_fit)
 
         # step two: fix CSF and fit WM + GM
-        mt_csd_mod = MultiCompartmentSphericalHarmonicsModel(tissue_responses)
+        mt_csd_mod = MultiCompartmentSphericalHarmonicsModel(
+            tissue_response_models, S0_tissue_responses)
         mt_csd_mod.set_fixed_parameter(
             'partial_volume_2',
             mt_csd_fit.fitted_parameters['partial_volume_2'])

@@ -6,7 +6,7 @@ import numpy as np
 from dipy.segment.mask import median_otsu
 from dipy.data import get_sphere, HemiSphere
 from ..signal_models.tissue_response_models import (
-    AnisotropicTissueResponseModel)
+    estimate_TR2_anisotropic_tissue_response_model)
 from scipy.ndimage import binary_erosion
 
 
@@ -26,9 +26,11 @@ def white_matter_response_tournier07(
 
     Returns
     -------
-    wm_model : Dmipy Anisotropic ModelFree Model
+    S0_wm : positive float,
+        Estimated S0 tissue response value.
+    TR2_wm_model : Dmipy Anisotropic ModelFree Model
         ModelFree representation of white matter response.
-    selected_voxel_indices : array of size (N_candidate_voxels,),
+    selected_indices : array of size (N_candidate_voxels,),
         indices of selected voxels for white matter response.
 
     References
@@ -64,11 +66,11 @@ def white_matter_response_tournier07(
     fa = tenfit.fa
 
     # selected based on FA
-    selected_voxel_indices = np.argsort(fa)[-N_candidate_voxels:]
-    selected_data = data_to_fit[selected_voxel_indices]
-    wm_model = AnisotropicTissueResponseModel(
+    selected_indices = np.argsort(fa)[-N_candidate_voxels:]
+    selected_data = data_to_fit[selected_indices]
+    S0_wm, TR2_wm_model = estimate_TR2_anisotropic_tissue_response_model(
         acquisition_scheme, selected_data)
-    return wm_model, selected_voxel_indices
+    return S0_wm, TR2_wm_model, selected_indices
 
 
 def white_matter_response_tournier13(
@@ -119,7 +121,9 @@ def white_matter_response_tournier13(
 
     Returns
     -------
-    wm_model : Dmipy Anisotropic ModelFree Model
+    S0_wm : positive float,
+        Estimated S0 tissue response value.
+    TR2_wm_model : Dmipy Anisotropic ModelFree Model
         ModelFree representation of white matter response.
     selected_indices : array of size (N_candidate_voxels,),
         indices of selected voxels for white matter response.
@@ -173,10 +177,10 @@ def white_matter_response_tournier13(
         print('Tournier13 white matter response iteration {}'.format(it + 1))
         selected_data = data_to_fit[selected_indices]
 
-        wm_model = AnisotropicTissueResponseModel(
+        S0_wm, TR2_wm_model = estimate_TR2_anisotropic_tissue_response_model(
             acquisition_scheme, selected_data)
-        sh_model = MultiCompartmentSphericalHarmonicsModel([wm_model],
-                                                           sh_order=sh_order)
+        sh_model = MultiCompartmentSphericalHarmonicsModel(
+            [TR2_wm_model], sh_order=sh_order)
         sh_fit = sh_model.fit(acquisition_scheme, data_to_fit,
                               solver='csd_tournier07',
                               use_parallel_processing=False,
@@ -201,4 +205,4 @@ def white_matter_response_tournier13(
         if it > max_iter:
             print('Maximum iterations reached without convergence')
             break
-    return wm_model, selected_indices
+    return S0_wm, TR2_wm_model, selected_indices

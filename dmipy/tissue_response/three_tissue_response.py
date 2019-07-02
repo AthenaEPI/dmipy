@@ -5,7 +5,8 @@ from dipy.reconst import dti
 from ..core.acquisition_scheme import gtab_dmipy2dipy
 from dipy.segment.mask import median_otsu
 from . import white_matter_response
-from ..signal_models.tissue_response_models import IsotropicTissueResponseModel
+from ..signal_models.tissue_response_models import (
+    estimate_TR1_isotropic_tissue_response_model)
 
 _white_matter_response_algorithms = {
     'tournier07': white_matter_response.white_matter_response_tournier07,
@@ -48,11 +49,17 @@ def three_tissue_response_dhollander16(
 
     Returns
     -------
-    wm_model : Dmipy Anisotropic ModelFree Model,
+    S0_wm : float,
+        white matter S0 response value.
+    TR2_wm_model : Dmipy TR2AnisotropicTissueResponseModel,
         ModelFree representation of white matter response.
-    gm_model : Dmipy Isotropic ModelFree Model,
+    S0_gm : float,
+        grey matter S0 response value.
+    TR1_gm_model : Dmipy TR1IsotropicTissueResponseModel,
         ModelFree representation of grey matter response.
-    csf_model : Dmipy Isotropic ModelFree Model,
+    S0_csf : float,
+        csf S0 response value.
+    TR1_csf_model : Dmipy TR1IsotropicTissueResponseModel,
         ModelFree representation of csf response.
     three_tissue_selection: array of size (x, y, z, 3),
         RGB mask of selected voxels used for white/grey matter and CSD.
@@ -129,7 +136,7 @@ def three_tissue_response_dhollander16(
 
     # for WM we use WM response selection algorithm
     response_wm_algorithm = _white_matter_response_algorithms[wm_algorithm]
-    response_wm, indices_wm_selected = response_wm_algorithm(
+    S0_wm, TR2_wm_model, indices_wm_selected = response_wm_algorithm(
         acquisition_scheme, data_wm, N_candidate_voxels=wm_N_candidate_voxels,
         **kwargs)
 
@@ -138,13 +145,13 @@ def three_tissue_response_dhollander16(
     N_threshold = int(np.sum(mask_GM_refine) * gm_perc)
     indices_gm_selected = np.argsort(
         np.abs(SDM[mask_GM_refine] - median_GM))[:N_threshold]
-    response_gm = IsotropicTissueResponseModel(
+    S0_gm, TR1_gm_model = estimate_TR1_isotropic_tissue_response_model(
         acquisition_scheme, data[mask_GM_refine][indices_gm_selected])
 
     # for GM, the 10% highest SDM valued voxels are selected.
     N_threshold = int(np.sum(mask_CSF_refine) * csf_perc)
     indices_csf_selected = np.argsort(SDM[mask_CSF_refine])[::-1][:N_threshold]
-    response_csf = IsotropicTissueResponseModel(
+    S0_csf, TR1_csf_model = estimate_TR1_isotropic_tissue_response_model(
         acquisition_scheme, data[mask_CSF_refine][indices_csf_selected])
 
     # generate selected WM/GM/CSF response function voxels masks.
@@ -170,7 +177,9 @@ def three_tissue_response_dhollander16(
         [mask_WM_selected, mask_GM_selected, mask_CSF_selected], dtype=float)
     three_tissue_selection = np.transpose(three_tissue_selection, (1, 2, 3, 0))
 
-    return response_wm, response_gm, response_csf, three_tissue_selection
+    return ([S0_wm, S0_gm, S0_csf],
+            [TR2_wm_model, TR1_gm_model, TR1_csf_model],
+            three_tissue_selection)
 
 
 def signal_decay_metric(acquisition_scheme, data):

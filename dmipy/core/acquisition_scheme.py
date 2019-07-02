@@ -65,6 +65,7 @@ class DmipyAcquisitionScheme:
         if Delta is not None:
             self.Delta = Delta.astype(float)
         self.TE = None
+        self.N_TE = 1  # default if not given
         if TE is not None:
             self.TE = TE.astype(float)
         self.tau = None
@@ -136,6 +137,7 @@ class DmipyAcquisitionScheme:
                     msg += " Make sure the TE values for b0-measurements have "
                     msg += "not defaulted to 0 for example."
                     raise ValueError(msg)
+                self.N_TE = len(self.shell_TE)
         # if for some reason only one measurement is given (for testing)
         else:
             self.shell_bvalues = self.bvalues
@@ -154,6 +156,10 @@ class DmipyAcquisitionScheme:
         # coefficients to the positions on the sphere for every shell
         self.unique_b0_indices = np.unique(self.shell_indices[self.b0_mask])
         self.unique_dwi_indices = np.unique(self.shell_indices[~self.b0_mask])
+        self.unique_shell_indices = np.unique(self.shell_indices)
+        self.N_b0_shells = len(self.unique_b0_indices)
+        self.N_dwi_shells = len(self.unique_dwi_indices)
+        self.N_shells = len(self.unique_shell_indices)
         self.shell_sh_matrices = {}
         self.shell_sh_orders = {}
         for shell_index in self.unique_b0_indices:
@@ -448,7 +454,12 @@ class RotationalHarmonicsAcquisitionScheme:
         self.b0_mask = np.tile(False, len(self.bvalues))
         self.shell_delta = scheme.shell_delta
         self.shell_Delta = scheme.shell_Delta
+        self.unique_b0_indices = scheme.unique_b0_indices
+        self.unique_shell_indices = scheme.unique_shell_indices
         self.unique_dwi_indices = scheme.unique_dwi_indices
+        self.N_b0_shells = len(self.unique_b0_indices)
+        self.N_dwi_shells = len(self.unique_dwi_indices)
+        self.N_shells = len(self.unique_shell_indices)
         self.number_of_measurements = len(self.bvalues)
 
         self.shell_sh_matrices = {}

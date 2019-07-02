@@ -3,7 +3,7 @@ from dmipy.distributions import distribute_models
 from dmipy.data.saved_acquisition_schemes import (
     wu_minn_hcp_acquisition_scheme)
 from dmipy.signal_models.tissue_response_models import (
-    AnisotropicTissueResponseModel)
+    estimate_TR2_anisotropic_tissue_response_model)
 from dmipy.tissue_response.white_matter_response import (
     white_matter_response_tournier07,
     white_matter_response_tournier13)
@@ -16,7 +16,7 @@ def _make_single_and_crossing():
     zeppelin = G2Zeppelin(
         lambda_par=1.7e-9, lambda_perp=1e-9, mu=[0., 0.])
     data_aniso = zeppelin(scheme)
-    aniso_model = AnisotropicTissueResponseModel(
+    S0_aniso, aniso_model = estimate_TR2_anisotropic_tissue_response_model(
         scheme, np.atleast_2d(data_aniso))
 
     watson_mod = distribute_models.SD1WatsonDistributed(
@@ -46,7 +46,7 @@ def test_tournier13_picks_single_peak():
                   white_matter_response_tournier13,
                   scheme, data_cross, peak_ratio_setting='bla')
 
-    wm, _ = white_matter_response_tournier13(
+    S0, wm, _ = white_matter_response_tournier13(
         scheme, data_cross, peak_ratio_setting='mrtrix',
         N_candidate_voxels=1)
     assert_array_almost_equal(
@@ -56,7 +56,7 @@ def test_tournier13_picks_single_peak():
 
 def test_tournier07_picks_single_peak():
     data_cross = _make_single_and_crossing()
-    wm, _ = white_matter_response_tournier07(
+    S0, wm, _ = white_matter_response_tournier07(
         scheme, data_cross, peak_ratio_setting='mrtrix',
         N_candidate_voxels=1)
     assert_array_almost_equal(
