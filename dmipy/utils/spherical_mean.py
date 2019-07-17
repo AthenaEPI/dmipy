@@ -84,5 +84,5 @@ def estimate_spherical_mean_shell(
     # Integral of Y00 spherical harmonic is 2 * np.sqrt(np.pi)
     # Multiplication results in normalization of 1 / (2 * np.sqrt(np.pi))
     E_mean = E_sh_coef[0] / (2 * np.sqrt(np.pi))
-    print 'emean', E_mean
+    print('emean', E_mean)
     return E_mean
