@@ -1,3 +1,4 @@
+import warnings
 from scipy.optimize import brute
 from scipy.stats import pearsonr
 import numpy as np
@@ -221,6 +222,12 @@ def signal_decay_metric(acquisition_scheme, data):
                                   mean_dwi_shells), axis=-1), axis=-1)>0    
     ratio = np.log(mean_b0[mask, None] / mean_dwi_shells[mask])
     SDM[mask] = np.mean(ratio, axis=-1)
+    
+    if np.max(SDM)>10 or np.min(SDM)<0:
+        warnings.warn(("The signal decay metric reached unrealistically " +
+                      "high or negative values and was clipped to [0, 10]"), 
+                      RuntimeWarning)
+        SDM = np.clip(SDM, 0, 10)
     return SDM
 
 
