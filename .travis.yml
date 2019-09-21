@@ -52,7 +52,10 @@ before_install:
 - echo $MINICONDA_URL
 - wget $MINICONDA_URL -O miniconda.sh;
 - bash miniconda.sh -b -f -p $MINICONDA;
+- source "$MINICONDA/etc/profile.d/conda.sh"
 - conda config --set always_yes yes
+- conda create -n py python=$PYTHON_VERSION
+- conda activate py-environment
 - conda update conda
 - conda info -a
 - conda install nbconvert
