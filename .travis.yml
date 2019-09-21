@@ -9,7 +9,7 @@
 
 env:
   global:
-    - CONDA_DEPS="pip flake8 nose coverage pytest numpy scipy matplotlib seaborn pandas h5py cvxpy" PIP_DEPS="coveralls pytest-cov codecov pathlib travis-sphinx boto"
+    - CONDA_DEPS="pip flake8 nose coverage pytest numpy scipy matplotlib seaborn pandas h5py cvxpy nbconvert entrypoints" PIP_DEPS="coveralls pytest-cov codecov pathlib travis-sphinx boto"
 
 matrix:
   include:
@@ -53,17 +53,14 @@ before_install:
 - wget $MINICONDA_URL -O miniconda.sh;
 - bash miniconda.sh -b -f -p $MINICONDA;
 - source "$MINICONDA/etc/profile.d/conda.sh"
-- conda config --set always_yes yes
-- conda create -n py python=$PYTHON_VERSION
-- conda activate py-environment
-- conda update conda
+- conda config --set always_yes yes --set changeps1 no
+- conda update -q conda
 - conda info -a
-- conda install nbconvert
-- conda install entrypoints
 - conda config --append channels conda-forge
 - conda config --append channels cvxgrp
   conda config --set channel_priority strict
-- conda install python=$PYTHON_VERSION $CONDA_DEPS
+- conda create -n testenv python=$PYTHON_VERSION $CONDA_DEPS
+- conda activate testenv
 - travis_retry pip install $PIP_DEPS
 
 install:
