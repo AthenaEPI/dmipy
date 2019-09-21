@@ -29,19 +29,19 @@ matrix:
     #     - PYTHON_VERSION=2.7
     #     - MINICONDA_URL="https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh"
     - os: linux
-      python: 3.5
+      python: 2.7
       env:
          - PYTHON_VERSION=3.5
          - MINICONDA_URL="https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh"
     - os: linux
-      python: 3.6
+      python: 2.7
       env:
-         - PYTHON_VERSION=3.5
+         - PYTHON_VERSION=3.6
          - MINICONDA_URL="https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh"
     - os: linux
-      python: 3.7
+      python: 2.7
       env:
-         - PYTHON_VERSION=3.5
+         - PYTHON_VERSION=3.7
          - MINICONDA_URL="https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh"
 
 
@@ -59,7 +59,8 @@ before_install:
 - conda install entrypoints
 - conda config --append channels conda-forge
 - conda config --append channels cvxgrp
-- conda install --override-channels -c main -c conda-forge -c cvxgrp python=$PYTHON_VERSION $CONDA_DEPS
+  conda config --set channel_priority strict
+- conda install python=$PYTHON_VERSION $CONDA_DEPS
 - travis_retry pip install $PIP_DEPS
 
 install:
