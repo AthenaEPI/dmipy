@@ -58,7 +58,7 @@ before_install:
 - conda info -a
 - conda config --append channels conda-forge
 - conda config --append channels cvxgrp
-  conda config --set channel_priority strict
+- conda config --set channel_priority strict
 - conda create -n testenv python=$PYTHON_VERSION $CONDA_DEPS
 - conda activate testenv
 - travis_retry pip install $PIP_DEPS
