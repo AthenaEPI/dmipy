@@ -9,7 +9,7 @@
 
 env:
   global:
-    - CONDA_DEPS="pip flake8 nose coverage pytest numpy scipy matplotlib seaborn pandas h5py" PIP_DEPS="coveralls pytest-cov codecov pathlib travis-sphinx boto"
+    - CONDA_DEPS="pip flake8 nose coverage pytest numpy scipy matplotlib seaborn pandas h5py cvxpy" PIP_DEPS="coveralls pytest-cov codecov pathlib travis-sphinx boto"
 
 matrix:
   include:
@@ -57,9 +57,8 @@ before_install:
 - conda info -a
 - conda install nbconvert
 - conda install entrypoints
-- conda config --add channels conda-forge
-- conda install python=$PYTHON_VERSION $CONDA_DEPS
-- conda install -c cvxgrp cvxpy
+- conda config --add channels conda-forge -c cvxgrp
+- conda install --override-channels -c main -c conda-forge -c cvxgrp python=$PYTHON_VERSION $CONDA_DEPS
 - travis_retry pip install $PIP_DEPS
 
 install:
