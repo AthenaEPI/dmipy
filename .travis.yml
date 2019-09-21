@@ -57,7 +57,7 @@ before_install:
 - conda info -a
 - conda install nbconvert
 - conda install entrypoints
-- conda config --add channels conda-forge -c cvxgrp
+- conda config --add channels conda-forge cvxgrp
 - conda install --override-channels -c main -c conda-forge -c cvxgrp python=$PYTHON_VERSION $CONDA_DEPS
 - travis_retry pip install $PIP_DEPS
 
