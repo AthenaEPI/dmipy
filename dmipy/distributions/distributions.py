@@ -377,9 +377,9 @@ class DD1Gamma(ModelProperties):
         self.beta = beta
         self.Nsteps = Nsteps
 
-        if normalization is 'standard':
+        if normalization == 'standard':
             self.norm_func = self.unity
-        elif normalization is 'plane':
+        elif normalization == 'plane':
             self.norm_func = self.length_plane
         elif normalization == 'cylinder':
             self.norm_func = self.surface_cylinder
