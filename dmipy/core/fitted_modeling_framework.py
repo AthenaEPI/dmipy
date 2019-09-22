@@ -479,11 +479,11 @@ class FittedMultiCompartmentSphericalMeanModel:
             msg = 'Ncompartments must be integer larger or equal to one.'
             raise ValueError(msg)
 
-        if distribution is 'watson':
+        if distribution == 'watson':
             bundle = distribute_models.SD1WatsonDistributed(
                 self.model.models)
             basename = 'SD1WatsonDistributed_'
-        elif distribution is 'bingham':
+        elif distribution == 'bingham':
             bundle = distribute_models.SD2BinghamDistributed(
                 self.model.models)
             basename = 'SD2BinghamDistributed_'

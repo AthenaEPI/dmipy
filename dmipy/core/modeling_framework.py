@@ -1404,7 +1404,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
 
     def _check_for_NMR_models(self):
         for model in self.models:
-            if model._model_type is 'NMRModel':
+            if model._model_type == 'NMRModel':
                 msg = "Cannot estimate spherical mean of 1D-NMR models."
                 raise ValueError(msg)
 
@@ -1798,10 +1798,10 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
 
     def _check_for_dispersed_or_NMR_models(self):
         for model in self.models:
-            if model._model_type is 'NMRModel':
+            if model._model_type == 'NMRModel':
                 msg = "Cannot estimate spherical mean of 1D-NMR models."
                 raise ValueError(msg)
-            if model._model_type is 'SphericalDistributedModel':
+            if model._model_type == 'SphericalDistributedModel':
                 msg = "Cannot estimate spherical mean spherically distributed "
                 msg += "model. Please give the input models to the distributed"
                 msg += " model directly to MultiCompartmentSphericalMeanModel."

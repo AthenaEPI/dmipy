@@ -218,14 +218,14 @@ def signal_decay_metric(acquisition_scheme, data):
         mean_dwi_shells[..., i] = np.mean(data[..., shell_mask], axis=-1)
 
     SDM = np.zeros(data_shape)
-    mask = np.min(np.concatenate((np.expand_dims(mean_b0, axis=-1), 
-                                  mean_dwi_shells), axis=-1), axis=-1)>0    
+    mask = np.min(np.concatenate((np.expand_dims(mean_b0, axis=-1),
+                                  mean_dwi_shells), axis=-1), axis=-1) > 0
     ratio = np.log(mean_b0[mask, None] / mean_dwi_shells[mask])
     SDM[mask] = np.mean(ratio, axis=-1)
-    
-    if np.max(SDM)>10 or np.min(SDM)<0:
+
+    if np.max(SDM) > 10 or np.min(SDM) < 0:
         warnings.warn(("The signal decay metric reached unrealistically " +
-                      "high or negative values and was clipped to [0, 10]"), 
+                      "high or negative values and was clipped to [0, 10]"),
                       RuntimeWarning)
         SDM = np.clip(SDM, 0, 10)
     return SDM
