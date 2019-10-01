@@ -899,7 +899,9 @@ def gtab_dmipy2dipy(dmipy_gradient_table):
     delta = dmipy_gradient_table.delta
     Delta = dmipy_gradient_table.Delta
 
-    if len(np.unique(delta)) > 1:
+    if delta is None:
+        pass  # leave delta undefined in dipy gtab
+    elif len(np.unique(delta)) > 1:
         msg = "Cannot create Dipy GradientTable for Acquisition schemes with "
         msg += "multiple delta (pulse duration) values, due to current "
         msg += "limitations of Dipy GradientTables."
@@ -907,7 +909,9 @@ def gtab_dmipy2dipy(dmipy_gradient_table):
     elif len(np.unique(delta)) == 1:
         delta = delta[0]
 
-    if len(np.unique(Delta)) > 1:
+    if Delta is None:
+        pass  # leave Delta undefined in dipy gtab
+    elif len(np.unique(Delta)) > 1:
         msg = "Cannot create Dipy GradientTable for Acquisition schemes with "
         msg += "multiple Delta (pulse sepration) values, due to current "
         msg += "limitations of Dipy GradientTables."
