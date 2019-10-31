@@ -170,7 +170,7 @@ def rotation_matrix_100_to_theta_phi_psi(theta, phi, psi):
     return np.dot(R_100_to_theta_phi, R_around_100)
 
 
-def T1_tortuosity(lambda_par, vf_intra, vf_extra=None, s0_responses=None):
+def T1_tortuosity(lambda_par, vf_intra, vf_extra=None, S0_responses=None):
     """Tortuosity model for perpendicular extra-axonal diffusivity [1, 2, 3].
     If vf_extra=None, then vf_intra must be a nested volume fraction, in the
     sense that E_bundle = vf_intra * E_intra + (1 - vf_intra) * E_extra, with
@@ -186,7 +186,7 @@ def T1_tortuosity(lambda_par, vf_intra, vf_extra=None, s0_responses=None):
         intra-axonal volume fraction [0, 1].
     vf_extra : float, (optional)
         extra-axonal volume fraction [0, 1].
-    s0_responses : list, (optional)
+    S0_responses : list, (optional)
         s0 response of the tissues associated to IC and EC.
 
     Returns
@@ -206,16 +206,16 @@ def T1_tortuosity(lambda_par, vf_intra, vf_extra=None, s0_responses=None):
     .. [3] Szafer et al. "Theoretical model for water diffusion in tissues."
         Magnetic resonance in medicine 33.5 (1995): 697-712.
     """
-    if s0_responses is not None:
-        vf_intra /= s0_responses[0]
-
     fraction_intra = vf_intra
-    if vf_extra is not None:
-        if s0_responses is not None:
-            vf_extra /= s0_responses[1]
-        fraction_intra /= (vf_intra + vf_extra)
-    lambda_perp = (1. - fraction_intra) * lambda_par
-    return lambda_perp
+    fraction_extra = 1.0 - fraction_intra if vf_extra is None else vf_extra
+
+    if S0_responses is not None:
+        fraction_intra /= S0_responses[0]
+        fraction_extra /= S0_responses[1]
+
+    fraction_intra /= fraction_extra + fraction_intra
+
+    return (1. - fraction_intra) * lambda_par
 
 
 def parameter_equality(param):

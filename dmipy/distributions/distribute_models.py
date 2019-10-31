@@ -276,7 +276,7 @@ class DistributedModel:
     def set_tortuous_parameter(self, lambda_perp,
                                lambda_par,
                                volume_fraction_intra,
-                               s0_responses=None):
+                               S0_responses=None):
         """
         Allows the user to set a tortuosity constraint on the perpendicular
         diffusivity of the extra-axonal compartment, which depends on the
@@ -296,7 +296,7 @@ class DistributedModel:
         volume_fraction_intra: string
             name of the intra-axonal volume fraction parameter, see
             self.parameter_names.
-        s0_responses: list
+        S0_responses: list
             list of the s0 responses of the tissues associated to IC and EC.
         """
         params = [lambda_perp, lambda_par, volume_fraction_intra]
@@ -313,7 +313,7 @@ class DistributedModel:
             self._parameter_map[lambda_par],
             self._parameter_map[volume_fraction_intra],
             None,
-            s0_responses
+            S0_responses
         ]
         ])
         del self.parameter_ranges[lambda_perp]

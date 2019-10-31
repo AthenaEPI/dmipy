@@ -558,7 +558,8 @@ class MultiCompartmentModelProperties:
     def set_tortuous_parameter(self, lambda_perp_parameter_name,
                                lambda_par_parameter_name,
                                volume_fraction_intra_parameter_name,
-                               volume_fraction_extra_parameter_name):
+                               volume_fraction_extra_parameter_name,
+                               S0_responses=None):
         """
         Allows the user to set a tortuosity constraint on the perpendicular
         diffusivity of the extra-axonal compartment, which depends on the
@@ -581,6 +582,8 @@ class MultiCompartmentModelProperties:
         volume_fraction_extra_parameter_name: string
             name of the extra-axonal volume fraction parameter, see
             self.parameter_names.
+        S0_responses : list, (optional)
+            s0 response of the tissues associated to IC and EC.
         """
         params = [lambda_perp_parameter_name, lambda_par_parameter_name,
                   volume_fraction_intra_parameter_name,
@@ -597,7 +600,8 @@ class MultiCompartmentModelProperties:
         self.parameter_links.append([model, name, T1_tortuosity, [
             self._parameter_map[lambda_par_parameter_name],
             self._parameter_map[volume_fraction_intra_parameter_name],
-            self._parameter_map[volume_fraction_extra_parameter_name]]
+            self._parameter_map[volume_fraction_extra_parameter_name],
+            S0_responses]
         ])
         del self.parameter_ranges[lambda_perp_parameter_name]
         del self.parameter_cardinality[lambda_perp_parameter_name]
@@ -1212,8 +1216,24 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             start = time()
             mt_fractions = np.empty(
                 np.r_[N_voxels, self.N_models], dtype=float)
+
+            S0_responses = []
+            for i, (m, s) in enumerate(zip(self.models,
+                                           self.S0_tissue_responses)):
+                if s is None:
+                    # If the S0 of the tissue is None, the model is composite
+                    # and the corresponding S0 is treated as the weighted
+                    # average of the S0 tissues modelled by the "submodels".
+                    s0 = 0.0
+                    for k, mm in enumerate(m.models):
+                        s0 += (mm['partial_volume_{}'.format(k)] *
+                               mm.S0_tissue_responses[k])
+                    S0_responses.append(s0)
+                else:
+                    S0_responses.append(s)
+
             fit_func = MultiTissueConvexOptimizer(
-                acquisition_scheme, self, self.S0_tissue_responses)
+                acquisition_scheme, self, S0_responses)
             for idx, pos in enumerate(zip(*mask_pos)):
                 voxel_S = data_[pos]
                 parameters = fitted_parameters_lin[idx]
