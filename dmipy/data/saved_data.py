@@ -7,6 +7,7 @@ from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
 import zipfile
 from . import saved_acquisition_schemes
+import logging
 
 try:
     from urllib2 import urlopen
@@ -76,7 +77,7 @@ def wu_minn_hcp_coronal_slice():
     msg += "NIH Institutes and Centers that support the NIH Blueprint for "
     msg += "Neuroscience Research; and by the McDonnell Center for Systems "
     msg += "Neuroscience at Washington University."
-    print(msg)
+    logging.info(msg)
 
     return scheme, data
 
@@ -88,7 +89,7 @@ def duval_cat_spinal_cord_2d():
     msg += "segmentation', ISMRM 2016. Reference at "
     msg += "Cohen-Adad et al. White Matter Microscopy Database."
     msg += " http://doi.org/10.17605/OSF.IO/YP4QG"
-    print(msg)
+    logging.info(msg)
 
     data_folder = join(DATA_PATH, "tanguy_cat_spinal_cord")
 
@@ -130,7 +131,7 @@ def duval_cat_spinal_cord_3d():
     msg += "segmentation', ISMRM 2016. Reference at "
     msg += "Cohen-Adad et al. White Matter Microscopy Database."
     msg += " http://doi.org/10.17605/OSF.IO/YP4QG"
-    print(msg)
+    logging.info(msg)
 
     data_folder = join(DATA_PATH, "tanguy_cat_spinal_cord")
 

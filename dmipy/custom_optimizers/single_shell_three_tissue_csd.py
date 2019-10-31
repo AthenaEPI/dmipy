@@ -4,6 +4,7 @@ from dmipy.core.modeling_framework import (
     MultiCompartmentSphericalHarmonicsModel)
 from dmipy.tissue_response.three_tissue_response import (
     three_tissue_response_dhollander16)
+import logging
 
 
 def single_shell_three_tissue_csd(
@@ -116,7 +117,7 @@ def single_shell_three_tissue_csd(
             mt_csd_fits.append(mt_csd_fit)
         computation_time = time.time() - start
         if ss3t_verbose:
-            print('finish it {} of {} in {} seconds'.format(
+            logging.info('finish it {} of {} in {} seconds'.format(
                 it + 1, N_iterations, int(computation_time)))
     if return_all_csd_fits:
         return mt_csd_fits

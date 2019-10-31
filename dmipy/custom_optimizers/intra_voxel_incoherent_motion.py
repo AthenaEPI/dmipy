@@ -2,6 +2,7 @@ from dmipy.signal_models.gaussian_models import G1Ball
 from dmipy.core.modeling_framework import MultiCompartmentModel
 import numpy as np
 from time import time
+import logging
 
 
 def ivim_Dstar_fixed(acquisition_scheme, data, mask=None, Dstar_value=7e-9,
@@ -60,7 +61,7 @@ def ivim_Dstar_fixed(acquisition_scheme, data, mask=None, Dstar_value=7e-9,
     if fit_args is None:
         fit_args = {}
 
-    print('Starting IVIM Dstar-fixed algorithm.')
+    logging.info('Starting IVIM Dstar-fixed algorithm.')
     ivim_mod = MultiCompartmentModel([G1Ball(), G1Ball()])
     ivim_mod.set_fixed_parameter(
         'G1Ball_2_lambda_iso', Dstar_value)  # following [2]
@@ -76,5 +77,5 @@ def ivim_Dstar_fixed(acquisition_scheme, data, mask=None, Dstar_value=7e-9,
     N_voxels = np.sum(ivim_fit.mask)
     msg = 'IVIM Dstar-fixed optimization of {0:d} voxels'.format(N_voxels)
     msg += ' complete in {0:.3f} seconds'.format(computation_time)
-    print(msg)
+    logging.info(msg)
     return ivim_fit
