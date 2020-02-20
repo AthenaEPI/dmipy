@@ -863,7 +863,7 @@ class MultiCompartmentModelProperties:
             raise ValueError('acquisition scheme must have b0-measurements '
                              'for signal-attenuation-based model fitting.')
 
-    def _construct_convolution_kernel(self, acquisition_scheme, **kwargs):
+    def _construct_convolution_kernel(self, acquisition_scheme=None, **kwargs):
         """
         Helper function that constructs the convolution kernel for the given
         multi-compartment model and the initial condition x0_vector.
@@ -893,6 +893,9 @@ class MultiCompartmentModelProperties:
             coefficients to the DWI signal values.
         """
         parameters_dict = self.add_linked_parameters_to_parameters(kwargs)
+
+        if acquisition_scheme is None:
+            acquisition_scheme = self.scheme
 
         if self.volume_fractions_fixed:
             if len(self.models) > 1:
