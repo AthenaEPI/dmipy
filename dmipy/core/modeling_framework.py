@@ -883,6 +883,8 @@ class MultiCompartmentModelProperties:
 
         Parameters
         ----------
+        acquisition_scheme: DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using Dmipy.
         x0_vector: array of size (N_parameters),
             Contains the fixed parameters of the convolution kernel.
 
@@ -893,6 +895,9 @@ class MultiCompartmentModelProperties:
             coefficients to the DWI signal values.
         """
         parameters_dict = self.add_linked_parameters_to_parameters(kwargs)
+        scheme = kwargs.get('acquisition_scheme')
+        if scheme is None:
+            scheme = self.scheme
 
         if self.volume_fractions_fixed:
             if len(self.models) > 1:
@@ -915,7 +920,7 @@ class MultiCompartmentModelProperties:
                     )
                 kernel += S0 * partial_volume * (
                     model.convolution_kernel_matrix(
-                        self.scheme, self.sh_order, **parameters))
+                        scheme, self.sh_order, **parameters))
         else:
             kernel = []
             for model, S0 in zip(self.models, self.S0_responses):
@@ -929,10 +934,10 @@ class MultiCompartmentModelProperties:
                     )
                 if 'orientation' in model.parameter_types.values():
                     kernel.append(S0 * model.convolution_kernel_matrix(
-                        self.scheme, self.sh_order, **parameters))
+                        scheme, self.sh_order, **parameters))
                 else:
                     kernel.append(S0 * model.convolution_kernel_matrix(
-                        self.scheme, 0, **parameters))
+                        scheme, 0, **parameters))
 
             kernel = np.hstack(kernel)
         return kernel
@@ -2167,7 +2172,8 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         kwargs: keyword arguments to the model parameter values,
             Is internally given as **parameter_dictionary.
         """
-        A = self._construct_convolution_kernel(**kwargs)
+        A = self._construct_convolution_kernel(
+            acquisition_scheme=acquisition_scheme, **kwargs)
         self.S0_responses = kwargs.get('S0_responses', self.S0_responses)
         self.fit_S0_response = kwargs.get(
             'fit_S0_response', self.fit_S0_response)
