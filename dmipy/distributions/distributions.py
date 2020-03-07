@@ -335,6 +335,29 @@ class SD2Bingham(ModelProperties):
         return bingham_normalization
 
 
+class SD3SphericalHarmonics(ModelProperties):
+    r"""A real-valued spherical harmonics distribution.
+
+    Parameters
+    ----------
+    sh_order: int,
+        maximum spherical harmonics order.
+    """
+
+    def __init__(self, sh_order):
+        N_coef = int((sh_order + 2) * (sh_order + 1) // 2)
+        self._parameter_ranges = {'sh_coeff': [
+            [-1e3, 1e3] for i in range(N_coef)]}
+        self._parameter_scales = {'sh_coeff':
+                                  np.ones(N_coef, dtype=float)}
+        self._parameter_cardinality = {'sh_coeff': N_coef}
+        self._parameter_types = {'sh_coeff': 'sh_coefficients'}
+        self._parameter_optimization_flags = {'sh_coeff': True}
+
+    def spherical_harmonics_representation(self, **kwargs):
+        return kwargs['sh_coeff']
+
+
 class DD1Gamma(ModelProperties):
     r"""A Gamma distribution of cylinder diameter for given alpha and beta
     parameters. NOTE: This is a distribution for axon DIAMETER and not SURFACE.

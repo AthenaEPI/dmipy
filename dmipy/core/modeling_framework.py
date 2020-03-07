@@ -464,12 +464,12 @@ class MultiCompartmentModelProperties:
                 elif isinstance(value, np.ndarray):
                     self._add_initial_guess_parameter_array(
                         parameter_name, value)
-            elif card == 2:
+            elif card >= 2:
                 value = np.array(value, dtype=float)
-                if value.shape[-1] != 2:
-                    msg = '{} can only be fixed '.format(parameter_name)
-                    msg += 'to an array or list with last dimension 2.'
-                    raise ValueError(msg)
+                if value.shape[-1] != card:
+                    msg = '{} can only be fixed to an array or list with '\
+                          'last dimension {}.'
+                    raise ValueError(msg.format(parameter_name, type(value)))
                 if value.ndim == 1:
                     self.x0_parameters[parameter_name] = value
                 if value.ndim > 1:
@@ -518,12 +518,12 @@ class MultiCompartmentModelProperties:
                     msg = 'fixed value for {} must be number or np.array, '\
                           'currently {}'
                     raise ValueError(msg.format(parameter_name, type(value)))
-            elif card == 2:
+            elif card >= 2:
                 value = np.array(value, dtype=float)
-                if value.shape[-1] != 2:
-                    msg = '{} can only be fixed '.format(parameter_name)
-                    msg += 'to an array or list with last dimension 2.'
-                    raise ValueError(msg)
+                if value.shape[-1] != card:
+                    msg = '{} can only be fixed to an array or list with '\
+                          'last dimension {}.'
+                    raise ValueError(msg.format(parameter_name, card))
                 if value.ndim == 1:
                     self._add_fixed_parameter_value(parameter_name, value)
                 if value.ndim > 1:
@@ -1038,6 +1038,12 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
                 msg += " into a MultiCompartmentModel."
                 raise ValueError(msg)
 
+    def _check_if_sh_coeff_fixed_if_present(self):
+        msg = 'sh_coeff parameter {} must be fixed in standard MC models '\
+              'to estimate the kernel parameters.'
+        for parameter in self.parameter_names:
+            assert 'sh_coeff' not in parameter, msg.format(parameter)
+
     def fit(self, acquisition_scheme, data,
             mask=None, solver='brute2fine', Ns=5, maxiter=300,
             N_sphere_samples=30, use_parallel_processing=have_pathos,
@@ -1122,6 +1128,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         self._check_model_params_with_acquisition_params(acquisition_scheme)
         self._check_acquisition_scheme_has_b0s(acquisition_scheme)
         self._check_if_volume_fractions_are_fixed()
+        self._check_if_sh_coeff_fixed_if_present()
 
         # estimate S0
         self.scheme = acquisition_scheme
