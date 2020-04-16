@@ -27,12 +27,13 @@ from ..optimizers.mix import MixOptimizer
 from ..optimizers.multi_tissue_convex_optimizer import (
     MultiTissueConvexOptimizer)
 from dipy.utils.optpkg import optional_package
-from graphviz import Digraph
 from uuid import uuid4
 pathos, have_pathos, _ = optional_package("pathos")
 numba, have_numba, _ = optional_package("numba")
+graphviz, have_graphviz, _ = optional_package("graphviz")
 
-
+if have_graphviz:
+    from graphviz import Digraph
 if have_pathos:
     import pathos.pools as pp
     from pathos.helpers import cpu_count
@@ -755,6 +756,8 @@ class MultiCompartmentModelProperties:
         with_parameters: boolean,
             Whether or not to also visualize the parameters of each model.
         """
+        if not have_graphviz:
+            raise ImportError('graphviz package not installed.')
         dot = Digraph('Model Setup', format=im_format)
         base_model = self.__class__.__name__
         base_uuid = str(uuid4())

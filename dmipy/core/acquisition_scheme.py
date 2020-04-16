@@ -6,7 +6,6 @@ from ..utils.spherical_convolution import real_sym_rh_basis
 from dipy.reconst.shm import real_sym_sh_mrtrix
 from scipy.cluster.hierarchy import fcluster, linkage
 from dipy.core.gradients import gradient_table, GradientTable
-import matplotlib.pyplot as plt
 from warnings import warn
 
 
@@ -330,6 +329,8 @@ class DmipyAcquisitionScheme:
         bvals_ = b_from_g(G_grid.ravel(), delta[0], Delta_grid.ravel()) / 1e6
         bvals_ = bvals_.reshape(G_grid.shape)
 
+        # local import because matplotlib is not in the strict requirements.
+        import matplotlib.pyplot as plt
         plt.contourf(Delta_, G_, bvals_,
                      levels=bval_isolines,
                      cmap='rainbow', alpha=alpha_shading)
