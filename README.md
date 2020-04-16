@@ -31,6 +31,10 @@ Dmipy is designed to be complementary for Dipy users. Dipy gradient tables can b
 Dmipy allows the user to do Microstructure Imaging research at the highest level, while the package automatically takes care of all the coding architecture that is needed to fit a designed model to a data set. The Dmipy documentation can be found at http://dmipy.readthedocs.io/. If you use Dmipy for your research publications, we kindly request you cite this package at the reference at the bottom of this page.
 
 ## Installation
+You can install dmipy using pypi by typing in your terminal
+- python3 -m pip install dmipy
+
+or you can manually
 - clone repository
 - python setup.py install
 
