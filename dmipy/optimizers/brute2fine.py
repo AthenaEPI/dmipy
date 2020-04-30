@@ -3,6 +3,7 @@ import pkg_resources
 from ..utils.utils import cart2mu
 import numpy as np
 from dipy.utils.optpkg import optional_package
+import logging
 
 numba, have_numba, _ = optional_package("numba")
 
@@ -76,8 +77,9 @@ class GlobalBruteOptimizer:
                 model, x0_vector_, Ns, N_sphere_samples)
         else:
             self.global_optimization_grid = False
-            msg = "Cannot estimate signal grid with voxel-dependent x0_vector."
-            print(msg)
+            msg = "Cannot precompute signal grid with voxel-dependent "\
+                  "x0_vector. Proceeding with voxel-wise brute force."
+            logging.info(msg)
 
     def precompute_signal_grid(self, model, x0_vector, Ns, N_sphere_samples):
         """

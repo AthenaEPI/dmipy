@@ -28,6 +28,7 @@ from ..optimizers.multi_tissue_convex_optimizer import (
     MultiTissueConvexOptimizer)
 from dipy.utils.optpkg import optional_package
 from uuid import uuid4
+import logging
 pathos, have_pathos, _ = optional_package("pathos")
 numba, have_numba, _ = optional_package("numba")
 graphviz, have_graphviz, _ = optional_package("graphviz")
@@ -229,7 +230,7 @@ class MultiCompartmentModelProperties:
                 msg = '"{}" is not a valid model parameter.'.format(parameter)
                 raise ValueError(msg)
         if len(parameter_cardinality) == 0:
-            print("All model parameters set.")
+            logging.info("All model parameters set.")
         else:
             for parameter, card in parameter_cardinality.items():
                 set_parameters[parameter] = np.tile(np.nan, card)
@@ -1022,13 +1023,13 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         self.x0_parameters = {}
 
         if not have_numba:
-            msg = "We highly recommend installing numba for faster function "
-            msg += "execution and model fitting."
-            print(msg)
+            msg = "We highly recommend installing numba for faster function "\
+                  "execution and model fitting."
+            logging.info(msg)
         if not have_pathos:
             msg = "We highly recommend installing pathos to take advantage of "
             msg += "multicore processing."
-            print(msg)
+            logging.info(msg)
 
     def _check_for_NMR_and_other_models(self):
         model_types = [model._model_type for model in self.models]
@@ -1162,7 +1163,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             if number_of_processors is None:
                 number_of_processors = cpu_count()
             pool = pp.ProcessPool(number_of_processors)
-            print('Using parallel processing with {} workers.'.format(
+            logging.info('Using parallel processing with {} workers.'.format(
                 number_of_processors))
         else:
             fitted_parameters_lin = np.empty(
@@ -1173,12 +1174,12 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             global_brute = GlobalBruteOptimizer(
                 self, self.scheme, x0_, Ns, N_sphere_samples)
             fit_func = Brute2FineOptimizer(self, self.scheme, Ns)
-            print('Setup brute2fine optimizer in {} seconds'.format(
+            logging.info('Setup brute2fine optimizer in {} seconds'.format(
                 time() - start))
         elif solver == 'mix':
             self._check_for_tortuosity_constraint()
             fit_func = MixOptimizer(self, self.scheme, maxiter)
-            print('Setup MIX optimizer in {} seconds'.format(
+            logging.info('Setup MIX optimizer in {} seconds'.format(
                 time() - start))
         else:
             msg = "Unknown solver name {}".format(solver)
@@ -1206,15 +1207,15 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             pool.clear()
 
         fitting_time = time() - start
-        print('Fitting of {} voxels complete in {} seconds.'.format(
+        logging.info('Fitting of {} voxels complete in {} seconds.'.format(
             len(fitted_parameters_lin), fitting_time))
-        print('Average of {} seconds per voxel.'.format(
+        logging.info('Average of {} seconds per voxel.'.format(
             fitting_time / N_voxels))
 
         fitted_mt_fractions = None
         if self.S0_tissue_responses:
             # secondary fitting including S0 responses
-            print('Starting secondary multi-tissue optimization.')
+            logging.info('Starting secondary multi-tissue optimization.')
             start = time()
             mt_fractions = np.empty(
                 np.r_[N_voxels, self.N_models], dtype=float)
@@ -1226,7 +1227,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
                 mt_fractions[idx] = fit_func(voxel_S, parameters)
             fitting_time = time() - start
             msg = 'Multi-tissue fitting of {} voxels complete in {} seconds.'
-            print(msg.format(len(mt_fractions), fitting_time))
+            logging.info(msg.format(len(mt_fractions), fitting_time))
             fitted_mt_fractions = np.zeros(np.r_[mask.shape, self.N_models])
             fitted_mt_fractions[mask_pos] = mt_fractions
 
@@ -1402,11 +1403,11 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         if not have_numba:
             msg = "We highly recommend installing numba for faster function "
             msg += "execution and model fitting."
-            print(msg)
+            logging.info(msg)
         if not have_pathos:
             msg = "We highly recommend installing pathos to take advantage of "
             msg += "multicore processing."
-            print(msg)
+            logging.info(msg)
 
     def _check_for_NMR_models(self):
         for model in self.models:
@@ -1557,7 +1558,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
             if number_of_processors is None:
                 number_of_processors = cpu_count()
             pool = pp.ProcessPool(number_of_processors)
-            print('Using parallel processing with {} workers.'.format(
+            logging.info('Using parallel processing with {} workers.'.format(
                 number_of_processors))
         else:
             fitted_parameters_lin = np.empty(
@@ -1575,12 +1576,12 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
                 self, self.scheme,
                 x0_, Ns, N_sphere_samples)
             fit_func = Brute2FineOptimizer(self, self.scheme, Ns)
-            print('Setup brute2fine optimizer in {} seconds'.format(
+            logging.info('Setup brute2fine optimizer in {} seconds'.format(
                 time() - start))
         elif solver == 'mix':
             self._check_for_tortuosity_constraint()
             fit_func = MixOptimizer(self, self.scheme, maxiter)
-            print('Setup MIX optimizer in {} seconds'.format(
+            logging.info('Setup MIX optimizer in {} seconds'.format(
                 time() - start))
         else:
             msg = "Unknown solver name {}".format(solver)
@@ -1608,15 +1609,15 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
             pool.clear()
 
         fitting_time = time() - start
-        print('Fitting of {} voxels complete in {} seconds.'.format(
+        logging.info('Fitting of {} voxels complete in {} seconds.'.format(
             len(fitted_parameters_lin), fitting_time))
-        print('Average of {} seconds per voxel.'.format(
+        logging.info('Average of {} seconds per voxel.'.format(
             fitting_time / N_voxels))
 
         fitted_mt_fractions = None
         if self.S0_tissue_responses:
             # secondary fitting including S0 responses
-            print('Starting secondary multi-tissue optimization.')
+            logging.info('Starting secondary multi-tissue optimization.')
             start = time()
             mt_fractions = np.empty(
                 np.r_[N_voxels, self.N_models], dtype=float)
@@ -1628,7 +1629,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
                 mt_fractions[idx] = fit_func(voxel_S, parameters)
             fitting_time = time() - start
             msg = 'Multi-tissue fitting of {} voxels complete in {} seconds.'
-            print(msg.format(len(mt_fractions), fitting_time))
+            logging.info(msg.format(len(mt_fractions), fitting_time))
             fitted_mt_fractions = np.zeros(np.r_[mask.shape, self.N_models])
             fitted_mt_fractions[mask_pos] = mt_fractions
 
@@ -1796,11 +1797,11 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         if not have_numba:
             msg = "We highly recommend installing numba for faster function "
             msg += "execution and model fitting."
-            print(msg)
+            logging.info(msg)
         if not have_pathos:
             msg = "We highly recommend installing pathos to take advantage of "
             msg += "multicore processing."
-            print(msg)
+            logging.info(msg)
 
     def _check_for_dispersed_or_NMR_models(self):
         for model in self.models:
@@ -2018,10 +2019,10 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
                     msg += ' optimizer because it does not improve fitting '
                     msg += 'speed.'
                     if verbose:
-                        print(msg)
+                        logging.info(msg)
                     use_parallel_processing = False
                 if verbose:
-                    print(
+                    logging.info(
                         'Setup Tournier07 FOD optimizer in {} seconds'.format(
                             time() - start))
             else:
@@ -2030,8 +2031,8 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
                     unity_constraint=self.unity_constraint,
                     lambda_lb=lambda_lb)
                 if verbose:
-                    print('Setup CVXPY FOD optimizer in {} seconds'.format(
-                        time() - start))
+                    msg = 'Setup CVXPY FOD optimizer in {} seconds'
+                    logging.info(msg.format(time() - start))
         elif solver == 'csd_tournier07':
             fit_func = CsdTournierOptimizer(
                 acquisition_scheme, self, x0_, self.sh_order,
@@ -2040,18 +2041,18 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
                 msg = 'Parallel processing turned off for tournier07 optimizer'
                 msg += ' because it does not improve fitting speed.'
                 if verbose:
-                    print(msg)
+                    logging.info(msg)
                 use_parallel_processing = False
             if verbose:
-                print('Setup Tournier07 FOD optimizer in {} seconds'.format(
-                    time() - start))
+                msg = 'Setup Tournier07 FOD optimizer in {} seconds'
+                logging.info(msg.format(time() - start))
         elif solver == 'csd_cvxpy':
             fit_func = CsdCvxpyOptimizer(
                 acquisition_scheme, self, x0_, self.sh_order,
                 unity_constraint=self.unity_constraint, lambda_lb=lambda_lb)
             if verbose:
-                print('Setup CVXPY FOD optimizer in {} seconds'.format(
-                    time() - start))
+                msg = 'Setup CVXPY FOD optimizer in {} seconds'
+                logging.info(msg.format(time() - start))
         else:
             msg = "Unknown solver name {}".format(solver)
             raise ValueError(msg)
@@ -2067,8 +2068,8 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
                 number_of_processors = cpu_count()
             pool = pp.ProcessPool(number_of_processors)
             if verbose:
-                print('Using parallel processing with {} workers.'.format(
-                    number_of_processors))
+                msg = 'Using parallel processing with {} workers.'
+                logging.info(msg.format(number_of_processors))
         else:
             fitted_parameters_lin = np.empty(
                 np.r_[N_voxels, N_parameters], dtype=float)
@@ -2095,9 +2096,9 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
 
         fitting_time = time() - start
         if verbose:
-            print('Fitting of {} voxels complete in {} seconds.'.format(
+            logging.info('Fitting of {} voxels complete in {} seconds.'.format(
                 len(fitted_parameters_lin), fitting_time))
-            print('Average of {} seconds per voxel.'.format(
+            logging.info('Average of {} seconds per voxel.'.format(
                 fitting_time / N_voxels))
         fitted_parameters = np.zeros_like(x0_, dtype=float)
         fitted_parameters[mask_pos] = fitted_parameters_lin

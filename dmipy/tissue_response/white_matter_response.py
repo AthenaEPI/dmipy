@@ -8,6 +8,7 @@ from dipy.data import get_sphere, HemiSphere
 from ..signal_models.tissue_response_models import (
     estimate_TR2_anisotropic_tissue_response_model)
 from scipy.ndimage import binary_erosion
+import logging
 
 
 def white_matter_response_tournier07(
@@ -43,10 +44,9 @@ def white_matter_response_tournier07(
     data_shape = np.atleast_2d(data).shape
     N_voxels = int(np.prod(data_shape[:-1]))
     if N_voxels < N_candidate_voxels:
-        msg = "The original algorithm uses 300 candidate voxels to estimate "
-        msg += "the tissue response. Currently only {} ".format(N_voxels)
-        msg += "candidate voxels given."
-        print(msg)
+        msg = "The original algorithm uses 300 candidate voxels to estimate "\
+              "the tissue response. Currently only {} candidate voxels given."
+        logging.warning(msg.format(N_voxels))
         N_candidate_voxels = N_voxels
 
     if data.ndim == 4:
@@ -139,11 +139,10 @@ def white_matter_response_tournier13(
     data_shape = np.atleast_2d(data).shape
     N_voxels = int(np.prod(data_shape[:-1]))
     if N_voxels < N_candidate_voxels:
-        msg = "The parameter N_candidate voxels is set to {} but only ".format(
-            N_candidate_voxels)
-        msg += "{} voxels are given. N_candidate_voxels".format(N_voxels)
-        msg += " reset to number of voxels given."
-        print(msg)
+        msg = "The parameter N_candidate voxels is set to {} but only {} "\
+              "voxels are given. N_candidate_voxels reset to number of "\
+              "voxels given."
+        logging.warning(msg.format(N_candidate_voxels, N_voxels))
         N_candidate_voxels = N_voxels
 
     ratio_settings = ['ratio', 'mrtrix']
@@ -174,7 +173,8 @@ def white_matter_response_tournier13(
     # iterate until convergence
     it = 0
     while True:
-        print('Tournier13 white matter response iteration {}'.format(it + 1))
+        logging.info(
+            'Tournier13 white matter response iteration {}'.format(it + 1))
         selected_data = data_to_fit[selected_indices]
 
         S0_wm, TR2_wm_model = estimate_TR2_anisotropic_tissue_response_model(
@@ -196,13 +196,13 @@ def white_matter_response_tournier13(
         selected_indices = np.argsort(ratio)[:N_candidate_voxels]
         percentage_overlap = 100 * float(len(np.intersect1d(
             selected_indices, selected_indices_old))) / N_candidate_voxels
-        print('{:.1f} percent candidate voxel overlap.'.format(
+        logging.info('{:.1f} percent candidate voxel overlap.'.format(
             percentage_overlap))
         if percentage_overlap == 100.:
-            print('White matter response converged')
+            logging.info('White matter response converged')
             break
         it += 1
         if it > max_iter:
-            print('Maximum iterations reached without convergence')
+            logging.warning('Maximum iterations reached without convergence')
             break
     return S0_wm, TR2_wm_model, selected_indices

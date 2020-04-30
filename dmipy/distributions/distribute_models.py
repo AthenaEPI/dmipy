@@ -6,6 +6,7 @@ from ..utils.utils import T1_tortuosity, parameter_equality
 from ..core.signal_model_properties import AnisotropicSignalModelProperties
 import copy
 import numpy as np
+import logging
 
 __all__ = [
     'DistributedModel',
@@ -301,8 +302,8 @@ class DistributedModel:
             try:
                 self.parameter_ranges[param]
             except KeyError:
-                print("{} does not exist or has already been fixed.").format(
-                    param)
+                msg = "{} does not exist or has already been fixed."
+                logging.error(msg.format(param))
                 return None
 
         model, name = self._parameter_map[lambda_perp]
@@ -337,9 +338,10 @@ class DistributedModel:
             try:
                 self.parameter_ranges[param]
             except KeyError:
-                print("{} does not exist or has already been fixed.").format(
-                    param)
+                msg = "{} does not exist or has already been fixed."
+                logging.error(msg.format(param))
                 return None
+
         model, name = self._parameter_map[parameter_name_out]
         self.parameter_links.append([model, name, parameter_equality, [
             self._parameter_map[parameter_name_in]]])

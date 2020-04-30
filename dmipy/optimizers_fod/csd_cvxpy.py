@@ -3,6 +3,7 @@ from dipy.data import get_sphere, HemiSphere
 from dipy.reconst.shm import real_sym_sh_mrtrix
 from dipy.utils.optpkg import optional_package
 from dipy.reconst.shm import sph_harm_ind_list
+import logging
 cvxpy, have_cvxpy, _ = optional_package("cvxpy")
 sphere = get_sphere('symmetric724')
 
@@ -180,12 +181,12 @@ class CsdCvxpyOptimizer:
             problem.solve()
         except cvxpy.error.SolverError:
             msg = 'cvxpy solver failed'
-            print(msg)
+            logging.error(msg)
             return np.zeros_like(x0_vector)
 
         if problem.status in ["infeasible", "unbounded"]:
             msg = 'cvxpy found {} problem'.format(problem.status)
-            print(msg)
+            logging.error(msg)
             return np.zeros_like(x0_vector)
 
         # return optimized fod sh coefficients
