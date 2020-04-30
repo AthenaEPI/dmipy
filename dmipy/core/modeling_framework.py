@@ -29,6 +29,7 @@ from ..optimizers.mix import MixOptimizer
 from ..optimizers.multi_tissue_convex_optimizer import (
     MultiTissueConvexOptimizer)
 from dipy.utils.optpkg import optional_package
+from dmipy.utils.build_sphere import get_hemisphere
 from uuid import uuid4
 pathos, have_pathos, _ = optional_package("pathos")
 numba, have_numba, _ = optional_package("numba")
@@ -2252,7 +2253,8 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
             maxiter=300,
             N_sphere_samples=30,
             use_parallel_processing=have_pathos,
-            number_of_processors=None):
+            number_of_processors=None,
+            directions_for_lut=64):
         """ The main data fitting function of a MultiCompartmentModel.
 
         This function can fit it to an N-dimensional dMRI data set, and returns
@@ -2319,6 +2321,11 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         number_of_processors : integer,
             number of processors to use for parallel processing. Defaults to
             the number of processors in the computer according to cpu_count().
+        directions_for_lut : int or N-by-3 array
+            If integer, this corresponds to the number of points on the
+            hemisphere that will be used as directions for the look-up-table.
+            If array, it corresponds to the list of directions that will be
+            used for building the look up table. Default: 64.
 
         Returns
         -------
@@ -2376,6 +2383,8 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
             fitted_parameters_lin = np.empty(
                 np.r_[N_voxels, N_parameters], dtype=float)
 
+        # these are the directions to use for the look-up table
+        directions = get_hemisphere(directions_for_lut)
         # TODO: complete the setup of the optimization in model fitting
         def fit_func(*args, **kwargs):
             # This function will use the self.forward_model property
@@ -2694,7 +2703,6 @@ class MultiCompartmentAMICOSphericalMeanModel(MultiCompartmentModelProperties):
         number_of_processors : integer,
             number of processors to use for parallel processing. Defaults to
             the number of processors in the computer according to cpu_count().
-
         Returns
         -------
         FittedCompartmentModel: class instance that contains fitted parameters,
