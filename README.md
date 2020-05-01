@@ -31,6 +31,10 @@ Dmipy is designed to be complementary for Dipy users. Dipy gradient tables can b
 Dmipy allows the user to do Microstructure Imaging research at the highest level, while the package automatically takes care of all the coding architecture that is needed to fit a designed model to a data set. The Dmipy documentation can be found at http://dmipy.readthedocs.io/. If you use Dmipy for your research publications, we kindly request you cite this package at the reference at the bottom of this page.
 
 ## Installation
+You can install dmipy using pypi by typing in your terminal
+- python3 -m pip install dmipy
+
+or you can manually
 - clone repository
 - python setup.py install
 
@@ -101,7 +105,7 @@ Constrained spherical deconvolution (CSD) models are primarily used for Fiber Or
 ## How to contribute to Dmipy
 Dmipy's design is completely modular and can easily be extended with new models, distributions or optimizers. To contribute, view our [contribution guidelines](https://github.com/AthenaEPI/dmipy/blob/master/contribution_guidelines.rst).
 ## How to cite Dmipy
-- **Temporarily Reference**: Rutger Fick, Demian Wassermann and Rachid Deriche *Mipy: An Open-Source Framework to improve reproducibility in Brain Microstructure Imaging*, OHBM (2018) Singapore.
-- **Github Repository**: Rutger Fick, Rachid Deriche, & Demian Wassermann. (2018, March 3). *Dmipy: An Open-source Framework for Reproducible dMRI-Based Microstructure Research (Version 0.1)*. Zenodo. http://doi.org/10.5281/zenodo.1188268
+- **Primary Reference**: Rutger Fick, Demian Wassermann and Rachid Deriche, "The Dmipy Toolbox: Diffusion MRI Multi-Compartment Modeling and Microstructure Recovery Made Easy", *Frontiers in Neuroinformatics* 13 (2019): 64.
+- **Github Repository**: Rutger Fick, Rachid Deriche, & Demian Wassermann. (2019, October 15). *The Dmipy Toolbox: Diffusion MRI Multi-Compartment Modeling and Microstructure Recovery Made Easy (Version 1.0)*. Zenodo. http://doi.org/10.5281/zenodo.3490325
 
 [Package Acknowledgements](https://github.com/AthenaEPI/dmipy/blob/master/Acknowledgements.md)

@@ -50,20 +50,14 @@ def three_tissue_response_dhollander16(
 
     Returns
     -------
-    S0_wm : float,
-        white matter S0 response value.
-    TR2_wm_model : Dmipy TR2AnisotropicTissueResponseModel,
-        ModelFree representation of white matter response.
-    S0_gm : float,
-        grey matter S0 response value.
-    TR1_gm_model : Dmipy TR1IsotropicTissueResponseModel,
-        ModelFree representation of grey matter response.
-    S0_csf : float,
-        csf S0 response value.
-    TR1_csf_model : Dmipy TR1IsotropicTissueResponseModel,
-        ModelFree representation of csf response.
+    [S0_wm, S0_gm, S0_csf] : list of floats,
+        white matter, grey matter and csf responses.
+    [TR2_wm_model, TR1_gm_model, TR1_csf_model]: list of
+            TR2AnisotropicTissueResponseModel and
+            2 TR1IsotropicTissueResponseModels,
+        Modelfree signal representations of white/grey matter and csf.
     three_tissue_selection: array of size (x, y, z, 3),
-        RGB mask of selected voxels used for white/grey matter and CSD.
+        RGB mask of selected voxels used for white/grey matter and csf.
 
     References
     ----------
@@ -88,7 +82,7 @@ def three_tissue_response_dhollander16(
     SDM = signal_decay_metric(acquisition_scheme, data)
 
     # Make Mask
-    b0_mask, mask = median_otsu(data, 2, 1)
+    b0_mask, mask = median_otsu(data, median_radius=2, numpass=1)
     gtab = gtab_dmipy2dipy(acquisition_scheme)
     tenmod = dti.TensorModel(gtab)
     tenfit = tenmod.fit(b0_mask)

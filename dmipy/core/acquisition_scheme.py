@@ -6,7 +6,6 @@ from ..utils.spherical_convolution import real_sym_rh_basis
 from dipy.reconst.shm import real_sym_sh_mrtrix
 from scipy.cluster.hierarchy import fcluster, linkage
 from dipy.core.gradients import gradient_table, GradientTable
-import matplotlib.pyplot as plt
 from warnings import warn
 
 
@@ -330,6 +329,8 @@ class DmipyAcquisitionScheme:
         bvals_ = b_from_g(G_grid.ravel(), delta[0], Delta_grid.ravel()) / 1e6
         bvals_ = bvals_.reshape(G_grid.shape)
 
+        # local import because matplotlib is not in the strict requirements.
+        import matplotlib.pyplot as plt
         plt.contourf(Delta_, G_, bvals_,
                      levels=bval_isolines,
                      cmap='rainbow', alpha=alpha_shading)
@@ -899,7 +900,9 @@ def gtab_dmipy2dipy(dmipy_gradient_table):
     delta = dmipy_gradient_table.delta
     Delta = dmipy_gradient_table.Delta
 
-    if len(np.unique(delta)) > 1:
+    if delta is None:
+        pass  # leave delta undefined in dipy gtab
+    elif len(np.unique(delta)) > 1:
         msg = "Cannot create Dipy GradientTable for Acquisition schemes with "
         msg += "multiple delta (pulse duration) values, due to current "
         msg += "limitations of Dipy GradientTables."
@@ -907,7 +910,9 @@ def gtab_dmipy2dipy(dmipy_gradient_table):
     elif len(np.unique(delta)) == 1:
         delta = delta[0]
 
-    if len(np.unique(Delta)) > 1:
+    if Delta is None:
+        pass  # leave Delta undefined in dipy gtab
+    elif len(np.unique(Delta)) > 1:
         msg = "Cannot create Dipy GradientTable for Acquisition schemes with "
         msg += "multiple Delta (pulse sepration) values, due to current "
         msg += "limitations of Dipy GradientTables."
