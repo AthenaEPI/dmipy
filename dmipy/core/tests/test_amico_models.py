@@ -97,3 +97,7 @@ def test_fitted_amico_model_properties():
     # TODO: check that the FittedMultiCompartmentAMICOModel class has the
     #  expected properties
     pass
+
+def test_signal_fitting():
+    # TODO: test the accuracy of the fitting on a synthetic signal
+    pass

@@ -19,8 +19,7 @@ from .fitted_modeling_framework import (
     FittedMultiCompartmentModel,
     FittedMultiCompartmentSphericalMeanModel,
     FittedMultiCompartmentSphericalHarmonicsModel,
-    FittedMultiCompartmentAMICOModel,
-    FittedMultiCompartmentAMICOSphericalMeanModel)
+    FittedMultiCompartmentAMICOModel)
 from ..optimizers.brute2fine import (
     GlobalBruteOptimizer, Brute2FineOptimizer)
 from ..optimizers_fod.csd_tournier import CsdTournierOptimizer
@@ -2218,6 +2217,7 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         self._check_for_NMR_and_other_models()
         self.x0_parameters = {}
         self._forward_model_matrix = None
+        self._parameter_indices = {}
 
         if not have_numba:
             msg = "We highly recommend installing numba for faster function "
@@ -2236,15 +2236,31 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
                 msg += " into a MultiCompartmentAMICOModel."
                 raise ValueError(msg)
 
+    def _check_if_model_orientations_are_fixed(self):
+        # TODO: return True if the orientations are fixed, False o/wise.
+        raise NotImplementedError
+
     def _create_forward_model_matrix(self):
-        # TODO: implement the function that creates the forward model matrix
+        # TODO: implement the function that creates the forward model matrix.
+        #  The function is expected to store the matrix in the
+        #  self._forward_model_matrix field and at the same time it must define
+        #  a dictionary whose keys are the parameter names and the values are
+        #  the set of column indices in the matrix corresponding to the
+        #  parameter. This dictionary must be stored in self._parameter_indices.
         raise NotImplementedError
 
     @property
     def forward_model(self):
+        """Return the forward model matrix associated to the AMICO model"""
         if self._forward_model_matrix is None:
             self._create_forward_model_matrix()
         return self._forward_model_matrix
+
+    @property
+    def parameter_indices(self):
+        """Return the dictionary containing the column indices associated to
+        each parameter in the forward model matrix"""
+        return self._parameter_indices
 
     def fit(self, acquisition_scheme, data,
             mask=None,
@@ -2496,8 +2512,7 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         acquisition_scheme : DmipyAcquisitionScheme instance,
             An acquisition scheme that has been instantiated using dMipy.
         quantity : string
-            can be 'signal', 'FOD' or 'stochastic cost function' depending on
-            the need of the model.
+            can be 'signal' or 'FOD' depending on the need of the model.
         kwargs: keyword arguments to the model parameter values,
             Is internally given as **parameter_dictionary.
         """
@@ -2551,381 +2566,6 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
             elif quantity == "stochastic cost function":
                 values[:, counter] = model(acquisition_scheme_or_vertices,
                                            **parameters)
-                counter += 1
-        return values
-
-class MultiCompartmentAMICOSphericalMeanModel(MultiCompartmentModelProperties):
-    r'''
-    The MultiCompartmentAMICOSphericalMeanModel class allows to combine any
-    number of CompartmentModels and DistributedModels into one combined model
-    that can be used to fit and simulate dMRI data.
-
-    Parameters
-    ----------
-    models : list of N CompartmentModel instances,
-        the models to combine into the MultiCompartmentModel.
-    parameter_links : list of iterables (model, parameter name, link function,
-        argument list),
-        deprecated, for testing only.
-    '''
-
-    def __init__(self, models, S0_tissue_responses=None, parameter_links=None):
-        self.models = models
-        self.N_models = len(models)
-        if S0_tissue_responses is not None:
-            if len(S0_tissue_responses) != self.N_models:
-                msg = 'Number of S0_tissue responses {} must be same as '\
-                      'number of input models {}.'
-                raise ValueError(
-                    msg.format(len(S0_tissue_responses), self.N_models))
-        self.S0_tissue_responses = S0_tissue_responses
-        self.parameter_links = parameter_links
-        if parameter_links is None:
-            self.parameter_links = []
-
-        self._check_for_NMR_models()
-        self._prepare_parameters()
-        self._delete_orientation_parameters()
-        self._prepare_partial_volumes()
-        self._prepare_parameter_links()
-        self._prepare_model_properties()
-        self._check_for_double_model_class_instances()
-        self._prepare_parameters_to_optimize()
-        self.x0_parameters = {}
-        self._forward_model_matrix = None
-
-
-        if not have_numba:
-            msg = "We highly recommend installing numba for faster function "
-            msg += "execution and model fitting."
-            print(msg)
-        if not have_pathos:
-            msg = "We highly recommend installing pathos to take advantage of "
-            msg += "multicore processing."
-            print(msg)
-
-    def _check_for_NMR_models(self):
-        for model in self.models:
-            if model._model_type == 'NMRModel':
-                msg = "Cannot estimate spherical mean of 1D-NMR models."
-                raise ValueError(msg)
-
-    def _delete_orientation_parameters(self):
-        """
-        Deletes orientation parameters from input models 'mu' since they're not
-        needed in spherical mean models.
-        """
-        "Removes orientation parameters from input models."
-        for model in self.models:
-            for param_name, param_type in model.parameter_types.items():
-                if param_type == 'orientation':
-                    appended_param_name = self._inverted_parameter_map[
-                        model, param_name]
-                    del self.parameter_ranges[appended_param_name]
-                    del self.parameter_scales[appended_param_name]
-                    del self.parameter_cardinality[appended_param_name]
-                    del self.parameter_types[appended_param_name]
-
-    def fit(self, acquisition_scheme, data,
-            mask=None,
-            solver=None, # TODO: define the solver
-            Ns=5,
-            maxiter=300,
-            N_sphere_samples=30,
-            use_parallel_processing=have_pathos,
-            number_of_processors=None):
-        """ The main data fitting function of a MultiCompartmentModel.
-
-        This function can fit it to an N-dimensional dMRI data set, and returns
-        a FittedMultiCompartmentModel instance that contains the fitted
-        parameters and other useful functions to study the results.
-
-        No initial guess needs to be given to fit a model, but a partial or
-        complete initial guess can be given if the user wants to have a
-        solution that is a local minimum close to that guess. The
-        parameter_initial_guess input can be created using
-        parameter_initial_guess_to_parameter_vector().
-
-        A mask can also be given to exclude voxels from fitting (e.g. voxels
-        that are outside the brain). If no mask is given then all voxels are
-        included.
-
-        An optimization approach can be chosen as either 'brute2fine' or 'mix'.
-        - Choosing brute2fine will first use a brute-force optimization to find
-          an initial guess for parameters without one, and will then refine the
-          result using gradient-descent-based optimization.
-
-          Note that given no initial guess will make brute2fine precompute an
-          global parameter grid that will be re-used for all voxels, which in
-          many cases is much faster than giving voxel-varying initial condition
-          that requires a grid to be estimated per voxel.
-
-        - Choosing mix will use the recent MIX algorithm based on separation of
-          linear and non-linear parameters. MIX first uses a stochastic
-          algorithm to find the non-linear parameters (non-volume fractions),
-          then estimates the volume fractions while fixing the estimates of the
-          non-linear parameters, and then finally refines the solution using
-          a gradient-descent-based algorithm.
-
-        The fitting process can be readily parallelized using the optional
-        "pathos" package. If it is installed then it will automatically use it,
-        but it can be turned off by setting use_parallel_processing=False. The
-        algorithm will automatically use all cores in the machine, unless
-        otherwise specified in number_of_processors.
-
-        Data with multiple TE are normalized in separate segments using the
-        b0-values according that TE.
-
-        Parameters
-        ----------
-        acquisition_scheme : DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using dMipy.
-        data : N-dimensional array of size (N_x, N_y, ..., N_dwis),
-            The measured DWI signal attenuation array of either a single voxel
-            or an N-dimensional dataset.
-        mask : (N-1)-dimensional integer/boolean array of size (N_x, N_y, ...),
-            Optional mask of voxels to be included in the optimization.
-        solver : string,
-            Selection of optimization algorithm.
-            - 'brute2fine' to use brute-force optimization.
-            - 'mix' to use Microstructure Imaging of Crossing (MIX)
-              optimization.
-        Ns : integer,
-            for brute optimization, decised how many steps are sampled for
-            every parameter.
-        maxiter : integer,
-            for MIX optimization, how many iterations are allowed.
-        N_sphere_samples : integer,
-            for brute optimization, how many spherical orientations are sampled
-            for 'mu'.
-        use_parallel_processing : bool,
-            whether or not to use parallel processing using pathos.
-        number_of_processors : integer,
-            number of processors to use for parallel processing. Defaults to
-            the number of processors in the computer according to cpu_count().
-        Returns
-        -------
-        FittedCompartmentModel: class instance that contains fitted parameters,
-            Can be used to recover parameters themselves or other useful
-            functions.
-        """
-        self._check_tissue_model_acquisition_scheme(acquisition_scheme)
-        self._check_model_params_with_acquisition_params(acquisition_scheme)
-        self._check_acquisition_scheme_has_b0s(acquisition_scheme)
-        self._check_if_volume_fractions_are_fixed()
-
-        # estimate S0
-        self.scheme = acquisition_scheme
-        data_ = np.atleast_2d(data)
-        if self.scheme.TE is None or len(np.unique(self.scheme.TE)) == 1:
-            S0 = np.mean(data_[..., self.scheme.b0_mask], axis=-1)
-        else:  # if multiple TE are in the data
-            S0 = np.ones(np.r_[data_.shape[:-1],
-                               len(acquisition_scheme.shell_TE)])
-            for TE_ in self.scheme.shell_TE:
-                TE_mask = self.scheme.shell_TE == TE_
-                TE_mask_shell = self.scheme.TE == TE_
-                TE_b0_mask = np.all([self.scheme.b0_mask, TE_mask_shell],
-                                    axis=0)
-                S0[..., TE_mask] = np.mean(
-                    data_[..., TE_b0_mask], axis=-1)[..., None]
-
-        if mask is None:
-            mask = data_[..., 0] > 0
-        else:
-            mask = np.all([mask, data_[..., 0] > 0], axis=0)
-        mask_pos = np.where(mask)
-
-        N_parameters = len(self.bounds_for_optimization)
-        N_voxels = np.sum(mask)
-
-        # make starting parameters and data the same size
-        x0_ = self.parameter_initial_guess_to_parameter_vector(
-            **self.x0_parameters)
-        x0_ = homogenize_x0_to_data(
-            data_, x0_)
-        x0_bool = np.all(
-            np.isnan(x0_), axis=tuple(np.arange(x0_.ndim - 1)))
-        x0_[..., ~x0_bool] /= self.scales_for_optimization[~x0_bool]
-
-        if use_parallel_processing and not have_pathos:
-            msg = 'Cannot use parallel processing without pathos.'
-            raise ValueError(msg)
-        elif use_parallel_processing and have_pathos:
-            fitted_parameters_lin = [None] * N_voxels
-            if number_of_processors is None:
-                number_of_processors = cpu_count()
-            pool = pp.ProcessPool(number_of_processors)
-            print('Using parallel processing with {} workers.'.format(
-                number_of_processors))
-        else:
-            fitted_parameters_lin = np.empty(
-                np.r_[N_voxels, N_parameters], dtype=float)
-
-        # estimate the spherical mean of the data.
-        data_to_fit = np.zeros(np.r_[data_.shape[:-1], self.scheme.N_shells])
-        for pos in zip(*mask_pos):
-            data_to_fit[pos] = estimate_spherical_mean_multi_shell(
-                data_[pos], self.scheme)
-
-        # TODO: complete the setup of the optimization in model fitting
-        def fit_func(*args, **kwargs):
-            # This function will use the self.forward_model property
-            # TODO: implement the fit_func method for the model fitting
-            raise NotImplementedError
-        self.optimizer = fit_func
-
-        start = time()
-        for idx, pos in enumerate(zip(*mask_pos)):
-            voxel_E = data_to_fit[pos] / S0[pos]
-            voxel_x0_vector = x0_[pos]
-            # TODO: preprocess the x0 as required by the solver
-            fit_args = (voxel_E, voxel_x0_vector)
-
-            if use_parallel_processing:
-                fitted_parameters_lin[idx] = pool.apipe(fit_func, *fit_args)
-            else:
-                fitted_parameters_lin[idx] = fit_func(*fit_args)
-        if use_parallel_processing:
-            fitted_parameters_lin = np.array(
-                [p.get() for p in fitted_parameters_lin])
-            pool.close()
-            pool.join()
-            pool.clear()
-
-        fitting_time = time() - start
-        print('Fitting of {} voxels complete in {} seconds.'.format(
-            len(fitted_parameters_lin), fitting_time))
-        print('Average of {} seconds per voxel.'.format(
-            fitting_time / N_voxels))
-
-        fitted_mt_fractions = None
-        if self.S0_tissue_responses:
-            # TODO: rescale the signal fractions to get the volume fractions
-            mt_fractions = None
-            msg = 'Multi-tissue fitting of {} voxels complete in {} seconds.'
-            print(msg.format(len(mt_fractions), fitting_time))
-            fitted_mt_fractions = np.zeros(np.r_[mask.shape, self.N_models])
-            fitted_mt_fractions[mask_pos] = mt_fractions
-
-        fitted_parameters = np.zeros_like(x0_, dtype=float)
-        fitted_parameters[mask_pos] = (
-            fitted_parameters_lin * self.scales_for_optimization)
-
-        return FittedMultiCompartmentAMICOSphericalMeanModel(
-            self, S0, mask, fitted_parameters, fitted_mt_fractions)
-
-    def simulate_signal(self, acquisition_scheme, parameters_array_or_dict):
-        """
-        Function to simulate diffusion data for a given acquisition_scheme
-        and model parameters for the MultiCompartmentModel.
-
-        Parameters
-        ----------
-        acquisition_scheme : DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using dMipy
-        model_parameters_array : 1D array of size (N_parameters) or
-            N-dimensional array the same size as the data.
-            The model parameters of the MultiCompartmentModel model.
-
-        Returns
-        -------
-        E_simulated: 1D array of size (N_parameters) or N-dimensional
-            array the same size as x0.
-            The simulated signal of the microstructure model.
-        """
-        self._check_model_params_with_acquisition_params(acquisition_scheme)
-
-        Ndata = acquisition_scheme.shell_indices.max() + 1
-        if isinstance(parameters_array_or_dict, np.ndarray):
-            x0 = parameters_array_or_dict
-        elif isinstance(parameters_array_or_dict, dict):
-            x0 = self.parameters_to_parameter_vector(
-                **parameters_array_or_dict)
-
-        x0_at_least_2d = np.atleast_2d(x0)
-        x0_2d = x0_at_least_2d.reshape(-1, x0_at_least_2d.shape[-1])
-        E_2d = np.empty(np.r_[x0_2d.shape[:-1], Ndata])
-        for i, x0_ in enumerate(x0_2d):
-            parameters = self.parameter_vector_to_parameters(x0_)
-            E_2d[i] = self(acquisition_scheme, **parameters)
-        E_simulated = E_2d.reshape(
-            np.r_[x0_at_least_2d.shape[:-1], Ndata])
-
-        if x0.ndim == 1:
-            return np.squeeze(E_simulated)
-        else:
-            return E_simulated
-
-    def __call__(self, acquisition_scheme_or_vertices,
-                 quantity="signal", **kwargs):
-        """
-        The MultiCompartmentModel function call for to generate signal
-        attenuation for a given acquisition scheme and model parameters.
-
-        First, the linked parameters are added to the optimized parameters.
-
-        Then, every model in the MultiCompartmentModel is called with the right
-        parameters to recover the part of the signal attenuation of that model.
-        The resulting values are multiplied with the volume fractions and
-        finally the combined signal attenuation is returned.
-
-        Aside from the signal, the function call can also return the Fiber
-        Orientation Distributions (FODs) when a dispersed model is used, and
-        can also return the stochastic cost function for the MIX algorithm.
-
-        Parameters
-        ----------
-        acquisition_scheme : DmipyAcquisitionScheme instance,
-            An acquisition scheme that has been instantiated using dMipy.
-        quantity : string
-            can be 'signal', 'FOD' or 'stochastic cost function' depending on
-            the need of the model.
-        kwargs: keyword arguments to the model parameter values,
-            Is internally given as **parameter_dictionary.
-        """
-        if quantity == "signal":
-            values = 0
-        elif quantity == "stochastic cost function":
-            values = np.empty((
-                len(acquisition_scheme_or_vertices.shell_bvalues),
-                len(self.models)
-            ))
-            counter = 0
-
-        kwargs = self.add_linked_parameters_to_parameters(
-            kwargs
-        )
-        if len(self.models) > 1:
-            partial_volumes = [
-                kwargs[p] for p in self.partial_volume_names
-            ]
-        else:
-            partial_volumes = [1.]
-
-        for model_name, model, partial_volume in zip(
-            self.model_names, self.models, partial_volumes
-        ):
-            parameters = {}
-            for parameter in model.parameter_ranges:
-                parameter_name = self._inverted_parameter_map[
-                    (model, parameter)
-                ]
-                parameters[parameter] = kwargs.get(
-                    # , self.parameter_defaults.get(parameter_name)
-                    parameter_name
-                )
-
-            if quantity == "signal":
-                values = (
-                    values +
-                    partial_volume * model.spherical_mean(
-                        acquisition_scheme_or_vertices, **parameters)
-                )
-            elif quantity == "stochastic cost function":
-                values[:, counter] = model.spherical_mean(
-                    acquisition_scheme_or_vertices,
-                    **parameters)
                 counter += 1
         return values
 
