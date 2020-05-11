@@ -82,7 +82,10 @@ def three_tissue_response_dhollander16(
     SDM = signal_decay_metric(acquisition_scheme, data)
 
     # Make Mask
-    b0_mask, mask = median_otsu(data, median_radius=2, numpass=1)
+    b0_mask, mask = median_otsu(
+        input_volume=data,
+        vol_idx=np.where(acquisition_scheme.b0_mask)[0],
+        median_radius=4, numpass=4)  # based on dipy default
     gtab = gtab_dmipy2dipy(acquisition_scheme)
     tenmod = dti.TensorModel(gtab)
     tenfit = tenmod.fit(b0_mask)
