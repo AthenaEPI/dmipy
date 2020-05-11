@@ -51,7 +51,10 @@ def white_matter_response_tournier07(
 
     if data.ndim == 4:
         # calculate brain mask on 4D data (x, y, z, DWI)
-        b0_mask, mask = median_otsu(data, 2, 1)
+        b0_mask, mask = median_otsu(
+            input_volume=data,
+            vol_idx=np.where(acquisition_scheme.b0_mask)[0],
+            median_radius=4, numpass=4)  # based on dipy default
         # needs to be eroded 3 times.
         mask_eroded = binary_erosion(mask, iterations=3)
         data_to_fit = data[mask_eroded]
@@ -153,7 +156,10 @@ def white_matter_response_tournier13(
 
     if data.ndim == 4:
         # calculate brain mask on 4D data (x, y, z, DWI)
-        b0_mask, mask = median_otsu(data, 2, 1)
+        b0_mask, mask = median_otsu(
+            input_volume=data,
+            vol_idx=np.where(acquisition_scheme.b0_mask)[0],
+            median_radius=4, numpass=4)  # based on dipy default
         # needs to be eroded 3 times.
         mask_eroded = binary_erosion(mask, iterations=3)
         data_to_fit = data[mask_eroded]
