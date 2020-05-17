@@ -28,7 +28,6 @@ from ..optimizers.mix import MixOptimizer
 from ..optimizers.multi_tissue_convex_optimizer import (
     MultiTissueConvexOptimizer)
 from dipy.utils.optpkg import optional_package
-from dmipy.utils.build_sphere import get_hemisphere
 from uuid import uuid4
 pathos, have_pathos, _ = optional_package("pathos")
 numba, have_numba, _ = optional_package("numba")
@@ -2194,6 +2193,21 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
 
 
 class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
+    """
+    The MultiCompartmentAmicoModel class allows to combine any number of
+    CompartmentModels and DistributedModels into one combined generalized
+    AMICO model that can be used to fit and simulate dMRI data.
+
+    Parameters
+    ----------
+    models : list of N CompartmentModel instances,
+        the models to combine into the MultiCompartmentModel.
+    S0_tissue_responses: list of N values,
+        the S0 response of the tissue modelled by each compartment.
+    parameter_links : list of iterables (model, parameter name, link function,
+        argument list),
+        deprecated, for testing only.
+    """
     def __init__(self, models, S0_tissue_responses=None, parameter_links=None):
         self.models = models
         self.N_models = len(models)
@@ -2237,7 +2251,7 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
                 raise ValueError(msg)
 
     def _check_if_model_orientations_are_fixed(self):
-        # TODO: return True if the orientations are fixed, False o/wise.
+        # TODO: raise ValueError if orientations are not fixed
         raise NotImplementedError
 
     def _create_forward_model_matrix(self):
@@ -2252,7 +2266,11 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
     @property
     def forward_model(self):
         """Return the forward model matrix associated to the AMICO model"""
-        if self._forward_model_matrix is None:
+        # TODO: we have to find a way to reset the forward model matrix to None
+        #  whenever a model parameter is changed. O/wise we will have a forward
+        #  matrix stored in the attribute that does not correspond to the
+        #  specified parameters.
+        if self._forward_model_matrix is None or self.parameter_indices is None:
             self._create_forward_model_matrix()
         return self._forward_model_matrix
 
@@ -2260,21 +2278,19 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
     def parameter_indices(self):
         """Return the dictionary containing the column indices associated to
         each parameter in the forward model matrix"""
+        if self._forward_model_matrix is None or self.parameter_indices is None:
+            self._create_forward_model_matrix()
         return self._parameter_indices
 
     def fit(self, acquisition_scheme, data,
             mask=None,
-            solver=None, # TODO: define the solver
-            Ns=5,
             maxiter=300,
-            N_sphere_samples=30,
             use_parallel_processing=have_pathos,
-            number_of_processors=None,
-            directions_for_lut=64):
+            number_of_processors=None):
         """ The main data fitting function of a MultiCompartmentModel.
 
         This function can fit it to an N-dimensional dMRI data set, and returns
-        a FittedMultiCompartmentModel instance that contains the fitted
+        a FittedMultiCompartmentAMICOModel instance that contains the fitted
         parameters and other useful functions to study the results.
 
         No initial guess needs to be given to fit a model, but a partial or
@@ -2286,23 +2302,6 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         A mask can also be given to exclude voxels from fitting (e.g. voxels
         that are outside the brain). If no mask is given then all voxels are
         included.
-
-        An optimization approach can be chosen as either 'brute2fine' or 'mix'.
-        - Choosing brute2fine will first use a brute-force optimization to find
-          an initial guess for parameters without one, and will then refine the
-          result using gradient-descent-based optimization.
-
-          Note that given no initial guess will make brute2fine precompute an
-          global parameter grid that will be re-used for all voxels, which in
-          many cases is much faster than giving voxel-varying initial condition
-          that requires a grid to be estimated per voxel.
-
-        - Choosing mix will use the recent MIX algorithm based on separation of
-          linear and non-linear parameters. MIX first uses a stochastic
-          algorithm to find the non-linear parameters (non-volume fractions),
-          then estimates the volume fractions while fixing the estimates of the
-          non-linear parameters, and then finally refines the solution using
-          a gradient-descent-based algorithm.
 
         The fitting process can be readily parallelized using the optional
         "pathos" package. If it is installed then it will automatically use it,
@@ -2322,26 +2321,14 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
             or an N-dimensional dataset.
         mask : (N-1)-dimensional integer/boolean array of size (N_x, N_y, ...),
             Optional mask of voxels to be included in the optimization.
-        solver : string,
-            TODO: ?
-        Ns : integer,
-            for brute optimization, decised how many steps are sampled for
-            every parameter. TODO: ?
         maxiter : integer,
-            for MIX optimization, how many iterations are allowed. TODO: ?
-        N_sphere_samples : integer,
-            for brute optimization, how many spherical orientations are sampled
-            for 'mu'. TODO: ?
+            How many iterations are allowed in the optimization process.
+            Defaults to 300.
         use_parallel_processing : bool,
             whether or not to use parallel processing using pathos.
         number_of_processors : integer,
             number of processors to use for parallel processing. Defaults to
             the number of processors in the computer according to cpu_count().
-        directions_for_lut : int or N-by-3 array
-            If integer, this corresponds to the number of points on the
-            hemisphere that will be used as directions for the look-up-table.
-            If array, it corresponds to the list of directions that will be
-            used for building the look up table. Default: 64.
 
         Returns
         -------
@@ -2353,6 +2340,7 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         self._check_model_params_with_acquisition_params(acquisition_scheme)
         self._check_acquisition_scheme_has_b0s(acquisition_scheme)
         self._check_if_volume_fractions_are_fixed()
+        self._check_if_model_orientations_are_fixed()
 
         # estimate S0
         self.scheme = acquisition_scheme
@@ -2399,8 +2387,6 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
             fitted_parameters_lin = np.empty(
                 np.r_[N_voxels, N_parameters], dtype=float)
 
-        # these are the directions to use for the look-up table
-        directions = get_hemisphere(directions_for_lut)
         # TODO: complete the setup of the optimization in model fitting
         def fit_func(*args, **kwargs):
             # This function will use the self.forward_model property
@@ -2563,10 +2549,6 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
                     )
                 except AttributeError:
                     continue
-            elif quantity == "stochastic cost function":
-                values[:, counter] = model(acquisition_scheme_or_vertices,
-                                           **parameters)
-                counter += 1
         return values
 
 

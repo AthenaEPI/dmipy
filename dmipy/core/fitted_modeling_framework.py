@@ -1046,41 +1046,14 @@ class FittedMultiCompartmentAMICOModel:
             spherical harmonics coefficients of the FODs, scaled by volume
             fraction.
         """
-        if not self.model.fod_available:
-            msg = ('FODs not available for current model.')
-            raise ValueError(msg)
-        sphere = get_sphere(name='repulsion724')
-        vertices = sphere.vertices
-        _, inv_sh_matrix = sh_to_sf_matrix(
-            sphere, sh_order, basis_type=basis_type, return_inv=True)
-        fods_sf = self.fod(vertices)
-
-        dataset_shape = self.fitted_parameters_vector.shape[:-1]
-        number_coef_used = int((sh_order + 2) * (sh_order + 1) // 2)
-        fods_sh = np.zeros(np.r_[dataset_shape, number_coef_used])
-        mask_pos = np.where(self.mask)
-        for pos in zip(*mask_pos):
-            fods_sh[pos] = np.dot(inv_sh_matrix.T, fods_sf[pos])
-        return fods_sh
+        raise NotImplementedError
 
     def peaks_spherical(self):
         "Returns the peak angles of the model."
-        mu_params = []
-        for name, card in self.model.parameter_cardinality.items():
-            if name[-2:] == 'mu' and card == 2:
-                mu_params.append(self.fitted_parameters[name])
-        if len(mu_params) == 0:
-            msg = ('peaks not available for current model.')
-            raise ValueError(msg)
-        if len(mu_params) == 1:
-            return np.expand_dims(mu_params[0], axis=-2)
-        return np.concatenate([mu[..., None] for mu in mu_params], axis=-1)
+        raise NotImplementedError
 
     def peaks_cartesian(self):
-        "Returns the cartesian peak unit vectors of the model."
-        peaks_spherical = self.peaks_spherical()
-        peaks_cartesian = unitsphere2cart_Nd(peaks_spherical)
-        return peaks_cartesian
+        raise NotImplementedError
 
     def predict(self, acquisition_scheme=None, S0=None, mask=None):
         """

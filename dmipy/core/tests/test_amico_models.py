@@ -68,6 +68,42 @@ def two_compartment_amico_model():
     return model, data
 
 
+def two_sticks_one_ball_amico_model():
+    """
+    Provides a simple Stick-Stick-and-Ball AMICO-like model.
+
+    This function builds an AMICO model with two compartments given by a
+    stick convolved with a watson distribution and a ball.
+
+    All the parameters are set randomly.
+
+    Returns:
+        tuple of length 2 with
+         * MultiCompartmentAMICOModel instance
+         * sample data simulated on the hcp acquisition scheme
+    """
+    stick1 = cylinder_models.C1Stick()
+    stick2 = cylinder_models.C1Stick()
+    ball = gaussian_models.G1Ball()
+    watsonstick1 = distribute_models.SD1WatsonDistributed(
+        [stick1])
+    watsonstick2 = distribute_models.SD1WatsonDistributed(
+        [stick2])
+    compartments = [watsonstick1, watsonstick2, ball]
+    model = modeling_framework.MultiCompartmentAMICOModel(compartments)
+
+    params = {}
+    for parameter, card, in model.parameter_cardinality.items():
+        params[parameter] = (np.random.rand(card) *
+                             model.parameter_scales[parameter])
+
+    for key, value in params.items():
+        model.set_fixed_parameter(key, value)
+
+    data = np.atleast_2d(model(scheme, **params))
+    return model, data
+
+
 def test_forward_model():
     # TODO: test that the observation matrix is defined as expected
     pass
