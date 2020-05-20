@@ -109,7 +109,7 @@ class AmicoCvxpyOptimizer:
         arguments = self.grids.copy()
         arguments[dir_params[0]] = [0, 0]
         self.M = self.model.simulate_signal(acquisition_scheme, arguments)
-        self.M = self.M[:, acquisition_scheme.b0_mask]
+        self.M = self.M[:, ~acquisition_scheme.b0_mask]
 
     def __call__(self, data):
         """
