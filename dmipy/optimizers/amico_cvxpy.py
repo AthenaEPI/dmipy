@@ -107,9 +107,8 @@ class AmicoCvxpyOptimizer:
             self.grids['partial_volume_' +
                        str(m_idx)][self.idx[model_name]] = 1.
 
-        arguments = self.grids.copy()
-        arguments[dir_params[0]] = [0, 0]
-        self.M = self.model.simulate_signal(acquisition_scheme, arguments)
+        self.grids[dir_params[0]] = [0, 0]
+        self.M = self.model.simulate_signal(acquisition_scheme, self.grids)
         self.M = self.M[:, ~acquisition_scheme.b0_mask].T
 
     def __call__(self, data):
