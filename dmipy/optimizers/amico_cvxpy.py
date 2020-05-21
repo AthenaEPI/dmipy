@@ -109,7 +109,7 @@ class AmicoCvxpyOptimizer:
         arguments = self.grids.copy()
         arguments[dir_params[0]] = [0, 0]
         self.M = self.model.simulate_signal(acquisition_scheme, arguments)
-        self.M = self.M[:, ~acquisition_scheme.b0_mask]
+        self.M = self.M[:, ~acquisition_scheme.b0_mask].T
 
     def __call__(self, data):
         """
@@ -128,7 +128,7 @@ class AmicoCvxpyOptimizer:
 
         x0 = cvxpy.Variable(len(self.x0_vector))
 
-        cost = 0.5 * cvxpy.sum_squares(self.M * x0 - data)
+        cost = 0.5 * cvxpy.sum_squares(self.M * x0 - data[~acquisition_scheme.b0_mask])
         for m_idx, model_name in enumerate(self.model.model_names):
             cost += self.lambda_1[m_idx] *\
                     cvxpy.norm(x0[self.idx[model_name]], 1)
