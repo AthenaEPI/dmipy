@@ -91,20 +91,21 @@ class AmicoCvxpyOptimizer:
                     continue
                 grid_params_names.append(model_name + p)
                 p_range = self.model.parameter_ranges[model_name + p]
-                self.grids[model_name + p] = np.mean(p_range)
+                self.grids[model_name + p] = np.full(x0_len, np.mean(p_range))
                 param_sampling.append(np.linspace(p_range[0], p_range[1],
                                                   self.Nt, endpoint=True))
                 m_atoms *= self.Nt
 
             self.idx[model_name] =\
-                sum([len(self.idx[k]) for k in self.idx]) + np.arange(0, m_atoms)
+                sum([len(self.idx[k]) for k in self.idx]) + np.arange(m_atoms)
             params_mesh = np.meshgrid(*param_sampling)
             for p_idx, p in enumerate(grid_params_names):
-                self.grids[p] += np.zeros(x0_len, dtype=np.float32)
-                self.grids[p][self.idx[model_name]] = np.ravel(params_mesh[p_idx])
+                self.grids[p][self.idx[model_name]] =\
+                    np.ravel(params_mesh[p_idx])
 
             self.grids['partial_volume_' + str(m_idx)] = np.zeros(x0_len)
-            self.grids['partial_volume_' + str(m_idx)][self.idx[model_name]] = 1.
+            self.grids['partial_volume_' +
+                       str(m_idx)][self.idx[model_name]] = 1.
 
         arguments = self.grids.copy()
         arguments[dir_params[0]] = [0, 0]
@@ -122,21 +123,26 @@ class AmicoCvxpyOptimizer:
         Returns
         -------
         fitted_parameter_vector : Array of size (Nx),
-            Vector containing probability distributions of the parameters that are
-            being estimated
+            Vector containing probability distributions of the parameters that
+            are being estimated
         """
 
         x0 = cvxpy.Variable(len(self.x0_vector))
 
-        cost = 0.5 * cvxpy.sum_squares(self.M * x0 - data[~acquisition_scheme.b0_mask])
+        cost = 0.5 * cvxpy.sum_squares(self.M * x0 -
+                                       data[~self.acquisition_scheme.b0_mask])
         for m_idx, model_name in enumerate(self.model.model_names):
             cost += self.lambda_1[m_idx] *\
-                    cvxpy.norm(x0[self.idx[model_name]], 1)
+                cvxpy.norm(x0[self.idx[model_name]], 1)
             cost += 0.5 * self.lambda_2[m_idx] *\
-                    cvxpy.norm(x0[self.idx[model_name]], 2) ** 2
+                cvxpy.norm(x0[self.idx[model_name]], 2) ** 2
 
         problem = cvxpy.Problem(cvxpy.Minimize(cost), [x0 >= 0])
         problem.solve()
+
+        # TODO:
+        # M-pruning
+        # estimate x0 vector with non negative least squares
 
         self.x0_vector = x0.value
 
