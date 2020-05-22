@@ -342,20 +342,53 @@ class SD3SphericalHarmonics(ModelProperties):
     ----------
     sh_order: int,
         maximum spherical harmonics order.
+    sh_coeff
     """
 
-    def __init__(self, sh_order):
-        N_coef = int((sh_order + 2) * (sh_order + 1) // 2)
+    def __init__(self, sh_order, sh_coeff=None):
+        self.sh_order = sh_order
+        self.N_coeff = int((sh_order + 2) * (sh_order + 1) // 2)
+        if sh_coeff is not None:
+            if len(sh_coeff) != self.N_coeff:
+                msg = 'if given, sh_coeff length must correspond to N_coeffs '\
+                      'associated with sh_order ({} vs {}).'
+                raise ValueError(msg.format(len(sh_coeff, self.N_coeff)))
+        self.sh_coeff = sh_coeff
+
         self._parameter_ranges = {'sh_coeff': [
-            [-1e3, 1e3] for i in range(N_coef)]}
+            [None, None] for i in range(self.N_coeff)]}
         self._parameter_scales = {'sh_coeff':
-                                  np.ones(N_coef, dtype=float)}
-        self._parameter_cardinality = {'sh_coeff': N_coef}
+                                  np.ones(self.N_coeff, dtype=float)}
+        self._parameter_cardinality = {'sh_coeff': self.N_coeff}
         self._parameter_types = {'sh_coeff': 'sh_coefficients'}
         self._parameter_optimization_flags = {'sh_coeff': True}
 
+    def __call__(self, n, **kwargs):
+        r"""Returns the sphere function at cartesian orientations n given
+        spherical harmonic coefficients.
+
+        Parameters
+        ----------
+        n : array of shape(N x 3),
+            sampled orientations of the Watson distribution.
+
+        Returns
+        -------
+        SHn: array of shape(N),
+            Probability density at orientations n, given sh coeffs.
+        """
+        # calculate SHT matrix
+        _, theta, phi = utils.cart2sphere(n).T
+        SHT = real_sym_sh_mrtrix(self.sh_order, theta, phi)[0]
+        # transform coefficients to sphere values
+        sh_coeff = kwargs.get('sh_coeff', self.sh_coeff)
+        SHn = SHT.dot(sh_coeff)
+        return SHn
+
     def spherical_harmonics_representation(self, **kwargs):
-        return kwargs['sh_coeff']
+        r"""Returns the spherical harmonic coefficients themselves.
+        """
+        return kwargs.get('sh_coeff', self.sh_coeff)
 
 
 class DD1Gamma(ModelProperties):
