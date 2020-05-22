@@ -1041,8 +1041,10 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
     def _check_if_sh_coeff_fixed_if_present(self):
         msg = 'sh_coeff parameter {} must be fixed in standard MC models '\
               'to estimate the kernel parameters.'
-        for parameter in self.parameter_names:
-            assert 'sh_coeff' not in parameter, msg.format(parameter)
+        for name, par_type in self.parameter_types.items():
+            if par_type == 'sh_coefficients':
+                if self.parameter_optimization_flags[name]:
+                    raise ValueError(msg.format(name))
 
     def fit(self, acquisition_scheme, data,
             mask=None, solver='brute2fine', Ns=5, maxiter=300,
@@ -1785,7 +1787,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         self.S0_tissue_responses = S0_tissue_responses
         self.parameter_links = []
 
-        self._check_for_dispersed_or_NMR_models()
+        self._check_for_NMR_models()
         self._prepare_parameters()
         self._delete_orientation_parameters()
         self._prepare_partial_volumes()
@@ -1809,15 +1811,10 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             msg += "multicore processing."
             print(msg)
 
-    def _check_for_dispersed_or_NMR_models(self):
+    def _check_for_NMR_models(self):
         for model in self.models:
             if model._model_type == 'NMRModel':
                 msg = "Cannot estimate spherical mean of 1D-NMR models."
-                raise ValueError(msg)
-            if model._model_type == 'SphericalDistributedModel':
-                msg = "Cannot estimate spherical mean spherically distributed "
-                msg += "model. Please give the input models to the distributed"
-                msg += " model directly to MultiCompartmentSphericalMeanModel."
                 raise ValueError(msg)
 
     def _delete_orientation_parameters(self):
