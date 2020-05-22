@@ -1,4 +1,5 @@
 import numpy as np
+from dipy.utils.optpkg import optional_package
 cvxpy, have_cvxpy, _ = optional_package("cvxpy")
 
 
