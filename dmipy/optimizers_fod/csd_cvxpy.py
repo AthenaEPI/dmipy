@@ -191,6 +191,9 @@ class CsdCvxpyOptimizer:
         # return optimized fod sh coefficients
         fitted_params = self.model.parameter_vector_to_parameters(x0_vector)
         fitted_params['sh_coeff'] = np.array(sh_fod.value).squeeze()
+        # explicitly set zeroth coefficient to inverse of jacobian
+        # to separate volume and shape of coefficients
+        fitted_params['sh_coeff'][0] = 1. / self.sphere_jacobian
 
         if not self.model.volume_fractions_fixed:  # if vf was estimated
             fractions_array = np.array(
