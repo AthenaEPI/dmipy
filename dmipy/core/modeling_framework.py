@@ -3,34 +3,26 @@
 Document Module
 '''
 from __future__ import division
-import pkg_resources
-from collections import OrderedDict
 
+import collections
+from dipy.utils import optpkg
 import numpy as np
-from time import time
+import pkg_resources
+import time
+import uuid
 
-from ..utils.spherical_mean import (
-    estimate_spherical_mean_multi_shell)
-from ..utils.utils import (
-    T1_tortuosity,
-    parameter_equality,
-    fractional_parameter)
-from .fitted_modeling_framework import (
-    FittedMultiCompartmentModel,
-    FittedMultiCompartmentSphericalMeanModel,
-    FittedMultiCompartmentSphericalHarmonicsModel)
-from ..optimizers.brute2fine import (
-    GlobalBruteOptimizer, Brute2FineOptimizer)
-from ..optimizers_fod.csd_tournier import CsdTournierOptimizer
-from ..optimizers_fod.csd_cvxpy import CsdCvxpyOptimizer
-from ..optimizers.mix import MixOptimizer
-from ..optimizers.multi_tissue_convex_optimizer import (
-    MultiTissueConvexOptimizer)
-from dipy.utils.optpkg import optional_package
-from uuid import uuid4
-pathos, have_pathos, _ = optional_package("pathos")
-numba, have_numba, _ = optional_package("numba")
-graphviz, have_graphviz, _ = optional_package("graphviz")
+from dmipy.utils import spherical_mean
+from dmipy.utils import utils
+from dmipy.core import fitted_modeling_framework
+from dmipy.optimizers import brute2fine
+from dmipy.optimizers_fod import csd_tournier
+from dmipy.optimizers_fod import csd_cvxpy
+from dmipy.optimizers import mix
+from dmipy.optimizers import multi_tissue_convex_optimizer
+
+pathos, have_pathos, _ = optpkg.optional_package("pathos")
+numba, have_numba, _ = optpkg.optional_package("numba")
+graphviz, have_graphviz, _ = optpkg.optional_package("graphviz")
 
 if have_graphviz:
     from graphviz import Digraph
@@ -67,7 +59,7 @@ class ModelProperties:
         These ranges are given in O(1) scale so optimization algorithms
         don't suffer from large scale differences in optimization parameters.
         """
-        return OrderedDict(self._parameter_ranges.copy())
+        return collections.OrderedDict(self._parameter_ranges.copy())
 
     @property
     def parameter_scales(self):
@@ -75,7 +67,7 @@ class ModelProperties:
         The scales scale the parameter_ranges to their actual size inside
         optimization algorithms.
         """
-        return OrderedDict(self._parameter_scales.copy())
+        return collections.OrderedDict(self._parameter_scales.copy())
 
     @property
     def parameter_types(self):
@@ -83,7 +75,7 @@ class ModelProperties:
         The scales scale the parameter_ranges to their actual size inside
         optimization algorithms.
         """
-        return OrderedDict(self._parameter_types.copy())
+        return collections.OrderedDict(self._parameter_types.copy())
 
     @property
     def parameter_names(self):
@@ -93,7 +85,7 @@ class ModelProperties:
     @property
     def parameter_cardinality(self):
         "Returns the cardinality of model parameters"
-        return OrderedDict([
+        return collections.OrderedDict([
             (k, len(np.atleast_2d(self.parameter_ranges[k])))
             for k in self.parameter_ranges
         ])
@@ -254,19 +246,19 @@ class MultiCompartmentModelProperties:
                 )
             )
 
-        self.parameter_ranges = OrderedDict({
+        self.parameter_ranges = collections.OrderedDict({
             model_name + k: v
             for model, model_name in zip(self.models, self.model_names)
             for k, v in model.parameter_ranges.items()
         })
 
-        self.parameter_scales = OrderedDict({
+        self.parameter_scales = collections.OrderedDict({
             model_name + k: v
             for model, model_name in zip(self.models, self.model_names)
             for k, v in model.parameter_scales.items()
         })
 
-        self.parameter_types = OrderedDict({
+        self.parameter_types = collections.OrderedDict({
             model_name + k: v
             for model, model_name in zip(self.models, self.model_names)
             for k, v in model.parameter_types.items()
@@ -282,7 +274,7 @@ class MultiCompartmentModelProperties:
             v: k for k, v in self._parameter_map.items()
         }
 
-        self.parameter_cardinality = OrderedDict([
+        self.parameter_cardinality = collections.OrderedDict([
             (k, len(np.atleast_2d(self.parameter_ranges[k])))
             for k in self.parameter_ranges
         ])
@@ -397,7 +389,7 @@ class MultiCompartmentModelProperties:
 
     def _prepare_parameters_to_optimize(self):
         "Sets up which parmameters to optimize."
-        self.parameter_optimization_flags = OrderedDict({
+        self.parameter_optimization_flags = collections.OrderedDict({
             k: True
             for k, v in self.parameter_cardinality.items()
         })
@@ -436,7 +428,7 @@ class MultiCompartmentModelProperties:
 
     def _check_for_tortuosity_constraint(self):
         for link in self.parameter_links:
-            if link[2] is T1_tortuosity:
+            if link[2] is utils.T1_tortuosity:
                 msg = "Cannot use MIX optimization when the Tortuosity "
                 msg += "constraint is set in the MultiCompartmentModel. To "
                 msg += "use MIX while imposing Tortuosity, set the constraint "
@@ -595,7 +587,7 @@ class MultiCompartmentModelProperties:
                 raise ValueError(msg)
 
         model, name = self._parameter_map[lambda_perp_parameter_name]
-        self.parameter_links.append([model, name, T1_tortuosity, [
+        self.parameter_links.append([model, name, utils.T1_tortuosity, [
             self._parameter_map[lambda_par_parameter_name],
             self._parameter_map[volume_fraction_intra_parameter_name],
             self._parameter_map[volume_fraction_extra_parameter_name]]
@@ -632,7 +624,7 @@ class MultiCompartmentModelProperties:
                     param)
                 raise ValueError(msg)
         model, name = self._parameter_map[parameter_name_out]
-        self.parameter_links.append([model, name, parameter_equality, [
+        self.parameter_links.append([model, name, utils.parameter_equality, [
             self._parameter_map[parameter_name_in]]])
         del self.parameter_ranges[parameter_name_out]
         del self.parameter_cardinality[parameter_name_out]
@@ -670,7 +662,7 @@ class MultiCompartmentModelProperties:
         self._add_optimization_parameter(
             new_parameter_name, [0., 1.], 1., 1, 'normal', True)
         model, name = self._parameter_map[parameter1_smaller_equal_than]
-        self.parameter_links.append([model, name, fractional_parameter, [
+        self.parameter_links.append([model, name, utils.fractional_parameter, [
             self._parameter_map[new_parameter_name],
             self._parameter_map[parameter2]]])
 
@@ -699,12 +691,15 @@ class MultiCompartmentModelProperties:
         old_parameter_types = self.parameter_types
         old_optimization_flags = self.parameter_optimization_flags
 
-        self.parameter_ranges = OrderedDict({parameter_name: parameter_range})
-        self.parameter_scales = OrderedDict({parameter_name: parameter_scale})
-        self.parameter_cardinality = OrderedDict(
+        self.parameter_ranges = collections.OrderedDict(
+            {parameter_name: parameter_range})
+        self.parameter_scales = collections.OrderedDict(
+            {parameter_name: parameter_scale})
+        self.parameter_cardinality = collections.OrderedDict(
             {parameter_name: parameter_card})
-        self.parameter_types = OrderedDict({parameter_name: parameter_type})
-        self.parameter_optimization_flags = OrderedDict(
+        self.parameter_types = collections.OrderedDict(
+            {parameter_name: parameter_type})
+        self.parameter_optimization_flags = collections.OrderedDict(
             {parameter_name: parameter_flag})
 
         for name, _ in old_parameter_ranges.items():
@@ -760,7 +755,7 @@ class MultiCompartmentModelProperties:
             raise ImportError('graphviz package not installed.')
         dot = Digraph('Model Setup', format=im_format)
         base_model = self.__class__.__name__
-        base_uuid = str(uuid4())
+        base_uuid = str(uuid.uuid4())
         dot.node(base_uuid, base_model)
         self._add_recursive_graph_node(dot, base_uuid, self, with_parameters)
         dot.render('Model Setup', view=view, cleanup=cleanup)
@@ -785,7 +780,7 @@ class MultiCompartmentModelProperties:
         """
         for sub_model in entry_model.models:
             model_name = sub_model.__class__.__name__
-            model_uuid = str(uuid4())
+            model_uuid = str(uuid.uuid4())
             graph_model.node(model_uuid, model_name)
             graph_model.edge(model_uuid, entry_uuid)
             if (sub_model._model_type == 'SphericalDistributedModel' or
@@ -797,7 +792,7 @@ class MultiCompartmentModelProperties:
                 self._add_parameter_nodes(graph_model, model_uuid, sub_model)
         if hasattr(entry_model, 'distribution'):
             dist_name = entry_model.distribution.__class__.__name__
-            dist_uuid = str(uuid4())
+            dist_uuid = str(uuid.uuid4())
             graph_model.node(dist_uuid, dist_name)
             graph_model.edge(dist_uuid, entry_uuid)
             if with_parameters:
@@ -819,7 +814,7 @@ class MultiCompartmentModelProperties:
             Entry dmipy model from which to keep growing the graph.
         """
         for parameter_name in entry_model.parameter_names:
-            parameter_uuid = str(uuid4())
+            parameter_uuid = str(uuid.uuid4())
             graph_model.node(parameter_uuid, parameter_name)
             graph_model.edge(parameter_uuid, entry_uuid)
 
@@ -1168,24 +1163,24 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             fitted_parameters_lin = np.empty(
                 np.r_[N_voxels, N_parameters], dtype=float)
 
-        start = time()
+        start = time.time()
         if solver == 'brute2fine':
-            global_brute = GlobalBruteOptimizer(
+            global_brute = brute2fine.GlobalBruteOptimizer(
                 self, self.scheme, x0_, Ns, N_sphere_samples)
-            fit_func = Brute2FineOptimizer(self, self.scheme, Ns)
+            fit_func = brute2fine.Brute2FineOptimizer(self, self.scheme, Ns)
             print('Setup brute2fine optimizer in {} seconds'.format(
-                time() - start))
+                time.time() - start))
         elif solver == 'mix':
             self._check_for_tortuosity_constraint()
-            fit_func = MixOptimizer(self, self.scheme, maxiter)
+            fit_func = mix.MixOptimizer(self, self.scheme, maxiter)
             print('Setup MIX optimizer in {} seconds'.format(
-                time() - start))
+                time.time() - start))
         else:
             msg = "Unknown solver name {}".format(solver)
             raise ValueError(msg)
         self.optimizer = fit_func
 
-        start = time()
+        start = time.time()
         for idx, pos in enumerate(zip(*mask_pos)):
             voxel_E = data_[pos] / S0[pos]
             voxel_x0_vector = x0_[pos]
@@ -1205,7 +1200,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             pool.join()
             pool.clear()
 
-        fitting_time = time() - start
+        fitting_time = time.time() - start
         print('Fitting of {} voxels complete in {} seconds.'.format(
             len(fitted_parameters_lin), fitting_time))
         print('Average of {} seconds per voxel.'.format(
@@ -1215,16 +1210,17 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         if self.S0_tissue_responses:
             # secondary fitting including S0 responses
             print('Starting secondary multi-tissue optimization.')
-            start = time()
+            start = time.time()
             mt_fractions = np.empty(
                 np.r_[N_voxels, self.N_models], dtype=float)
-            fit_func = MultiTissueConvexOptimizer(
-                acquisition_scheme, self, self.S0_tissue_responses)
+            fit_func = multi_tissue_convex_optimizer.\
+                MultiTissueConvexOptimizer(
+                    acquisition_scheme, self, self.S0_tissue_responses)
             for idx, pos in enumerate(zip(*mask_pos)):
                 voxel_S = data_[pos]
                 parameters = fitted_parameters_lin[idx]
                 mt_fractions[idx] = fit_func(voxel_S, parameters)
-            fitting_time = time() - start
+            fitting_time = time.time() - start
             msg = 'Multi-tissue fitting of {} voxels complete in {} seconds.'
             print(msg.format(len(mt_fractions), fitting_time))
             fitted_mt_fractions = np.zeros(np.r_[mask.shape, self.N_models])
@@ -1234,7 +1230,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         fitted_parameters[mask_pos] = (
             fitted_parameters_lin * self.scales_for_optimization)
 
-        return FittedMultiCompartmentModel(
+        return fitted_modeling_framework.FittedMultiCompartmentModel(
             self, S0, mask, fitted_parameters, fitted_mt_fractions)
 
     def simulate_signal(self, acquisition_scheme, parameters_array_or_dict):
@@ -1566,28 +1562,29 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         # estimate the spherical mean of the data.
         data_to_fit = np.zeros(np.r_[data_.shape[:-1], self.scheme.N_shells])
         for pos in zip(*mask_pos):
-            data_to_fit[pos] = estimate_spherical_mean_multi_shell(
-                data_[pos], self.scheme)
+            data_to_fit[pos] = \
+                spherical_mean.estimate_spherical_mean_multi_shell(
+                    data_[pos], self.scheme)
 
-        start = time()
+        start = time.time()
         if solver == 'brute2fine':
-            global_brute = GlobalBruteOptimizer(
+            global_brute = brute2fine.GlobalBruteOptimizer(
                 self, self.scheme,
                 x0_, Ns, N_sphere_samples)
-            fit_func = Brute2FineOptimizer(self, self.scheme, Ns)
+            fit_func = brute2fine.Brute2FineOptimizer(self, self.scheme, Ns)
             print('Setup brute2fine optimizer in {} seconds'.format(
-                time() - start))
+                time.time() - start))
         elif solver == 'mix':
             self._check_for_tortuosity_constraint()
-            fit_func = MixOptimizer(self, self.scheme, maxiter)
+            fit_func = mix.MixOptimizer(self, self.scheme, maxiter)
             print('Setup MIX optimizer in {} seconds'.format(
-                time() - start))
+                time.time() - start))
         else:
             msg = "Unknown solver name {}".format(solver)
             raise ValueError(msg)
         self.optimizer = fit_func
 
-        start = time()
+        start = time.time()
         for idx, pos in enumerate(zip(*mask_pos)):
             voxel_E = data_to_fit[pos] / S0[pos]
             voxel_x0_vector = x0_[pos]
@@ -1607,7 +1604,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
             pool.join()
             pool.clear()
 
-        fitting_time = time() - start
+        fitting_time = time.time() - start
         print('Fitting of {} voxels complete in {} seconds.'.format(
             len(fitted_parameters_lin), fitting_time))
         print('Average of {} seconds per voxel.'.format(
@@ -1617,16 +1614,17 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         if self.S0_tissue_responses:
             # secondary fitting including S0 responses
             print('Starting secondary multi-tissue optimization.')
-            start = time()
+            start = time.time()
             mt_fractions = np.empty(
                 np.r_[N_voxels, self.N_models], dtype=float)
-            fit_func = MultiTissueConvexOptimizer(
-                acquisition_scheme, self, self.S0_tissue_responses)
+            fit_func = multi_tissue_convex_optimizer.\
+                MultiTissueConvexOptimizer(
+                    acquisition_scheme, self, self.S0_tissue_responses)
             for idx, pos in enumerate(zip(*mask_pos)):
                 voxel_S = data_to_fit[pos]
                 parameters = fitted_parameters_lin[idx]
                 mt_fractions[idx] = fit_func(voxel_S, parameters)
-            fitting_time = time() - start
+            fitting_time = time.time() - start
             msg = 'Multi-tissue fitting of {} voxels complete in {} seconds.'
             print(msg.format(len(mt_fractions), fitting_time))
             fitted_mt_fractions = np.zeros(np.r_[mask.shape, self.N_models])
@@ -1636,8 +1634,9 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         fitted_parameters[mask_pos] = (
             fitted_parameters_lin * self.scales_for_optimization)
 
-        return FittedMultiCompartmentSphericalMeanModel(
-            self, S0, mask, fitted_parameters, fitted_mt_fractions)
+        return fitted_modeling_framework.\
+            FittedMultiCompartmentSphericalMeanModel(
+                self, S0, mask, fitted_parameters, fitted_mt_fractions)
 
     def simulate_signal(self, acquisition_scheme, parameters_array_or_dict):
         """
@@ -2006,10 +2005,10 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         x0_ = homogenize_x0_to_data(
             data_, x0_)
 
-        start = time()
+        start = time.time()
         if solver == 'csd':
             if self.volume_fractions_fixed:
-                fit_func = CsdTournierOptimizer(
+                fit_func = csd_tournier.CsdTournierOptimizer(
                     acquisition_scheme, self, x0_, self.sh_order,
                     unity_constraint=self.unity_constraint,
                     lambda_lb=lambda_lb)
@@ -2023,17 +2022,17 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
                 if verbose:
                     print(
                         'Setup Tournier07 FOD optimizer in {} seconds'.format(
-                            time() - start))
+                            time.time() - start))
             else:
-                fit_func = CsdCvxpyOptimizer(
+                fit_func = csd_cvxpy.CsdCvxpyOptimizer(
                     acquisition_scheme, self, x0_, self.sh_order,
                     unity_constraint=self.unity_constraint,
                     lambda_lb=lambda_lb)
                 if verbose:
                     print('Setup CVXPY FOD optimizer in {} seconds'.format(
-                        time() - start))
+                        time.time() - start))
         elif solver == 'csd_tournier07':
-            fit_func = CsdTournierOptimizer(
+            fit_func = csd_tournier.CsdTournierOptimizer(
                 acquisition_scheme, self, x0_, self.sh_order,
                 unity_constraint=self.unity_constraint, lambda_lb=lambda_lb)
             if use_parallel_processing:
@@ -2044,14 +2043,14 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
                 use_parallel_processing = False
             if verbose:
                 print('Setup Tournier07 FOD optimizer in {} seconds'.format(
-                    time() - start))
+                    time.time() - start))
         elif solver == 'csd_cvxpy':
-            fit_func = CsdCvxpyOptimizer(
+            fit_func = csd_cvxpy.CsdCvxpyOptimizer(
                 acquisition_scheme, self, x0_, self.sh_order,
                 unity_constraint=self.unity_constraint, lambda_lb=lambda_lb)
             if verbose:
                 print('Setup CVXPY FOD optimizer in {} seconds'.format(
-                    time() - start))
+                    time.time() - start))
         else:
             msg = "Unknown solver name {}".format(solver)
             raise ValueError(msg)
@@ -2073,7 +2072,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             fitted_parameters_lin = np.empty(
                 np.r_[N_voxels, N_parameters], dtype=float)
 
-        start = time()
+        start = time.time()
         for idx, pos in enumerate(zip(*mask_pos)):
             if fit_S0_response:
                 data_to_fit = data_[pos] / self.max_S0_response
@@ -2093,7 +2092,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             pool.join()
             pool.clear()
 
-        fitting_time = time() - start
+        fitting_time = time.time() - start
         if verbose:
             print('Fitting of {} voxels complete in {} seconds.'.format(
                 len(fitted_parameters_lin), fitting_time))
@@ -2102,8 +2101,9 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         fitted_parameters = np.zeros_like(x0_, dtype=float)
         fitted_parameters[mask_pos] = fitted_parameters_lin
 
-        return FittedMultiCompartmentSphericalHarmonicsModel(
-            self, S0, mask, fitted_parameters)
+        return fitted_modeling_framework.\
+            FittedMultiCompartmentSphericalHarmonicsModel(
+                self, S0, mask, fitted_parameters)
 
     def simulate_signal(self, acquisition_scheme, parameters_array_or_dict):
         """
