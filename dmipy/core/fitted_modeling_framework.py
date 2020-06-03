@@ -914,11 +914,17 @@ class FittedMultiCompartmentAMICOModel:
         if there are multiple TEs.
     mask : array of size (N_data,),
         boolean mask of voxels that were fitted.
+    forward_model_matrix : array of size N_DWIs-by-Nparameters,
+        forward model used in the fitting process.
+    parameter_indices : dictionary,
+        keys are parameter names and values are the column indices corresponding
+        to the parameter.
     fitted_parameters_vector : array of size (N_data, Nparameters),
         fitted model parameters array.
     """
 
     def __init__(self, model, S0, mask, fitted_parameters_vector,
+                 forward_model_matrix, parameter_indices,
                  fitted_multi_tissue_fractions_vector=None):
         self.model = model
         self.S0 = S0
@@ -926,6 +932,18 @@ class FittedMultiCompartmentAMICOModel:
         self.fitted_parameters_vector = fitted_parameters_vector
         self.fitted_multi_tissue_fractions_vector = (
             fitted_multi_tissue_fractions_vector)
+        self._forward_model_matrix = forward_model_matrix
+        self._parameter_indices = parameter_indices
+
+    @property
+    def forward_model_matrix(self):
+        """Return forward model matrix."""
+        return self._forward_model_matrix
+
+    @property
+    def parameter_indices(self):
+        """Return parameter indices."""
+        return self._parameter_indices
 
     @property
     def fitted_distribution(self):
@@ -1060,8 +1078,7 @@ class FittedMultiCompartmentAMICOModel:
         simulates the dMRI signal of the fitted MultiCompartmentModel for the
         estimated model parameters. If no acquisition_scheme is given, then
         the same acquisition_scheme that was used for the fitting is used. If
-        no S0 is given then it is assumed to be the estimated one. If no mask
-        is given then all voxels are assumed to have been fitted.
+        no mask is given then all voxels are assumed to have been fitted.
 
         Parameters
         ----------
@@ -1080,15 +1097,25 @@ class FittedMultiCompartmentAMICOModel:
             scheme.
         """
         if acquisition_scheme is None:
-            # TODO: for each voxel, multiply the forward model matrix by the
-            #  corresponding x.
-            pass
-        else:
-            # TODO: recompute the forward model matrix on the given set of
-            #  orientations. Also, the coefficients for each orientation must
-            #  be resampled.
-            pass
-        raise NotImplementedError
+            acquisition_scheme = self.model.scheme
+        self.model._check_model_params_with_acquisition_params(
+            acquisition_scheme)
+
+        if S0 is None:
+            S0 = self.S0
+        elif isinstance(S0, float):
+            S0 = np.ones(self.fitted_parameters_vector.shape[:-1]) * S0
+
+        if mask is None:
+            mask = self.mask
+
+        E_shape = mask.shape + (acquisition_scheme.N_dwi,)
+        E = np.zeros(E_shape)
+        mask_pos = np.where(mask)
+        for pos in zip(*mask_pos):
+            parameter_array = self.fitted_parameters_vector[pos]
+            E[pos] = self.forward_model_matrix.dot(parameter_array) * S0[pos]
+        return E
 
     def R2_coefficient_of_determination(self, data):
         "Calculates the R-squared of the model fit."

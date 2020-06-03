@@ -2230,8 +2230,6 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         self._prepare_parameters_to_optimize()
         self._check_for_NMR_and_other_models()
         self.x0_parameters = {}
-        self._forward_model_matrix = None
-        self._parameter_indices = {}
 
         if not have_numba:
             msg = "We highly recommend installing numba for faster function "
@@ -2251,36 +2249,9 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
                 raise ValueError(msg)
 
     def _check_if_model_orientations_are_fixed(self):
-        # TODO: raise ValueError if orientations are not fixed
-        raise NotImplementedError
-
-    def _create_forward_model_matrix(self):
-        # TODO: implement the function that creates the forward model matrix.
-        #  The function is expected to store the matrix in the
-        #  self._forward_model_matrix field and at the same time it must define
-        #  a dictionary whose keys are the parameter names and the values are
-        #  the set of column indices in the matrix corresponding to the
-        #  parameter. This dictionary must be stored in self._parameter_indices.
-        raise NotImplementedError
-
-    @property
-    def forward_model(self):
-        """Return the forward model matrix associated to the AMICO model"""
-        # TODO: we have to find a way to reset the forward model matrix to None
-        #  whenever a model parameter is changed. O/wise we will have a forward
-        #  matrix stored in the attribute that does not correspond to the
-        #  specified parameters.
-        if self._forward_model_matrix is None or self.parameter_indices is None:
-            self._create_forward_model_matrix()
-        return self._forward_model_matrix
-
-    @property
-    def parameter_indices(self):
-        """Return the dictionary containing the column indices associated to
-        each parameter in the forward model matrix"""
-        if self._forward_model_matrix is None or self.parameter_indices is None:
-            self._create_forward_model_matrix()
-        return self._parameter_indices
+        if 'orientation' in self.parameter_types.values:
+            msg = 'The orientation parameters must be fixed a priori.'
+            raise ValueError(msg)
 
     def fit(self, acquisition_scheme, data,
             mask=None,
@@ -2431,6 +2402,8 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         fitted_parameters[mask_pos] = (
             fitted_parameters_lin * self.scales_for_optimization)
 
+        # TODO: pass the forward model matrix and the parameter indices
+        #  dictionary to the FittedMultiCompartmentAMICOModel
         return FittedMultiCompartmentAMICOModel(
             self, S0, mask, fitted_parameters, fitted_mt_fractions)
 
@@ -2479,37 +2452,24 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
     def __call__(self, acquisition_scheme_or_vertices,
                  quantity="signal", **kwargs):
         """
-        The MultiCompartmentModel function call for to generate signal
+        The MultiCompartmentAMICOModel function call for to generate signal
         attenuation for a given acquisition scheme and model parameters.
 
         First, the linked parameters are added to the optimized parameters.
 
-        Then, every model in the MultiCompartmentModel is called with the right
-        parameters to recover the part of the signal attenuation of that model.
-        The resulting values are multiplied with the volume fractions and
+        Then, every model in the MultiCompartmentAMICOModel is called with the
+        right parameters to recover the part of the signal attenuation of that
+        model. The resulting values are multiplied with the volume fractions and
         finally the combined signal attenuation is returned.
-
-        Aside from the signal, the function call can also return the Fiber
-        Orientation Distributions (FODs) when a dispersed model is used, and
-        can also return the stochastic cost function for the MIX algorithm.
 
         Parameters
         ----------
         acquisition_scheme : DmipyAcquisitionScheme instance,
             An acquisition scheme that has been instantiated using dMipy.
-        quantity : string
-            can be 'signal' or 'FOD' depending on the need of the model.
         kwargs: keyword arguments to the model parameter values,
             Is internally given as **parameter_dictionary.
         """
-        if quantity == "signal" or quantity == "FOD":
-            values = 0
-        elif quantity == "stochastic cost function":
-            values = np.empty((
-                acquisition_scheme_or_vertices.number_of_measurements,
-                len(self.models)
-            ))
-            counter = 0
+        values = 0
 
         kwargs = self.add_linked_parameters_to_parameters(
             kwargs
@@ -2534,21 +2494,12 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
                     parameter_name
                 )
 
-            if quantity == "signal":
-                values = (
-                    values +
-                    partial_volume * model(
-                        acquisition_scheme_or_vertices, **parameters)
-                )
-            elif quantity == "FOD":
-                try:
-                    values = (
-                        values +
-                        partial_volume * model.fod(
-                            acquisition_scheme_or_vertices, **parameters)
-                    )
-                except AttributeError:
-                    continue
+            values = (
+                values +
+                partial_volume * model(
+                    acquisition_scheme_or_vertices, **parameters)
+            )
+
         return values
 
 
