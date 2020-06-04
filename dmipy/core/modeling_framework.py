@@ -22,6 +22,7 @@ from .fitted_modeling_framework import (
     FittedMultiCompartmentAMICOModel)
 from ..optimizers.brute2fine import (
     GlobalBruteOptimizer, Brute2FineOptimizer)
+from ..optimizers.amico_cvxpy import AmicoCvxpyOptimizer
 from ..optimizers_fod.csd_tournier import CsdTournierOptimizer
 from ..optimizers_fod.csd_cvxpy import CsdCvxpyOptimizer
 from ..optimizers.mix import MixOptimizer
@@ -2230,6 +2231,9 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         self._prepare_parameters_to_optimize()
         self._check_for_NMR_and_other_models()
         self.x0_parameters = {}
+        self._amico_grid = None
+        self._amico_idx = None
+        self._freezed_parameters_vector = None
 
         if not have_numba:
             msg = "We highly recommend installing numba for faster function "
@@ -2253,10 +2257,29 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
             msg = 'The orientation parameters must be fixed a priori.'
             raise ValueError(msg)
 
-    def forward_model_matrix(self, args, *kwargs):
+    @property
+    def amico_grid(self):
+        """Dictionary with parameter names as keys and values that are the
+        parameter grids used in the definition of the AMICO forward model
+        matrix."""
+        return self._amico_grid
+
+    @property
+    def amico_idx(self):
+        """Dictionary with parameter names as keys and values that are the
+        column indices corresponding to the parameter in the AMICO forward model
+        matrix."""
+        return self._amico_idx
+
+    def forward_model_matrix(self, *args, **kwargs):
         # TODO: move the creation of the forward model matrix from the optimizer
         #  to here. At the same time, instantiate the parameter grid and
         #  indices.
+        #  - Create the forward model matrix that will be returned
+        #  - Instantiate the self._amico_grid and self._amico_idx attributes
+        #  - Save the "freezed" parameters vector as a hidden attribute and
+        #    check if it has changed since the last call.
+        #    Attribute: self._freezed_parameters_vector
         raise NotImplementedError
 
     def fit(self, acquisition_scheme, data,
@@ -2363,11 +2386,17 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
             fitted_parameters_lin = np.empty(
                 np.r_[N_voxels, N_parameters], dtype=float)
 
-        # TODO: complete the setup of the optimization in model fitting
-        def fit_func(*args, **kwargs):
-            # This function will use the self.forward_model property
-            # TODO: implement the fit_func method for the model fitting
+        start = time()
+        opt = AmicoCvxpyOptimizer(self, self.scheme, x0_)  # TODO: fix params
+        # setup self.amico_grids and self.amico_indices
+        _ = self.forward_model_matrix()
+        def fit_func(data):
+            # TODO: extract the parameter value for each param and return the
+            #  parameter vector in the voxel.
             raise NotImplementedError
+        print('Setup AMICO optimizer in {} seconds'.format(
+            time() - start))
+
         self.optimizer = fit_func
 
         start = time()
@@ -2375,7 +2404,7 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
             voxel_E = data_[pos] / S0[pos]
             voxel_x0_vector = x0_[pos]
             # TODO: preprocess the x0 as required by the solver
-            fit_args = (voxel_E, voxel_x0_vector)
+            fit_args = (voxel_E, )
 
             if use_parallel_processing:
                 fitted_parameters_lin[idx] = pool.apipe(fit_func, *fit_args)
@@ -2396,8 +2425,18 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
 
         fitted_mt_fractions = None
         if self.S0_tissue_responses:
-            # TODO: rescale the signal fractions to get the volume fractions
-            mt_fractions = None
+            # secondary fitting including S0 responses
+            print('Starting secondary multi-tissue optimization.')
+            start = time()
+            mt_fractions = np.empty(
+                np.r_[N_voxels, self.N_models], dtype=float)
+            fit_func = MultiTissueConvexOptimizer(
+                acquisition_scheme, self, self.S0_tissue_responses)
+            for idx, pos in enumerate(zip(*mask_pos)):
+                voxel_S = data_[pos]
+                parameters = fitted_parameters_lin[idx]
+                mt_fractions[idx] = fit_func(voxel_S, parameters)
+            fitting_time = time() - start
             msg = 'Multi-tissue fitting of {} voxels complete in {} seconds.'
             print(msg.format(len(mt_fractions), fitting_time))
             fitted_mt_fractions = np.zeros(np.r_[mask.shape, self.N_models])
@@ -2407,8 +2446,9 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         fitted_parameters[mask_pos] = (
             fitted_parameters_lin * self.scales_for_optimization)
 
-        # TODO: pass the forward model matrix and the parameter indices
-        #  dictionary to the FittedMultiCompartmentAMICOModel
+        # TODO: pass the forward model matrix, the AmicoCvxpyOptimizer object
+        #  and the parameter indices dictionary to the
+        #  FittedMultiCompartmentAMICOModel .
         return FittedMultiCompartmentAMICOModel(
             self, S0, mask, fitted_parameters, fitted_mt_fractions)
 

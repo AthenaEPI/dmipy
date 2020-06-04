@@ -899,33 +899,35 @@ class FittedMultiCompartmentSphericalHarmonicsModel:
         return mse
 
 class FittedMultiCompartmentAMICOModel:
-    """
-    The FittedMultiCompartmentModel instance contains information about the
-    original MultiCompartmentModel, the estimated S0 values, the fitting mask
-    and the fitted model parameters.
-
-    Parameters
-    ----------
-    model : MultiCompartmentAMICOModel instance,
-        A dmipy MultiCompartmentAMICOModel.
-    S0 : array of size (Ndata,) or (N_data, N_DWIs),
-        Array containing the estimated S0 values of the data. If data is 4D,
-        then S0 is 3D if there is only one TE, and the same 4D size of the data
-        if there are multiple TEs.
-    mask : array of size (N_data,),
-        boolean mask of voxels that were fitted.
-    forward_model_matrix : array of size N_DWIs-by-Nparameters,
-        forward model used in the fitting process.
-    parameter_indices : dictionary,
-        keys are parameter names and values are the column indices corresponding
-        to the parameter.
-    fitted_parameters_vector : array of size (N_data, Nparameters),
-        fitted model parameters array.
-    """
-
     def __init__(self, model, S0, mask, fitted_parameters_vector,
-                 forward_model_matrix, parameter_indices,
+                 forward_model_matrix, parameter_indices, optimizer,
                  fitted_multi_tissue_fractions_vector=None):
+        """
+        The FittedMultiCompartmentModel instance contains information about the
+        original MultiCompartmentModel, the estimated S0 values, the fitting mask
+        and the fitted model parameters.
+
+        Parameters
+        ----------
+        model : MultiCompartmentAMICOModel instance,
+            A dmipy MultiCompartmentAMICOModel.
+        S0 : array of size (Ndata,) or (N_data, N_DWIs),
+            Array containing the estimated S0 values of the data. If data is 4D,
+            then S0 is 3D if there is only one TE, and the same 4D size of the data
+            if there are multiple TEs.
+        mask : array of size (N_data,),
+            boolean mask of voxels that were fitted.
+        forward_model_matrix : array of size N_DWIs-by-Nparameters,
+            forward model used in the fitting process.
+        parameter_indices : dictionary,
+            keys are parameter names and values are the column indices
+            corresponding to the parameter.
+        optimizer : AmicoCvxpyOptimizer instance,
+            A dmipy AmicoCvxpyOptimizer instantiated object that will be used
+            for computing the parameter distributions.
+        fitted_parameters_vector : array of size (N_data, Nparameters),
+            fitted model parameters array.
+        """
         self.model = model
         self.S0 = S0
         self.mask = mask
@@ -934,6 +936,7 @@ class FittedMultiCompartmentAMICOModel:
             fitted_multi_tissue_fractions_vector)
         self._forward_model_matrix = forward_model_matrix
         self._parameter_indices = parameter_indices
+        self._optimizer = optimizer
 
     @property
     def forward_model_matrix(self):
@@ -949,7 +952,7 @@ class FittedMultiCompartmentAMICOModel:
     def fitted_distribution(self):
         """Returns the distribution of each parameter."""
         # TODO: we have to find a way to return the distribution of each
-        #  parameter obtained from the optimization
+        #  parameter obtained from the optimization. Uses self._optimizer .
         raise NotImplementedError
 
     @property
