@@ -2253,6 +2253,12 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
             msg = 'The orientation parameters must be fixed a priori.'
             raise ValueError(msg)
 
+    def forward_model_matrix(self, args, *kwargs):
+        # TODO: move the creation of the forward model matrix from the optimizer
+        #  to here. At the same time, instantiate the parameter grid and
+        #  indices.
+        raise NotImplementedError
+
     def fit(self, acquisition_scheme, data,
             mask=None,
             maxiter=300,
@@ -2310,7 +2316,6 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         self._check_tissue_model_acquisition_scheme(acquisition_scheme)
         self._check_model_params_with_acquisition_params(acquisition_scheme)
         self._check_acquisition_scheme_has_b0s(acquisition_scheme)
-        self._check_if_volume_fractions_are_fixed()
         self._check_if_model_orientations_are_fixed()
 
         # estimate S0

@@ -80,6 +80,8 @@ class AmicoCvxpyOptimizer:
             x0_len += m_atoms
 
         # Creating parameter tessellation grids and corresponding indices
+        # TODO: move the matrix/grid/indices definition to the
+        #  modeling_framework module.
         self.grids, self.idx = {}, {}
         for m_idx in range(self.model.N_models):
             model = self.model.models[m_idx]
