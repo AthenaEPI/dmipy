@@ -2205,11 +2205,15 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         the models to combine into the MultiCompartmentModel.
     S0_tissue_responses: list of N values,
         the S0 response of the tissue modelled by each compartment.
+    Nt: int
+        Number of equidistant sampling points over each
+        parameter range used to create atoms of observation matrix M
     parameter_links : list of iterables (model, parameter name, link function,
         argument list),
         deprecated, for testing only.
     """
-    def __init__(self, models, S0_tissue_responses=None, parameter_links=None):
+    def __init__(self, models, S0_tissue_responses=None, Nt=10,
+                 parameter_links=None):
         self.models = models
         self.N_models = len(models)
         if S0_tissue_responses is not None:
@@ -2219,6 +2223,7 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
                 raise ValueError(
                     msg.format(len(S0_tissue_responses), self.N_models))
         self.S0_tissue_responses = S0_tissue_responses
+        self.Nt = Nt
         self.parameter_links = parameter_links
         if parameter_links is None:
             self.parameter_links = []
@@ -2228,6 +2233,12 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         self._prepare_parameter_links()
         self._prepare_model_properties()
         self._check_for_double_model_class_instances()
+
+        # QUESTION: I think we should create multi-compartment model
+        # somewhere in __init__ to avoid creating it every time we create
+        # forward model matrix
+        self.mc_model = MultiCompartmentModel(models=self.models)
+
         self._prepare_parameters_to_optimize()
         self._check_for_NMR_and_other_models()
         self.x0_parameters = {}
@@ -2271,16 +2282,83 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         matrix."""
         return self._amico_idx
 
-    def forward_model_matrix(self, *args, **kwargs):
-        # TODO: move the creation of the forward model matrix from the optimizer
-        #  to here. At the same time, instantiate the parameter grid and
-        #  indices.
-        #  - Create the forward model matrix that will be returned
-        #  - Instantiate the self._amico_grid and self._amico_idx attributes
-        #  - Save the "freezed" parameters vector as a hidden attribute and
-        #    check if it has changed since the last call.
-        #    Attribute: self._freezed_parameters_vector
-        raise NotImplementedError
+    def forward_model_matrix(self, acquisition_scheme, model_dirs, **kwargs):
+        """Creates forward model matrix, including parameter tessellation grid
+        and corresponding indices.
+        """
+        """
+            Arguments:
+                acquisition_scheme: instance containing acquisition protocol
+                model_dirs: list containing direction of all models in
+                    multi-compartment model
+            Returns:
+                observation matrix M
+        """
+
+        dir_params = [p for p in self.mc_model.parameter_names
+                      if p.endswith('mu')]
+        if len(dir_params) != len(model_dirs):
+            raise ValueError("Length of model_dirs should correspond "
+                             "to the number of directional parameters!")
+
+        if not self._freezed_parameters_vector:
+            self._amico_grid, self._amico_idx = {}, {}
+
+            grid_params = \
+                [p for p in self.mc_model.parameter_names
+                 if not p.endswith('mu') and
+                 not p.startswith('partial_volume')]
+
+            # Compute length of the vector x0
+            x0_len = 0
+            for m_idx in range(self.N_models):
+                m_atoms = 1
+                for p in self.models[m_idx].parameter_names:
+                    if self.mc_model.model_names[m_idx] + p in grid_params:
+                        m_atoms *= self.Nt
+                x0_len += m_atoms
+
+            for m_idx in range(self.N_models):
+                model = self.models[m_idx]
+                model_name = self.mc_model.model_names[m_idx]
+
+                param_sampling, grid_params_names = [], []
+                m_atoms = 1
+                for p in model.parameter_names:
+                    if model_name + p not in grid_params:
+                        continue
+                    grid_params_names.append(model_name + p)
+                    p_range = self.mc_model.parameter_ranges[model_name + p]
+                    self._amico_grid[model_name + p] = \
+                        np.full(x0_len, np.mean(p_range))
+                    param_sampling.append(np.linspace(p_range[0], p_range[1],
+                                                      self.Nt, endpoint=True))
+                    m_atoms *= self.Nt
+
+                self._amico_idx[model_name] =\
+                    sum([len(self._amico_idx[k])
+                         for k in self._amico_idx]) + \
+                    np.arange(m_atoms)
+                params_mesh = np.meshgrid(*param_sampling)
+                for p_idx, p in enumerate(grid_params_names):
+                    self.grids[p][self._amico_idx[model_name]] =\
+                        np.ravel(params_mesh[p_idx])
+
+                self._amico_grid['partial_volume_' + str(m_idx)] = \
+                    np.zeros(x0_len)
+                self._amico_grid['partial_volume_' +
+                                 str(m_idx)][self._amico_idx[model_name]] = 1.
+            self._freezed_parameters_vector = True
+
+        for d_idx, dp in enumerate(dir_params):
+            self._amico_grids[dp] = model_dirs[d_idx]
+
+        # QUESTION:
+        # Should we return simulated signals with b=0 values
+        # or only diffusion weighted, I think b=0 impacts a lot
+        # results when solving nnls
+        return self.mc_model.simulate_signal(acquisition_scheme,
+                                             self._amico_grid).T
 
     def fit(self, acquisition_scheme, data,
             mask=None,

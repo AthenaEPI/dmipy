@@ -47,8 +47,8 @@ class AmicoCvxpyOptimizer:
         Learning Research 17.1 (2016): 2909-2913.
     """
 
-    def __init__(self, acquisition_scheme, model, x0_vector=None,
-                 lambda_1=None, lambda_2=None, Nt=10):
+    def __init__(self, acquisition_scheme, model,
+                 lambda_1=None, lambda_2=None):
         self.model = model
         self.acquisition_scheme = acquisition_scheme
 
@@ -56,63 +56,8 @@ class AmicoCvxpyOptimizer:
                 len(lambda_2) != self.model.N_models:
             raise ValueError("Number of regularization weights should"
                              "correspond to the number of compartments!")
-
         self.lambda_1 = lambda_1
         self.lambda_2 = lambda_2
-
-        self.Nt = Nt
-
-        # Make a list of parameters that are not fixed and that require
-        # tessellation of parameter ranges
-        dir_params = [p for p in self.model.parameter_names
-                      if p.endswith('mu')]
-        grid_params =\
-            [p for p in self.model.parameter_names
-             if not p.endswith('mu') and not p.startswith('partial_volume')]
-
-        # Compute length of the vector x0
-        x0_len = 0
-        for m_idx in range(self.model.N_models):
-            m_atoms = 1
-            for p in self.model.models[m_idx].parameter_names:
-                if self.model.model_names[m_idx] + p in grid_params:
-                    m_atoms *= Nt
-            x0_len += m_atoms
-
-        # Creating parameter tessellation grids and corresponding indices
-        # TODO: move the matrix/grid/indices definition to the
-        #  modeling_framework module.
-        self.grids, self.idx = {}, {}
-        for m_idx in range(self.model.N_models):
-            model = self.model.models[m_idx]
-            model_name = self.model.model_names[m_idx]
-
-            param_sampling, grid_params_names = [], []
-            m_atoms = 1
-            for p in model.parameter_names:
-                if model_name + p not in grid_params:
-                    continue
-                grid_params_names.append(model_name + p)
-                p_range = self.model.parameter_ranges[model_name + p]
-                self.grids[model_name + p] = np.full(x0_len, np.mean(p_range))
-                param_sampling.append(np.linspace(p_range[0], p_range[1],
-                                                  self.Nt, endpoint=True))
-                m_atoms *= self.Nt
-
-            self.idx[model_name] =\
-                sum([len(self.idx[k]) for k in self.idx]) + np.arange(m_atoms)
-            params_mesh = np.meshgrid(*param_sampling)
-            for p_idx, p in enumerate(grid_params_names):
-                self.grids[p][self.idx[model_name]] =\
-                    np.ravel(params_mesh[p_idx])
-
-            self.grids['partial_volume_' + str(m_idx)] = np.zeros(x0_len)
-            self.grids['partial_volume_' +
-                       str(m_idx)][self.idx[model_name]] = 1.
-
-        self.grids[dir_params[0]] = [0, 0]
-        self.M = self.model.simulate_signal(acquisition_scheme, self.grids)
-        self.M = self.M[:, ~acquisition_scheme.b0_mask].T
 
     def __call__(self, data):
         """
