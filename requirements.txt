@@ -4,3 +4,4 @@ dipy
 cvxpy
 boto
 pathlib
+sphinx==1.6.7
