@@ -2234,9 +2234,6 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         self._prepare_model_properties()
         self._check_for_double_model_class_instances()
 
-        # QUESTION: I think we should create multi-compartment model
-        # somewhere in __init__ to avoid creating it every time we create
-        # forward model matrix
         self.mc_model = MultiCompartmentModel(models=self.models)
 
         self._prepare_parameters_to_optimize()
@@ -2341,7 +2338,7 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
                     np.arange(m_atoms)
                 params_mesh = np.meshgrid(*param_sampling)
                 for p_idx, p in enumerate(grid_params_names):
-                    self.grids[p][self._amico_idx[model_name]] =\
+                    self._amico_grid[p][self._amico_idx[model_name]] =\
                         np.ravel(params_mesh[p_idx])
 
                 self._amico_grid['partial_volume_' + str(m_idx)] = \
@@ -2351,12 +2348,8 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
             self._freezed_parameters_vector = True
 
         for d_idx, dp in enumerate(dir_params):
-            self._amico_grids[dp] = model_dirs[d_idx]
+            self._amico_grid[dp] = model_dirs[d_idx]
 
-        # QUESTION:
-        # Should we return simulated signals with b=0 values
-        # or only diffusion weighted, I think b=0 impacts a lot
-        # results when solving nnls
         return self.mc_model.simulate_signal(acquisition_scheme,
                                              self._amico_grid).T
 
