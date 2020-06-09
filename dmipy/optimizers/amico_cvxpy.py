@@ -60,7 +60,7 @@ class AmicoCvxpyOptimizer:
         self.lambda_1 = lambda_1
         self.lambda_2 = lambda_2
 
-    def __call__(self, data, M, idx, x0_th=1.e-6):
+    def __call__(self, data, M, grid, idx, x0_th=1.e-6):
         """
         The fitting function of AMICO optimizer.
         Parameters
@@ -69,9 +69,12 @@ class AmicoCvxpyOptimizer:
             The normalized dMRI signal attenuation to be fitted.
         M: Array of size (Ndata, Nx)
             The observation matrix containing Nx model atoms
+        grid: dict
+            Dictionary containing tessellation of parameters to be estimated
+            for each model within multi-compartment model
         idx: dict
-            Dictionary containing indices that correspond to the parameters of
-            each model within multi-compartment model
+            Dictionary containing indices that correspond to the parameters
+            to be estimated for each model within multi-compartment model
         x0_th: float
             Threshold for selecting important atoms after solving NNLS
             with L1 and L2 regularization terms
