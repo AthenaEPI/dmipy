@@ -559,7 +559,9 @@ class MultiCompartmentModelProperties:
     def set_tortuous_parameter(self, lambda_perp_parameter_name,
                                lambda_par_parameter_name,
                                volume_fraction_intra_parameter_name,
-                               volume_fraction_extra_parameter_name):
+                               volume_fraction_extra_parameter_name,
+                               S0_intra=None,
+                               S0_extra=None):
         """
         Allows the user to set a tortuosity constraint on the perpendicular
         diffusivity of the extra-axonal compartment, which depends on the
@@ -567,6 +569,9 @@ class MultiCompartmentModelProperties:
 
         The perpendicular diffusivity parameter will be removed from the
         optimized parameters and added as a linked parameter.
+
+        To employ the multi-tissue correction of tortuosity it is sufficient to
+        pass the S0_intra and S0_extra parameters.
 
         Parameters
         ----------
@@ -582,6 +587,12 @@ class MultiCompartmentModelProperties:
         volume_fraction_extra_parameter_name: string
             name of the extra-axonal volume fraction parameter, see
             self.parameter_names.
+        S0_intra: float,
+            S0 response of the tissue associated to the intra-cellular
+            compartment. Default: 1 .
+        S0_extra: float,
+            S0 response of the tissue associated to the extra-cellular
+            compartment. Default: 1.
         """
         params = [lambda_perp_parameter_name, lambda_par_parameter_name,
                   volume_fraction_intra_parameter_name,
@@ -594,8 +605,33 @@ class MultiCompartmentModelProperties:
                     param)
                 raise ValueError(msg)
 
+        if S0_intra is None and S0_extra is None:
+            S0_intra = 1.
+            S0_extra = 1.
+        elif S0_intra is not None and S0_extra is not None:
+            if self.S0_tissue_responses is None:
+                msg = ('The multi compartment model does not have an S0 for '
+                       'each compartment. It is necessary in order to use the '
+                       'tortuosity constraint with multi-tissue correction.')
+                raise ValueError(msg)
+            if S0_intra not in self.S0_tissue_responses:
+                msg = ('The specified S0_intra does not correspond to any S0 '
+                       'in the multi-compartment model.')
+                raise ValueError(msg)
+            if S0_extra not in self.S0_tissue_responses:
+                msg = ('The specified S0_extra does not correspond to any S0 '
+                       'in the multi-compartment model.')
+                raise ValueError(msg)
+            S0_intra = float(S0_intra)
+            S0_extra = float(S0_extra)
+        else:
+            raise ValueError('Only one S0 has been specified. Both S0_intra '
+                             'and S0_extra must be passed.')
+
         model, name = self._parameter_map[lambda_perp_parameter_name]
-        self.parameter_links.append([model, name, T1_tortuosity, [
+        def tort_aux_func(lpar, ivf, evf):
+            return T1_tortuosity(lpar, ivf, evf, S0_intra, S0_extra)
+        self.parameter_links.append([model, name, tort_aux_func, [
             self._parameter_map[lambda_par_parameter_name],
             self._parameter_map[volume_fraction_intra_parameter_name],
             self._parameter_map[volume_fraction_extra_parameter_name]]

@@ -170,11 +170,12 @@ def rotation_matrix_100_to_theta_phi_psi(theta, phi, psi):
     return np.dot(R_100_to_theta_phi, R_around_100)
 
 
-def T1_tortuosity(lambda_par, vf_intra, vf_extra=None):
+def T1_tortuosity(lambda_par, vf_intra, vf_extra=None, S0_intra=1, S0_extra=1):
     """Tortuosity model for perpendicular extra-axonal diffusivity [1, 2, 3].
     If vf_extra=None, then vf_intra must be a nested volume fraction, in the
     sense that E_bundle = vf_intra * E_intra + (1 - vf_intra) * E_extra, with
     vf_intra + (1 - vf_intra) = 1.
+    The volume fractions are scaled according to the passed S0 responses.
     If both vf_intra and vf_extra are given, then they have be be normalized
     fractions, in the sense that vf_intra + vf_extra <= 1.
 
@@ -186,6 +187,12 @@ def T1_tortuosity(lambda_par, vf_intra, vf_extra=None):
         intra-axonal volume fraction [0, 1].
     vf_extra : float, (optional)
         extra-axonal volume fraction [0, 1].
+    S0_intra: float,
+        S0 response of the tissue associated to the intra-cellular
+        compartment. Default: 1 .
+    S0_extra: float,
+        S0 response of the tissue associated to the extra-cellular
+        compartment. Default: 1.
 
     Returns
     -------
@@ -205,11 +212,12 @@ def T1_tortuosity(lambda_par, vf_intra, vf_extra=None):
         Magnetic resonance in medicine 33.5 (1995): 697-712.
     """
     if vf_extra is None:
-        lambda_perp = (1 - vf_intra) * lambda_par
+        vf_extra = 1. - vf_intra
     else:
-        fraction_intra = vf_intra / (vf_intra + vf_extra)
-        lambda_perp = (1 - fraction_intra) * lambda_par
-    return lambda_perp
+        vf_intra = vf_intra / (vf_intra + vf_extra)
+
+    f = (vf_intra * S0_extra) / (vf_intra * S0_extra + vf_extra * S0_intra)
+    return (1. - f) * lambda_par
 
 
 def parameter_equality(param):
