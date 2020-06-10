@@ -1,8 +1,10 @@
-from dmipy.signal_models import cylinder_models, gaussian_models
+from nose.tools import raises
+from numpy.testing import assert_almost_equal
+
 from dmipy.core import modeling_framework
 from dmipy.data.saved_acquisition_schemes import (
     wu_minn_hcp_acquisition_scheme)
-from numpy.testing import assert_almost_equal
+from dmipy.signal_models import cylinder_models, gaussian_models
 
 scheme = wu_minn_hcp_acquisition_scheme()
 
@@ -72,3 +74,65 @@ def test_multi_tissue_mc_sm_model():
         vol_fracts_norm['partial_volume_0'], 2 / 3., 2)
     assert_almost_equal(
         vol_fracts_norm['partial_volume_1'], 1 / 3., 2)
+
+
+def test_multi_tissue_tortuosity():
+    stick = cylinder_models.C1Stick()
+    zeppelin = gaussian_models.G2Zeppelin()
+    ball = gaussian_models.G1Ball()
+
+    s0s = 3000.
+    s0z = 4000.
+    s0b = 10000.
+
+    @raises(ValueError)
+    def only_intra_s0_in_tortuosity():
+        model1t = modeling_framework.MultiCompartmentModel(
+            models=[stick, zeppelin, ball])
+        model1t.set_tortuous_parameter('G2Zeppelin_1_lambda_perp',
+                                       'C1Stick_1_lambda_par',
+                                       'partial_volume_0',
+                                       'partial_volume_1',
+                                       S0_intra=s0s)
+
+    @raises(ValueError)
+    def only_extra_s0_in_tortuosity():
+        model = modeling_framework.MultiCompartmentModel(
+            models=[stick, zeppelin, ball])
+        model.set_tortuous_parameter('G2Zeppelin_1_lambda_perp',
+                                     'C1Stick_1_lambda_par', 'partial_volume_0',
+                                     'partial_volume_1',
+                                     S0_extra=s0z)
+
+    @raises(ValueError)
+    def one_tissue_but_two_s0_in_tortuosity():
+        model = modeling_framework.MultiCompartmentModel(
+            models=[stick, zeppelin, ball])
+        model.set_tortuous_parameter('G2Zeppelin_1_lambda_perp',
+                                     'C1Stick_1_lambda_par', 'partial_volume_0',
+                                     'partial_volume_1',
+                                     S0_intra=s0s,
+                                     S0_extra=s0z)
+
+    @raises(ValueError)
+    def mismatch_s0_intra():
+        model = modeling_framework.MultiCompartmentModel(
+            models=[stick, zeppelin, ball])
+        model.set_tortuous_parameter('G2Zeppelin_1_lambda_perp',
+                                     'C1Stick_1_lambda_par',
+                                     'partial_volume_0',
+                                     'partial_volume_1',
+                                     S0_intra=s0s + 10.,
+                                     S0_extra=s0z)
+
+    @raises(ValueError)
+    def mismatch_s0_extra():
+        model = modeling_framework.MultiCompartmentModel(
+            models=[stick, zeppelin, ball],
+            S0_tissue_responses=[s0s, s0z, s0b])
+        model.set_tortuous_parameter('G2Zeppelin_1_lambda_perp',
+                                     'C1Stick_1_lambda_par',
+                                     'partial_volume_0',
+                                     'partial_volume_1',
+                                     S0_intra=s0s,
+                                     S0_extra=s0z + 10.)
