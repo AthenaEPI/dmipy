@@ -1,4 +1,5 @@
 __all__ = [
     "brute2fine",
-    "mix"
+    "mix",
+    "amico_cvxpy"
 ]
