@@ -342,7 +342,8 @@ class SD3SphericalHarmonics(ModelProperties):
     ----------
     sh_order: int,
         maximum spherical harmonics order.
-    sh_coeff
+    sh_coeff: np.ndarray that must be of shape corresponding to sh_order.
+        spherical harmonics coefficients of the distribution.
     """
 
     def __init__(self, sh_order, sh_coeff=None):
