@@ -211,12 +211,3 @@ def test_amico(lambda_1=[0, 0.0001], lambda_2=[0, 0.0001], Nt=12):
                         gt['SD1WatsonDistributed_1_SD1Watson_1_odi'], 3)
     assert_almost_equal(v_ic_estim,
                         gt['SD1WatsonDistributed_1_partial_volume_0'], 3)
-
-
-def main():
-
-    test_amico()
-
-
-if __name__ == '__main__':
-    main()
