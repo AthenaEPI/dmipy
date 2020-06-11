@@ -93,10 +93,10 @@ class AmicoCvxpyOptimizer:
                cvxpy.sum_squares(M[~self.acquisition_scheme.b0_mask, :] * x0 -
                                  data[~self.acquisition_scheme.b0_mask])
         for m_idx, model_name in enumerate(self.model.model_names):
-            cost += self.lambda_1[m_idx] *\
-                cvxpy.norm(x0[idx[model_name]], 1)
-            cost += 0.5 * self.lambda_2[m_idx] *\
-                cvxpy.norm(x0[idx[model_name]], 2) ** 2
+            cost += self.lambda_1[m_idx] * \
+                    cvxpy.norm(x0[idx[model_name]], 1)
+            cost += 0.5 * self.lambda_2[m_idx] * \
+                    cvxpy.norm(x0[idx[model_name]], 2) ** 2
         problem = cvxpy.Problem(cvxpy.Minimize(cost), [x0 >= 0])
         problem.solve()
         self.x0_vector = x0.value
