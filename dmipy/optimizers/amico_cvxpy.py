@@ -127,7 +127,8 @@ class AmicoCvxpyOptimizer:
                     p_estim = \
                         np.sum(grid[model_name + p][idx[model_name]] *
                                self.x0_vector[idx[model_name]]) /\
-                        np.sum(self.x0_vector[idx[model_name]])
+                        (np.sum(self.x0_vector[idx[model_name]]) +
+                         1.e-8)
                     fitted_parameter_vector.append(p_estim)
 
         return fitted_parameter_vector
