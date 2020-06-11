@@ -2183,12 +2183,12 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             E = np.dot(A, kwargs['sh_coeff'])
         else:
             sh_coeff = np.zeros(self.optimizer.Ncoef_total)
-            for i, name in enumerate(self.partial_volume_names):
-                sh_coeff[self.optimizer.vf_indices[i]] = (
-                    kwargs[name] / (2 * np.sqrt(np.pi)))
             sh_coeff[self.optimizer.sh_start:
                      self.optimizer.Ncoef + self.optimizer.sh_start] = kwargs[
                 'sh_coeff']
+            for i, name in enumerate(self.partial_volume_names):
+                sh_coeff[self.optimizer.vf_indices[i]] = (
+                    kwargs[name] / (2 * np.sqrt(np.pi)))
             E = np.dot(A, sh_coeff)
         return E
 
