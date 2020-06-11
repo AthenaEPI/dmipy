@@ -28,6 +28,7 @@ from ..optimizers.multi_tissue_convex_optimizer import (
     MultiTissueConvexOptimizer)
 from dipy.utils.optpkg import optional_package
 from uuid import uuid4
+
 pathos, have_pathos, _ = optional_package("pathos")
 numba, have_numba, _ = optional_package("numba")
 graphviz, have_graphviz, _ = optional_package("graphviz")
@@ -128,16 +129,16 @@ class MultiCompartmentModelProperties:
         if parameter_vector.ndim == 1:
             for parameter, card in self.parameter_cardinality.items():
                 parameters[parameter] = parameter_vector[
-                    current_pos: current_pos + card
-                ]
+                                        current_pos: current_pos + card
+                                        ]
                 if card == 1:
                     parameters[parameter] = parameters[parameter][0]
                 current_pos += card
         else:
             for parameter, card in self.parameter_cardinality.items():
                 parameters[parameter] = parameter_vector[
-                    ..., current_pos: current_pos + card
-                ]
+                                        ..., current_pos: current_pos + card
+                                        ]
                 if card == 1:
                     parameters[parameter] = parameters[parameter][..., 0]
                 current_pos += card
@@ -320,8 +321,8 @@ class MultiCompartmentModelProperties:
                 parameter_function
 
             if (
-                (parameter_model, parameter_name)
-                not in self._inverted_parameter_map
+                    (parameter_model, parameter_name)
+                    not in self._inverted_parameter_map
             ):
                 raise ValueError(
                     "Parameter function {} doesn't exist".format(i)
@@ -515,7 +516,7 @@ class MultiCompartmentModelProperties:
                 elif isinstance(value, np.ndarray):
                     self._add_fixed_parameter_array(parameter_name, value)
                 else:
-                    msg = 'fixed value for {} must be number or np.array, '\
+                    msg = 'fixed value for {} must be number or np.array, ' \
                           'currently {}'
                     raise ValueError(msg.format(parameter_name, type(value)))
             elif card == 2:
@@ -629,13 +630,15 @@ class MultiCompartmentModelProperties:
                              'and S0_extra must be passed.')
 
         model, name = self._parameter_map[lambda_perp_parameter_name]
+
         def tort_aux_func(lpar, ivf, evf):
             return T1_tortuosity(lpar, ivf, evf, S0_intra, S0_extra)
+
         self.parameter_links.append([model, name, tort_aux_func, [
             self._parameter_map[lambda_par_parameter_name],
             self._parameter_map[volume_fraction_intra_parameter_name],
             self._parameter_map[volume_fraction_extra_parameter_name]]
-        ])
+                                     ])
         del self.parameter_ranges[lambda_perp_parameter_name]
         del self.parameter_cardinality[lambda_perp_parameter_name]
         del self.parameter_scales[lambda_perp_parameter_name]
@@ -1010,7 +1013,7 @@ class MultiCompartmentModelProperties:
                 msg.format(parameter_name, card, bounds_array.shape))
         for lower, higher in bounds_array:
             if higher < lower:
-                msg = 'given optimization bounds for {} are invalid: lower '\
+                msg = 'given optimization bounds for {} are invalid: lower ' \
                       'bound {} is higher than upper bound {}.'
                 raise ValueError(msg.format(parameter_name, lower, higher))
         parameter_scale = np.max(bounds)
@@ -1039,7 +1042,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         self.N_models = len(models)
         if S0_tissue_responses is not None:
             if len(S0_tissue_responses) != self.N_models:
-                msg = 'Number of S0_tissue responses {} must be same as '\
+                msg = 'Number of S0_tissue responses {} must be same as ' \
                       'number of input models {}.'
                 raise ValueError(
                     msg.format(len(S0_tissue_responses), self.N_models))
@@ -1268,7 +1271,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
 
         fitted_parameters = np.zeros_like(x0_, dtype=float)
         fitted_parameters[mask_pos] = (
-            fitted_parameters_lin * self.scales_for_optimization)
+                fitted_parameters_lin * self.scales_for_optimization)
 
         return FittedMultiCompartmentModel(
             self, S0, mask, fitted_parameters, fitted_mt_fractions)
@@ -1362,7 +1365,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             partial_volumes = [1.]
 
         for model_name, model, partial_volume in zip(
-            self.model_names, self.models, partial_volumes
+                self.model_names, self.models, partial_volumes
         ):
             parameters = {}
             for parameter in model.parameter_ranges:
@@ -1376,16 +1379,16 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
 
             if quantity == "signal":
                 values = (
-                    values +
-                    partial_volume * model(
-                        acquisition_scheme_or_vertices, **parameters)
+                        values +
+                        partial_volume * model(
+                    acquisition_scheme_or_vertices, **parameters)
                 )
             elif quantity == "FOD":
                 try:
                     values = (
-                        values +
-                        partial_volume * model.fod(
-                            acquisition_scheme_or_vertices, **parameters)
+                            values +
+                            partial_volume * model.fod(
+                        acquisition_scheme_or_vertices, **parameters)
                     )
                 except AttributeError:
                     continue
@@ -1416,7 +1419,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         self.N_models = len(models)
         if S0_tissue_responses is not None:
             if len(S0_tissue_responses) != self.N_models:
-                msg = 'Number of S0_tissue responses {} must be same as '\
+                msg = 'Number of S0_tissue responses {} must be same as ' \
                       'number of input models {}.'
                 raise ValueError(
                     msg.format(len(S0_tissue_responses), self.N_models))
@@ -1670,7 +1673,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
 
         fitted_parameters = np.zeros_like(x0_, dtype=float)
         fitted_parameters[mask_pos] = (
-            fitted_parameters_lin * self.scales_for_optimization)
+                fitted_parameters_lin * self.scales_for_optimization)
 
         return FittedMultiCompartmentSphericalMeanModel(
             self, S0, mask, fitted_parameters, fitted_mt_fractions)
@@ -1764,7 +1767,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
             partial_volumes = [1.]
 
         for model_name, model, partial_volume in zip(
-            self.model_names, self.models, partial_volumes
+                self.model_names, self.models, partial_volumes
         ):
             parameters = {}
             for parameter in model.parameter_ranges:
@@ -1778,9 +1781,9 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
 
             if quantity == "signal":
                 values = (
-                    values +
-                    partial_volume * model.spherical_mean(
-                        acquisition_scheme_or_vertices, **parameters)
+                        values +
+                        partial_volume * model.spherical_mean(
+                    acquisition_scheme_or_vertices, **parameters)
                 )
             elif quantity == "stochastic cost function":
                 values[:, counter] = model.spherical_mean(
@@ -1807,7 +1810,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         self.N_models = len(models)
         if S0_tissue_responses is not None:
             if len(S0_tissue_responses) != self.N_models:
-                msg = 'Number of S0_tissue responses {} must be same as '\
+                msg = 'Number of S0_tissue responses {} must be same as ' \
                       'number of input models {}.'
                 raise ValueError(
                     msg.format(len(S0_tissue_responses), self.N_models))
@@ -2219,7 +2222,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             sh_coeff = np.zeros(self.optimizer.Ncoef_total)
             for i, name in enumerate(self.partial_volume_names):
                 sh_coeff[self.optimizer.vf_indices[i]] = (
-                    kwargs[name] / (2 * np.sqrt(np.pi)))
+                        kwargs[name] / (2 * np.sqrt(np.pi)))
             sh_coeff[self.optimizer.sh_start:
                      self.optimizer.Ncoef + self.optimizer.sh_start] = kwargs[
                 'sh_coeff']
@@ -2239,7 +2242,7 @@ def homogenize_x0_to_data(data, x0):
         else:
             x0_as_data = x0.copy()
     if not np.all(
-        x0_as_data.shape[:-1] == data.shape[:-1]
+            x0_as_data.shape[:-1] == data.shape[:-1]
     ):
         # if x0 and data are both N-dimensional but have different shapes.
         msg = "data and x0 both N-dimensional but have different shapes. "
