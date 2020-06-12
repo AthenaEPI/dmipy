@@ -22,14 +22,16 @@ def test_fit_S0_response(S0_iso=10., S0_aniso=1.):
     S0_aniso, aniso_model = estimate_TR2_anisotropic_tissue_response_model(
         scheme, np.atleast_2d(data_aniso))
 
+    mccsd = MultiCompartmentSphericalHarmonicsModel(
+        models=[iso_model, aniso_model])
     mtcsd = MultiCompartmentSphericalHarmonicsModel(
         models=[iso_model, aniso_model],
         S0_tissue_responses=[S0_iso, S0_aniso])
 
     data_to_fit = 0.3 * data_iso + 0.7 * data_aniso
 
-    csd_fit_no_S0 = mtcsd.fit(scheme, data_to_fit, fit_S0_response=False)
-    csd_fit_S0 = mtcsd.fit(scheme, data_to_fit, fit_S0_response=True)
+    csd_fit_no_S0 = mccsd.fit(scheme, data_to_fit)
+    csd_fit_S0 = mtcsd.fit(scheme, data_to_fit)
     np.testing.assert_almost_equal(
         0.3, csd_fit_S0.fitted_parameters['partial_volume_0'], 1)
     np.testing.assert_almost_equal(

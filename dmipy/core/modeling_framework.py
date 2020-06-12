@@ -229,7 +229,7 @@ class MultiCompartmentModelProperties:
                 msg = '"{}" is not a valid model parameter.'.format(parameter)
                 raise ValueError(msg)
         if len(parameter_cardinality) == 0:
-            print("All model parameters set.")
+            print("All model parameters set or have initial guess.")
         else:
             for parameter, card in parameter_cardinality.items():
                 set_parameters[parameter] = np.tile(np.nan, card)
@@ -464,12 +464,12 @@ class MultiCompartmentModelProperties:
                 elif isinstance(value, np.ndarray):
                     self._add_initial_guess_parameter_array(
                         parameter_name, value)
-            elif card == 2:
+            elif card >= 2:
                 value = np.array(value, dtype=float)
-                if value.shape[-1] != 2:
-                    msg = '{} can only be fixed '.format(parameter_name)
-                    msg += 'to an array or list with last dimension 2.'
-                    raise ValueError(msg)
+                if value.shape[-1] != card:
+                    msg = '{} can only be fixed to an array or list with '\
+                          'last dimension {}.'
+                    raise ValueError(msg.format(parameter_name, type(value)))
                 if value.ndim == 1:
                     self.x0_parameters[parameter_name] = value
                 if value.ndim > 1:
@@ -518,12 +518,12 @@ class MultiCompartmentModelProperties:
                     msg = 'fixed value for {} must be number or np.array, '\
                           'currently {}'
                     raise ValueError(msg.format(parameter_name, type(value)))
-            elif card == 2:
+            elif card >= 2:
                 value = np.array(value, dtype=float)
-                if value.shape[-1] != 2:
-                    msg = '{} can only be fixed '.format(parameter_name)
-                    msg += 'to an array or list with last dimension 2.'
-                    raise ValueError(msg)
+                if value.shape[-1] != card:
+                    msg = '{} can only be fixed to an array or list with '\
+                          'last dimension {}.'
+                    raise ValueError(msg.format(parameter_name, card))
                 if value.ndim == 1:
                     self._add_fixed_parameter_value(parameter_name, value)
                 if value.ndim > 1:
@@ -901,7 +901,7 @@ class MultiCompartmentModelProperties:
             acquisition_scheme = self.scheme
 
         if self.volume_fractions_fixed:
-            if len(self.models) > 1:
+            if self.N_models > 1:
                 partial_volumes = [
                     parameters_dict[p] for p in self.partial_volume_names
                 ]
@@ -1038,6 +1038,14 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
                 msg += " into a MultiCompartmentModel."
                 raise ValueError(msg)
 
+    def _check_if_sh_coeff_fixed_if_present(self):
+        msg = 'sh_coeff parameter {} must be fixed in standard MC models '\
+              'to estimate the kernel parameters.'
+        for name, par_type in self.parameter_types.items():
+            if par_type == 'sh_coefficients':
+                if self.parameter_optimization_flags[name]:
+                    raise ValueError(msg.format(name))
+
     def fit(self, acquisition_scheme, data,
             mask=None, solver='brute2fine', Ns=5, maxiter=300,
             N_sphere_samples=30, use_parallel_processing=have_pathos,
@@ -1122,6 +1130,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         self._check_model_params_with_acquisition_params(acquisition_scheme)
         self._check_acquisition_scheme_has_b0s(acquisition_scheme)
         self._check_if_volume_fractions_are_fixed()
+        self._check_if_sh_coeff_fixed_if_present()
 
         # estimate S0
         self.scheme = acquisition_scheme
@@ -1770,15 +1779,18 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         self.models = models
         self.N_models = len(models)
         if S0_tissue_responses is not None:
+            self.fit_S0_response = True
             if len(S0_tissue_responses) != self.N_models:
                 msg = 'Number of S0_tissue responses {} must be same as '\
                       'number of input models {}.'
                 raise ValueError(
                     msg.format(len(S0_tissue_responses), self.N_models))
+        else:
+            self.fit_S0_response = False
         self.S0_tissue_responses = S0_tissue_responses
         self.parameter_links = []
 
-        self._check_for_dispersed_or_NMR_models()
+        self._check_for_NMR_models()
         self._prepare_parameters()
         self._delete_orientation_parameters()
         self._prepare_partial_volumes()
@@ -1802,15 +1814,10 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             msg += "multicore processing."
             print(msg)
 
-    def _check_for_dispersed_or_NMR_models(self):
+    def _check_for_NMR_models(self):
         for model in self.models:
             if model._model_type == 'NMRModel':
                 msg = "Cannot estimate spherical mean of 1D-NMR models."
-                raise ValueError(msg)
-            if model._model_type == 'SphericalDistributedModel':
-                msg = "Cannot estimate spherical mean spherically distributed "
-                msg += "model. Please give the input models to the distributed"
-                msg += " model directly to MultiCompartmentSphericalMeanModel."
                 raise ValueError(msg)
 
     def _delete_orientation_parameters(self):
@@ -1871,7 +1878,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
 
     def fit(self, acquisition_scheme, data, mask=None, solver='csd',
             lambda_lb=1e-5, unity_constraint='kernel_dependent',
-            fit_S0_response=True, use_parallel_processing=have_pathos,
+            use_parallel_processing=have_pathos,
             number_of_processors=None, verbose=True):
         """ The main data fitting function of a
         MultiCompartmentSphericalHarmonicsModel.
@@ -1917,11 +1924,6 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             enforce unity if the kernel is voxel-varying or when volume
             fractions are estimated. Otherwise unity_constraint is set to
             False.
-        fit_S0_response: bool,
-            Fits the raw signal using the S0_tissue_responses, if they are
-            given. If True, the raw signal is fitted and the S0 intensities of
-            the biophysical models are used in the signal generation.
-            Default: True.
         use_parallel_processing : bool,
             Whether or not to use parallel processing using pathos.
         number_of_processors : integer,
@@ -1962,15 +1964,14 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
 
         if unity_constraint == 'kernel_dependent':
             self.unity_constraint = False
-            if fit_S0_response:
+            if self.fit_S0_response:
                 self.unity_constraint = False
             elif not self.volume_fractions_fixed or self.voxel_varying_kernel:
                 self.unity_constraint = True
         else:
             self.unity_constraint = unity_constraint
 
-        self.fit_S0_response = fit_S0_response
-        if self.fit_S0_response and self.S0_tissue_responses is not None:
+        if self.fit_S0_response:
             S0_responses = np.array(self.S0_tissue_responses)
             self.max_S0_response = S0_responses.max()
             self.S0_responses = S0_responses / self.max_S0_response
@@ -2075,7 +2076,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
 
         start = time()
         for idx, pos in enumerate(zip(*mask_pos)):
-            if fit_S0_response:
+            if self.fit_S0_response:
                 data_to_fit = data_[pos] / self.max_S0_response
             else:
                 data_to_fit = data_[pos] / S0[pos]
@@ -2125,6 +2126,9 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             The simulated signal of the microstructure model.
         """
         self._check_model_params_with_acquisition_params(acquisition_scheme)
+        self.volume_fractions_fixed = True
+        if self.S0_tissue_responses is None:
+            self.S0_responses = np.ones(self.N_models)
 
         Ndata = acquisition_scheme.number_of_measurements
         if isinstance(parameters_array_or_dict, np.ndarray):
@@ -2173,20 +2177,18 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         A = self._construct_convolution_kernel(
             acquisition_scheme=acquisition_scheme, **kwargs)
         self.S0_responses = kwargs.get('S0_responses', self.S0_responses)
-        self.fit_S0_response = kwargs.get(
-            'fit_S0_response', self.fit_S0_response)
 
         # if vf fixed then just multiply with sh_coeff
         if self.volume_fractions_fixed:
             E = np.dot(A, kwargs['sh_coeff'])
         else:
             sh_coeff = np.zeros(self.optimizer.Ncoef_total)
-            for i, name in enumerate(self.partial_volume_names):
-                sh_coeff[self.optimizer.vf_indices[i]] = (
-                    kwargs[name] / (2 * np.sqrt(np.pi)))
             sh_coeff[self.optimizer.sh_start:
                      self.optimizer.Ncoef + self.optimizer.sh_start] = kwargs[
                 'sh_coeff']
+            for i, name in enumerate(self.partial_volume_names):
+                sh_coeff[self.optimizer.vf_indices[i]] = (
+                    kwargs[name] / (2 * np.sqrt(np.pi)))
             E = np.dot(A, sh_coeff)
         return E
 
