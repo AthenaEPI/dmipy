@@ -95,10 +95,9 @@ class ModelProperties:
     @property
     def parameter_cardinality(self):
         "Returns the cardinality of model parameters"
-        return OrderedDict([
-            (k, len(np.atleast_2d(self.parameter_ranges[k])))
-            for k in self.parameter_ranges
-        ])
+        return OrderedDict(
+            [(k, len(np.atleast_2d(self.parameter_ranges[k]))) for k in
+             self.parameter_ranges])
 
 
 class MultiCompartmentModelProperties:
@@ -130,16 +129,14 @@ class MultiCompartmentModelProperties:
         if parameter_vector.ndim == 1:
             for parameter, card in self.parameter_cardinality.items():
                 parameters[parameter] = parameter_vector[
-                                        current_pos: current_pos + card
-                                        ]
+                    current_pos: current_pos + card]
                 if card == 1:
                     parameters[parameter] = parameters[parameter][0]
                 current_pos += card
         else:
             for parameter, card in self.parameter_cardinality.items():
                 parameters[parameter] = parameter_vector[
-                                        ..., current_pos: current_pos + card
-                                        ]
+                    ..., current_pos: current_pos + card]
                 if card == 1:
                     parameters[parameter] = parameters[parameter][..., 0]
                 current_pos += card
@@ -469,7 +466,7 @@ class MultiCompartmentModelProperties:
             elif card >= 2:
                 value = np.array(value, dtype=float)
                 if value.shape[-1] != card:
-                    msg = '{} can only be fixed to an array or list with '\
+                    msg = '{} can only be fixed to an array or list with ' \
                           'last dimension {}.'
                     raise ValueError(msg.format(parameter_name, type(value)))
                 if value.ndim == 1:
@@ -523,7 +520,7 @@ class MultiCompartmentModelProperties:
             elif card >= 2:
                 value = np.array(value, dtype=float)
                 if value.shape[-1] != card:
-                    msg = '{} can only be fixed to an array or list with '\
+                    msg = '{} can only be fixed to an array or list with ' \
                           'last dimension {}.'
                     raise ValueError(msg.format(parameter_name, card))
                 if value.ndim == 1:
@@ -637,8 +634,7 @@ class MultiCompartmentModelProperties:
         self.parameter_links.append([model, name, tortuosity, [
             self._parameter_map[lambda_par_parameter_name],
             self._parameter_map[volume_fraction_intra_parameter_name],
-            self._parameter_map[volume_fraction_extra_parameter_name]]
-                                     ])
+            self._parameter_map[volume_fraction_extra_parameter_name]]])
         del self.parameter_ranges[lambda_perp_parameter_name]
         del self.parameter_cardinality[lambda_perp_parameter_name]
         del self.parameter_scales[lambda_perp_parameter_name]
@@ -1078,7 +1074,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
                 raise ValueError(msg)
 
     def _check_if_sh_coeff_fixed_if_present(self):
-        msg = 'sh_coeff parameter {} must be fixed in standard MC models '\
+        msg = 'sh_coeff parameter {} must be fixed in standard MC models ' \
               'to estimate the kernel parameters.'
         for name, par_type in self.parameter_types.items():
             if par_type == 'sh_coefficients':
@@ -1280,10 +1276,10 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
 
         fitted_parameters = np.zeros_like(x0_, dtype=float)
         fitted_parameters[mask_pos] = (
-                fitted_parameters_lin * self.scales_for_optimization)
+            fitted_parameters_lin * self.scales_for_optimization)
 
-        return FittedMultiCompartmentModel(
-            self, S0, mask, fitted_parameters, fitted_mt_fractions)
+        return FittedMultiCompartmentModel(self, S0, mask, fitted_parameters,
+                                           fitted_mt_fractions)
 
     def simulate_signal(self, acquisition_scheme, parameters_array_or_dict):
         """
@@ -1676,7 +1672,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
 
         fitted_parameters = np.zeros_like(x0_, dtype=float)
         fitted_parameters[mask_pos] = (
-                fitted_parameters_lin * self.scales_for_optimization)
+            fitted_parameters_lin * self.scales_for_optimization)
 
         return FittedMultiCompartmentSphericalMeanModel(
             self, S0, mask, fitted_parameters, fitted_mt_fractions)
