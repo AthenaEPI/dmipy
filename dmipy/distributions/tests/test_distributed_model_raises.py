@@ -1,6 +1,7 @@
+from numpy.testing import assert_raises
+
 from dmipy.distributions import distribute_models
 from dmipy.signal_models import sphere_models, cylinder_models
-from numpy.testing import assert_raises
 
 
 def test_raise_mixed_parameter_types():

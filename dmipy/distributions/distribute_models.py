@@ -1,11 +1,13 @@
-from . import distributions
+import copy
 from collections import OrderedDict
 from itertools import chain
+
+import numpy as np
+
+from . import distributions
+from ..core.signal_model_properties import AnisotropicSignalModelProperties
 from ..utils.spherical_convolution import sh_convolution
 from ..utils.utils import T1_tortuosity, parameter_equality
-from ..core.signal_model_properties import AnisotropicSignalModelProperties
-import copy
-import numpy as np
 
 __all__ = [
     'DistributedModel',
@@ -178,8 +180,8 @@ class DistributedModel:
                 parameter_function
 
             if (
-                (parameter_model, parameter_name)
-                not in self._inverted_parameter_map
+                    (parameter_model, parameter_name)
+                    not in self._inverted_parameter_map
             ):
                 raise ValueError(
                     "Parameter function {} doesn't exist".format(i)
@@ -275,9 +277,7 @@ class DistributedModel:
 
     def set_tortuous_parameter(self, lambda_perp,
                                lambda_par,
-                               volume_fraction_intra,
-                               S0_intra=None,
-                               S0_extra=None):
+                               volume_fraction_intra):
         """
         Allows the user to set a tortuosity constraint on the perpendicular
         diffusivity of the extra-axonal compartment, which depends on the
@@ -285,10 +285,6 @@ class DistributedModel:
 
         The perpendicular diffusivity parameter will be removed from the
         optimized parameters and added as a linked parameter.
-
-        To employ the multi-tissue correction of tortuosity it is sufficient to
-        pass the S0_intra and S0_extra parameters.
-
 
         Parameters
         ----------
@@ -301,12 +297,6 @@ class DistributedModel:
         volume_fraction_intra: string
             name of the intra-axonal volume fraction parameter, see
             self.parameter_names.
-        S0_intra: float,
-            S0 response of the tissue associated to the intra-cellular
-            compartment. Default: 1 .
-        S0_extra: float,
-            S0 response of the tissue associated to the extra-cellular
-            compartment. Default: 1.
         """
         params = [lambda_perp, lambda_par, volume_fraction_intra]
         for param in params:
@@ -317,35 +307,11 @@ class DistributedModel:
                     param)
                 return None
 
-        if S0_intra is None and S0_extra is None:
-            S0_intra = 1.
-            S0_extra = 1.
-        elif S0_intra is not None and S0_extra is not None:
-            if self.S0_tissue_responses is None:
-                msg = ('The multi compartment model does not have an S0 for '
-                       'each compartment. It is necessary in order to use the '
-                       'tortuosity constraint with multi-tissue correction.')
-                raise ValueError(msg)
-            if S0_intra not in self.S0_tissue_responses:
-                msg = ('The specified S0_intra does not correspond to any S0 '
-                       'in the multi-compartment model.')
-                raise ValueError(msg)
-            if S0_extra not in self.S0_tissue_responses:
-                msg = ('The specified S0_extra does not correspond to any S0 '
-                       'in the multi-compartment model.')
-                raise ValueError(msg)
-            S0_intra = float(S0_intra)
-            S0_extra = float(S0_extra)
-        else:
-            raise ValueError('Only one S0 has been specified. Both S0_intra '
-                             'and S0_extra must be passed.')
-
-        tortuosity = T1_tortuosity(S0_intra, S0_extra)
+        tortuosity = T1_tortuosity()
         model, name = self._parameter_map[lambda_perp]
         self.parameter_links.append([model, name, tortuosity, [
             self._parameter_map[lambda_par],
-            self._parameter_map[volume_fraction_intra]]
-        ])
+            self._parameter_map[volume_fraction_intra]]])
         del self.parameter_ranges[lambda_perp]
         del self.parameter_scales[lambda_perp]
         del self.parameter_cardinality[lambda_perp]
@@ -458,8 +424,8 @@ class DistributedModel:
         remaining_volume_fraction = 1.
         E = 0.
         for model_name, model, partial_volume in zip(
-            self.model_names, self.models,
-            chain(partial_volumes, [None])
+                self.model_names, self.models,
+                chain(partial_volumes, [None])
         ):
             parameters = {}
             for parameter in model.parameter_ranges:
@@ -525,8 +491,8 @@ class DistributedModel:
         remaining_volume_fraction = 1.
         rh_models = 0.
         for model_name, model, partial_volume in zip(
-            self.model_names, self.models,
-            chain(partial_volumes, [None])
+                self.model_names, self.models,
+                chain(partial_volumes, [None])
         ):
             parameters = {}
             for parameter in model.parameter_ranges:
@@ -606,8 +572,8 @@ class DistributedModel:
             partial_volumes = []
         remaining_volume_fraction = 1.
         for model_name, model, partial_volume in zip(
-            self.model_names, self.models,
-            chain(partial_volumes, [None])
+                self.model_names, self.models,
+                chain(partial_volumes, [None])
         ):
             parameters = {}
             for parameter in model.parameter_ranges:
@@ -622,10 +588,7 @@ class DistributedModel:
                  acquisition_scheme.number_of_measurements))
             for i, radius in enumerate(radii):
                 parameters[self.target_parameter] = radius * 2
-                E[i] = (
-                    P_radii[i] *
-                    model(acquisition_scheme, **parameters)
-                )
+                E[i] = P_radii[i] * model(acquisition_scheme, **parameters)
             E = np.trapz(E, x=radii, axis=0)
 
             if partial_volume is not None:
@@ -805,8 +768,8 @@ class SD1WatsonDistributed(DistributedModel, AnisotropicSignalModelProperties):
         return rh_array
 
 
-class SD2BinghamDistributed(
-        DistributedModel, AnisotropicSignalModelProperties):
+class SD2BinghamDistributed(DistributedModel,
+                            AnisotropicSignalModelProperties):
     """
     The DistributedModel instantiation for a Bingham-dispersed model. Multiple
     models can be dispersed at the same time (like a Stick and Zeppelin for
@@ -848,8 +811,8 @@ class SD2BinghamDistributed(
                 self.mu_param = param
 
 
-class SD3SphericalHarmonicsDistributed(
-        DistributedModel, AnisotropicSignalModelProperties):
+class SD3SphericalHarmonicsDistributed(DistributedModel,
+                                       AnisotropicSignalModelProperties):
     """
     The DistributedModel instantiation of the SphericalHarmonicsDistributed
     model. Multiple models can be dispersed at the same time.
