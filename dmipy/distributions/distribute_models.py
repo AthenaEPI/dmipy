@@ -420,11 +420,14 @@ class DistributedModel:
             Is internally given as **parameter_dictionary.
         """
         if hasattr(self, 'distribution'):
-            if (isinstance(self.distribution, distributions.SD1Watson) or
-                    isinstance(self.distribution, distributions.SD2Bingham)):
+            if self._model_type == 'SphericalDistributedModel':
                 return self.sh_convolved_model(acquisition_scheme, **kwargs)
-            elif isinstance(self.distribution, distributions.DD1Gamma):
+            elif self._model_type == 'SpatialDistributedModel':
                 return self.integrated_model(acquisition_scheme, **kwargs)
+            else:
+                raise RuntimeError(
+                    'Cannot generate signal for unknown distribution type '
+                    '{}'.format(self._model_type))
         else:
             return self.bundle_model(acquisition_scheme, **kwargs)
 
@@ -817,7 +820,7 @@ class SD2BinghamDistributed(
     Parameters
     ----------
     models: list of length 1 or more,
-        list of models to be Watson-dispersed.
+        list of models to be Bingham-dispersed.
     parameters_links: list of length 1 or more,
         deprecated for testing use only.
     """
@@ -833,6 +836,52 @@ class SD2BinghamDistributed(
         if parameter_links is None:
             self.parameter_links = []
         self.distribution = distributions.SD2Bingham()
+
+        _models_and_distribution = list(self.models)
+        _models_and_distribution.append(self.distribution)
+        self._prepare_parameters(_models_and_distribution)
+        self._delete_orientation_from_parameters()
+        self._prepare_partial_volumes()
+        self._prepare_parameter_links()
+        for param in self.parameter_names:
+            if param.endswith('mu'):
+                self.mu_param = param
+
+
+class SD3SphericalHarmonicsDistributed(
+        DistributedModel, AnisotropicSignalModelProperties):
+    """
+    The DistributedModel instantiation of the SphericalHarmonicsDistributed
+    model. Multiple models can be dispersed at the same time.
+
+    Its use is intended for estimating the convolution kernel given some
+    distribution in the regular MC-model. To fit spherical harmonics of a
+    distributed model one must use the MC-SH approach.
+
+    To estimate the kernel, however, The SH parameters must be fixed before
+    fitting the model
+
+    Parameters
+    ----------
+    models: list of length 1 or more,
+        list of models to be SH-dispersed.
+    sh_order: int,
+        maximum spherical harmonics order to use.
+    parameters_links: list of length 1 or more,
+        deprecated for testing use only.
+    """
+
+    _model_type = 'SphericalDistributedModel'
+
+    def __init__(self, models, sh_order, parameter_links=None):
+        self.models = models
+        self._set_required_acquisition_parameters()
+        self._check_for_double_model_class_instances()
+        self._check_for_dispersable_models()
+        self.parameter_links = parameter_links
+        if parameter_links is None:
+            self.parameter_links = []
+        self.distribution = distributions.SD3SphericalHarmonics(sh_order)
 
         _models_and_distribution = list(self.models)
         _models_and_distribution.append(self.distribution)
