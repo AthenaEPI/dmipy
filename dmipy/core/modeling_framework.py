@@ -3,31 +3,32 @@
 Document Module
 '''
 from __future__ import division
-import pkg_resources
+
 from collections import OrderedDict
+from time import time
+from uuid import uuid4
 
 import numpy as np
-from time import time
+import pkg_resources
+from dipy.utils.optpkg import optional_package
 
-from ..utils.spherical_mean import (
-    estimate_spherical_mean_multi_shell)
-from ..utils.utils import (
-    T1_tortuosity,
-    parameter_equality,
-    fractional_parameter)
 from .fitted_modeling_framework import (
     FittedMultiCompartmentModel,
     FittedMultiCompartmentSphericalMeanModel,
     FittedMultiCompartmentSphericalHarmonicsModel)
 from ..optimizers.brute2fine import (
     GlobalBruteOptimizer, Brute2FineOptimizer)
-from ..optimizers_fod.csd_tournier import CsdTournierOptimizer
-from ..optimizers_fod.csd_cvxpy import CsdCvxpyOptimizer
 from ..optimizers.mix import MixOptimizer
 from ..optimizers.multi_tissue_convex_optimizer import (
     MultiTissueConvexOptimizer)
-from dipy.utils.optpkg import optional_package
-from uuid import uuid4
+from ..optimizers_fod.csd_cvxpy import CsdCvxpyOptimizer
+from ..optimizers_fod.csd_tournier import CsdTournierOptimizer
+from ..utils.spherical_mean import (
+    estimate_spherical_mean_multi_shell)
+from ..utils.utils import (
+    T1_tortuosity,
+    parameter_equality,
+    fractional_parameter)
 
 pathos, have_pathos, _ = optional_package("pathos")
 numba, have_numba, _ = optional_package("numba")
@@ -437,7 +438,7 @@ class MultiCompartmentModelProperties:
 
     def _check_for_tortuosity_constraint(self):
         for link in self.parameter_links:
-            if link[2] is T1_tortuosity:
+            if isinstance(link[2], T1_tortuosity):
                 msg = "Cannot use MIX optimization when the Tortuosity "
                 msg += "constraint is set in the MultiCompartmentModel. To "
                 msg += "use MIX while imposing Tortuosity, set the constraint "
@@ -631,10 +632,9 @@ class MultiCompartmentModelProperties:
 
         model, name = self._parameter_map[lambda_perp_parameter_name]
 
-        def tort_aux_func(lpar, ivf, evf):
-            return T1_tortuosity(lpar, ivf, evf, S0_intra, S0_extra)
+        tortuosity = T1_tortuosity(S0_intra, S0_extra)
 
-        self.parameter_links.append([model, name, tort_aux_func, [
+        self.parameter_links.append([model, name, tortuosity, [
             self._parameter_map[lambda_par_parameter_name],
             self._parameter_map[volume_fraction_intra_parameter_name],
             self._parameter_map[volume_fraction_extra_parameter_name]]
@@ -1378,18 +1378,12 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
                 )
 
             if quantity == "signal":
-                values = (
-                        values +
-                        partial_volume * model(
-                    acquisition_scheme_or_vertices, **parameters)
-                )
+                values = (values + partial_volume * model(
+                    acquisition_scheme_or_vertices, **parameters))
             elif quantity == "FOD":
                 try:
-                    values = (
-                            values +
-                            partial_volume * model.fod(
-                        acquisition_scheme_or_vertices, **parameters)
-                    )
+                    values = (values + partial_volume * model.fod(
+                        acquisition_scheme_or_vertices, **parameters))
                 except AttributeError:
                     continue
             elif quantity == "stochastic cost function":
@@ -1780,11 +1774,8 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
                 )
 
             if quantity == "signal":
-                values = (
-                        values +
-                        partial_volume * model.spherical_mean(
-                    acquisition_scheme_or_vertices, **parameters)
-                )
+                values = (values + partial_volume * model.spherical_mean(
+                    acquisition_scheme_or_vertices, **parameters))
             elif quantity == "stochastic cost function":
                 values[:, counter] = model.spherical_mean(
                     acquisition_scheme_or_vertices,

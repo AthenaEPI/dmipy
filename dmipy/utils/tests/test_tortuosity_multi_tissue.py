@@ -9,12 +9,12 @@ def test_single_tissue():
 
     # only intra and extra cellular compartments
     lperp = (1. - icvf) * lpar
-    np.testing.assert_almost_equal(T1_tortuosity(lpar, icvf), lperp)
+    np.testing.assert_almost_equal(T1_tortuosity()(lpar, icvf), lperp)
 
     # with additional compartment
     ecvf = 0.2
     lperp = ecvf / (icvf + ecvf) * lpar
-    np.testing.assert_almost_equal(T1_tortuosity(lpar, icvf, ecvf), lperp)
+    np.testing.assert_almost_equal(T1_tortuosity()(lpar, icvf, ecvf), lperp)
 
 
 def test_multi_tissue():
@@ -27,12 +27,14 @@ def test_multi_tissue():
     ecsf = 1. - icsf
     ecvf = icsf * s0ec / (icsf * s0ec + ecsf * s0ec)
     lperp = ecvf * lpar
-    actual = T1_tortuosity(lpar, icsf, ecsf, s0ic, s0ec)
+    tort = T1_tortuosity(s0ic, s0ec)
+    actual = tort(lpar, icsf, ecsf)
     np.testing.assert_almost_equal(actual, lperp)
 
     # with additional compartment
     ecsf = 0.2
     ecvf = icsf * s0ec / (icsf * s0ec + ecsf * s0ec)
     lperp = ecvf * lpar
-    actual = T1_tortuosity(lpar, icsf, ecsf, s0ic, s0ec)
+    tort = T1_tortuosity(s0ic, s0ec)
+    actual = tort(lpar, icsf, ecsf)
     np.testing.assert_almost_equal(actual, lperp)

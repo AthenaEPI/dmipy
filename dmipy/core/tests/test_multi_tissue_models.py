@@ -1,5 +1,4 @@
-from nose.tools import raises
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_raises
 
 from dmipy.core import modeling_framework
 from dmipy.data.saved_acquisition_schemes import (
@@ -85,7 +84,6 @@ def test_multi_tissue_tortuosity():
     s0z = 4000.
     s0b = 10000.
 
-    @raises(ValueError)
     def only_intra_s0_in_tortuosity():
         model1t = modeling_framework.MultiCompartmentModel(
             models=[stick, zeppelin, ball])
@@ -95,26 +93,31 @@ def test_multi_tissue_tortuosity():
                                        'partial_volume_1',
                                        S0_intra=s0s)
 
-    @raises(ValueError)
+    assert_raises(ValueError, only_intra_s0_in_tortuosity)
+
     def only_extra_s0_in_tortuosity():
         model = modeling_framework.MultiCompartmentModel(
             models=[stick, zeppelin, ball])
         model.set_tortuous_parameter('G2Zeppelin_1_lambda_perp',
-                                     'C1Stick_1_lambda_par', 'partial_volume_0',
+                                     'C1Stick_1_lambda_par',
+                                     'partial_volume_0',
                                      'partial_volume_1',
                                      S0_extra=s0z)
 
-    @raises(ValueError)
+    assert_raises(ValueError, only_extra_s0_in_tortuosity)
+
     def one_tissue_but_two_s0_in_tortuosity():
         model = modeling_framework.MultiCompartmentModel(
             models=[stick, zeppelin, ball])
         model.set_tortuous_parameter('G2Zeppelin_1_lambda_perp',
-                                     'C1Stick_1_lambda_par', 'partial_volume_0',
+                                     'C1Stick_1_lambda_par',
+                                     'partial_volume_0',
                                      'partial_volume_1',
                                      S0_intra=s0s,
                                      S0_extra=s0z)
 
-    @raises(ValueError)
+    assert_raises(ValueError, one_tissue_but_two_s0_in_tortuosity)
+
     def mismatch_s0_intra():
         model = modeling_framework.MultiCompartmentModel(
             models=[stick, zeppelin, ball])
@@ -125,7 +128,8 @@ def test_multi_tissue_tortuosity():
                                      S0_intra=s0s + 10.,
                                      S0_extra=s0z)
 
-    @raises(ValueError)
+    assert_raises(ValueError, mismatch_s0_intra)
+
     def mismatch_s0_extra():
         model = modeling_framework.MultiCompartmentModel(
             models=[stick, zeppelin, ball],
@@ -136,3 +140,5 @@ def test_multi_tissue_tortuosity():
                                      'partial_volume_1',
                                      S0_intra=s0s,
                                      S0_extra=s0z + 10.)
+
+    assert_raises(ValueError, mismatch_s0_extra)
