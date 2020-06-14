@@ -176,6 +176,15 @@ class T1_tortuosity:
         """Tortuosity model for perpendicular extra-axonal diffusivity
         [1, 2, 3].
 
+        Parameters
+        ----------
+        S0_intra: float,
+            S0 response of the tissue associated to the intra-cellular
+            compartment. Default: 1.
+        S0_extra: float,
+            S0 response of the tissue associated to the extra-cellular
+            compartment. Default: 1.
+
         References
         -------
         .. [1] Bruggeman, Von DAG. "Berechnung verschiedener physikalischer
@@ -214,7 +223,7 @@ class T1_tortuosity:
         Returns
         -------
         lambda_perp : float,
-            Rotation matrix.
+            Perpendicular diffusivity.
         """
         if vf_extra is None:
             vf_extra = 1. - vf_intra
