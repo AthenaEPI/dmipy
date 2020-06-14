@@ -3,31 +3,33 @@
 Document Module
 '''
 from __future__ import division
-import pkg_resources
+
 from collections import OrderedDict
+from time import time
+from uuid import uuid4
 
 import numpy as np
-from time import time
+import pkg_resources
+from dipy.utils.optpkg import optional_package
 
-from ..utils.spherical_mean import (
-    estimate_spherical_mean_multi_shell)
-from ..utils.utils import (
-    T1_tortuosity,
-    parameter_equality,
-    fractional_parameter)
 from .fitted_modeling_framework import (
     FittedMultiCompartmentModel,
     FittedMultiCompartmentSphericalMeanModel,
     FittedMultiCompartmentSphericalHarmonicsModel)
 from ..optimizers.brute2fine import (
     GlobalBruteOptimizer, Brute2FineOptimizer)
-from ..optimizers_fod.csd_tournier import CsdTournierOptimizer
-from ..optimizers_fod.csd_cvxpy import CsdCvxpyOptimizer
 from ..optimizers.mix import MixOptimizer
 from ..optimizers.multi_tissue_convex_optimizer import (
     MultiTissueConvexOptimizer)
-from dipy.utils.optpkg import optional_package
-from uuid import uuid4
+from ..optimizers_fod.csd_cvxpy import CsdCvxpyOptimizer
+from ..optimizers_fod.csd_tournier import CsdTournierOptimizer
+from ..utils.spherical_mean import (
+    estimate_spherical_mean_multi_shell)
+from ..utils.utils import (
+    T1_tortuosity,
+    parameter_equality,
+    fractional_parameter)
+
 pathos, have_pathos, _ = optional_package("pathos")
 numba, have_numba, _ = optional_package("numba")
 graphviz, have_graphviz, _ = optional_package("graphviz")
@@ -93,10 +95,9 @@ class ModelProperties:
     @property
     def parameter_cardinality(self):
         "Returns the cardinality of model parameters"
-        return OrderedDict([
-            (k, len(np.atleast_2d(self.parameter_ranges[k])))
-            for k in self.parameter_ranges
-        ])
+        return OrderedDict(
+            [(k, len(np.atleast_2d(self.parameter_ranges[k]))) for k in
+             self.parameter_ranges])
 
 
 class MultiCompartmentModelProperties:
@@ -128,16 +129,14 @@ class MultiCompartmentModelProperties:
         if parameter_vector.ndim == 1:
             for parameter, card in self.parameter_cardinality.items():
                 parameters[parameter] = parameter_vector[
-                    current_pos: current_pos + card
-                ]
+                    current_pos: current_pos + card]
                 if card == 1:
                     parameters[parameter] = parameters[parameter][0]
                 current_pos += card
         else:
             for parameter, card in self.parameter_cardinality.items():
                 parameters[parameter] = parameter_vector[
-                    ..., current_pos: current_pos + card
-                ]
+                    ..., current_pos: current_pos + card]
                 if card == 1:
                     parameters[parameter] = parameters[parameter][..., 0]
                 current_pos += card
@@ -320,8 +319,8 @@ class MultiCompartmentModelProperties:
                 parameter_function
 
             if (
-                (parameter_model, parameter_name)
-                not in self._inverted_parameter_map
+                    (parameter_model, parameter_name)
+                    not in self._inverted_parameter_map
             ):
                 raise ValueError(
                     "Parameter function {} doesn't exist".format(i)
@@ -436,7 +435,7 @@ class MultiCompartmentModelProperties:
 
     def _check_for_tortuosity_constraint(self):
         for link in self.parameter_links:
-            if link[2] is T1_tortuosity:
+            if isinstance(link[2], T1_tortuosity):
                 msg = "Cannot use MIX optimization when the Tortuosity "
                 msg += "constraint is set in the MultiCompartmentModel. To "
                 msg += "use MIX while imposing Tortuosity, set the constraint "
@@ -467,7 +466,7 @@ class MultiCompartmentModelProperties:
             elif card >= 2:
                 value = np.array(value, dtype=float)
                 if value.shape[-1] != card:
-                    msg = '{} can only be fixed to an array or list with '\
+                    msg = '{} can only be fixed to an array or list with ' \
                           'last dimension {}.'
                     raise ValueError(msg.format(parameter_name, type(value)))
                 if value.ndim == 1:
@@ -515,13 +514,13 @@ class MultiCompartmentModelProperties:
                 elif isinstance(value, np.ndarray):
                     self._add_fixed_parameter_array(parameter_name, value)
                 else:
-                    msg = 'fixed value for {} must be number or np.array, '\
+                    msg = 'fixed value for {} must be number or np.array, ' \
                           'currently {}'
                     raise ValueError(msg.format(parameter_name, type(value)))
             elif card >= 2:
                 value = np.array(value, dtype=float)
                 if value.shape[-1] != card:
-                    msg = '{} can only be fixed to an array or list with '\
+                    msg = '{} can only be fixed to an array or list with ' \
                           'last dimension {}.'
                     raise ValueError(msg.format(parameter_name, card))
                 if value.ndim == 1:
@@ -559,7 +558,8 @@ class MultiCompartmentModelProperties:
     def set_tortuous_parameter(self, lambda_perp_parameter_name,
                                lambda_par_parameter_name,
                                volume_fraction_intra_parameter_name,
-                               volume_fraction_extra_parameter_name):
+                               volume_fraction_extra_parameter_name,
+                               S0_correction=False):
         """
         Allows the user to set a tortuosity constraint on the perpendicular
         diffusivity of the extra-axonal compartment, which depends on the
@@ -567,6 +567,9 @@ class MultiCompartmentModelProperties:
 
         The perpendicular diffusivity parameter will be removed from the
         optimized parameters and added as a linked parameter.
+
+        To employ the multi-tissue correction of tortuosity it is sufficient to
+        pass the S0_intra and S0_extra parameters.
 
         Parameters
         ----------
@@ -582,6 +585,9 @@ class MultiCompartmentModelProperties:
         volume_fraction_extra_parameter_name: string
             name of the extra-axonal volume fraction parameter, see
             self.parameter_names.
+        S0_correction: bool
+            If True, it uses the S0 of the intra-axonal and extra-axonal
+            compartments to define the tortuosity constraint. Default: False.
         """
         params = [lambda_perp_parameter_name, lambda_par_parameter_name,
                   volume_fraction_intra_parameter_name,
@@ -595,11 +601,23 @@ class MultiCompartmentModelProperties:
                 raise ValueError(msg)
 
         model, name = self._parameter_map[lambda_perp_parameter_name]
-        self.parameter_links.append([model, name, T1_tortuosity, [
+        if S0_correction and self.S0_tissue_responses is not None:
+            s0intra_tag = volume_fraction_intra_parameter_name.split('_')[-1]
+            s0extra_tag = volume_fraction_extra_parameter_name.split('_')[-1]
+            S0_intra = self.S0_tissue_responses[int(s0intra_tag)]
+            S0_extra = self.S0_tissue_responses[int(s0extra_tag)]
+            print('Employing S0 correction of tortuosity constraint with:')
+            print('S0_intra: {}'.format(S0_intra))
+            print('S0_extra: {}'.format(S0_extra))
+        else:
+            S0_intra = 1.
+            S0_extra = 1.
+        tortuosity = T1_tortuosity(S0_intra, S0_extra)
+
+        self.parameter_links.append([model, name, tortuosity, [
             self._parameter_map[lambda_par_parameter_name],
             self._parameter_map[volume_fraction_intra_parameter_name],
-            self._parameter_map[volume_fraction_extra_parameter_name]]
-        ])
+            self._parameter_map[volume_fraction_extra_parameter_name]]])
         del self.parameter_ranges[lambda_perp_parameter_name]
         del self.parameter_cardinality[lambda_perp_parameter_name]
         del self.parameter_scales[lambda_perp_parameter_name]
@@ -974,7 +992,7 @@ class MultiCompartmentModelProperties:
                 msg.format(parameter_name, card, bounds_array.shape))
         for lower, higher in bounds_array:
             if higher < lower:
-                msg = 'given optimization bounds for {} are invalid: lower '\
+                msg = 'given optimization bounds for {} are invalid: lower ' \
                       'bound {} is higher than upper bound {}.'
                 raise ValueError(msg.format(parameter_name, lower, higher))
         parameter_scale = np.max(bounds)
@@ -1003,7 +1021,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         self.N_models = len(models)
         if S0_tissue_responses is not None:
             if len(S0_tissue_responses) != self.N_models:
-                msg = 'Number of S0_tissue responses {} must be same as '\
+                msg = 'Number of S0_tissue responses {} must be same as ' \
                       'number of input models {}.'
                 raise ValueError(
                     msg.format(len(S0_tissue_responses), self.N_models))
@@ -1039,7 +1057,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
                 raise ValueError(msg)
 
     def _check_if_sh_coeff_fixed_if_present(self):
-        msg = 'sh_coeff parameter {} must be fixed in standard MC models '\
+        msg = 'sh_coeff parameter {} must be fixed in standard MC models ' \
               'to estimate the kernel parameters.'
         for name, par_type in self.parameter_types.items():
             if par_type == 'sh_coefficients':
@@ -1243,8 +1261,8 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
         fitted_parameters[mask_pos] = (
             fitted_parameters_lin * self.scales_for_optimization)
 
-        return FittedMultiCompartmentModel(
-            self, S0, mask, fitted_parameters, fitted_mt_fractions)
+        return FittedMultiCompartmentModel(self, S0, mask, fitted_parameters,
+                                           fitted_mt_fractions)
 
     def simulate_signal(self, acquisition_scheme, parameters_array_or_dict):
         """
@@ -1335,7 +1353,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
             partial_volumes = [1.]
 
         for model_name, model, partial_volume in zip(
-            self.model_names, self.models, partial_volumes
+                self.model_names, self.models, partial_volumes
         ):
             parameters = {}
             for parameter in model.parameter_ranges:
@@ -1348,18 +1366,12 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
                 )
 
             if quantity == "signal":
-                values = (
-                    values +
-                    partial_volume * model(
-                        acquisition_scheme_or_vertices, **parameters)
-                )
+                values = (values + partial_volume * model(
+                    acquisition_scheme_or_vertices, **parameters))
             elif quantity == "FOD":
                 try:
-                    values = (
-                        values +
-                        partial_volume * model.fod(
-                            acquisition_scheme_or_vertices, **parameters)
-                    )
+                    values = (values + partial_volume * model.fod(
+                        acquisition_scheme_or_vertices, **parameters))
                 except AttributeError:
                     continue
             elif quantity == "stochastic cost function":
@@ -1389,7 +1401,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
         self.N_models = len(models)
         if S0_tissue_responses is not None:
             if len(S0_tissue_responses) != self.N_models:
-                msg = 'Number of S0_tissue responses {} must be same as '\
+                msg = 'Number of S0_tissue responses {} must be same as ' \
                       'number of input models {}.'
                 raise ValueError(
                     msg.format(len(S0_tissue_responses), self.N_models))
@@ -1737,7 +1749,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
             partial_volumes = [1.]
 
         for model_name, model, partial_volume in zip(
-            self.model_names, self.models, partial_volumes
+                self.model_names, self.models, partial_volumes
         ):
             parameters = {}
             for parameter in model.parameter_ranges:
@@ -1750,11 +1762,8 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
                 )
 
             if quantity == "signal":
-                values = (
-                    values +
-                    partial_volume * model.spherical_mean(
-                        acquisition_scheme_or_vertices, **parameters)
-                )
+                values = (values + partial_volume * model.spherical_mean(
+                    acquisition_scheme_or_vertices, **parameters))
             elif quantity == "stochastic cost function":
                 values[:, counter] = model.spherical_mean(
                     acquisition_scheme_or_vertices,
@@ -1781,7 +1790,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         if S0_tissue_responses is not None:
             self.fit_S0_response = True
             if len(S0_tissue_responses) != self.N_models:
-                msg = 'Number of S0_tissue responses {} must be same as '\
+                msg = 'Number of S0_tissue responses {} must be same as ' \
                       'number of input models {}.'
                 raise ValueError(
                     msg.format(len(S0_tissue_responses), self.N_models))
@@ -2205,7 +2214,7 @@ def homogenize_x0_to_data(data, x0):
         else:
             x0_as_data = x0.copy()
     if not np.all(
-        x0_as_data.shape[:-1] == data.shape[:-1]
+            x0_as_data.shape[:-1] == data.shape[:-1]
     ):
         # if x0 and data are both N-dimensional but have different shapes.
         msg = "data and x0 both N-dimensional but have different shapes. "
