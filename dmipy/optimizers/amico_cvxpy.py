@@ -1,6 +1,5 @@
 import numpy as np
-from dipy.utils.optpkg import optional_package
-cvxpy, have_cvxpy, _ = optional_package("cvxpy")
+import cvxpy
 
 
 __all__ = [
@@ -60,7 +59,7 @@ class AmicoCvxpyOptimizer:
         self.lambda_1 = lambda_1
         self.lambda_2 = lambda_2
 
-    def __call__(self, data, M, grid, idx, x0_th=1.e-6):
+    def __call__(self, data, M, grid, idx, x0_th=1.e-4):
         """
         The fitting function of AMICO optimizer.
         Parameters
@@ -86,22 +85,27 @@ class AmicoCvxpyOptimizer:
 
         """
 
-        # 1. Selecting important atoms by solving NNLS
+        # 1. Contracting matrix M and data to have one b=0 value
+        M = np.vstack((np.mean(M[self.acquisition_scheme.b0_mask, :], axis=0),
+                      M[~self.acquisition_scheme.b0_mask, :]))
+        data = np.append(np.mean(data[self.acquisition_scheme.b0_mask]),
+                         data[~self.acquisition_scheme.b0_mask])
+
+        # 2. Selecting important atoms by solving NNLS
         # regularized with L1 and L2 norms
         x0 = cvxpy.Variable(len(self.x0_vector))
-        cost = 0.5 * \
-               cvxpy.sum_squares(M[~self.acquisition_scheme.b0_mask, :] * x0 -
-                                 data[~self.acquisition_scheme.b0_mask])
+
+        cost = 0.5 * cvxpy.sum_squares(M * x0 - data)
         for m_idx, model_name in enumerate(self.model.model_names):
             cost += self.lambda_1[m_idx] * \
                     cvxpy.norm(x0[idx[model_name]], 1)
             cost += 0.5 * self.lambda_2[m_idx] * \
-                    cvxpy.norm(x0[idx[model_name]], 2) ** 2
+                cvxpy.norm(x0[idx[model_name]], 2) ** 2
         problem = cvxpy.Problem(cvxpy.Minimize(cost), [x0 >= 0])
         problem.solve()
         self.x0_vector = x0.value
 
-        # 2. Computing distribution vector x0_vector by solving NNLS
+        # 3. Computing distribution vector x0_vector by solving NNLS
         x0_idx_i = self.x0_vector > x0_th
         x0_i = cvxpy.Variable(sum(x0_idx_i))
         cost = cvxpy.sum_squares(M[:, x0_idx_i] * x0_i - data)
@@ -111,9 +115,8 @@ class AmicoCvxpyOptimizer:
         self.x0_vector[x0_idx_i] = x0_i.value
         self.x0_vector /= (np.sum(self.x0_vector) + 1.e-8)
 
-        # 3. Estimating parameters based using estimated distribution
+        # 4. Estimating parameters based using estimated distribution
         # vector and tessellation grids
-        # TODO: This parameter estimation will be revised
         fitted_parameter_vector = []
         for m_idx, model_name in enumerate(self.model.model_names):
             m = self.model.models[m_idx]
