@@ -98,7 +98,7 @@ class AmicoCvxpyOptimizer:
         cost = 0.5 * cvxpy.sum_squares(M * x0 - data)
         for m_idx, model_name in enumerate(self.model.model_names):
             cost += self.lambda_1[m_idx] * \
-                    cvxpy.norm(x0[idx[model_name]], 1)
+                cvxpy.norm(x0[idx[model_name]], 1)
             cost += 0.5 * self.lambda_2[m_idx] * \
                 cvxpy.norm(x0[idx[model_name]], 2) ** 2
         problem = cvxpy.Problem(cvxpy.Minimize(cost), [x0 >= 0])
