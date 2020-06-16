@@ -208,7 +208,7 @@ def white_matter_response_tournier13(
             print('White matter response converged')
             break
         it += 1
-        if it > max_iter:
+        if it == max_iter:
             print('Maximum iterations reached without convergence')
             break
     return S0_wm, TR2_wm_model, selected_indices

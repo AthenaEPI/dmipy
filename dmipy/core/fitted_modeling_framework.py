@@ -495,7 +495,7 @@ class FittedMultiCompartmentSphericalMeanModel:
         for link in self.model.parameter_links:
             param_to_delete = self.model._inverted_parameter_map[link[0],
                                                                  link[1]]
-            if link[2] is T1_tortuosity:
+            if isinstance(link[2], T1_tortuosity):
                 bundle.parameter_links.append(
                     [link[0], link[1], link[2], link[3][:-1]])
             elif link[2] is fractional_parameter:
@@ -590,7 +590,7 @@ class FittedMultiCompartmentSphericalMeanModel:
         for link in self.model.parameter_links:
             param_to_delete = self.model._inverted_parameter_map[link[0],
                                                                  link[1]]
-            if link[2] is T1_tortuosity:
+            if isinstance(link[2], T1_tortuosity):
                 sh_model.parameter_links.append(
                     [link[0], link[1], link[2], link[3][:-1]])
             elif link[2] is fractional_parameter:
