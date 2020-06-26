@@ -218,3 +218,52 @@ def test_spherical_harmonics_model_raises(
     sh_mod.set_fixed_parameter('G1Ball_1_lambda_iso', 3e-9)
     assert_raises(
         ValueError, sh_mod.fit, scheme, data, solver='csd_tournier07')
+
+
+def test_equivalence_sh_distributed_mc_with_mcsh():
+    """
+    We test if we can input a Watson-distributed zeppelin and stick into an
+    SD3SphericalHarmonicsDistributedModel in an MC-model, and compare it with
+    an MCSH model with the same watson distribution as a kernel.
+    """
+    stick = cylinder_models.C1Stick()
+    zep = gaussian_models.G2Zeppelin()
+
+    mck_dist = distribute_models.SD1WatsonDistributed([stick, zep])
+    mck_dist.set_equal_parameter(
+        'G2Zeppelin_1_lambda_par', 'C1Stick_1_lambda_par')
+    mck_dist.set_tortuous_parameter(
+        'G2Zeppelin_1_lambda_perp', 'G2Zeppelin_1_lambda_par',
+        'partial_volume_0')
+
+    mcsh = modeling_framework.MultiCompartmentSphericalHarmonicsModel(
+        models=[mck_dist], sh_order=8)
+    mc = modeling_framework.MultiCompartmentModel(
+        [distribute_models.SD3SphericalHarmonicsDistributed(
+            [mck_dist], sh_order=8)])
+
+    lambda_par = 0.
+    odi = .02
+    sh_coeff = np.ones(45)
+    sh_coeff[0] = 1 / (2 * np.sqrt(np.pi))
+    pv0 = .3
+
+    params_mcsh = {
+        'SD1WatsonDistributed_1_partial_volume_0': pv0,
+        'SD1WatsonDistributed_1_G2Zeppelin_1_lambda_par': lambda_par,
+        'SD1WatsonDistributed_1_SD1Watson_1_odi': odi,
+        'sh_coeff': sh_coeff
+    }
+
+    basemod = 'SD3SphericalHarmonicsDistributed_1_'
+    params_mc = {
+        basemod + 'SD1WatsonDistributed_1_partial_volume_0': pv0,
+        basemod + 'SD1WatsonDistributed_1_G2Zeppelin_1_lambda_par': lambda_par,
+        basemod + 'SD1WatsonDistributed_1_SD1Watson_1_odi': odi,
+        basemod + 'SD3SphericalHarmonics_1_sh_coeff': sh_coeff
+    }
+
+    E_mcsh = mcsh.simulate_signal(scheme, params_mcsh)
+    E_mc = mc.simulate_signal(scheme, params_mc)
+
+    np.testing.assert_array_almost_equal(E_mcsh, E_mc)

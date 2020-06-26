@@ -65,7 +65,7 @@ class GlobalBruteOptimizer:
             self.global_optimization_grid = True
             x0_vector = np.tile(np.nan, len(model.bounds_for_optimization))
             self.precompute_signal_grid(model, x0_vector, Ns, N_sphere_samples)
-        elif x0_vector.squeeze().ndim == 1:
+        elif x0_vector.squeeze().ndim == 1 and np.any(np.isnan(x0_vector)):
             self.global_optimization_grid = True
             self.precompute_signal_grid(
                 model, x0_vector.squeeze(), Ns, N_sphere_samples)
