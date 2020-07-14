@@ -339,8 +339,8 @@ class DistributedModel:
             try:
                 self.parameter_ranges[param]
             except KeyError:
-                print("{} does not exist or has already been fixed.").format(
-                    param)
+                print("{} does not exist or has already been fixed.".format(
+                    param))
                 return None
         model, name = self._parameter_map[parameter_name_out]
         self.parameter_links.append([model, name, parameter_equality, [
