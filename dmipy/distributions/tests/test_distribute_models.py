@@ -206,3 +206,18 @@ def test_C4_watson_gamma_equals_gamma_watson():
 
     assert_array_almost_equal(watsongammacyl(scheme, **params2),
                               gammawatsoncyl(scheme, **params1), 5)
+
+
+def test_set_equal_param():
+    cylinder = cylinder_models.C2CylinderStejskalTannerApproximation()
+    watsoncyl = distribute_models.SD1WatsonDistributed([cylinder])
+    p1 = 'C2CylinderStejskalTannerApproximation_1_lambda_par'
+    p2 = 'C2CylinderStejskalTannerApproximation_1_diameter'
+    watsoncyl.set_equal_parameter(p1, p2)
+
+    isnone = False
+    reset = watsoncyl.set_equal_parameter(p1, p2)
+    if reset is None:
+        isnone = True
+
+    assert_equal(isnone, True)
