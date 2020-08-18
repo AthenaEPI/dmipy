@@ -17,9 +17,9 @@ from .fitted_modeling_framework import (
     FittedMultiCompartmentSphericalMeanModel,
     FittedMultiCompartmentSphericalHarmonicsModel,
     FittedMultiCompartmentAMICOModel)
+from ..optimizers.amico_cvxpy import AmicoCvxpyOptimizer
 from ..optimizers.brute2fine import (
     GlobalBruteOptimizer, Brute2FineOptimizer)
-from ..optimizers.amico_cvxpy import AmicoCvxpyOptimizer
 from ..optimizers.mix import MixOptimizer
 from ..optimizers.multi_tissue_convex_optimizer import (
     MultiTissueConvexOptimizer)
@@ -131,14 +131,14 @@ class MultiCompartmentModelProperties:
         if parameter_vector.ndim == 1:
             for parameter, card in self.parameter_cardinality.items():
                 parameters[parameter] = parameter_vector[
-                    current_pos: current_pos + card]
+                                        current_pos: current_pos + card]
                 if card == 1:
                     parameters[parameter] = parameters[parameter][0]
                 current_pos += card
         else:
             for parameter, card in self.parameter_cardinality.items():
                 parameters[parameter] = parameter_vector[
-                    ..., current_pos: current_pos + card]
+                                        ..., current_pos: current_pos + card]
                 if card == 1:
                     parameters[parameter] = parameters[parameter][..., 0]
                 current_pos += card
@@ -1261,7 +1261,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
 
         fitted_parameters = np.zeros_like(x0_, dtype=float)
         fitted_parameters[mask_pos] = (
-            fitted_parameters_lin * self.scales_for_optimization)
+                fitted_parameters_lin * self.scales_for_optimization)
 
         return FittedMultiCompartmentModel(self, S0, mask, fitted_parameters,
                                            fitted_mt_fractions)
@@ -1657,7 +1657,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
 
         fitted_parameters = np.zeros_like(x0_, dtype=float)
         fitted_parameters[mask_pos] = (
-            fitted_parameters_lin * self.scales_for_optimization)
+                fitted_parameters_lin * self.scales_for_optimization)
 
         return FittedMultiCompartmentSphericalMeanModel(
             self, S0, mask, fitted_parameters, fitted_mt_fractions)
@@ -2199,7 +2199,7 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
                 'sh_coeff']
             for i, name in enumerate(self.partial_volume_names):
                 sh_coeff[self.optimizer.vf_indices[i]] = (
-                    kwargs[name] / (2 * np.sqrt(np.pi)))
+                        kwargs[name] / (2 * np.sqrt(np.pi)))
             E = np.dot(A, sh_coeff)
         return E
 
@@ -2223,13 +2223,14 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         argument list),
         deprecated, for testing only.
     """
+
     def __init__(self, models, S0_tissue_responses=None, Nt=10,
                  parameter_links=None):
         self.models = models
         self.N_models = len(models)
         if S0_tissue_responses is not None:
             if len(S0_tissue_responses) != self.N_models:
-                msg = 'Number of S0_tissue responses {} must be same as '\
+                msg = 'Number of S0_tissue responses {} must be same as ' \
                       'number of input models {}.'
                 raise ValueError(
                     msg.format(len(S0_tissue_responses), self.N_models))
@@ -2290,24 +2291,25 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         matrix."""
         return self._amico_idx
 
-    def forward_model_matrix(self, acquisition_scheme, model_dirs, **kwargs):
+    def forward_model_matrix(self, acquisition_scheme, model_dirs=None,
+                             **kwargs):
         """Creates forward model matrix, including parameter tessellation grid
         and corresponding indices.
-        """
-        """
+
             Arguments:
                 acquisition_scheme: instance containing acquisition protocol
                 model_dirs: list containing direction of all models in
-                    multi-compartment model
+                    multi-compartment model. By default it uses the ones fixed
+                    in the multi-compartment model. Default: None.
             Returns:
                 observation matrix M
         """
-
-        dir_params = [p for p in self.mc_model.parameter_names
-                      if p.endswith('mu')]
-        if len(dir_params) != len(model_dirs):
-            raise ValueError("Length of model_dirs should correspond "
-                             "to the number of directional parameters!")
+        if model_dirs is not None:
+            dir_params = [p for p in self.mc_model.parameter_names
+                          if p.endswith('mu')]
+            if len(dir_params) != len(model_dirs):
+                raise ValueError("Length of model_dirs should correspond "
+                                 "to the number of directional parameters!")
 
         if not self._freezed_parameters_vector:
             self._amico_grid, self._amico_idx = {}, {}
@@ -2343,13 +2345,13 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
                                                       self.Nt, endpoint=True))
                     m_atoms *= self.Nt
 
-                self._amico_idx[model_name] =\
+                self._amico_idx[model_name] = \
                     sum([len(self._amico_idx[k])
                          for k in self._amico_idx]) + \
                     np.arange(m_atoms)
                 params_mesh = np.meshgrid(*param_sampling)
                 for p_idx, p in enumerate(grid_params_names):
-                    self._amico_grid[p][self._amico_idx[model_name]] =\
+                    self._amico_grid[p][self._amico_idx[model_name]] = \
                         np.ravel(params_mesh[p_idx])
 
                 self._amico_grid['partial_volume_' + str(m_idx)] = \
@@ -2358,15 +2360,17 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
                                  str(m_idx)][self._amico_idx[model_name]] = 1.
             self._freezed_parameters_vector = True
 
-        for d_idx, dp in enumerate(dir_params):
-            self._amico_grid[dp] = model_dirs[d_idx]
+        if model_dirs is not None:
+            for d_idx, dp in enumerate(dir_params):
+                self._amico_grid[dp] = model_dirs[d_idx]
 
         return self.mc_model.simulate_signal(acquisition_scheme,
-                                             self._amico_grid).T
+                                             self.amico_grid).T
 
     def fit(self, acquisition_scheme, data,
             mask=None,
-            maxiter=300,
+            lambda_1=None,
+            lambda_2=None,
             use_parallel_processing=have_pathos,
             number_of_processors=None):
         """ The main data fitting function of a MultiCompartmentModel.
@@ -2403,9 +2407,12 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
             or an N-dimensional dataset.
         mask : (N-1)-dimensional integer/boolean array of size (N_x, N_y, ...),
             Optional mask of voxels to be included in the optimization.
-        maxiter : integer,
-            How many iterations are allowed in the optimization process.
-            Defaults to 300.
+        lambda_1 : vector with one value per compartment. The
+            coefficients will be applied to the L1 regularization of each
+            compartment. Default: 0.0.
+        lambda_2 : vector with one value per compartment. The
+            coefficients will be applied to the L2 regularization of each
+            compartment. Default: 0.0.
         use_parallel_processing : bool,
             whether or not to use parallel processing using pathos.
         number_of_processors : integer,
@@ -2469,13 +2476,23 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
                 np.r_[N_voxels, N_parameters], dtype=float)
 
         start = time()
-        opt = AmicoCvxpyOptimizer(self, self.scheme, x0_)  # TODO: fix params
-        # setup self.amico_grids and self.amico_indices
-        _ = self.forward_model_matrix()
+        if lambda_1 is None:
+            l1 = np.zeros(self.N_models)
+        else:
+            l1 = lambda_1
+
+        if lambda_2 is None:
+            l2 = np.zeros(self.N_models)
+        else:
+            l2 = lambda_2
+
+        opt = AmicoCvxpyOptimizer(self, self.scheme, x0_, l1, l2)
+
+        M = self.forward_model_matrix(self.scheme)
+
         def fit_func(data):
-            # TODO: extract the parameter value for each param and return the
-            #  parameter vector in the voxel.
-            raise NotImplementedError
+            return opt(data, M, self.amico_grid, self.amico_idx)
+
         print('Setup AMICO optimizer in {} seconds'.format(
             time() - start))
 
@@ -2484,9 +2501,7 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         start = time()
         for idx, pos in enumerate(zip(*mask_pos)):
             voxel_E = data_[pos] / S0[pos]
-            voxel_x0_vector = x0_[pos]
-            # TODO: preprocess the x0 as required by the solver
-            fit_args = (voxel_E, )
+            fit_args = (voxel_E,)
 
             if use_parallel_processing:
                 fitted_parameters_lin[idx] = pool.apipe(fit_func, *fit_args)
@@ -2526,13 +2541,12 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
 
         fitted_parameters = np.zeros_like(x0_, dtype=float)
         fitted_parameters[mask_pos] = (
-            fitted_parameters_lin * self.scales_for_optimization)
+                fitted_parameters_lin * self.scales_for_optimization)
 
-        # TODO: pass the forward model matrix, the AmicoCvxpyOptimizer object
-        #  and the parameter indices dictionary to the
-        #  FittedMultiCompartmentAMICOModel .
         return FittedMultiCompartmentAMICOModel(
-            self, S0, mask, fitted_parameters, fitted_mt_fractions)
+            self, S0, mask, fitted_parameters, M, self.amico_idx, opt,
+            fitted_mt_fractions
+        )
 
     def simulate_signal(self, acquisition_scheme, parameters_array_or_dict):
         """
@@ -2609,7 +2623,7 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
             partial_volumes = [1.]
 
         for model_name, model, partial_volume in zip(
-            self.model_names, self.models, partial_volumes
+                self.model_names, self.models, partial_volumes
         ):
             parameters = {}
             for parameter in model.parameter_ranges:
@@ -2622,9 +2636,9 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
                 )
 
             values = (
-                values +
-                partial_volume * model(
-                    acquisition_scheme_or_vertices, **parameters)
+                    values +
+                    partial_volume * model(
+                acquisition_scheme_or_vertices, **parameters)
             )
 
         return values
