@@ -55,6 +55,12 @@ class AmicoCvxpyOptimizer:
                 len(lambda_2) != self.model.N_models:
             raise ValueError("Number of regularization weights should"
                              "correspond to the number of compartments!")
+        if lambda_1 is None:
+            lambda_1 = np.zeros(self.model.N_models)
+
+        if lambda_1 is None:
+            lambda_1 = np.zeros(self.model.N_models)
+
         self.lambda_1 = lambda_1
         self.lambda_2 = lambda_2
 
