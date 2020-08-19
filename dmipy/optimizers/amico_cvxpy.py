@@ -24,9 +24,6 @@ class AmicoCvxpyOptimizer:
         An acquisition scheme that has been instantiated using Dmipy.
     model: Dmipy MultiCompartmentModel instance,
         Contains Dmipy multi-compartment model information.
-    x0_vector: Array of size (Nx),
-        Vector containing probability distributions of the parameters that are
-        being estimated
     lambda_1: Array of size (Nc)
         Vector containing L2 regularization weights for each compartment
     lambda_2: Array of size (Nc)
@@ -45,11 +42,11 @@ class AmicoCvxpyOptimizer:
         modeling language for convex optimization." The Journal of Machine
         Learning Research 17.1 (2016): 2909-2913.
     """
-    def __init__(self, model, acquisition_scheme, x0_vector=None,
+    def __init__(self, model, acquisition_scheme,
                  lambda_1=None, lambda_2=None):
         self.model = model
         self.acquisition_scheme = acquisition_scheme
-        self.x0_vector = x0_vector
+        self._distribution = None
 
         if len(lambda_1) != self.model.N_models or \
                 len(lambda_2) != self.model.N_models:
@@ -64,7 +61,11 @@ class AmicoCvxpyOptimizer:
         self.lambda_1 = lambda_1
         self.lambda_2 = lambda_2
 
-    def __call__(self, data, M, grid, idx, x0_th=1.e-4):
+    @property
+    def distribution(self):
+        return self._distribution
+
+    def __call__(self, data, M, grid, idx, x_th=1.e-4):
         """
         The fitting function of AMICO optimizer.
         Parameters
@@ -79,7 +80,7 @@ class AmicoCvxpyOptimizer:
         idx: dict
             Dictionary containing indices that correspond to the parameters
             to be estimated for each model within multi-compartment model
-        x0_th: float
+        x_th: float
             Threshold for selecting important atoms after solving NNLS
             with L1 and L2 regularization terms
 
@@ -98,27 +99,31 @@ class AmicoCvxpyOptimizer:
 
         # 2. Selecting important atoms by solving NNLS
         # regularized with L1 and L2 norms
-        x0 = cvxpy.Variable(len(self.x0_vector))
+        x = cvxpy.Variable(shape=(M.shape[1], ))
 
-        cost = 0.5 * cvxpy.sum_squares(M * x0 - data)
+        cost = 0.5 * cvxpy.sum_squares(M @ x - data)
         for m_idx, model_name in enumerate(self.model.model_names):
+            # L1 regularization
             cost += self.lambda_1[m_idx] * \
-                cvxpy.norm(x0[idx[model_name]], 1)
+                cvxpy.norm(x[idx[model_name]], 1)
+            # L2 regularization
             cost += 0.5 * self.lambda_2[m_idx] * \
-                cvxpy.norm(x0[idx[model_name]], 2) ** 2
-        problem = cvxpy.Problem(cvxpy.Minimize(cost), [x0 >= 0])
+                cvxpy.norm(x[idx[model_name]], 2) ** 2
+
+        problem = cvxpy.Problem(cvxpy.Minimize(cost), [x >= 0])
         problem.solve()
-        self.x0_vector = x0.value
 
         # 3. Computing distribution vector x0_vector by solving NNLS
-        x0_idx_i = self.x0_vector > x0_th
-        x0_i = cvxpy.Variable(sum(x0_idx_i))
-        cost = cvxpy.sum_squares(M[:, x0_idx_i] * x0_i - data)
-        problem = cvxpy.Problem(cvxpy.Minimize(cost), [x0_i >= 0])
+        dist = x.value
+        x_idx_i = dist > x_th
+        x_i = cvxpy.Variable(sum(x_idx_i))
+        cost = cvxpy.sum_squares(M[:, x_idx_i] * x_i - data)
+        problem = cvxpy.Problem(cvxpy.Minimize(cost), [x_i >= 0])
         problem.solve()
-        self.x0_vector[~x0_idx_i] = 0.
-        self.x0_vector[x0_idx_i] = x0_i.value
-        self.x0_vector /= (np.sum(self.x0_vector) + 1.e-8)
+        dist[~x_idx_i] = 0.
+        dist[x_idx_i] = x_i.value
+        dist /= (np.sum(dist) + 1.e-8)
+        self._distribution = dist
 
         # 4. Estimating parameters based using estimated distribution
         # vector and tessellation grids
@@ -126,7 +131,7 @@ class AmicoCvxpyOptimizer:
         for m_idx, model_name in enumerate(self.model.model_names):
             m = self.model.models[m_idx]
             if 'partial_volume_' + str(m_idx) in grid:
-                p_estim = np.sum(self.x0_vector[idx[model_name]])
+                p_estim = np.sum(self.distribution[idx[model_name]])
                 fitted_parameter_vector.append(p_estim)
             for p in m.parameter_names:
                 if p.endswith('mu'):
@@ -134,8 +139,8 @@ class AmicoCvxpyOptimizer:
                 if model_name + p in grid:
                     p_estim = \
                         np.sum(grid[model_name + p][idx[model_name]] *
-                               self.x0_vector[idx[model_name]]) /\
-                        (np.sum(self.x0_vector[idx[model_name]]) + 1.e-8)
+                               self.distribution[idx[model_name]]) / \
+                        (np.sum(self.distribution[idx[model_name]]) + 1.e-8)
                     fitted_parameter_vector.append(p_estim)
 
-        return fitted_parameter_vector
+        return np.asarray(fitted_parameter_vector)
