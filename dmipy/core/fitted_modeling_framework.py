@@ -961,7 +961,7 @@ class FittedMultiCompartmentAMICOModel:
         fitted = {}
         for pname in self.model.parameter_names:
             prange = self.model.parameter_ranges[pname]
-            idx = self.model.parameter_indices[pname]
+            idx = self.model.amico_idx[pname]
             px = self.fitted_parameters_vector[idx]
             value = np.zeros_like(prange[0])
             for v, x in zip(prange, px): # TODO: can be optimized by using dot
