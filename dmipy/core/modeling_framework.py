@@ -2246,7 +2246,8 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         self._prepare_model_properties()
         self._check_for_double_model_class_instances()
 
-        self.mc_model = MultiCompartmentModel(models=self.models)
+        self.mc_model = MultiCompartmentModel(
+            models=self.models, S0_tissue_responses=self.S0_tissue_responses)
 
         self._prepare_parameters_to_optimize()
         self._check_for_NMR_and_other_models()
@@ -2273,7 +2274,7 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
                 raise ValueError(msg)
 
     def _check_if_model_orientations_are_fixed(self):
-        if 'orientation' in self.parameter_types.values:
+        if 'orientation' in self.parameter_types.values():
             msg = 'The orientation parameters must be fixed a priori.'
             raise ValueError(msg)
 
@@ -2452,15 +2453,6 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         N_parameters = len(self.bounds_for_optimization)
         N_voxels = np.sum(mask)
 
-        # make starting parameters and data the same size
-        x0_ = self.parameter_initial_guess_to_parameter_vector(
-            **self.x0_parameters)
-        x0_ = homogenize_x0_to_data(
-            data_, x0_)
-        x0_bool = np.all(
-            np.isnan(x0_), axis=tuple(np.arange(x0_.ndim - 1)))
-        x0_[..., ~x0_bool] /= self.scales_for_optimization[~x0_bool]
-
         if use_parallel_processing and not have_pathos:
             msg = 'Cannot use parallel processing without pathos.'
             raise ValueError(msg)
@@ -2486,7 +2478,7 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         else:
             l2 = lambda_2
 
-        opt = AmicoCvxpyOptimizer(self, self.scheme, x0_, l1, l2)
+        opt = AmicoCvxpyOptimizer(self, self.scheme, l1, l2)
 
         M = self.forward_model_matrix(self.scheme)
 
@@ -2539,7 +2531,7 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
             fitted_mt_fractions = np.zeros(np.r_[mask.shape, self.N_models])
             fitted_mt_fractions[mask_pos] = mt_fractions
 
-        fitted_parameters = np.zeros_like(x0_, dtype=float)
+        fitted_parameters = np.zeros_like(fitted_parameters_lin, dtype=float)
         fitted_parameters[mask_pos] = (
                 fitted_parameters_lin * self.scales_for_optimization)
 
@@ -2547,6 +2539,35 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
             self, S0, mask, fitted_parameters, M, self.amico_idx, opt,
             fitted_mt_fractions
         )
+
+    def set_equal_parameter(self, parameter_name_in, parameter_name_out):
+        p = (parameter_name_in, parameter_name_out)
+        super(MultiCompartmentAMICOModel, self).set_equal_parameter(*p)
+        self.mc_model.set_equal_parameter(*p)
+
+    def set_fixed_parameter(self, parameter_name, value):
+        p = (parameter_name, value)
+        super(MultiCompartmentAMICOModel, self).set_fixed_parameter(*p)
+        self.mc_model.set_fixed_parameter(*p)
+
+    def set_fractional_parameter(self, parameter1_smaller_equal_than,
+                                 parameter2):
+        p = (parameter1_smaller_equal_than, parameter2)
+        super(MultiCompartmentAMICOModel, self).set_fractional_parameter(*p)
+        self.mc_model.set_fractional_parameter(*p)
+
+    def set_tortuous_parameter(self, lambda_perp_parameter_name,
+                               lambda_par_parameter_name,
+                               volume_fraction_intra_parameter_name,
+                               volume_fraction_extra_parameter_name,
+                               S0_correction=False):
+        p = (lambda_perp_parameter_name,
+             lambda_par_parameter_name,
+             volume_fraction_intra_parameter_name,
+             volume_fraction_extra_parameter_name,
+             S0_correction)
+        super(MultiCompartmentAMICOModel, self).set_tortuous_parameter(*p)
+        self.mc_model.set_tortuous_parameter(*p)
 
     def simulate_signal(self, acquisition_scheme, parameters_array_or_dict):
         """
