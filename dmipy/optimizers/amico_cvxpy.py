@@ -130,9 +130,6 @@ class AmicoCvxpyOptimizer:
         fitted_parameter_vector = []
         for m_idx, model_name in enumerate(self.model.model_names):
             m = self.model.models[m_idx]
-            if 'partial_volume_' + str(m_idx) in grid:
-                p_estim = np.sum(self.distribution[idx[model_name]])
-                fitted_parameter_vector.append(p_estim)
             for p in m.parameter_names:
                 if p.endswith('mu'):
                     continue
@@ -142,5 +139,9 @@ class AmicoCvxpyOptimizer:
                                self.distribution[idx[model_name]]) / \
                         (np.sum(self.distribution[idx[model_name]]) + 1.e-8)
                     fitted_parameter_vector.append(p_estim)
+
+            if 'partial_volume_' + str(m_idx) in grid:
+                p_estim = np.sum(self.distribution[idx[model_name]])
+                fitted_parameter_vector.append(p_estim)
 
         return np.asarray(fitted_parameter_vector)

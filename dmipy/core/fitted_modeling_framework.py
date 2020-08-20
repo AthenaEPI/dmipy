@@ -898,6 +898,7 @@ class FittedMultiCompartmentSphericalHarmonicsModel:
         mse[~self.mask] = 0
         return mse
 
+
 class FittedMultiCompartmentAMICOModel:
     def __init__(self, model, S0, mask, fitted_parameters_vector,
                  forward_model_matrix, parameter_indices, optimizer,
@@ -957,21 +958,9 @@ class FittedMultiCompartmentAMICOModel:
 
     @property
     def fitted_parameters(self):
-        "Returns the fitted parameters as a dictionary."
-        fitted = {}
-        for pname in self.model.parameter_names:
-            prange = self.model.parameter_ranges[pname]
-            idx = self.model.amico_idx[pname]
-            px = self.fitted_parameters_vector[idx]
-            value = np.zeros_like(prange[0])
-            for v, x in zip(prange, px): # TODO: can be optimized by using dot
-                value += v * x
-            value /= np.sum(px, axis=-1)
-            # By summing over the last axis, we assume the x have been saved
-            # in a compatible format, namely with one vector per voxel in the
-            # last direction.
-            fitted[pname] = value
-        return fitted
+        """Returns the fitted parameters as a dictionary."""
+        return self.model.parameter_vector_to_parameters(
+            self.fitted_parameters_vector)
 
     @property
     def fitted_multi_tissue_fractions(self):
