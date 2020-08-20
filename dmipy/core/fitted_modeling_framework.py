@@ -901,7 +901,7 @@ class FittedMultiCompartmentSphericalHarmonicsModel:
 
 class FittedMultiCompartmentAMICOModel:
     def __init__(self, model, S0, mask, fitted_parameters_vector,
-                 forward_model_matrix, parameter_indices, optimizer,
+                 parameter_indices, optimizer,
                  fitted_multi_tissue_fractions_vector=None):
         """
         The FittedMultiCompartmentModel instance contains information about the
@@ -918,8 +918,6 @@ class FittedMultiCompartmentAMICOModel:
             if there are multiple TEs.
         mask : array of size (N_data,),
             boolean mask of voxels that were fitted.
-        forward_model_matrix : array of size N_DWIs-by-Nparameters,
-            forward model used in the fitting process.
         parameter_indices : dictionary,
             keys are parameter names and values are the column indices
             corresponding to the parameter.
@@ -935,14 +933,8 @@ class FittedMultiCompartmentAMICOModel:
         self.fitted_parameters_vector = fitted_parameters_vector
         self.fitted_multi_tissue_fractions_vector = (
             fitted_multi_tissue_fractions_vector)
-        self._forward_model_matrix = forward_model_matrix
         self._parameter_indices = parameter_indices
         self._optimizer = optimizer
-
-    @property
-    def forward_model_matrix(self):
-        """Return forward model matrix."""
-        return self._forward_model_matrix
 
     @property
     def parameter_indices(self):
@@ -1104,9 +1096,8 @@ class FittedMultiCompartmentAMICOModel:
         E_shape = mask.shape + (acquisition_scheme.N_dwi,)
         E = np.zeros(E_shape)
         mask_pos = np.where(mask)
-        for pos in zip(*mask_pos):
-            parameter_array = self.fitted_parameters_vector[pos]
-            E[pos] = self.forward_model_matrix.dot(parameter_array) * S0[pos]
+        # TODO: get rid of the forward model matrix here. We should use the
+        #  predict function of the underlying multi compartment model
         return E
 
     def R2_coefficient_of_determination(self, data):
