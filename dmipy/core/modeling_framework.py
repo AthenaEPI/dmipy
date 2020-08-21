@@ -2274,9 +2274,11 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
                 raise ValueError(msg)
 
     def _check_if_model_orientations_are_fixed(self):
-        if 'orientation' in self.parameter_types.values():
-            msg = 'The orientation parameters must be fixed a priori.'
-            raise ValueError(msg)
+        msg = lambda p: 'Parameter {} must be fixed a priori.'.format(p)
+        for k, v in self.parameter_types.items():
+            if v == 'orientation':
+                if self.parameter_optimization_flags[k]:
+                    raise ValueError(msg)
 
     @property
     def amico_grid(self):
@@ -2430,6 +2432,8 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         self._check_model_params_with_acquisition_params(acquisition_scheme)
         self._check_acquisition_scheme_has_b0s(acquisition_scheme)
         self._check_if_model_orientations_are_fixed()
+        # TODO: add check if some non-directional parameter is different for
+        #  each voxel
 
         # estimate S0
         self.scheme = acquisition_scheme
@@ -2480,9 +2484,13 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
 
         opt = AmicoCvxpyOptimizer(self, self.scheme, l1, l2)
 
-        M = self.forward_model_matrix(self.scheme)
+        dir_par_names = []
+        for k, v in self.parameter_types.items():
+            if v == 'orientation':
+                dir_par_names.append(k)
 
-        def fit_func(data):
+        def fit_func(data, directions):
+            M = self.forward_model_matrix(self.scheme, directions)
             return opt(data, M, self.amico_grid, self.amico_idx)
 
         print('Setup AMICO optimizer in {} seconds'.format(
@@ -2493,7 +2501,10 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         start = time()
         for idx, pos in enumerate(zip(*mask_pos)):
             voxel_E = data_[pos] / S0[pos]
-            fit_args = (voxel_E,)
+            directions = []
+            for p in dir_par_names:
+                directions.append(self.x0_parameters[p][pos])
+            fit_args = (voxel_E, directions)
 
             if use_parallel_processing:
                 fitted_parameters_lin[idx] = pool.apipe(fit_func, *fit_args)
@@ -2531,12 +2542,15 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
             fitted_mt_fractions = np.zeros(np.r_[mask.shape, self.N_models])
             fitted_mt_fractions[mask_pos] = mt_fractions
 
-        fitted_parameters = np.zeros_like(fitted_parameters_lin, dtype=float)
+        shape = ()
+        # TODO: the shape must be the one of the volume (data_) plus the
+        #  number of parameters (including the directional ones)
+        fitted_parameters = np.zeros(shape=shape, dtype=float)
         fitted_parameters[mask_pos] = (
                 fitted_parameters_lin * self.scales_for_optimization)
 
         return FittedMultiCompartmentAMICOModel(
-            self, S0, mask, fitted_parameters, M, self.amico_idx, opt,
+            self, S0, mask, fitted_parameters, self.amico_idx, opt,
             fitted_mt_fractions
         )
 
