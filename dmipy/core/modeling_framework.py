@@ -2309,7 +2309,8 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         """
         if model_dirs is not None:
             dir_params = [p for p in self.mc_model.parameter_names
-                          if p.endswith('mu')]
+                          if self.mc_model.parameter_types[p] ==
+                          'orientation']
             if len(dir_params) != len(model_dirs):
                 raise ValueError("Length of model_dirs should correspond "
                                  "to the number of directional parameters!")
@@ -2319,7 +2320,7 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
 
             grid_params = \
                 [p for p in self.mc_model.parameter_names
-                 if not p.endswith('mu') and
+                 if self.mc_model.parameter_types[p] == 'normal' and
                  not p.startswith('partial_volume')]
 
             # Compute length of the vector x0
@@ -2432,8 +2433,6 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         self._check_model_params_with_acquisition_params(acquisition_scheme)
         self._check_acquisition_scheme_has_b0s(acquisition_scheme)
         self._check_if_model_orientations_are_fixed()
-        # TODO: add check if some non-directional parameter is different for
-        #  each voxel
 
         # estimate S0
         self.scheme = acquisition_scheme
@@ -2491,7 +2490,8 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
 
         def fit_func(data, directions):
             M = self.forward_model_matrix(self.scheme, directions)
-            return opt(data, M, self.amico_grid, self.amico_idx)
+            return np.concatenate((np.ravel(directions),
+                                   opt(data, M, self.amico_grid, self.amico_idx)))
 
         print('Setup AMICO optimizer in {} seconds'.format(
             time() - start))
@@ -2501,15 +2501,13 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         start = time()
         for idx, pos in enumerate(zip(*mask_pos)):
             voxel_E = data_[pos] / S0[pos]
-            directions = []
-            for p in dir_par_names:
-                directions.append(self.x0_parameters[p][pos])
+            directions = [self.x0_parameters[p][pos] for p in dir_par_names]
             fit_args = (voxel_E, directions)
-
             if use_parallel_processing:
                 fitted_parameters_lin[idx] = pool.apipe(fit_func, *fit_args)
             else:
                 fitted_parameters_lin[idx] = fit_func(*fit_args)
+
         if use_parallel_processing:
             fitted_parameters_lin = np.array(
                 [p.get() for p in fitted_parameters_lin])
@@ -2542,10 +2540,10 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
             fitted_mt_fractions = np.zeros(np.r_[mask.shape, self.N_models])
             fitted_mt_fractions[mask_pos] = mt_fractions
 
-        shape = ()
-        # TODO: the shape must be the one of the volume (data_) plus the
-        #  number of parameters (including the directional ones)
-        fitted_parameters = np.zeros(shape=shape, dtype=float)
+        p_shape = tuple(list(data_.shape[:-1]) +
+                        [fitted_parameters_lin.shape[-1]])
+
+        fitted_parameters = np.zeros(shape=p_shape, dtype=float)
         fitted_parameters[mask_pos] = (
                 fitted_parameters_lin * self.scales_for_optimization)
 
@@ -2560,6 +2558,19 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         self.mc_model.set_equal_parameter(*p)
 
     def set_fixed_parameter(self, parameter_name, value):
+
+        if self.parameter_types[parameter_name] == 'normal':
+            if isinstance(value, list) or isinstance(value, np.ndarray):
+                if len(value) == 1:
+                    value = value[0]
+                else:
+                    raise ValueError("Parameter {} should be "
+                                     "unique for all voxels.".
+                                     format(parameter_name))
+            if not isinstance(value, float):
+                raise ValueError("Parameter {} should be float".
+                                 format(parameter_name))
+
         p = (parameter_name, value)
         super(MultiCompartmentAMICOModel, self).set_fixed_parameter(*p)
         self.mc_model.set_fixed_parameter(*p)
