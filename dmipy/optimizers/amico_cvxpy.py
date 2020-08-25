@@ -95,7 +95,7 @@ class AmicoCvxpyOptimizer:
         M = np.vstack((np.mean(M[self.acquisition_scheme.b0_mask, :], axis=0),
                       M[~self.acquisition_scheme.b0_mask, :]))
         # normalize the columns of the matrix
-        norms = np.linalg.norm(M, 1, axis=0)
+        norms = np.linalg.norm(M, 2, axis=0)
         M /= norms
 
         data = np.append(np.mean(data[self.acquisition_scheme.b0_mask]),
