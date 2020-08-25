@@ -2559,17 +2559,19 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
 
     def set_fixed_parameter(self, parameter_name, value):
 
+        message = "Parameter '{}' should be unique for all voxels.".format(
+            parameter_name)
         if self.parameter_types[parameter_name] == 'normal':
-            if isinstance(value, list) or isinstance(value, np.ndarray):
-                if len(value) == 1:
-                    value = value[0]
+            if isinstance(value, list):
+                value = np.asarray(value)
+
+            if isinstance(value, np.ndarray):
+                if value.size == 1:
+                    value = value.ravel()[0]
                 else:
-                    raise ValueError("Parameter {} should be "
-                                     "unique for all voxels.".
-                                     format(parameter_name))
-            if not isinstance(value, float):
-                raise ValueError("Parameter {} should be float".
-                                 format(parameter_name))
+                    raise ValueError(message)
+
+            value = float(value)
 
         p = (parameter_name, value)
         super(MultiCompartmentAMICOModel, self).set_fixed_parameter(*p)
