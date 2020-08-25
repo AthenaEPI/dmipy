@@ -94,6 +94,10 @@ class AmicoCvxpyOptimizer:
         # 1. Contracting matrix M and data to have one b=0 value
         M = np.vstack((np.mean(M[self.acquisition_scheme.b0_mask, :], axis=0),
                       M[~self.acquisition_scheme.b0_mask, :]))
+        # normalize the columns of the matrix
+        norms = np.linalg.norm(M, 1, axis=0)
+        M /= norms
+
         data = np.append(np.mean(data[self.acquisition_scheme.b0_mask]),
                          data[~self.acquisition_scheme.b0_mask])
 
@@ -115,6 +119,7 @@ class AmicoCvxpyOptimizer:
 
         # 3. Computing distribution vector x0_vector by solving NNLS
         dist = x.value
+        dist /= norms  # rescale by the original norm of the columns
         x_idx_i = dist > x_th
         x_i = cvxpy.Variable(sum(x_idx_i))
         cost = cvxpy.sum_squares(M[:, x_idx_i] * x_i - data)
