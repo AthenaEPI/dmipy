@@ -2343,9 +2343,12 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
                         continue
                     grid_params_names.append(model_name + p)
                     p_range = self.mc_model.parameter_ranges[model_name + p]
+                    p_scale = self.mc_model.parameter_scales[model_name + p]
+
                     self._amico_grid[model_name + p] = \
-                        np.full(x0_len, np.mean(p_range))
-                    param_sampling.append(np.linspace(p_range[0], p_range[1],
+                        np.full(x0_len, np.mean(p_range) * p_scale)
+                    param_sampling.append(np.linspace(p_range[0] * p_scale,
+                                                      p_range[1] * p_scale,
                                                       self.Nt, endpoint=True))
                     m_atoms *= self.Nt
 
