@@ -2358,15 +2358,20 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
                     self._amico_grid[p][self._amico_idx[model_name]] = \
                         np.ravel(params_mesh[p_idx])
 
-                self._amico_grid['partial_volume_' + str(m_idx)] = \
-                    np.zeros(x0_len)
-                self._amico_grid['partial_volume_' +
-                                 str(m_idx)][self._amico_idx[model_name]] = 1.
+                if 'partial_volume_' + str(m_idx) in self.mc_model.parameter_names:
+                    self._amico_grid['partial_volume_' + str(m_idx)] = \
+                        np.zeros(x0_len)
+                    self._amico_grid['partial_volume_' +
+                                     str(m_idx)][self._amico_idx[model_name]] = 1.
             self._freezed_parameters_vector = True
 
         if model_dirs is not None:
             for d_idx, dp in enumerate(dir_params):
                 self._amico_grid[dp] = model_dirs[d_idx]
+
+        if 'normal' not in self.mc_model.parameter_types.values():
+            msg = 'No parameters to be estimated, all parameters are set.'
+            raise ValueError(msg)
 
         return self.mc_model.simulate_signal(acquisition_scheme,
                                              self.amico_grid).T
