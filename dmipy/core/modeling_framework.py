@@ -2224,7 +2224,7 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         deprecated, for testing only.
     """
 
-    def __init__(self, models, S0_tissue_responses=None, Nt=10, max_atoms=2000,
+    def __init__(self, models, S0_tissue_responses=None, Nt=10, max_atoms=20000,
                  parameter_links=None):
         self.models = models
         self.N_models = len(models)
@@ -2370,14 +2370,15 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
                         self._amico_idx[model_name]] = 1.
             self._freezed_parameters_vector = True
 
-        if m_atoms > self.max_atoms:
+        n_atoms = sum([len(self._amico_idx[m]) for m in self._amico_idx])
+        if n_atoms > self.max_atoms:
             raise ValueError("Large number of unknown parameters {} "
                              "resulted in large number of atoms in "
                              "forward model matrix.".
                              format(grid_params_names),
                              "Size of the forward model matrix is [{}, {}]".
                              format(acquisition_scheme.number_of_measurements,
-                                    m_atoms))
+                                    n_atoms))
 
         if model_dirs is not None:
             for d_idx, dp in enumerate(dir_params):
