@@ -2224,7 +2224,7 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
         deprecated, for testing only.
     """
 
-    def __init__(self, models, S0_tissue_responses=None, Nt=10,
+    def __init__(self, models, S0_tissue_responses=None, Nt=10, max_atoms=2000,
                  parameter_links=None):
         self.models = models
         self.N_models = len(models)
@@ -2236,6 +2236,7 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
                     msg.format(len(S0_tissue_responses), self.N_models))
         self.S0_tissue_responses = S0_tissue_responses
         self.Nt = Nt
+        self.max_atoms = max_atoms
         self.parameter_links = parameter_links
         if parameter_links is None:
             self.parameter_links = []
@@ -2320,7 +2321,7 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
 
             grid_params = \
                 [p for p in self.mc_model.parameter_names
-                 if self.mc_model.parameter_types[p] == 'normal' and
+                 if self.mc_model.parameter_types[p] in ['normal', 'circular'] and
                  not p.startswith('partial_volume')]
 
             # Compute length of the vector x0
@@ -2361,18 +2362,29 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
                     self._amico_grid[p][self._amico_idx[model_name]] = \
                         np.ravel(params_mesh[p_idx])
 
-                if 'partial_volume_' + str(m_idx) in self.mc_model.parameter_names:
-                    self._amico_grid['partial_volume_' + str(m_idx)] = \
-                        np.zeros(x0_len)
-                    self._amico_grid['partial_volume_' +
-                                     str(m_idx)][self._amico_idx[model_name]] = 1.
+                if 'partial_volume_' + str(m_idx) in \
+                        self.mc_model.parameter_names:
+                    p_volume_name = 'partial_volume_' + str(m_idx)
+                    self._amico_grid[p_volume_name] = np.zeros(x0_len)
+                    self._amico_grid[p_volume_name][
+                        self._amico_idx[model_name]] = 1.
             self._freezed_parameters_vector = True
+
+        if m_atoms > self.max_atoms:
+            raise ValueError("Large number of unknown parameters {} "
+                             "resulted in large number of atoms in "
+                             "forward model matrix.".
+                             format(grid_params_names),
+                             "Size of the forward model matrix is [{}, {}]".
+                             format(acquisition_scheme.number_of_measurements,
+                                    m_atoms))
 
         if model_dirs is not None:
             for d_idx, dp in enumerate(dir_params):
                 self._amico_grid[dp] = model_dirs[d_idx]
 
-        if 'normal' not in self.mc_model.parameter_types.values():
+        if 'normal' not in self.mc_model.parameter_types.values() and \
+                'circular' not in self.mc_model.parameter_types.values():
             msg = 'No parameters to be estimated, all parameters are set.'
             raise ValueError(msg)
 
