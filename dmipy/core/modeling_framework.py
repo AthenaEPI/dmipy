@@ -2609,13 +2609,9 @@ class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
                                volume_fraction_intra_parameter_name,
                                volume_fraction_extra_parameter_name,
                                S0_correction=False):
-        p = (lambda_perp_parameter_name,
-             lambda_par_parameter_name,
-             volume_fraction_intra_parameter_name,
-             volume_fraction_extra_parameter_name,
-             S0_correction)
-        super(MultiCompartmentAMICOModel, self).set_tortuous_parameter(*p)
-        self.mc_model.set_tortuous_parameter(*p)
+        raise NotImplementedError('The tortuousity constraint must be set '
+                                  'from a distributed model, not from a '
+                                  'multi compartment model.')
 
     def simulate_signal(self, acquisition_scheme, parameters_array_or_dict):
         """

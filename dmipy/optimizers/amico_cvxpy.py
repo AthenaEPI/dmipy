@@ -1,6 +1,5 @@
-import numpy as np
 import cvxpy
-
+import numpy as np
 
 __all__ = [
     'AmicoCvxpyOptimizer'
@@ -42,6 +41,7 @@ class AmicoCvxpyOptimizer:
         modeling language for convex optimization." The Journal of Machine
         Learning Research 17.1 (2016): 2909-2913.
     """
+
     def __init__(self, model, acquisition_scheme,
                  lambda_1=None, lambda_2=None):
         self.model = model
@@ -93,33 +93,29 @@ class AmicoCvxpyOptimizer:
 
         # 1. Contracting matrix M and data to have one b=0 value
         M = np.vstack((np.mean(M[self.acquisition_scheme.b0_mask, :], axis=0),
-                      M[~self.acquisition_scheme.b0_mask, :]))
-        # normalize the columns of the matrix
-        norms = np.linalg.norm(M, 2, axis=0)
-        M /= norms
+                       M[~self.acquisition_scheme.b0_mask, :]))
 
         data = np.append(np.mean(data[self.acquisition_scheme.b0_mask]),
                          data[~self.acquisition_scheme.b0_mask])
 
         # 2. Selecting important atoms by solving NNLS
         # regularized with L1 and L2 norms
-        x = cvxpy.Variable(shape=(M.shape[1], ))
+        x = cvxpy.Variable(shape=(M.shape[1],))
 
         cost = 0.5 * cvxpy.sum_squares(M @ x - data)
         for m_idx, model_name in enumerate(self.model.model_names):
             # L1 regularization
             cost += self.lambda_1[m_idx] * \
-                cvxpy.norm(x[idx[model_name]], 1)
+                    cvxpy.norm(x[idx[model_name]], 1)
             # L2 regularization
             cost += 0.5 * self.lambda_2[m_idx] * \
-                cvxpy.norm(x[idx[model_name]], 2) ** 2
+                    cvxpy.norm(x[idx[model_name]], 2) ** 2
 
         problem = cvxpy.Problem(cvxpy.Minimize(cost), [x >= 0])
         problem.solve()
 
         # 3. Computing distribution vector x0_vector by solving NNLS
         dist = x.value
-        dist /= norms  # rescale by the original norm of the columns
         x_idx_i = dist > x_th
         x_i = cvxpy.Variable(sum(x_idx_i))
         cost = cvxpy.sum_squares(M[:, x_idx_i] * x_i - data)
