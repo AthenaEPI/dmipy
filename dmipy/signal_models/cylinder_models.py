@@ -118,7 +118,7 @@ class C1Stick(ModelProperties, AnisotropicSignalModelProperties):
         bvals_ = bvals[bval_indices_above0]
         E_mean_ = ((np.sqrt(np.pi) * erf(np.sqrt(bvals_ * lambda_par))) /
                    (2 * np.sqrt(bvals_ * lambda_par)))
-        E_mean[~acquisition_scheme.shell_b0_mask] = E_mean_
+        E_mean[bval_indices_above0] = E_mean_
         return E_mean
 
 
