@@ -1,6 +1,5 @@
 import numpy as np
-from dipy.utils.optpkg import optional_package
-cvxpy, have_cvxpy, _ = optional_package("cvxpy")
+import cvxpy
 
 
 __all__ = [
@@ -47,103 +46,91 @@ class AmicoCvxpyOptimizer:
         Learning Research 17.1 (2016): 2909-2913.
     """
 
-    def __init__(self, acquisition_scheme, model, x0_vector=None,
-                 lambda_1=None, lambda_2=None, Nt=10):
+    def __init__(self, model, acquisition_scheme, x0_vector=None,
+                 lambda_1=None, lambda_2=None):
         self.model = model
         self.acquisition_scheme = acquisition_scheme
+        self.x0_vector = x0_vector
 
         if len(lambda_1) != self.model.N_models or \
                 len(lambda_2) != self.model.N_models:
             raise ValueError("Number of regularization weights should"
                              "correspond to the number of compartments!")
-
         self.lambda_1 = lambda_1
         self.lambda_2 = lambda_2
 
-        self.Nt = Nt
-
-        # Make a list of parameters that are not fixed and that require
-        # tessellation of parameter ranges
-        dir_params = [p for p in self.model.parameter_names
-                      if p.endswith('mu')]
-        grid_params =\
-            [p for p in self.model.parameter_names
-             if not p.endswith('mu') and not p.startswith('partial_volume')]
-
-        # Compute length of the vector x0
-        x0_len = 0
-        for m_idx in range(self.model.N_models):
-            m_atoms = 1
-            for p in self.model.models[m_idx].parameter_names:
-                if self.model.model_names[m_idx] + p in grid_params:
-                    m_atoms *= Nt
-            x0_len += m_atoms
-
-        # Creating parameter tessellation grids and corresponding indices
-        self.grids, self.idx = {}, {}
-        for m_idx in range(self.model.N_models):
-            model = self.model.models[m_idx]
-            model_name = self.model.model_names[m_idx]
-
-            param_sampling, grid_params_names = [], []
-            m_atoms = 1
-            for p in model.parameter_names:
-                if model_name + p not in grid_params:
-                    continue
-                grid_params_names.append(model_name + p)
-                p_range = self.model.parameter_ranges[model_name + p]
-                self.grids[model_name + p] = np.full(x0_len, np.mean(p_range))
-                param_sampling.append(np.linspace(p_range[0], p_range[1],
-                                                  self.Nt, endpoint=True))
-                m_atoms *= self.Nt
-
-            self.idx[model_name] =\
-                sum([len(self.idx[k]) for k in self.idx]) + np.arange(m_atoms)
-            params_mesh = np.meshgrid(*param_sampling)
-            for p_idx, p in enumerate(grid_params_names):
-                self.grids[p][self.idx[model_name]] =\
-                    np.ravel(params_mesh[p_idx])
-
-            self.grids['partial_volume_' + str(m_idx)] = np.zeros(x0_len)
-            self.grids['partial_volume_' +
-                       str(m_idx)][self.idx[model_name]] = 1.
-
-        self.grids[dir_params[0]] = [0, 0]
-        self.M = self.model.simulate_signal(acquisition_scheme, self.grids)
-        self.M = self.M[:, ~acquisition_scheme.b0_mask].T
-
-    def __call__(self, data):
+    def __call__(self, data, M, grid, idx, x0_th=1.e-4):
         """
         The fitting function of AMICO optimizer.
         Parameters
         ----------
         data : Array of size (Ndata)
             The normalized dMRI signal attenuation to be fitted.
+        M: Array of size (Ndata, Nx)
+            The observation matrix containing Nx model atoms
+        grid: dict
+            Dictionary containing tessellation of parameters to be estimated
+            for each model within multi-compartment model
+        idx: dict
+            Dictionary containing indices that correspond to the parameters
+            to be estimated for each model within multi-compartment model
+        x0_th: float
+            Threshold for selecting important atoms after solving NNLS
+            with L1 and L2 regularization terms
 
         Returns
         -------
-        fitted_parameter_vector : Array of size (Nx),
-            Vector containing probability distributions of the parameters that
-            are being estimated
+        fitted_parameter_vector : Array of size (Np),
+            Vector containing estimated parameters
+
         """
 
+        # 1. Contracting matrix M and data to have one b=0 value
+        M = np.vstack((np.mean(M[self.acquisition_scheme.b0_mask, :], axis=0),
+                      M[~self.acquisition_scheme.b0_mask, :]))
+        data = np.append(np.mean(data[self.acquisition_scheme.b0_mask]),
+                         data[~self.acquisition_scheme.b0_mask])
+
+        # 2. Selecting important atoms by solving NNLS
+        # regularized with L1 and L2 norms
         x0 = cvxpy.Variable(len(self.x0_vector))
 
-        cost = 0.5 * cvxpy.sum_squares(self.M * x0 -
-                                       data[~self.acquisition_scheme.b0_mask])
+        cost = 0.5 * cvxpy.sum_squares(M * x0 - data)
         for m_idx, model_name in enumerate(self.model.model_names):
-            cost += self.lambda_1[m_idx] *\
-                cvxpy.norm(x0[self.idx[model_name]], 1)
-            cost += 0.5 * self.lambda_2[m_idx] *\
-                cvxpy.norm(x0[self.idx[model_name]], 2) ** 2
-
+            cost += self.lambda_1[m_idx] * \
+                cvxpy.norm(x0[idx[model_name]], 1)
+            cost += 0.5 * self.lambda_2[m_idx] * \
+                cvxpy.norm(x0[idx[model_name]], 2) ** 2
         problem = cvxpy.Problem(cvxpy.Minimize(cost), [x0 >= 0])
         problem.solve()
-
-        # TODO:
-        # M-pruning
-        # estimate x0 vector with non negative least squares
-
         self.x0_vector = x0.value
 
-        return self.x0_vector
+        # 3. Computing distribution vector x0_vector by solving NNLS
+        x0_idx_i = self.x0_vector > x0_th
+        x0_i = cvxpy.Variable(sum(x0_idx_i))
+        cost = cvxpy.sum_squares(M[:, x0_idx_i] * x0_i - data)
+        problem = cvxpy.Problem(cvxpy.Minimize(cost), [x0_i >= 0])
+        problem.solve()
+        self.x0_vector[~x0_idx_i] = 0.
+        self.x0_vector[x0_idx_i] = x0_i.value
+        self.x0_vector /= (np.sum(self.x0_vector) + 1.e-8)
+
+        # 4. Estimating parameters based using estimated distribution
+        # vector and tessellation grids
+        fitted_parameter_vector = []
+        for m_idx, model_name in enumerate(self.model.model_names):
+            m = self.model.models[m_idx]
+            if 'partial_volume_' + str(m_idx) in grid:
+                p_estim = np.sum(self.x0_vector[idx[model_name]])
+                fitted_parameter_vector.append(p_estim)
+            for p in m.parameter_names:
+                if p.endswith('mu'):
+                    continue
+                if model_name + p in grid:
+                    p_estim = \
+                        np.sum(grid[model_name + p][idx[model_name]] *
+                               self.x0_vector[idx[model_name]]) /\
+                        (np.sum(self.x0_vector[idx[model_name]]) + 1.e-8)
+                    fitted_parameter_vector.append(p_estim)
+
+        return fitted_parameter_vector
