@@ -28,9 +28,9 @@ CLASSIFIERS = ["Development Status :: 3 - Alpha",
 # Description should be a one-liner:
 description = "dmipy: diffusion microstructure imaging in python"
 # Long description will go up on the pypi page
-with open('../README.md', 'r') as f:
+with open('README.md', 'r') as f:
     long_description = f.read()
-long_description_content_type = 'text/markdown',
+long_description_content_type = 'text/markdown'
 
 NAME = "dmipy"
 MAINTAINER = "Rutger Fick"
