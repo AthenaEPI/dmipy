@@ -10,11 +10,14 @@ with open(ver_file) as f:
 with open ('requirements.txt', "r") as f:
     requirements=f.read().splitlines()[::-1]
 
+with open('README.md', 'r') as f:
+    long_description = f.read()
+
 opts = dict(name=NAME,
             maintainer=MAINTAINER,
             maintainer_email=MAINTAINER_EMAIL,
             description=DESCRIPTION,
-            long_description=LONG_DESCRIPTION,
+            long_description=long_description,
             long_description_content_type=LONG_DESCRIPTION_CONTENT_TYPE,
             url=URL,
             download_url=DOWNLOAD_URL,
