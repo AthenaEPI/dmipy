@@ -4,7 +4,7 @@ from os.path import join as pjoin
 # Format expected by setup.py and doc/source/conf.py: string of form "X.Y.Z"
 _version_major = 1
 _version_minor = 0
-_version_micro = 3  # use '' for first of series, number for 1 and above
+_version_micro = 4  # use '' for first of series, number for 1 and above
 _version_extra = ''
 # _version_extra = ''  # Uncomment this for full releases
 
@@ -28,15 +28,16 @@ CLASSIFIERS = ["Development Status :: 3 - Alpha",
 # Description should be a one-liner:
 description = "dmipy: diffusion microstructure imaging in python"
 # Long description will go up on the pypi page
-long_description = """
-to be filled
-"""
+with open('../README.md', 'r') as f:
+    long_description = f.read()
+long_description_content_type = 'text/markdown',
 
 NAME = "dmipy"
 MAINTAINER = "Rutger Fick"
 MAINTAINER_EMAIL = "fick.rutger@gmail.com"
 DESCRIPTION = description
 LONG_DESCRIPTION = long_description
+LONG_DESCRIPTION_CONTENT_TYPE = long_description_content_type
 URL = "https://github.com/AthenaEPI/dmipy"
 DOWNLOAD_URL = ""
 LICENSE = "MIT"
