@@ -4,7 +4,7 @@ from os.path import join as pjoin
 # Format expected by setup.py and doc/source/conf.py: string of form "X.Y.Z"
 _version_major = 1
 _version_minor = 0
-_version_micro = 4  # use '' for first of series, number for 1 and above
+_version_micro = 5  # use '' for first of series, number for 1 and above
 _version_extra = ''
 # _version_extra = ''  # Uncomment this for full releases
 
@@ -58,4 +58,4 @@ PACKAGE_DATA = {
         pjoin('data', 'isbi2015_white_matter_challenge', '*')
     ]
 }
-REQUIRES = ["dipy", "scipy", "numpy (>=1.13)"]
+REQUIRES = ["dipy", "scipy (==1.4.1)", "numpy (>=1.13)"]
