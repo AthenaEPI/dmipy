@@ -1,5 +1,5 @@
 numpy(>=1.13)
-scipy
+scipy(==1.4.1)
 dipy
 cvxpy
 boto
