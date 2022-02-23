@@ -23,6 +23,7 @@ from ..optimizers.multi_tissue_convex_optimizer import (
     MultiTissueConvexOptimizer)
 from ..optimizers_fod.csd_cvxpy import CsdCvxpyOptimizer
 from ..optimizers_fod.csd_tournier import CsdTournierOptimizer
+from ..optimizers_fod.csd_plus import CsdPlusOptimizer
 from ..utils.spherical_mean import (
     estimate_spherical_mean_multi_shell)
 from ..utils.utils import (
@@ -2061,6 +2062,13 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
                 unity_constraint=self.unity_constraint, lambda_lb=lambda_lb)
             if verbose:
                 print('Setup CVXPY FOD optimizer in {} seconds'.format(
+                    time() - start))
+        elif solver == 'csd_plus':
+            fit_func = CsdPlusOptimizer(
+                acquisition_scheme, self, x0_, self.sh_order,
+                unity_constraint=self.unity_constraint)
+            if verbose:
+                print('Setup CSD-PLUS FOD optimizer in {} seconds'.format(
                     time() - start))
         else:
             msg = "Unknown solver name {}".format(solver)
