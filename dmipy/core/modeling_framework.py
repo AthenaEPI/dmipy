@@ -1920,11 +1920,13 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
         mask : (N-1)-dimensional integer/boolean array of size (N_x, N_y, ...),
             Optional mask of voxels to be included in the optimization.
         solver : string,
-            Can be 'csd', 'csd_tounier07' or 'csd_cvxpy', with the default
-            being 'csd'. Using 'csd' will make the algorithm automatically
-            use the 'tournier07' solver [1]_ if there are no volume fractions
-            to fit or they are fixed. Otherwise, the slower but more general
-            cvxpy solver [2]_ is used, which follows the formulation of [3]_.
+            Can be 'csd', 'csd_tounier07', 'csd_cvxpy' or 'csd_plus', with the
+            default being 'csd'. Using 'csd' will make the algorithm
+            automatically use the 'tournier07' solver [1]_ if there are no
+            volume fractionsto fit or they are fixed. Otherwise, the slower but
+            more general cvxpy solver [2]_ is used, which follows the
+            formulation of [3]_. Using 'csd_plus' will make the algorithm use
+            the global positivity constraints of [5]_.
         lambda_lb: positive float,
             Weight for Laplace-Beltrami regularization to impose smoothness
             into estimated FODs, follows [4]_.
@@ -1962,6 +1964,9 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
             analytical Q-ball imaging." Magnetic Resonance in Medicine: An
             Official Journal of the International Society for Magnetic
             Resonance in Medicine 58.3 (2007): 497-510.
+        .. [5] Dela Haije, Tom, Evren Özarslan, and Aasa Feragen. "Enforcing
+            necessary non-negativity constraints for common diffusion MRI models
+            using sum of squares programming." NeuroImage 209 (2020): 116405.
         """
         self._check_if_kernel_parameters_are_fixed()
         self._check_tissue_model_acquisition_scheme(acquisition_scheme)
