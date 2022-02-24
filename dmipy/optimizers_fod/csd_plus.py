@@ -1,4 +1,7 @@
 import numpy as np
+import pkg_resources
+from os.path import join
+from packaging.version import Version
 from dipy.data import get_sphere, HemiSphere
 from dipy.reconst.shm import real_sym_sh_mrtrix
 from dipy.utils.optpkg import optional_package
@@ -84,17 +87,19 @@ class CsdPlusOptimizer:
         else:
             self.single_convolution_kernel = False
 
-        # load the sh SOS constraints for the given spherical harmonics order.
-        ########### TO BE UPDATED
-                conf = 'sh_constraint_' + str(sh_order) + '.csv'
-        arr = np.loadtxt(conf, delimiter=",")
-        pos = arr[:, :3].astype(int)
-        val = arr[:, 3]
+        # Load the SOS constraint matrices
+        # Currently defined up to sh_order = 10
+        CONSTRAINTS_PATH = pkg_resources.resource_filename(
+            'dmipy', 'data/sos_constraints'
+        )
+        mf = join(CONSTRAINTS_PATH, 'sh_constraint_' + str(sh_order) + '.csv')
+        coo = np.loadtxt(mf, delimiter=",")
+        pos = coo[:, :3].astype(int)
+        val = coo[:, 3]
         dim = list(map(max, zip(*(pos + 1))))
         self.sdp_constraints = np.zeros(dim)
-        for i in range(arr.shape[0]):
+        for i in range(coo.shape[0]):
             self.sdp_constraints[tuple(pos[i])] = val[i]
-        ###########################
 
         self.Ncoef_total = 0
         vf_array = []
@@ -150,19 +155,17 @@ class CsdPlusOptimizer:
         sh_coef = cvxpy.Variable(self.Ncoef_total)
         sh_fod = sh_coef[self.sh_start: self.Ncoef + self.sh_start]
 
-        constraints = []
-        ################## ADD SOS CONSTRAINTS
-        A = self.sdp_constraints
-        m = M.shape[1]
-        n = A.shape[0] - m - 1
+        # Add SOS constraints
+        con = self.sdp_constraints
+        m = self.Ncoef_total # M.shape[1]
+        n = con.shape[0] - m - 1
         s = cvxpy.Variable(n)
-        X = A[0]
+        X = con[0]
         for i in range(m):
-            X = X + c[i] * A[i + 1]
+            X = X + sh_coef[i] * con[i + 1]
         for i in range(n):
-            X = X + s[i] * A[m + i + 1]
-        constraints.append(X >> 0)
-        ##################
+            X = X + s[i] * con[m + i + 1]
+        constraints = [X >> 0]
 
         vf = sh_coef[self.vf_indices] * self.sphere_jacobian
         constraints.append(vf >= 0)
@@ -179,7 +182,10 @@ class CsdPlusOptimizer:
                 if not self.model.parameter_optimization_flags[vf_name]:
                     constraints.append(vf[i] == params[vf_name])
 
-        cost = cvxpy.sum_squares(A * sh_coef - data)
+        if Version(cvxpy.__version__) < Version('1.1'):
+            cost = cvxpy.sum_squares(A * sh_coef - data)
+        else:
+            cost = cvxpy.sum_squares(A @ sh_coef - data)
         problem = cvxpy.Problem(cvxpy.Minimize(cost), constraints)
         try:
             problem.solve()
