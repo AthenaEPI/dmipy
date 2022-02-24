@@ -1,4 +1,5 @@
 import numpy as np
+from packaging.version import Version
 from dipy.data import get_sphere, HemiSphere
 from dipy.reconst.shm import real_sym_sh_mrtrix
 from dipy.utils.optpkg import optional_package
@@ -154,8 +155,12 @@ class CsdCvxpyOptimizer:
         sh_fod = sh_coef[self.sh_start: self.Ncoef + self.sh_start]
 
         constraints = []
-        constraints.append(
-            self.L_positivity * sh_fod >= 0)
+        if Version(cvxpy.__version__) < Version('1.1'):
+            constraints.append(
+                self.L_positivity * sh_fod >= 0)
+        else:
+            constraints.append(
+                self.L_positivity @ sh_fod >= 0)
         vf = sh_coef[self.vf_indices] * self.sphere_jacobian
         constraints.append(vf >= 0)
         if self.unity_constraint:
@@ -171,7 +176,10 @@ class CsdCvxpyOptimizer:
                 if not self.model.parameter_optimization_flags[vf_name]:
                     constraints.append(vf[i] == params[vf_name])
 
-        cost = cvxpy.sum_squares(A * sh_coef - data)
+        if Version(cvxpy.__version__) < Version('1.1'):
+            cost = cvxpy.sum_squares(A * sh_coef - data)
+        else:
+            cost = cvxpy.sum_squares(A @ sh_coef - data)
         if self.lambda_lb > 0:
             cost += (
                 self.lambda_lb * cvxpy.quad_form(sh_coef, self.R_smoothness))
