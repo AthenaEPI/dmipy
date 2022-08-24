@@ -1,4 +1,6 @@
 import numpy as np
+import pkg_resources
+from os.path import join
 from packaging.version import Version
 from dipy.data import get_sphere, HemiSphere
 from dipy.reconst.shm import real_sym_sh_mrtrix
@@ -9,18 +11,19 @@ sphere = get_sphere('symmetric724')
 
 
 __all__ = [
-    'CsdCvxpyOptimizer'
+    'CsdPlusOptimizer'
 ]
 
 
-class CsdCvxpyOptimizer:
+class CsdPlusOptimizer:
     """
     Generalized multi-compartment constrained spherical deconvolution (MC-CSD)
     optimizer. The algorithm follows the formulation of Multi-Tissue (MT)-CSD
     [1]_, but is completely generalized in that it can take any number or type
     of convolution kernels, have static or voxel-varying kernels parameters,
     and can have fixed volume fractions or estimate them. The algorithm is
-    implemented using CVXPY [2]_.
+    implemented using CVXPY [2]_ and positivity is enforced using sum-of-squares
+    constraints [4]_.
 
     Limitations:
     - It cannot estimate the volume fractions of multiple kernels that each
@@ -45,9 +48,6 @@ class CsdCvxpyOptimizer:
         whether or not to constrain the volume fractions of the FOD to
         unity. In the case of one model this means that the SH-coefficients
         represent a distribution on the sphere.
-    lambda_lb: positive float,
-        Laplace-Belrami regularization weight to impose smoothness in the
-        FOD. Same as is done in [3]_.
 
     References
     ----------
@@ -61,23 +61,20 @@ class CsdCvxpyOptimizer:
         Q-ball imaging." Magnetic Resonance in Medicine: An Official Journal of
         the International Society for Magnetic Resonance in Medicine 58.3
         (2007): 497-510.
+    .. [4] Dela Haije, Tom, Evren Özarslan, and Aasa Feragen. "Enforcing
+        necessary non-negativity constraints for common diffusion MRI models
+        using sum of squares programming." NeuroImage 209 (2020): 116405.
     """
 
     def __init__(self, acquisition_scheme, model, x0_vector=None, sh_order=8,
-                 unity_constraint=True, lambda_lb=0.):
+                 unity_constraint=True):
         self.model = model
         self.acquisition_scheme = acquisition_scheme
         self.sh_order = sh_order
         self.Ncoef = int((sh_order + 2) * (sh_order + 1) // 2)
         self.Nmodels = len(self.model.models)
-        self.lambda_lb = lambda_lb
         self.unity_constraint = unity_constraint
         self.sphere_jacobian = 2 * np.sqrt(np.pi)
-
-        sphere = get_sphere('symmetric724')
-        hemisphere = HemiSphere(phi=sphere.phi, theta=sphere.theta)
-        self.L_positivity = real_sym_sh_mrtrix(
-            self.sh_order, hemisphere.theta, hemisphere.phi)[0]
 
         x0_single_voxel = np.reshape(
             x0_vector, (-1, x0_vector.shape[-1]))[0]
@@ -89,6 +86,20 @@ class CsdCvxpyOptimizer:
                 **parameters_dict)
         else:
             self.single_convolution_kernel = False
+
+        # Load the SOS constraint matrices
+        # Currently defined up to sh_order = 10
+        CONSTRAINTS_PATH = pkg_resources.resource_filename(
+            'dmipy', 'data/sos_constraints'
+        )
+        mf = join(CONSTRAINTS_PATH, 'sh_constraint_' + str(sh_order) + '.csv')
+        coo = np.loadtxt(mf, delimiter=",")
+        pos = coo[:, :3].astype(int)
+        val = coo[:, 3]
+        dim = list(map(max, zip(*(pos + 1))))
+        self.sdp_constraints = np.zeros(dim)
+        for i in range(coo.shape[0]):
+            self.sdp_constraints[tuple(pos[i])] = val[i]
 
         self.Ncoef_total = 0
         vf_array = []
@@ -110,26 +121,16 @@ class CsdCvxpyOptimizer:
                     self.Ncoef_total += 1
             self.vf_indices = np.where(np.hstack(vf_array))[0]
 
-        sh_l = sph_harm_ind_list(sh_order)[1]
-        lb_weights = sh_l ** 2 * (sh_l + 1) ** 2  # laplace-beltrami [3]
-        if self.model.volume_fractions_fixed:
-            self.R_smoothness = np.diag(lb_weights)
-        else:
-            diagonal = np.zeros(self.Ncoef_total)
-            diagonal[self.sh_start: self.sh_start + self.Ncoef] = lb_weights
-            self.R_smoothness = np.diag(diagonal)
-
     def __call__(self, data, x0_vector):
         """
-        The fitting function of Multi-Compartment CSD optimizer.
+        The fitting function of Multi-Compartment CSD optimizer using
+        sum-of-squares constraints.
 
         If there is only one convolution kernel, it loads the precalculated
         values. If the kernel is voxel-varying, it calculates it now.
 
         Adds a constraint that the volume fractions add up to one depending on
         the unity_constraint being True or False.
-
-        Adds Laplace-Beltrami (smoothness) regularization if lambda_lb>0.
 
         Parameters
         ----------
@@ -154,13 +155,18 @@ class CsdCvxpyOptimizer:
         sh_coef = cvxpy.Variable(self.Ncoef_total)
         sh_fod = sh_coef[self.sh_start: self.Ncoef + self.sh_start]
 
-        constraints = []
-        if Version(cvxpy.__version__) < Version('1.1'):
-            constraints.append(
-                self.L_positivity * sh_fod >= 0)
-        else:
-            constraints.append(
-                self.L_positivity @ sh_fod >= 0)
+        # Add SOS constraints
+        con = self.sdp_constraints
+        m = self.Ncoef_total # M.shape[1]
+        n = con.shape[0] - m - 1
+        s = cvxpy.Variable(n)
+        X = con[0]
+        for i in range(m):
+            X = X + sh_coef[i] * con[i + 1]
+        for i in range(n):
+            X = X + s[i] * con[m + i + 1]
+        constraints = [X >> 0]
+
         vf = sh_coef[self.vf_indices] * self.sphere_jacobian
         constraints.append(vf >= 0)
         if self.unity_constraint:
@@ -180,9 +186,6 @@ class CsdCvxpyOptimizer:
             cost = cvxpy.sum_squares(A * sh_coef - data)
         else:
             cost = cvxpy.sum_squares(A @ sh_coef - data)
-        if self.lambda_lb > 0:
-            cost += (
-                self.lambda_lb * cvxpy.quad_form(sh_coef, self.R_smoothness))
         problem = cvxpy.Problem(cvxpy.Minimize(cost), constraints)
         try:
             problem.solve()
