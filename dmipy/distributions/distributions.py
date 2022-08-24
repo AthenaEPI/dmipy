@@ -353,7 +353,7 @@ class SD3SphericalHarmonics(ModelProperties):
             if len(sh_coeff) != self.N_coeff:
                 msg = 'if given, sh_coeff length must correspond to N_coeffs '\
                       'associated with sh_order ({} vs {}).'
-                raise ValueError(msg.format(len(sh_coeff, self.N_coeff)))
+                raise ValueError(msg.format(len(sh_coeff), self.N_coeff))
         self.sh_coeff = sh_coeff
 
         self._parameter_ranges = {'sh_coeff': [
