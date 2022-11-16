@@ -181,10 +181,8 @@ def test_amico(lambda_1=[0, 0.0001], lambda_2=[0, 0.0000001], Nt=12):
             if mc_model.model_names[m_idx] + p in grid_params:
                 m_atoms *= Nt
         x0_len += m_atoms
-    x0_vector = np.zeros(x0_len)
 
     amico_opt = amico_cvxpy.AmicoCvxpyOptimizer(mc_model, scheme_hcp,
-                                                x0_vector=x0_vector,
                                                 lambda_1=lambda_1,
                                                 lambda_2=lambda_2)
 
