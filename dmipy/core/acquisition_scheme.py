@@ -82,9 +82,9 @@ class DmipyAcquisitionScheme:
             elif self.delta is not None and self.Delta is None:
                 deltas = np.c_[self.delta]
             else:
-                deltas = []
+                deltas = np.array([])
 
-            if deltas == []:
+            if deltas.size ==0: 
                 deltas = np.c_[np.zeros(len(self.bvalues))]
             unique_deltas = np.unique(deltas, axis=0)
             self.shell_indices = np.zeros(len(bvalues), dtype=int)
