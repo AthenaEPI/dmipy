@@ -897,3 +897,229 @@ class FittedMultiCompartmentSphericalHarmonicsModel:
         mse = np.mean((data_ - y_hat) ** 2, axis=-1)
         mse[~self.mask] = 0
         return mse
+
+
+class FittedMultiCompartmentAMICOModel:
+    def __init__(self, model, S0, mask, fitted_parameters_vector,
+                 parameter_indices, optimizer,
+                 fitted_multi_tissue_fractions_vector=None):
+        """
+        The FittedMultiCompartmentModel instance contains information about the
+        original MultiCompartmentModel, the estimated S0 values, the fitting mask
+        and the fitted model parameters.
+
+        Parameters
+        ----------
+        model : MultiCompartmentAMICOModel instance,
+            A dmipy MultiCompartmentAMICOModel.
+        S0 : array of size (Ndata,) or (N_data, N_DWIs),
+            Array containing the estimated S0 values of the data. If data is 4D,
+            then S0 is 3D if there is only one TE, and the same 4D size of the data
+            if there are multiple TEs.
+        mask : array of size (N_data,),
+            boolean mask of voxels that were fitted.
+        parameter_indices : dictionary,
+            keys are parameter names and values are the column indices
+            corresponding to the parameter.
+        optimizer : AmicoCvxpyOptimizer instance,
+            A dmipy AmicoCvxpyOptimizer instantiated object that will be used
+            for computing the parameter distributions.
+        fitted_parameters_vector : array of size (N_data, Nparameters),
+            fitted model parameters array.
+        """
+        self.model = model
+        self.S0 = S0
+        self.mask = mask
+        self.fitted_parameters_vector = fitted_parameters_vector
+        self.fitted_multi_tissue_fractions_vector = (
+            fitted_multi_tissue_fractions_vector)
+        self._parameter_indices = parameter_indices
+        self._optimizer = optimizer
+
+    @property
+    def parameter_indices(self):
+        """Return parameter indices."""
+        return self._parameter_indices
+
+    @property
+    def fitted_distribution(self):
+        """Returns the distribution of each parameter."""
+        # TODO: we have to find a way to return the distribution of each
+        #  parameter obtained from the optimization. Uses self._optimizer .
+        raise NotImplementedError
+
+    @property
+    def fitted_parameters(self):
+        """Returns the fitted parameters as a dictionary."""
+        return self.model.parameter_vector_to_parameters(
+            self.fitted_parameters_vector)
+
+    @property
+    def fitted_multi_tissue_fractions(self):
+        "Returns the fitted multi tissue fractions as a dictionary."
+        return self._return_fitted_multi_tissue_fractions()
+
+    @property
+    def fitted_multi_tissue_fractions_normalized(self):
+        "Returns the normalized fitted multi tissue fractions as a dictionary"
+        return self._return_fitted_multi_tissue_fractions(normalized=True)
+
+    def _return_fitted_multi_tissue_fractions(self, normalized=False):
+        """
+        Returns the multi-tissue estimated volume fractions.
+
+        Parameters
+        ----------
+        normalized: boolean,
+            whether or not to normalize returned multi-tissue volume fractions.
+            NOTE: This does not mean the unity constraint was enforced during
+            the estimation of the fractions - it is just a normalization after
+            the fact.
+
+        Returns
+        -------
+        mt_partial_volumes: dict,
+            contains the multi-tissue volume fractions by name.
+            NOTE: if the MC-model only consisted of 1 model, then the name will
+            be 'partial_volume_0', but will not have a counterpart in
+            self.fitted_parameters.
+        """
+        mt_fract_vec = self.fitted_multi_tissue_fractions_vector.copy()
+        if normalized:
+            mt_fract_sum = np.sum(mt_fract_vec, axis=-1)
+            mt_fract_mask = mt_fract_sum > 0
+            mt_fract_vec[mt_fract_mask] = (
+                mt_fract_vec[mt_fract_mask] /
+                mt_fract_sum[mt_fract_mask][..., None])
+        if self.model.N_models > 1:
+            fract_names = self.model.partial_volume_names
+        else:
+            fract_names = ['partial_volume_0']
+        mt_partial_volumes = {}
+        for i, partial_volume_name in enumerate(fract_names):
+            mt_partial_volumes[partial_volume_name] = mt_fract_vec[..., i]
+        return mt_partial_volumes
+
+    @property
+    def fitted_and_linked_parameters(self):
+        "Returns the fitted and linked parameters as a dictionary."
+        fitted_parameters = self.model.parameter_vector_to_parameters(
+            self.fitted_parameters_vector)
+        return self.model.add_linked_parameters_to_parameters(
+            fitted_parameters)
+
+    def fod(self, vertices, visual_odi_lower_bound=0.):
+        """
+        Returns the Fiber Orientation Distribution if it is available.
+
+        Parameters
+        ----------
+        vertices : array of size (Nvertices, 3),
+            Array of cartesian unit vectors at which to sample the FOD.
+        visual_odi_lower_bound : float,
+            gives a lower bound to the Orientation Distribution Index (ODI) of
+            FODs of Watson and Bingham distributions. This can be useful to
+            visualize FOD fields where some FODs are extremely sharp.
+
+        Returns
+        -------
+        fods : array of size (Ndata, Nvertices),
+            the FODs of the fitted model, scaled by volume fraction.
+        """
+        raise NotImplementedError
+
+    def fod_sh(self, sh_order=8, basis_type=None):
+        """
+        Returns the spherical harmonics coefficients of the Fiber Orientation
+        Distribution (FOD) if it is available. Uses are 724 spherical
+        tessellation to do the spherical harmonics transform.
+
+        Parameters
+        ----------
+        sh_order : integer,
+            the maximum spherical harmonics order of the coefficient expansion.
+        basis_type : string,
+            type of spherical harmonics basis to use for the expansion, see
+            sh_to_sf_matrix for more info.
+
+        Returns
+        -------
+        fods_sh : array of size (Ndata, Ncoefficients),
+            spherical harmonics coefficients of the FODs, scaled by volume
+            fraction.
+        """
+        raise NotImplementedError
+
+    def peaks_spherical(self):
+        "Returns the peak angles of the model."
+        raise NotImplementedError
+
+    def peaks_cartesian(self):
+        raise NotImplementedError
+
+    def predict(self, acquisition_scheme=None, S0=None, mask=None):
+        """
+        simulates the dMRI signal of the fitted MultiCompartmentModel for the
+        estimated model parameters. If no acquisition_scheme is given, then
+        the same acquisition_scheme that was used for the fitting is used. If
+        no mask is given then all voxels are assumed to have been fitted.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        S0 : None or float,
+            Signal intensity without diffusion sensitization. If None, uses
+            estimated SO from fitting process. If float, uses that value.
+        mask : (N-1)-dimensional integer/boolean array of size (N_x, N_y, ...),
+            mask of voxels to simulate data at.
+
+        Returns
+        -------
+        predicted_signal : array of size (Ndata, N_DWIS),
+            predicted DWIs for the given model parameters and acquisition
+            scheme.
+        """
+        if acquisition_scheme is None:
+            acquisition_scheme = self.model.scheme
+        self.model._check_model_params_with_acquisition_params(
+            acquisition_scheme)
+
+        if S0 is None:
+            S0 = self.S0
+        elif isinstance(S0, float):
+            S0 = np.ones(self.fitted_parameters_vector.shape[:-1]) * S0
+
+        if mask is None:
+            mask = self.mask
+
+        E_shape = mask.shape + (acquisition_scheme.N_dwi,)
+        E = np.zeros(E_shape)
+        mask_pos = np.where(mask)
+        # TODO: get rid of the forward model matrix here. We should use the
+        #  predict function of the underlying multi compartment model
+        return E
+
+    def R2_coefficient_of_determination(self, data):
+        "Calculates the R-squared of the model fit."
+        data_ = data / self.S0[..., None]
+
+        y_hat = self.predict(S0=1.)
+        y_bar = np.mean(data_, axis=-1)
+        SStot = np.sum((data_ - y_bar[..., None]) ** 2, axis=-1)
+        SSres = np.sum((data_ - y_hat) ** 2, axis=-1)
+        R2 = 1 - SSres / SStot
+        R2[~self.mask] = 0
+        return R2
+
+    def mean_squared_error(self, data):
+        "Calculates the mean squared error of the model fit."
+        if self.model.scheme.TE is None:
+            data_ = data / self.S0[..., None]
+        else:
+            data_ = data / self.S0
+
+        y_hat = self.predict(S0=1.)
+        mse = np.mean((data_ - y_hat) ** 2, axis=-1)
+        mse[~self.mask] = 0
+        return mse
