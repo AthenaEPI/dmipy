@@ -6,7 +6,7 @@
 > - **[dmipy-fit](https://github.com/dmrai-lab/dmipy-fit)** — the analytical inverse: the modular multi-compartment model design and fitting you know from here, now JAX / GPU-accelerated.
 > - **[dmipy-sim](https://github.com/dmrai-lab/dmipy-sim)** — a new Monte-Carlo forward simulator: arbitrary triangular-mesh substrates, membrane permeability, surface relaxivity, and more.
 >
-> 👉 **Install the maintained stack:** `pip install dmipy` (now v2.1.0) &nbsp;·&nbsp; **Docs:** [dmipy.org](https://dmipy.org)
+> 👉 **Install the maintained stack:** `pip install dmipy` (now v2.1.0) &nbsp;·&nbsp; **Docs:** [dmipy.org](https://dmipy.org) &nbsp;·&nbsp; **Coming from 1.x?** [What's changed](https://dmipy.org/migrating/)
 >
 > The code below remains available for reference and for reproducing the original 2019 release.
 
