@@ -1,3 +1,17 @@
+> [!IMPORTANT]
+> ### 🚀 Dmipy is revived — and has a new home
+>
+> This original **AthenaEPI/dmipy** (2019) toolbox has been **revived, subsumed, and substantially expanded** under the new **[`dmrai-lab/dmipy`](https://github.com/dmrai-lab/dmipy)** umbrella. The project is now two engines that share one acquisition-and-tissue description:
+>
+> - **[dmipy-fit](https://github.com/dmrai-lab/dmipy-fit)** — the analytical inverse: the modular multi-compartment model design and fitting you know from here, now JAX / GPU-accelerated.
+> - **[dmipy-sim](https://github.com/dmrai-lab/dmipy-sim)** — a new Monte-Carlo forward simulator: arbitrary triangular-mesh substrates, membrane permeability, surface relaxivity, and more.
+>
+> 👉 **Install the maintained stack:** `pip install dmipy` (now v2.1.0) &nbsp;·&nbsp; **Docs:** [dmipy.org](https://dmipy.org) &nbsp;·&nbsp; **Coming from 1.x?** [What's changed](https://dmipy.org/migrating/)
+>
+> The code below remains available for reference and for reproducing the original 2019 release.
+
+---
+
 [![Build Status](https://travis-ci.org/AthenaEPI/dmipy.svg?branch=master)](https://travis-ci.org/AthenaEPI/dmipy)
 [![codecov](https://codecov.io/gh/AthenaEPI/dmipy/branch/master/graph/badge.svg)](https://codecov.io/gh/AthenaEPI/dmipy)
 [![Coverage Status](https://coveralls.io/repos/github/AthenaEPI/dmipy/badge.svg)](https://coveralls.io/github/AthenaEPI/dmipy)
