@@ -15,7 +15,9 @@ from dipy.utils.optpkg import optional_package
 from .fitted_modeling_framework import (
     FittedMultiCompartmentModel,
     FittedMultiCompartmentSphericalMeanModel,
-    FittedMultiCompartmentSphericalHarmonicsModel)
+    FittedMultiCompartmentSphericalHarmonicsModel,
+    FittedMultiCompartmentAMICOModel)
+from ..optimizers.amico_cvxpy import AmicoCvxpyOptimizer
 from ..optimizers.brute2fine import (
     GlobalBruteOptimizer, Brute2FineOptimizer)
 from ..optimizers.mix import MixOptimizer
@@ -130,14 +132,14 @@ class MultiCompartmentModelProperties:
         if parameter_vector.ndim == 1:
             for parameter, card in self.parameter_cardinality.items():
                 parameters[parameter] = parameter_vector[
-                    current_pos: current_pos + card]
+                                        current_pos: current_pos + card]
                 if card == 1:
                     parameters[parameter] = parameters[parameter][0]
                 current_pos += card
         else:
             for parameter, card in self.parameter_cardinality.items():
                 parameters[parameter] = parameter_vector[
-                    ..., current_pos: current_pos + card]
+                                        ..., current_pos: current_pos + card]
                 if card == 1:
                     parameters[parameter] = parameters[parameter][..., 0]
                 current_pos += card
@@ -1260,7 +1262,7 @@ class MultiCompartmentModel(MultiCompartmentModelProperties):
 
         fitted_parameters = np.zeros_like(x0_, dtype=float)
         fitted_parameters[mask_pos] = (
-            fitted_parameters_lin * self.scales_for_optimization)
+                fitted_parameters_lin * self.scales_for_optimization)
 
         return FittedMultiCompartmentModel(self, S0, mask, fitted_parameters,
                                            fitted_mt_fractions)
@@ -1656,7 +1658,7 @@ class MultiCompartmentSphericalMeanModel(MultiCompartmentModelProperties):
 
         fitted_parameters = np.zeros_like(x0_, dtype=float)
         fitted_parameters[mask_pos] = (
-            fitted_parameters_lin * self.scales_for_optimization)
+                fitted_parameters_lin * self.scales_for_optimization)
 
         return FittedMultiCompartmentSphericalMeanModel(
             self, S0, mask, fitted_parameters, fitted_mt_fractions)
@@ -2210,9 +2212,514 @@ class MultiCompartmentSphericalHarmonicsModel(MultiCompartmentModelProperties):
                 'sh_coeff']
             for i, name in enumerate(self.partial_volume_names):
                 sh_coeff[self.optimizer.vf_indices[i]] = (
-                    kwargs[name] / (2 * np.sqrt(np.pi)))
+                        kwargs[name] / (2 * np.sqrt(np.pi)))
             E = np.dot(A, sh_coeff)
         return E
+
+
+class MultiCompartmentAMICOModel(MultiCompartmentModelProperties):
+    """
+    The MultiCompartmentAmicoModel class allows to combine any number of
+    CompartmentModels and DistributedModels into one combined generalized
+    AMICO model that can be used to fit and simulate dMRI data.
+
+    Parameters
+    ----------
+    models : list of N CompartmentModel instances,
+        the models to combine into the MultiCompartmentModel.
+    S0_tissue_responses: list of N values,
+        the S0 response of the tissue modelled by each compartment.
+    Nt: int
+        Number of equidistant sampling points over each
+        parameter range used to create atoms of observation matrix M
+    parameter_links : list of iterables (model, parameter name, link function,
+        argument list),
+        deprecated, for testing only.
+    """
+
+    def __init__(self, models, S0_tissue_responses=None, Nt=10, max_atoms=20000,
+                 parameter_links=None):
+        self.models = models
+        self.N_models = len(models)
+        if S0_tissue_responses is not None:
+            if len(S0_tissue_responses) != self.N_models:
+                msg = 'Number of S0_tissue responses {} must be same as ' \
+                      'number of input models {}.'
+                raise ValueError(
+                    msg.format(len(S0_tissue_responses), self.N_models))
+        self.S0_tissue_responses = S0_tissue_responses
+        self.Nt = Nt
+        self.max_atoms = max_atoms
+        self.parameter_links = parameter_links
+        if parameter_links is None:
+            self.parameter_links = []
+
+        self._prepare_parameters()
+        self._prepare_partial_volumes()
+        self._prepare_parameter_links()
+        self._prepare_model_properties()
+        self._check_for_double_model_class_instances()
+
+        self.mc_model = MultiCompartmentModel(
+            models=self.models, S0_tissue_responses=self.S0_tissue_responses)
+
+        self._prepare_parameters_to_optimize()
+        self._check_for_NMR_and_other_models()
+        self.x0_parameters = {}
+        self._amico_grid = None
+        self._amico_idx = None
+        self._freezed_parameters_vector = None
+
+        if not have_numba:
+            msg = "We highly recommend installing numba for faster function "
+            msg += "execution and model fitting."
+            print(msg)
+        if not have_pathos:
+            msg = "We highly recommend installing pathos to take advantage of "
+            msg += "multicore processing."
+            print(msg)
+
+    def _check_for_NMR_and_other_models(self):
+        model_types = [model._model_type for model in self.models]
+        if "NMRModel" in model_types:
+            if len(np.unique(model_types)) > 1:
+                msg = "Cannot combine 1D-NMR and other 3D model types together"
+                msg += " into a MultiCompartmentAMICOModel."
+                raise ValueError(msg)
+
+    def _check_if_model_orientations_are_fixed(self):
+        msg = lambda p: 'Parameter {} must be fixed a priori.'.format(p)
+        for k, v in self.parameter_types.items():
+            if v == 'orientation':
+                if self.parameter_optimization_flags[k]:
+                    raise ValueError(msg)
+
+    @property
+    def amico_grid(self):
+        """Dictionary with parameter names as keys and values that are the
+        parameter grids used in the definition of the AMICO forward model
+        matrix."""
+        return self._amico_grid
+
+    @property
+    def amico_idx(self):
+        """Dictionary with parameter names as keys and values that are the
+        column indices corresponding to the parameter in the AMICO forward model
+        matrix."""
+        return self._amico_idx
+
+    def forward_model_matrix(self, acquisition_scheme, model_dirs=None,
+                             **kwargs):
+        """Creates forward model matrix, including parameter tessellation grid
+        and corresponding indices.
+
+            Arguments:
+                acquisition_scheme: instance containing acquisition protocol
+                model_dirs: list containing direction of all models in
+                    multi-compartment model. By default it uses the ones fixed
+                    in the multi-compartment model. Default: None.
+            Returns:
+                observation matrix M
+        """
+        if model_dirs is not None:
+            dir_params = [p for p in self.mc_model.parameter_names
+                          if self.mc_model.parameter_types[p] ==
+                          'orientation']
+            if len(dir_params) != len(model_dirs):
+                raise ValueError("Length of model_dirs should correspond "
+                                 "to the number of directional parameters!")
+
+        if not self._freezed_parameters_vector:
+            self._amico_grid, self._amico_idx = {}, {}
+
+            grid_params = \
+                [p for p in self.mc_model.parameter_names
+                 if self.mc_model.parameter_types[p] in ['normal', 'circular'] and
+                 not p.startswith('partial_volume')]
+
+            # Compute length of the vector x0
+            x0_len = 0
+            for m_idx in range(self.N_models):
+                m_atoms = 1
+                for p in self.models[m_idx].parameter_names:
+                    if self.mc_model.model_names[m_idx] + p in grid_params:
+                        m_atoms *= self.Nt
+                x0_len += m_atoms
+
+            for m_idx in range(self.N_models):
+                model = self.models[m_idx]
+                model_name = self.mc_model.model_names[m_idx]
+
+                param_sampling, grid_params_names = [], []
+                m_atoms = 1
+                for p in model.parameter_names:
+                    if model_name + p not in grid_params:
+                        continue
+                    grid_params_names.append(model_name + p)
+                    p_range = self.mc_model.parameter_ranges[model_name + p]
+                    p_scale = self.mc_model.parameter_scales[model_name + p]
+
+                    self._amico_grid[model_name + p] = \
+                        np.full(x0_len, np.mean(p_range) * p_scale)
+                    param_sampling.append(np.linspace(p_range[0] * p_scale,
+                                                      p_range[1] * p_scale,
+                                                      self.Nt, endpoint=True))
+                    m_atoms *= self.Nt
+
+                self._amico_idx[model_name] = \
+                    sum([len(self._amico_idx[k])
+                         for k in self._amico_idx]) + \
+                    np.arange(m_atoms)
+                params_mesh = np.meshgrid(*param_sampling)
+                for p_idx, p in enumerate(grid_params_names):
+                    self._amico_grid[p][self._amico_idx[model_name]] = \
+                        np.ravel(params_mesh[p_idx])
+
+                if 'partial_volume_' + str(m_idx) in \
+                        self.mc_model.parameter_names:
+                    p_volume_name = 'partial_volume_' + str(m_idx)
+                    self._amico_grid[p_volume_name] = np.zeros(x0_len)
+                    self._amico_grid[p_volume_name][
+                        self._amico_idx[model_name]] = 1.
+            self._freezed_parameters_vector = True
+
+        n_atoms = sum([len(self._amico_idx[m]) for m in self._amico_idx])
+        if n_atoms > self.max_atoms:
+            raise ValueError("Large number of unknown parameters {} "
+                             "resulted in large number of atoms in "
+                             "forward model matrix.".
+                             format(grid_params_names),
+                             "Size of the forward model matrix is [{}, {}]".
+                             format(acquisition_scheme.number_of_measurements,
+                                    n_atoms))
+
+        if model_dirs is not None:
+            for d_idx, dp in enumerate(dir_params):
+                self._amico_grid[dp] = model_dirs[d_idx]
+
+        if 'normal' not in self.mc_model.parameter_types.values() and \
+                'circular' not in self.mc_model.parameter_types.values():
+            msg = 'No parameters to be estimated, all parameters are set.'
+            raise ValueError(msg)
+
+        return self.mc_model.simulate_signal(acquisition_scheme,
+                                             self.amico_grid).T
+
+    def fit(self, acquisition_scheme, data,
+            mask=None,
+            lambda_1=None,
+            lambda_2=None,
+            use_parallel_processing=have_pathos,
+            number_of_processors=None):
+        """ The main data fitting function of a MultiCompartmentModel.
+
+        This function can fit it to an N-dimensional dMRI data set, and returns
+        a FittedMultiCompartmentAMICOModel instance that contains the fitted
+        parameters and other useful functions to study the results.
+
+        No initial guess needs to be given to fit a model, but a partial or
+        complete initial guess can be given if the user wants to have a
+        solution that is a local minimum close to that guess. The
+        parameter_initial_guess input can be created using
+        parameter_initial_guess_to_parameter_vector().
+
+        A mask can also be given to exclude voxels from fitting (e.g. voxels
+        that are outside the brain). If no mask is given then all voxels are
+        included.
+
+        The fitting process can be readily parallelized using the optional
+        "pathos" package. If it is installed then it will automatically use it,
+        but it can be turned off by setting use_parallel_processing=False. The
+        algorithm will automatically use all cores in the machine, unless
+        otherwise specified in number_of_processors.
+
+        Data with multiple TE are normalized in separate segments using the
+        b0-values according that TE.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        data : N-dimensional array of size (N_x, N_y, ..., N_dwis),
+            The measured DWI signal attenuation array of either a single voxel
+            or an N-dimensional dataset.
+        mask : (N-1)-dimensional integer/boolean array of size (N_x, N_y, ...),
+            Optional mask of voxels to be included in the optimization.
+        lambda_1 : vector with one value per compartment. The
+            coefficients will be applied to the L1 regularization of each
+            compartment. Default: 0.0.
+        lambda_2 : vector with one value per compartment. The
+            coefficients will be applied to the L2 regularization of each
+            compartment. Default: 0.0.
+        use_parallel_processing : bool,
+            whether or not to use parallel processing using pathos.
+        number_of_processors : integer,
+            number of processors to use for parallel processing. Defaults to
+            the number of processors in the computer according to cpu_count().
+
+        Returns
+        -------
+        FittedMultiCompartmentAMICOModel: class instance that contains fitted
+        parameters. Can be used to recover parameters themselves or other useful
+        functions.
+        """
+        self._check_tissue_model_acquisition_scheme(acquisition_scheme)
+        self._check_model_params_with_acquisition_params(acquisition_scheme)
+        self._check_acquisition_scheme_has_b0s(acquisition_scheme)
+        self._check_if_model_orientations_are_fixed()
+
+        # estimate S0
+        self.scheme = acquisition_scheme
+        data_ = np.atleast_2d(data)
+        if self.scheme.TE is None or len(np.unique(self.scheme.TE)) == 1:
+            S0 = np.mean(data_[..., self.scheme.b0_mask], axis=-1)
+        else:  # if multiple TE are in the data
+            S0 = np.ones_like(data_)
+            for TE_ in self.scheme.shell_TE:
+                TE_mask = self.scheme.TE == TE_
+                TE_b0_mask = np.all([self.scheme.b0_mask, TE_mask], axis=0)
+                S0[..., TE_mask] = np.mean(
+                    data_[..., TE_b0_mask], axis=-1)[..., None]
+
+        if mask is None:
+            mask = data_[..., 0] > 0
+        else:
+            mask = np.all([mask, data_[..., 0] > 0], axis=0)
+        mask_pos = np.where(mask)
+
+        N_parameters = len(self.bounds_for_optimization)
+        N_voxels = np.sum(mask)
+
+        if use_parallel_processing and not have_pathos:
+            msg = 'Cannot use parallel processing without pathos.'
+            raise ValueError(msg)
+        elif use_parallel_processing and have_pathos:
+            fitted_parameters_lin = [None] * N_voxels
+            if number_of_processors is None:
+                number_of_processors = cpu_count()
+            pool = pp.ProcessPool(number_of_processors)
+            print('Using parallel processing with {} workers.'.format(
+                number_of_processors))
+        else:
+            fitted_parameters_lin = np.empty(
+                np.r_[N_voxels, N_parameters], dtype=float)
+
+        start = time()
+        if lambda_1 is None:
+            l1 = np.zeros(self.N_models)
+        else:
+            l1 = lambda_1
+
+        if lambda_2 is None:
+            l2 = np.zeros(self.N_models)
+        else:
+            l2 = lambda_2
+
+        opt = AmicoCvxpyOptimizer(self, self.scheme, l1, l2)
+
+        dir_par_names = []
+        for k, v in self.parameter_types.items():
+            if v == 'orientation':
+                dir_par_names.append(k)
+
+        def fit_func(data, directions):
+            M = self.forward_model_matrix(self.scheme, directions)
+            return np.concatenate((np.ravel(directions),
+                                   opt(data, M, self.amico_grid, self.amico_idx)))
+
+        print('Setup AMICO optimizer in {} seconds'.format(
+            time() - start))
+
+        self.optimizer = fit_func
+
+        start = time()
+        for idx, pos in enumerate(zip(*mask_pos)):
+            voxel_E = data_[pos] / S0[pos]
+            directions = [self.x0_parameters[p][pos] for p in dir_par_names]
+            fit_args = (voxel_E, directions)
+            if use_parallel_processing:
+                fitted_parameters_lin[idx] = pool.apipe(fit_func, *fit_args)
+            else:
+                fitted_parameters_lin[idx] = fit_func(*fit_args)
+
+        if use_parallel_processing:
+            fitted_parameters_lin = np.array(
+                [p.get() for p in fitted_parameters_lin])
+            pool.close()
+            pool.join()
+            pool.clear()
+
+        fitting_time = time() - start
+        print('Fitting of {} voxels complete in {} seconds.'.format(
+            len(fitted_parameters_lin), fitting_time))
+        print('Average of {} seconds per voxel.'.format(
+            fitting_time / N_voxels))
+
+        fitted_mt_fractions = None
+        if self.S0_tissue_responses:
+            # secondary fitting including S0 responses
+            print('Starting secondary multi-tissue optimization.')
+            start = time()
+            mt_fractions = np.empty(
+                np.r_[N_voxels, self.N_models], dtype=float)
+            fit_func = MultiTissueConvexOptimizer(
+                acquisition_scheme, self, self.S0_tissue_responses)
+            for idx, pos in enumerate(zip(*mask_pos)):
+                voxel_S = data_[pos]
+                parameters = fitted_parameters_lin[idx]
+                mt_fractions[idx] = fit_func(voxel_S, parameters)
+            fitting_time = time() - start
+            msg = 'Multi-tissue fitting of {} voxels complete in {} seconds.'
+            print(msg.format(len(mt_fractions), fitting_time))
+            fitted_mt_fractions = np.zeros(np.r_[mask.shape, self.N_models])
+            fitted_mt_fractions[mask_pos] = mt_fractions
+
+        p_shape = tuple(list(data_.shape[:-1]) +
+                        [fitted_parameters_lin.shape[-1]])
+
+        fitted_parameters = np.zeros(shape=p_shape, dtype=float)
+        fitted_parameters[mask_pos] = (
+                fitted_parameters_lin * self.scales_for_optimization)
+
+        return FittedMultiCompartmentAMICOModel(
+            self, S0, mask, fitted_parameters, self.amico_idx, opt,
+            fitted_mt_fractions
+        )
+
+    def set_equal_parameter(self, parameter_name_in, parameter_name_out):
+        p = (parameter_name_in, parameter_name_out)
+        super(MultiCompartmentAMICOModel, self).set_equal_parameter(*p)
+        self.mc_model.set_equal_parameter(*p)
+
+    def set_fixed_parameter(self, parameter_name, value):
+
+        message = "Parameter '{}' should be unique for all voxels.".format(
+            parameter_name)
+        if self.parameter_types[parameter_name] == 'normal':
+            if isinstance(value, list):
+                value = np.asarray(value)
+
+            if isinstance(value, np.ndarray):
+                if value.size == 1:
+                    value = value.ravel()[0]
+                else:
+                    raise ValueError(message)
+
+            value = float(value)
+
+        p = (parameter_name, value)
+        super(MultiCompartmentAMICOModel, self).set_fixed_parameter(*p)
+        self.mc_model.set_fixed_parameter(*p)
+
+    def set_fractional_parameter(self, parameter1_smaller_equal_than,
+                                 parameter2):
+        p = (parameter1_smaller_equal_than, parameter2)
+        super(MultiCompartmentAMICOModel, self).set_fractional_parameter(*p)
+        self.mc_model.set_fractional_parameter(*p)
+
+    def set_tortuous_parameter(self, lambda_perp_parameter_name,
+                               lambda_par_parameter_name,
+                               volume_fraction_intra_parameter_name,
+                               volume_fraction_extra_parameter_name,
+                               S0_correction=False):
+        raise NotImplementedError('The tortuousity constraint must be set '
+                                  'from a distributed model, not from a '
+                                  'multi compartment model.')
+
+    def simulate_signal(self, acquisition_scheme, parameters_array_or_dict):
+        """
+        Function to simulate diffusion data for a given acquisition_scheme
+        and model parameters for the MultiCompartmentModel.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy
+        model_parameters_array : 1D array of size (N_parameters) or
+            N-dimensional array the same size as the data.
+            The model parameters of the MultiCompartmentModel model.
+
+        Returns
+        -------
+        E_simulated: 1D array of size (N_parameters) or N-dimensional
+            array the same size as x0.
+            The simulated signal of the microstructure model.
+        """
+        self._check_model_params_with_acquisition_params(acquisition_scheme)
+
+        Ndata = acquisition_scheme.number_of_measurements
+        if isinstance(parameters_array_or_dict, np.ndarray):
+            x0 = parameters_array_or_dict
+        elif isinstance(parameters_array_or_dict, dict):
+            x0 = self.parameters_to_parameter_vector(
+                **parameters_array_or_dict)
+
+        x0_at_least_2d = np.atleast_2d(x0)
+        x0_2d = x0_at_least_2d.reshape(-1, x0_at_least_2d.shape[-1])
+        E_2d = np.empty(np.r_[x0_2d.shape[:-1], Ndata])
+        for i, x0_ in enumerate(x0_2d):
+            parameters = self.parameter_vector_to_parameters(x0_)
+            E_2d[i] = self(acquisition_scheme, **parameters)
+        E_simulated = E_2d.reshape(
+            np.r_[x0_at_least_2d.shape[:-1], Ndata])
+
+        if x0.ndim == 1:
+            return np.squeeze(E_simulated)
+        else:
+            return E_simulated
+
+    def __call__(self, acquisition_scheme_or_vertices,
+                 quantity="signal", **kwargs):
+        """
+        The MultiCompartmentAMICOModel function call for to generate signal
+        attenuation for a given acquisition scheme and model parameters.
+
+        First, the linked parameters are added to the optimized parameters.
+
+        Then, every model in the MultiCompartmentAMICOModel is called with the
+        right parameters to recover the part of the signal attenuation of that
+        model. The resulting values are multiplied with the volume fractions and
+        finally the combined signal attenuation is returned.
+
+        Parameters
+        ----------
+        acquisition_scheme : DmipyAcquisitionScheme instance,
+            An acquisition scheme that has been instantiated using dMipy.
+        kwargs: keyword arguments to the model parameter values,
+            Is internally given as **parameter_dictionary.
+        """
+        values = 0
+
+        kwargs = self.add_linked_parameters_to_parameters(
+            kwargs
+        )
+        if len(self.models) > 1:
+            partial_volumes = [
+                kwargs[p] for p in self.partial_volume_names
+            ]
+        else:
+            partial_volumes = [1.]
+
+        for model_name, model, partial_volume in zip(
+                self.model_names, self.models, partial_volumes
+        ):
+            parameters = {}
+            for parameter in model.parameter_ranges:
+                parameter_name = self._inverted_parameter_map[
+                    (model, parameter)
+                ]
+                parameters[parameter] = kwargs.get(
+                    # , self.parameter_defaults.get(parameter_name)
+                    parameter_name
+                )
+
+            values = (
+                    values +
+                    partial_volume * model(
+                acquisition_scheme_or_vertices, **parameters)
+            )
+
+        return values
 
 
 def homogenize_x0_to_data(data, x0):
